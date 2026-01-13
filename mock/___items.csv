@@ -1,0 +1,48 @@
+Name,Category,Subcategory,Unit,Track Stock,Minimum Stock,Maximum Stock,Sales Price,Barcode
+Hennessy VS,Alcoholic Beverages,Cognac,Bottle (70cl),true,5,50,45000,3245990250012
+Hennessy VSOP,Alcoholic Beverages,Cognac,Bottle (70cl),true,3,30,85000,3245990250029
+Rémy Martin XO,Alcoholic Beverages,Cognac,Bottle (70cl),true,2,15,250000,3024480001057
+Johnnie Walker Black Label,Alcoholic Beverages,Whisky,Bottle (75cl),true,5,40,35000,5000267024301
+Johnnie Walker Blue Label,Alcoholic Beverages,Whisky,Bottle (75cl),true,2,10,180000,5000267114279
+Jack Daniel's Tennessee,Alcoholic Beverages,Whisky,Bottle (70cl),true,4,35,28000,5099873089798
+Chivas Regal 12 Years,Alcoholic Beverages,Whisky,Bottle (75cl),true,4,30,32000,5000299225028
+Ciroc Vodka,Alcoholic Beverages,Vodka,Bottle (75cl),true,5,40,38000,0088076174856
+Grey Goose Vodka,Alcoholic Beverages,Vodka,Bottle (70cl),true,3,25,42000,5010677850209
+Absolut Vodka,Alcoholic Beverages,Vodka,Bottle (70cl),true,5,40,18000,7312040017010
+Bombay Sapphire Gin,Alcoholic Beverages,Gin,Bottle (70cl),true,4,30,25000,5010677714006
+Tanqueray Gin,Alcoholic Beverages,Gin,Bottle (75cl),true,4,30,22000,5000291020713
+Bacardi White Rum,Alcoholic Beverages,Rum,Bottle (75cl),true,5,35,15000,5010677039017
+Captain Morgan Spiced Rum,Alcoholic Beverages,Rum,Bottle (70cl),true,4,30,18000,0082000727521
+Patrón Silver Tequila,Alcoholic Beverages,Tequila,Bottle (70cl),true,3,20,55000,7210036001015
+Jose Cuervo Gold Tequila,Alcoholic Beverages,Tequila,Bottle (70cl),true,4,25,22000,7501035042131
+Moët & Chandon Brut,Alcoholic Beverages,Champagne,Bottle (75cl),true,5,30,75000,3185370000014
+Dom Pérignon,Alcoholic Beverages,Champagne,Bottle (75cl),true,2,10,350000,3185370535516
+Veuve Clicquot Yellow Label,Alcoholic Beverages,Champagne,Bottle (75cl),true,3,20,85000,3049614083907
+Heineken Lager,Alcoholic Beverages,Beer,Bottle (33cl),true,48,240,1500,8712000900557
+Guinness Foreign Extra Stout,Alcoholic Beverages,Beer,Bottle (60cl),true,48,240,1200,5000213001035
+Star Lager,Alcoholic Beverages,Beer,Bottle (60cl),true,48,240,800,5942178000012
+Trophy Lager,Alcoholic Beverages,Beer,Bottle (60cl),true,48,240,750,5942178000029
+Smirnoff Ice,Alcoholic Beverages,RTD,Bottle (30cl),true,24,120,1800,5410316967013
+Coca-Cola,Non-Alcoholic Beverages,Soft Drinks,Bottle (50cl),true,48,288,500,5449000000996
+Sprite,Non-Alcoholic Beverages,Soft Drinks,Bottle (50cl),true,48,288,500,5449000014535
+Fanta Orange,Non-Alcoholic Beverages,Soft Drinks,Bottle (50cl),true,48,288,500,5449000011527
+Schweppes Tonic Water,Non-Alcoholic Beverages,Mixers,Bottle (33cl),true,48,192,600,5449000004697
+Schweppes Soda Water,Non-Alcoholic Beverages,Mixers,Bottle (33cl),true,48,192,600,5449000004703
+Red Bull Energy Drink,Non-Alcoholic Beverages,Energy Drinks,Can (25cl),true,48,192,2000,9002490100070
+Monster Energy,Non-Alcoholic Beverages,Energy Drinks,Can (50cl),true,24,120,2500,0070847811169
+Cranberry Juice,Non-Alcoholic Beverages,Juices,Bottle (1L),true,12,60,3500,0031200270061
+Orange Juice,Non-Alcoholic Beverages,Juices,Bottle (1L),true,12,60,3000,0048500018439
+Pineapple Juice,Non-Alcoholic Beverages,Juices,Bottle (1L),true,12,60,3000,0048500018446
+Eva Water,Non-Alcoholic Beverages,Water,Bottle (75cl),true,48,288,300,6161100100123
+Premium Shisha Tobacco - Double Apple,Shisha,Tobacco,Pack (250g),true,10,50,8000,8901234567890
+Premium Shisha Tobacco - Grape Mint,Shisha,Tobacco,Pack (250g),true,10,50,8000,8901234567891
+Shisha Charcoal,Shisha,Accessories,Box (96 pcs),true,20,100,3500,8901234567892
+Kilishi (Beef Jerky),Snacks,Local Snacks,Pack (100g),true,20,80,2500,6161200200234
+Pringles Original,Snacks,Chips,Can (165g),true,24,96,3500,5053990101573
+Mixed Nuts Premium,Snacks,Nuts,Pack (200g),true,15,60,4000,0029000016545
+Chin Chin,Snacks,Local Snacks,Pack (250g),true,20,80,1500,6161200200241
+Fresh Lime,Bar Supplies,Garnishes,Piece,true,50,200,100,4011200200001
+Fresh Lemon,Bar Supplies,Garnishes,Piece,true,50,200,150,4011200200002
+Grenadine Syrup,Bar Supplies,Syrups,Bottle (75cl),true,5,20,5000,0041294202200
+Simple Syrup,Bar Supplies,Syrups,Bottle (75cl),true,5,20,3500,0041294202217
+Ice Cubes,Bar Supplies,Ice,Bag (5kg),true,20,100,1500,6161300300001
