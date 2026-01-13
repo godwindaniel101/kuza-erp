@@ -1,0 +1,51 @@
+Name,Category,Subcategory,Unit,Track Stock,Minimum Stock,Maximum Stock,Sales Price,Barcode,Other
+Hennessy VS 750ml,Beverages,Cognac,Bottle,yes,10,50,45000,5000001001,Premium
+Hennessy VSOP 750ml,Beverages,Cognac,Bottle,yes,8,40,75000,5000001002,Premium
+Johnnie Walker Black Label 750ml,Beverages,Whiskey,Bottle,yes,15,60,32000,5000001003,Popular
+Johnnie Walker Red Label 750ml,Beverages,Whiskey,Bottle,yes,20,80,18000,5000001004,High Volume
+Chivas Regal 12 Year 750ml,Beverages,Whiskey,Bottle,yes,12,50,28000,5000001005,
+Jack Daniels 750ml,Beverages,Whiskey,Bottle,yes,15,55,25000,5000001006,
+Ciroc Vodka 750ml,Beverages,Vodka,Bottle,yes,12,50,35000,5000001007,Premium
+Grey Goose Vodka 750ml,Beverages,Vodka,Bottle,yes,10,45,42000,5000001008,Premium
+Absolut Vodka 750ml,Beverages,Vodka,Bottle,yes,15,60,18000,5000001009,
+Smirnoff Vodka 750ml,Beverages,Vodka,Bottle,yes,20,80,12000,5000001010,High Volume
+Bombay Sapphire Gin 750ml,Beverages,Gin,Bottle,yes,10,40,28000,5000001011,
+Gordon's Gin 750ml,Beverages,Gin,Bottle,yes,15,55,14000,5000001012,
+Bacardi White Rum 750ml,Beverages,Rum,Bottle,yes,12,50,15000,5000001013,
+Captain Morgan Spiced Rum 750ml,Beverages,Rum,Bottle,yes,10,45,18000,5000001014,
+Jose Cuervo Tequila 750ml,Beverages,Tequila,Bottle,yes,10,40,22000,5000001015,
+Patron Silver Tequila 750ml,Beverages,Tequila,Bottle,yes,6,30,55000,5000001016,Premium
+Moet Chandon Champagne 750ml,Beverages,Champagne,Bottle,yes,8,35,85000,5000001017,Premium
+Veuve Clicquot Champagne 750ml,Beverages,Champagne,Bottle,yes,6,30,95000,5000001018,Premium
+Heineken Beer 330ml,Beverages,Beer,Bottle,yes,100,500,1500,5000001019,High Volume
+Budweiser Beer 330ml,Beverages,Beer,Bottle,yes,100,500,1200,5000001020,High Volume
+Corona Beer 330ml,Beverages,Beer,Bottle,yes,80,400,1800,5000001021,
+Guinness Stout 330ml,Beverages,Beer,Bottle,yes,80,400,1500,5000001022,
+Star Lager Beer 600ml,Beverages,Beer,Bottle,yes,120,600,1000,5000001023,Local Favorite
+Red Bull Energy Drink 250ml,Beverages,Energy Drinks,Can,yes,50,200,2000,5000001024,
+Monster Energy Drink 500ml,Beverages,Energy Drinks,Can,yes,40,150,2500,5000001025,
+Coca Cola 350ml,Beverages,Soft Drinks,Bottle,yes,100,500,500,5000001026,
+Sprite 350ml,Beverages,Soft Drinks,Bottle,yes,100,500,500,5000001027,
+Fanta Orange 350ml,Beverages,Soft Drinks,Bottle,yes,80,400,500,5000001028,
+Schweppes Tonic Water 330ml,Beverages,Mixers,Bottle,yes,60,250,800,5000001029,
+Schweppes Soda Water 330ml,Beverages,Mixers,Bottle,yes,60,250,700,5000001030,
+Cranberry Juice 1L,Beverages,Juices,Bottle,yes,20,80,3500,5000001031,
+Orange Juice 1L,Beverages,Juices,Bottle,yes,25,100,3000,5000001032,
+Pineapple Juice 1L,Beverages,Juices,Bottle,yes,20,80,3000,5000001033,
+Bottled Water 500ml,Beverages,Water,Bottle,yes,200,1000,300,5000001034,High Volume
+Bottled Water 1.5L,Beverages,Water,Bottle,yes,100,500,500,5000001035,
+Grilled Chicken Wings 6pcs,Food,Appetizers,Portion,no,0,0,8500,,Kitchen
+Peppered Snail,Food,Appetizers,Portion,no,0,0,12000,,Kitchen
+Asun (Spicy Goat Meat),Food,Appetizers,Portion,no,0,0,9500,,Kitchen
+Suya Platter,Food,Appetizers,Portion,no,0,0,7500,,Kitchen
+Grilled Fish,Food,Main Course,Portion,no,0,0,15000,,Kitchen
+Jollof Rice with Chicken,Food,Main Course,Portion,no,0,0,6500,,Kitchen
+Fried Rice with Beef,Food,Main Course,Portion,no,0,0,7000,,Kitchen
+Pounded Yam with Egusi Soup,Food,Main Course,Portion,no,0,0,8500,,Kitchen
+Pepper Soup (Goat Meat),Food,Soups,Portion,no,0,0,7500,,Kitchen
+Chicken Shawarma,Food,Snacks,Piece,no,0,0,5500,,Kitchen
+Ice Cubes 5kg Bag,Supplies,Bar Supplies,Bag,yes,20,100,2000,5000001046,Essential
+Cocktail Napkins Pack,Supplies,Bar Supplies,Pack,yes,30,150,1500,5000001047,
+Disposable Cups Pack 50,Supplies,Bar Supplies,Pack,yes,25,100,2500,5000001048,
+Drinking Straws Pack 100,Supplies,Bar Supplies,Pack,yes,30,120,1000,5000001049,
+Lime Fresh 1kg,Supplies,Garnishes,Kg,yes,10,50,2500,5000001050,Perishable

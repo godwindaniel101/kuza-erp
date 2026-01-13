@@ -1,0 +1,28 @@
+Branch Name,Supplier Name,Received At,Inventory Item Name,UOM,Quantity,Cost Per Unit,Batch Number,Expiry Date,Invoice Number,Notes
+Victoria Island Lounge,Nigerian Breweries PLC,2024-01-15,Star Lager Beer,bottle,150,320,NB240115A,2024-12-31,NB-INV-2024-0015,Premium stock for weekend rush
+Lekki Phase 1 Lounge,Guinness Nigeria,2024-01-16,Guinness Stout,bottle,120,380,GN240116B,2024-11-30,GN-INV-2024-0032,Includes promotional materials
+Ikoyi Premium Lounge,Heineken Nigeria,2024-01-17,Heineken Beer,bottle,100,350,HN240117C,2024-12-15,HN-INV-2024-0045,International stock batch
+Victoria Island Lounge,Nigeria Distilleries Ltd,2024-01-18,Smirnoff Vodka,bottle,40,2200,ND240118D,2025-06-30,ND-INV-2024-0078,Premium import batch
+Lekki Phase 1 Lounge,Jameson Importers NG,2024-01-19,Jameson Whiskey,bottle,25,5200,JI240119E,2026-03-31,JI-INV-2024-0012,Limited edition packaging
+Ikoyi Premium Lounge,Wines & Spirits Nigeria,2024-01-20,Baileys Irish Cream,bottle,20,5800,WS240120F,2025-09-30,WS-INV-2024-0099,Christmas special stock
+Victoria Island Lounge,Coca-Cola Nigeria,2024-01-21,Coca-Cola,bottle,200,130,CC240121G,2024-08-31,CC-INV-2024-0156,Regular supply
+Lekki Phase 1 Lounge,Coca-Cola Nigeria,2024-01-22,Fanta Orange,bottle,180,130,CC240122H,2024-08-31,CC-INV-2024-0167,Regular supply
+Ikoyi Premium Lounge,Coca-Cola Nigeria,2024-01-23,Sprite,bottle,160,130,CC240123I,2024-09-30,CC-INV-2024-0178,Regular supply
+Victoria Island Lounge,Four Cousins Distributors,2024-01-24,Four Cousins Wine,bottle,60,1800,FC240124J,2025-05-31,FC-INV-2024-0034,Mixed red and white wines
+Lekki Phase 1 Lounge,Origin Wine Merchants,2024-01-25,Origin Wine,bottle,50,1600,OW240125K,2025-04-30,OW-INV-2024-0023,South African import
+Ikoyi Premium Lounge,Nigerian Breweries PLC,2024-01-26,Trophy Beer,bottle,100,290,NB240126L,2024-10-31,NB-INV-2024-0028,Economy stock
+Victoria Island Lounge,Fresh Produce NG,2024-01-27,Lemon/Lime,kg,20,500,FP240127M,2024-02-10,FP-INV-2024-0045,Fresh from Ogbomosho farms
+Lekki Phase 1 Lounge,Fresh Produce NG,2024-01-28,Cucumber,kg,15,400,FP240128N,2024-02-08,FP-INV-2024-0048,Organic cucumbers
+Ikoyi Premium Lounge,Herbs & Spices Ltd,2024-01-29,Mint Leaves,bunch,50,150,HS240129O,2024-02-05,HS-INV-2024-0019,Fresh mint for cocktails
+Victoria Island Lounge,Ice Manufacturing Co.,2024-01-30,Ice Cubes,kg,50,100,IM240130P,2024-02-01,IM-INV-2024-0033,Filtered water ice
+Lekki Phase 1 Lounge,Packaging Solutions Ltd,2024-01-31,Disposable Cups,pack,200,800,PS240131Q,2025-12-31,PS-INV-2024-0067,12oz clear cups
+Ikoyi Premium Lounge,Packaging Solutions Ltd,2024-02-01,Cocktail Straws,pack,150,450,PS240201R,2025-12-31,PS-INV-2024-0071,Paper eco-friendly straws
+Victoria Island Lounge,Packaging Solutions Ltd,2024-02-02,Paper Napkins,pack,250,1200,PS240202S,2025-12-31,PS-INV-2024-0075,2-ply embossed napkins
+Lekki Phase 1 Lounge,Local Delicacies Inc.,2024-02-03,Plantain Chips,pack,80,450,LD240203T,2024-06-30,LD-INV-2024-0024,Spicy and sweet varieties
+Ikoyi Premium Lounge,Northern Specialties,2024-02-04,Kilishi,pack,60,900,NS240204U,2024-05-31,NS-INV-2024-0015,Premium beef kilishi
+Victoria Island Lounge,Agro Produce Ltd,2024-02-05,Peanuts,bowl,100,300,AP240205V,2024-07-31,AP-INV-2024-0038,Roasted and salted
+Lekki Phase 1 Lounge,Traditional Snacks Co.,2024-02-06,Bitter Kola,pack,40,700,TS240206W,2024-09-30,TS-INV-2024-0011,Grade A bitter kola
+Ikoyi Premium Lounge,Mixers Distributors,2024-02-07,Club Soda,bottle,90,180,MD240207X,2024-10-31,MD-INV-2024-0022,For cocktails
+Victoria Island Lounge,Mixers Distributors,2024-02-08,Tonic Water,bottle,80,200,MD240208Y,2024-11-30,MD-INV-2024-0025,For gin and tonic
+Lekki Phase 1 Lounge,Fresh Juice Co.,2024-02-09,Orange Juice,liter,50,800,FJ240209Z,2024-03-10,FJ-INV-2024-0036,Freshly squeezed
+Ikoyi Premium Lounge,Fresh Juice Co.,2024-02-10,Pineapple Juice,liter,45,800,FJ240210AA,2024-03-08,FJ-INV-2024-0039,Pure pineapple juice

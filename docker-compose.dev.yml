@@ -1,0 +1,82 @@
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: erp_postgres_dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: erp_db
+    ports:
+      - "4433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./docker/postgres/init-landlord.sql:/docker-entrypoint-initdb.d/01-init-landlord.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: erp_backend_dev
+    environment:
+      NODE_ENV: development
+      PORT: 4001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: erp_db
+      DB_LANDLORD_NAME: erp_landlord
+      JWT_SECRET: dev-secret-key
+      JWT_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:4000
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/src/i18n:/app/src/i18n
+      - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
+    networks:
+      - erp_network
+    command: npm run start:dev
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: erp_frontend_dev
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4001
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "4000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - erp_network
+    command: npm run dev -- -H 0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  erp_network:
+    driver: bridge
+

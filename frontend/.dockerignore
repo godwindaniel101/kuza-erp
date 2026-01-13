@@ -1,0 +1,11 @@
+node_modules
+.nuxt
+.output
+.git
+.gitignore
+.env
+.env.local
+*.md
+.DS_Store
+coverage
+

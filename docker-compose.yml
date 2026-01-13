@@ -1,0 +1,93 @@
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: erp_postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-erp_db}
+    ports:
+      - "${DB_PORT:-4433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-landlord.sql:/docker-entrypoint-initdb.d/01-init-landlord.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ${DOCKERFILE_BACKEND:-Dockerfile.dev}
+    container_name: erp_backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 4001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-erp_db}
+      DB_LANDLORD_NAME: ${DB_LANDLORD_NAME:-erp_landlord}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/auth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ERP Platform}
+    ports:
+      - "${BACKEND_PORT:-4001}:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/src/i18n:/app/src/i18n
+      - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
+      - /app/node_modules
+    networks:
+      - erp_network
+    restart: unless-stopped
+    command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ${DOCKERFILE_FRONTEND:-Dockerfile.dev}
+    container_name: erp_frontend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "${FRONTEND_PORT:-4000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - erp_network
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev -- -H 0.0.0.0
+
+volumes:
+  postgres_data:
+
+networks:
+  erp_network:
+    driver: bridge
+

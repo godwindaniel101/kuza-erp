@@ -1,0 +1,24 @@
+{"applyVat"
+: 
+false
+"branchId
+": 
+"8470f0dc-5fba-44eb-9a5e-9c34a663ebc0"
+"items"
+: 
+[{"inventoryItemId": "14e2a077-7e12-4ad3-9c31-95ff850d3c30",…}]
+0
+: 
+{"inventoryItemId": "14e2a077-7e12-4ad3-9c31-95ff850d3c30",…}
+"inventoryItemId"
+: 
+"14e2a077-7e12-4ad3-9c31-95ff850d3c30"
+"quantity"
+: 
+1
+"uomId"
+: 
+"24f9126a-d71f-44e5-8cf8-76de5098e892"
+"type"
+: 
+"dine_in"}

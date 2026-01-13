@@ -1,0 +1,10 @@
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(40,20)">
+    <rect x="0" y="120" width="40" height="140" rx="14" fill="#2563eb"/>
+    <rect x="60" y="90" width="40" height="170" rx="14" fill="#2563eb" opacity="0.85"/>
+    <rect x="120" y="60" width="40" height="200" rx="14" fill="#2563eb" opacity="0.7"/>
+    <line x1="-10" y1="260" x2="180" y2="70" stroke="#ffffff" stroke-width="14"/>
+    <polygon points="180,70 160,70 180,50" fill="#ffffff"/>
+  </g>
+  <text x="260" y="190" font-size="120" font-family="Arial, Helvetica, sans-serif" font-weight="700" fill="#ffffff">Kuza</text>
+</svg>

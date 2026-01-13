@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --sidebar-width: 256px; /* 16rem - matches w-64 */
+  --header-height: 90px; /* Header height - adjust as needed */
+  --primary: #DC2626;
+  --primary-dark: #B91C1C;
+  --secondary: #1E40AF;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --background: #F9FAFB;
+  --card: #FFFFFF;
+  --border: #E5E7EB;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+}
+
+@media (min-width: 1024px) {
+  .main-content-area {
+    margin-left: var(--sidebar-width);
+  }
+}
+
+.dashboard-header {
+  height: var(--header-height);
+  flex-shrink: 0;
+}
+
+.dashboard-main {
+  height: calc(100dvh - var(--header-height)) !important;
+  overflow-y: auto !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F3F4F6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9CA3AF;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
+/* Dark mode scrollbar */
+html.dark ::-webkit-scrollbar-track {
+  background: #1F2937;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4B5563;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Touch-friendly targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+@layer base {
+  * {
+    font-family: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    font-family: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: color 200ms, background-color 200ms;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .stat-card {
+    @apply p-4;
+  }
+  
+  .table-responsive {
+    @apply block w-full overflow-x-auto;
+  }
+  
+  /* Mobile-specific layout fixes */
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  
+  /* Improve mobile navigation */
+  .mobile-nav-item {
+    @apply py-4 px-4 text-base;
+    min-height: 48px;
+  }
+  
+  /* Prevent body scroll when mobile menu is open */
+  body.menu-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-responsive {
+    @apply px-4;
+  }
+}
+
+/* Additional mobile viewport fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes */
+  .app-container {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Force GPU acceleration for smoother animations */
+.mobile-menu-overlay,
+.desktop-sidebar,
+.main-content-wrapper {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Better mobile scrolling performance */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Enhanced responsive utilities */
+.container-responsive {
+  @apply w-full;
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Fix for content going under fixed elements */
+.content-safe-area {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
+}
+
+/* Ensure proper z-index stacking */
+.mobile-menu-overlay {
+  z-index: 9999;
+}
+
+.desktop-sidebar {
+  z-index: 50;
+}
+
+.main-content-wrapper {
+  z-index: 10;
+}
+
+/* Fix select dropdown text overflow */
+select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+select option {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  padding: 0.5rem;
+  background-color: #FFFFFF;
+  color: #111827;
+}
+
+/* Dark mode for select options */
+html.dark select option {
+  background-color: #1F2937;
+  color: #F9FAFB;
+}
+
+/* Mobile-specific select fixes */
+@media (max-width: 640px) {
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+  
+  select option {
+    padding: 0.75rem;
+    font-size: 16px;
+  }
+}
+
+/* Print styles for barcodes */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .barcode-sheet {
+    padding: 0;
+    margin: 0;
+    page-break-after: always;
+  }
+}
+
+[x-cloak] { 
+  display: none !important; 
+}

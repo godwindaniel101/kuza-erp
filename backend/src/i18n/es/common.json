@@ -1,0 +1,13 @@
+{
+  "welcome": "Bienvenido",
+  "error": "Error",
+  "success": "Éxito",
+  "not_found": "No encontrado",
+  "unauthorized": "No autorizado",
+  "forbidden": "Prohibido",
+  "validation_error": "Error de validación",
+  "created": "Creado exitosamente",
+  "updated": "Actualizado exitosamente",
+  "deleted": "Eliminado exitosamente"
+}
+
