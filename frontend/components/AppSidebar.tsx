@@ -165,6 +165,15 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       groups: [
         { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
         {
+          // Inventory/retail businesses sell too — their own POS surface
+          // (looks different from the Restaurant order flow).
+          label: 'Sell',
+          items: [
+            { href: '/pos', label: 'Point of Sale', icon: 'building-storefront', permission: 'orders.create', exact: true },
+            { href: '/rms/orders', label: term(businessType, 'sellNav') || 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+          ],
+        },
+        {
           label: 'Stock',
           items: [
             { href: '/ims/inventory', label: 'Stock Items', icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
@@ -336,12 +345,16 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
       if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
       if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
-      if (
-        path === '/' ||
-        path.startsWith('/rms') ||
-        path.startsWith('/pos') ||
-        path.startsWith('/menu-studio')
-      )
+      // Selling surfaces (/pos, sales list) belong to Restaurant when that app
+      // exists; otherwise to Inventory (a retail business sells from Inventory).
+      if (path.startsWith('/pos') || path.startsWith('/rms/orders')) {
+        const hasRestaurant = businessApps.some((a) => a.id === 'pos');
+        if (!hasRestaurant && businessApps.some((a) => a.id === 'inventory')) {
+          return apps.find((a) => a.id === 'inventory')!;
+        }
+        return apps.find((a) => a.id === 'pos')!;
+      }
+      if (path === '/' || path.startsWith('/rms') || path.startsWith('/menu-studio'))
         return apps.find((a) => a.id === 'pos')!;
       // Fallback: first available business app, else settings.
       return businessApps[0] ?? apps.find((a) => a.id === 'settings')!;

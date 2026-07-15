@@ -106,6 +106,14 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* Product rule: no text input or select should stretch wider than 300px.
+   Applies globally; grid/table cell inputs are narrower than this so are
+   unaffected. Excludes toggles/range/color/file and multi-line textareas. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+select {
+  max-width: 300px;
+}
+
 * {
   box-sizing: border-box;
 }

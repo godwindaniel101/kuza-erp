@@ -781,14 +781,14 @@ export default function CreateOrderPage() {
                         )}
                     </div>
                     <div>
-                      <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                      <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                         {selectedItem && selectedUomId
                           ? `₦${Number(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           : "-"}
                       </div>
                     </div>
                     <div>
-                      <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                      <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                         {selectedItem && itemQuantity > 0 && selectedUomId
                           ? `₦${(Number(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0) * itemQuantity).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           : "-"}
@@ -804,7 +804,7 @@ export default function CreateOrderPage() {
                           itemQuantity <= 0 ||
                           !branchId
                         }
-                        className="w-full px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-h-[48px]"
+                        className="w-full px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center h-9"
                         title={t("add") || "Add Item"}
                       >
                         <i className="bx bx-plus text-lg"></i>
@@ -828,7 +828,7 @@ export default function CreateOrderPage() {
                           >
                             <div>
                               {item.inventoryItemId ? (
-                                <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                                <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                                   {item.name}
                                 </div>
                               ) : (
@@ -931,14 +931,14 @@ export default function CreateOrderPage() {
                                 )}
                             </div>
                             <div>
-                              <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                              <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                                 {item.unitPrice
                                   ? `₦${Number(item.unitPrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                   : "-"}
                               </div>
                             </div>
                             <div>
-                              <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                              <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                                 {item.totalPrice
                                   ? `₦${Number(item.totalPrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                   : "-"}
