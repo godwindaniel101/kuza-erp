@@ -6,7 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
+import Button from '@/components/ui/Button';
 
 export default function LearningPage() {
   const { t } = useTranslation('common');
@@ -40,13 +40,10 @@ export default function LearningPage() {
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('learning') }]}
         actions={
           <PermissionGuard permission="learning.courses.create">
-            <Link
-              href="/hrms/learning/courses/create"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
-            >
-              <i className="bx bx-plus mr-2"></i>
+            <Button href="/hrms/learning/courses/create" size="sm">
+              <i className="bx bx-plus"></i>
               {t('create')} {t('course')}
-            </Link>
+            </Button>
           </PermissionGuard>
         }
       />

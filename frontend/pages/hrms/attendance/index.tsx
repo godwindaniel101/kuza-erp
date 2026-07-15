@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function AttendancePage() {
   const { t } = useTranslation('common');
@@ -96,13 +97,14 @@ export default function AttendancePage() {
               </button>
             </PermissionGuard>
             <PermissionGuard permission="attendance.clock-out">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={clockOut}
                 disabled={clockingIn || clockingOut}
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {clockingOut ? t('clockingOut') || 'Clocking out...' : t('clockOut')}
-              </button>
+              </Button>
             </PermissionGuard>
           </>
         }
@@ -130,16 +132,16 @@ export default function AttendancePage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('employee')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('clockIn')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('clockOut')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('hours')}
                   </th>
                 </tr>
@@ -147,16 +149,16 @@ export default function AttendancePage() {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {record.employee?.firstName} {record.employee?.lastName}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {record.clockIn ? new Date(record.clockIn).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {record.clockOut ? new Date(record.clockOut).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {record.totalHours || '—'}
                     </td>
                   </tr>

@@ -6,6 +6,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import StatCard from '@/components/ui/StatCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import InvoiceStatusBadge from '@/components/ui/InvoiceStatusBadge';
@@ -116,12 +117,9 @@ export default function CustomerDetailPage() {
           title="Customer not found"
           description="It may have been removed, or the link is invalid"
           actions={
-            <Link
-              href="/sales/customers"
-              className="h-8 px-3 bg-red-600 dark:bg-red-700 text-white rounded-lg text-[13px] font-medium hover:bg-red-700 dark:hover:bg-red-600"
-            >
+            <Button href="/sales/customers" size="sm">
               Back to Customers
-            </Link>
+            </Button>
           }
         />
       ) : (
@@ -202,12 +200,12 @@ export default function CustomerDetailPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Invoice #</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Issued</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Due</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Total</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Balance</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Invoice #</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Issued</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Due</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Total</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Balance</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -217,22 +215,22 @@ export default function CustomerDetailPage() {
                         onClick={() => router.push(`/sales/invoices/${inv.id}`)}
                         className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
                       >
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                           {inv.invoiceNumber}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                           {formatDate(inv.issueDate)}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                           {formatDate(inv.dueDate)}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                           {formatMoney(inv.total, inv.currency || currency)}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                           {formatMoney(inv.balance, inv.currency || currency)}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <InvoiceStatusBadge status={inv.status} size="sm" />
                         </td>
                       </tr>

@@ -7,6 +7,8 @@ import Toast from '@/components/Toast';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader, { type Breadcrumb } from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 interface SettingsFormProps {
   title?: string;
@@ -117,25 +119,23 @@ export default function SettingsForm({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={showAddress || showPhone || showEmail ? 'md:col-span-1' : 'md:col-span-2'}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t(organizationLabel) || t('businessName') || 'Business Name'} <span className="text-red-500">*</span>
-              </label>
-              <input
+              <FormField
+                name="name"
                 type="text"
+                label={t(organizationLabel) || t('businessName') || 'Business Name'}
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                onChange={(value) => setFormData({ ...formData, name: value })}
               />
             </div>
             {showAddress && (
               <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('address')}</label>
-                <input
+                <FormField
+                  name="address"
                   type="text"
+                  label={t('address')}
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  onChange={(value) => setFormData({ ...formData, address: value })}
                 />
               </div>
             )}
@@ -179,36 +179,32 @@ export default function SettingsForm({
             </div>
             {showPhone && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('phone')}</label>
-                <input
+                <FormField
+                  name="phone"
                   type="text"
+                  label={t('phone')}
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  onChange={(value) => setFormData({ ...formData, phone: value })}
                 />
               </div>
             )}
             {showEmail && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('email')}</label>
-                <input
+                <FormField
+                  name="email"
                   type="email"
+                  label={t('email')}
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  onChange={(value) => setFormData({ ...formData, email: value })}
                 />
               </div>
             )}
           </div>
           <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center space-x-2"
-            >
+            <Button type="submit" variant="primary" disabled={saving}>
               <i className="bx bx-save"></i>
               <span>{saving ? t('saving') : t('saveSettings')}</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>

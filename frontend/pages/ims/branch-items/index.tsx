@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function BranchItemsPage() {
   const { t } = useTranslation('common');
@@ -189,7 +190,7 @@ export default function BranchItemsPage() {
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
                       <th
-                        className="sticky left-0 z-10 px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="sticky left-0 z-10 px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center space-x-1">
@@ -198,7 +199,7 @@ export default function BranchItemsPage() {
                         </div>
                       </th>
                       <th
-                        className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('category')}
                       >
                         <div className="flex items-center space-x-1">
@@ -207,13 +208,13 @@ export default function BranchItemsPage() {
                         </div>
                       </th>
                       {branches.map((branch) => (
-                        <th key={branch.id} className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase min-w-[120px]">
+                        <th key={branch.id} className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase min-w-[120px]">
                           {branch.name}
                           {branch.isDefault && <span className="ml-1 text-xs text-gray-400">({t('default') || 'Default'})</span>}
                         </th>
                       ))}
                       <th
-                        className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('totalStock')}
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -221,7 +222,7 @@ export default function BranchItemsPage() {
                           <SortIcon field="totalStock" />
                         </div>
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('unit') || 'Unit'}
                       </th>
                     </tr>
@@ -291,23 +292,25 @@ export default function BranchItemsPage() {
                   {t('showing') || 'Showing'} {startIndex + 1} {t('to') || 'to'} {Math.min(startIndex + itemsPerPage, sortedItems.length)} {t('of') || 'of'} {sortedItems.length} {t('items') || 'items'}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t('previous') || 'Previous'}
-                  </button>
+                  </Button>
                   <div className="text-sm text-gray-700 dark:text-gray-300">
                     {t('page') || 'Page'} {currentPage} {t('of') || 'of'} {totalPages}
                   </div>
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t('next') || 'Next'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

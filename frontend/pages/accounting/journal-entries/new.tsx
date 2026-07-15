@@ -7,6 +7,7 @@ import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
 import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import { formatMoney, todayIso, useCurrency } from '@/lib/format';
 
 interface Account {
@@ -200,7 +201,7 @@ export default function NewJournalEntryPage() {
                   onClick={() => removeLine(line.key)}
                   disabled={lines.length <= 2}
                   title="Remove line"
-                  className="p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <i className="bx bx-trash" aria-hidden="true"></i>
                 </button>
@@ -211,14 +212,10 @@ export default function NewJournalEntryPage() {
 
         {/* Footer: add line + totals */}
         <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setLines((prev) => [...prev, newLine()])}
-            className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center"
-          >
-            <i className="bx bx-plus mr-1"></i>
+          <Button variant="ghost" size="sm" type="button" onClick={() => setLines((prev) => [...prev, newLine()])}>
+            <i className="bx bx-plus"></i>
             Add line
-          </button>
+          </Button>
           <div
             className={`flex items-center gap-6 text-sm font-semibold px-4 py-2 rounded-lg ${
               balanced
@@ -249,21 +246,12 @@ export default function NewJournalEntryPage() {
 
       {/* Actions */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push('/accounting/journal-entries')}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
+        <Button variant="secondary" type="button" onClick={() => router.push('/accounting/journal-entries')}>
           Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center"
-        >
+        </Button>
+        <Button type="button" onClick={handleSave} disabled={!canSave}>
           {saving ? 'Saving...' : 'Save Entry'}
-        </button>
+        </Button>
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

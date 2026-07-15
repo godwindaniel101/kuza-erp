@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
@@ -128,13 +128,10 @@ export default function JournalEntriesPage() {
         subtitle="Record and review double-entry transactions"
         breadcrumbs={[{ label: 'Accounting', href: '/accounting' }, { label: 'Journal Entries' }]}
         actions={
-          <Link
-            href="/accounting/journal-entries/new"
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
+          <Button href="/accounting/journal-entries/new" size="sm">
+            <i className="bx bx-plus"></i>
             New Entry
-          </Link>
+          </Button>
         }
       />
 
@@ -167,14 +164,14 @@ export default function JournalEntriesPage() {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+              className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
             />
             <label className="text-[13px] text-gray-500 dark:text-gray-400">To</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+              className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
             />
           </div>
         }
@@ -203,12 +200,9 @@ export default function JournalEntriesPage() {
                 : 'Create your first journal entry to start recording transactions'
             }
             actions={
-              <Link
-                href="/accounting/journal-entries/new"
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
+              <Button href="/accounting/journal-entries/new" size="sm">
                 New Entry
-              </Link>
+              </Button>
             }
           />
         }

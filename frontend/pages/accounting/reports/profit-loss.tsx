@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatMoney, formatDate, firstOfMonthIso, todayIso, downloadCsv, useCurrency } from '@/lib/format';
@@ -35,25 +36,25 @@ function SectionTable({
 }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
-      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide">{title}</h2>
       </div>
       <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {lines.length === 0 ? (
             <tr>
-              <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400" colSpan={2}>
+              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400" colSpan={2}>
                 No activity in this period
               </td>
             </tr>
           ) : (
             lines.map((line) => (
               <tr key={line.code} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td className="px-6 py-3 text-sm">
+                <td className="px-4 py-3 text-sm">
                   <span className="font-mono text-gray-500 dark:text-gray-400 mr-2">{line.code}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{line.name}</span>
                 </td>
-                <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                   {formatMoney(line.amount, currency)}
                 </td>
               </tr>
@@ -62,8 +63,8 @@ function SectionTable({
         </tbody>
         <tfoot className="bg-gray-50 dark:bg-gray-900">
           <tr>
-            <td className="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</td>
-            <td className="px-6 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
+            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</td>
+            <td className="px-4 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
               {formatMoney(total, currency)}
             </td>
           </tr>
@@ -136,24 +137,20 @@ export default function ProfitLossPage() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
               />
               <label className="text-[13px] text-gray-500 dark:text-gray-400">To</label>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
               />
             </div>
-            <button
-              onClick={handleExport}
-              disabled={!hasData}
-              className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              <i className="bx bx-download mr-2"></i>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={!hasData}>
+              <i className="bx bx-download"></i>
               Export CSV
-            </button>
+            </Button>
           </>
         }
       />

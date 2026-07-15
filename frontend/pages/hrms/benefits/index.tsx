@@ -6,7 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
+import Button from '@/components/ui/Button';
 
 export default function BenefitsPage() {
   const { t } = useTranslation('common');
@@ -40,13 +40,10 @@ export default function BenefitsPage() {
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('benefits') }]}
         actions={
           <PermissionGuard permission="benefits.plans.create">
-            <Link
-              href="/hrms/benefits/plans/create"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
-            >
-              <i className="bx bx-plus mr-2"></i>
+            <Button href="/hrms/benefits/plans/create" size="sm">
+              <i className="bx bx-plus"></i>
               {t('create')} {t('benefit')} {t('plan')}
-            </Link>
+            </Button>
           </PermissionGuard>
         }
       />

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import StatCard from '@/components/ui/StatCard';
 import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
@@ -154,13 +154,10 @@ export default function InvoicesPage() {
         subtitle="Bill customers and track payments"
         breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices' }]}
         actions={
-          <Link
-            href="/sales/invoices/new"
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
+          <Button href="/sales/invoices/new" size="sm">
+            <i className="bx bx-plus"></i>
             New Invoice
-          </Link>
+          </Button>
         }
       />
 
@@ -242,12 +239,9 @@ export default function InvoicesPage() {
             title={hasFilters ? 'No invoices match your filters' : 'No invoices yet'}
             description={hasFilters ? 'Try adjusting your filters' : 'Create your first invoice to start billing customers'}
             actions={
-              <Link
-                href="/sales/invoices/new"
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
+              <Button href="/sales/invoices/new" size="sm">
                 New Invoice
-              </Link>
+              </Button>
             }
           />
         }

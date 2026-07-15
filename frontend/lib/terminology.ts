@@ -46,17 +46,20 @@ const NEUTRAL: Record<TermKey, string> = {
 
 /** Hospitality vocabulary — shared by 'hospitality' and its legacy alias 'restaurant'. */
 const HOSPITALITY_TERMS: Partial<Record<TermKey, string>> = {
-  items: 'Dishes & Ingredients',
-  itemsNav: 'Dishes',
-  itemSingular: 'dish',
-  addItem: 'Add dish',
-  itemsDescription: 'Every dish and ingredient, priced and tracked',
-  goodsIn: 'Deliveries',
-  recordGoodsIn: 'Record delivery',
-  goodsInDescription: 'Deliveries received, from whom, and at what cost',
-  pos: 'Shop',
+  // Inventory = stock / ingredients, NOT dishes. Dishes are the sellable menu
+  // items and live in the Menu module (/rms/menus) — keep the two distinct so
+  // the Stock Items page never labels a row a "dish".
+  items: 'Stock Items',
+  itemsNav: 'Stock Items',
+  itemSingular: 'stock item',
+  addItem: 'Add stock item',
+  itemsDescription: 'Ingredients and supplies, priced and tracked',
+  goodsIn: 'Receive Stock',
+  recordGoodsIn: 'Receive stock',
+  goodsInDescription: 'Stock received, from whom, and at what cost',
+  pos: 'New Sale',
   posSection: 'Restaurant',
-  emptyItems: 'No dishes yet. Add your first dish or ingredient to get started.',
+  emptyItems: 'No stock items yet. Add your first ingredient or supply to get started.',
 };
 
 /** Keyed by string (not BusinessType) so future verticals slot in freely. */

@@ -8,6 +8,8 @@ import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function SuppliersPage() {
   const { t } = useTranslation('common');
@@ -90,13 +92,10 @@ export default function SuppliersPage() {
           breadcrumbs={[{ label: 'Restaurant' }, { label: t('suppliers') || 'Suppliers' }]}
           actions={
             <PermissionGuard permission="suppliers.create">
-              <button
-                onClick={() => setShowCreate(true)}
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
-                <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+              <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
+                <i className="bx bx-plus" aria-hidden="true"></i>
                 {t('add')} {t('supplier')}
-              </button>
+              </Button>
             </PermissionGuard>
           }
         />
@@ -111,13 +110,10 @@ export default function SuppliersPage() {
             description={t('addSuppliersToStart') || 'Add suppliers to start recording inflows'}
             actions={
               <PermissionGuard permission="suppliers.create">
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-                >
-                  <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+                <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
+                  <i className="bx bx-plus" aria-hidden="true"></i>
                   {t('add')} {t('supplier')}
-                </button>
+                </Button>
               </PermissionGuard>
             }
           />
@@ -150,12 +146,12 @@ export default function SuppliersPage() {
                     </div>
                     <div className="flex flex-col gap-1 ml-2">
                       <PermissionGuard permission="suppliers.edit">
-                        <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors" title={t('edit')}>
+                        <button className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title={t('edit')}>
                           <i className="bx bx-edit text-lg"></i>
                         </button>
                       </PermissionGuard>
                       <PermissionGuard permission="suppliers.delete">
-                        <button className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title={t('delete')}>
+                        <button className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title={t('delete')}>
                           <i className="bx bx-trash text-lg"></i>
                         </button>
                       </PermissionGuard>
@@ -178,23 +174,19 @@ export default function SuppliersPage() {
         >
           <form onSubmit={(e) => { e.preventDefault(); handleCreateSupplier(); }}>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('name')} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newSupplier.name}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                  placeholder={t('supplierName') || 'Supplier name'}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  required
-                  autoFocus
-                />
-              </div>
+              <FormField
+                name="name"
+                type="text"
+                label={t('name')}
+                required
+                value={newSupplier.name}
+                onChange={(value) => setNewSupplier({ ...newSupplier, name: value })}
+                placeholder={t('supplierName') || 'Supplier name'}
+                inputProps={{ autoFocus: true }}
+              />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('contactPerson') || 'Contact Person'} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
                 </label>
                 <input
@@ -202,12 +194,12 @@ export default function SuppliersPage() {
                   value={newSupplier.contactPerson}
                   onChange={(e) => setNewSupplier({ ...newSupplier, contactPerson: e.target.value })}
                   placeholder={t('contactPersonName') || 'Contact person name'}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('email')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
                 </label>
                 <input
@@ -215,12 +207,12 @@ export default function SuppliersPage() {
                   value={newSupplier.email}
                   onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
                   placeholder={t('emailAddress') || 'email@example.com'}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('phone')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
                 </label>
                 <input
@@ -228,12 +220,12 @@ export default function SuppliersPage() {
                   value={newSupplier.phone}
                   onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
                   placeholder={t('phoneNumber') || '+1234567890'}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                  className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('address')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
                 </label>
                 <textarea
@@ -241,36 +233,30 @@ export default function SuppliersPage() {
                   onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
                   placeholder={t('address') || 'Street address'}
                   rows={2}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   setShowCreate(false);
                   setNewSupplier({ name: '', email: '', phone: '', contactPerson: '', address: '' });
                 }}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
                 disabled={creating}
               >
                 {t('cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={creating || !newSupplier.name.trim()}
-                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                variant="primary"
+                loading={creating}
+                disabled={!newSupplier.name.trim()}
               >
-                {creating ? (
-                  <span className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    {t('creating') || 'Creating...'}
-                  </span>
-                ) : (
-                  t('save')
-                )}
-              </button>
+                {creating ? t('creating') || 'Creating...' : t('save')}
+              </Button>
             </div>
           </form>
         </Modal>

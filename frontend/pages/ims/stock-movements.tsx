@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
+import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
 import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
@@ -304,14 +305,10 @@ export default function StockMovementsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Compares current stock against the ledger balance for each item. Non-zero drift indicates a discrepancy.
             </p>
-            <button
-              onClick={loadReconciliation}
-              disabled={reconLoading}
-              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center shrink-0"
-            >
-              <i className={`bx bx-refresh mr-1 ${reconLoading ? 'animate-spin' : ''}`} aria-hidden="true"></i>
+            <Button variant="secondary" size="sm" onClick={loadReconciliation} disabled={reconLoading} className="shrink-0">
+              <i className={`bx bx-refresh ${reconLoading ? 'animate-spin' : ''}`} aria-hidden="true"></i>
               Refresh
-            </button>
+            </Button>
           </div>
 
           {reconLoading ? (
@@ -328,10 +325,10 @@ export default function StockMovementsPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Current Stock</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Ledger Balance</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Drift</th>
+                      <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Current Stock</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Ledger Balance</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Drift</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

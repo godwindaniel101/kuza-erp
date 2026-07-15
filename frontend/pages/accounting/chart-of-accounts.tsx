@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
 import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
@@ -195,13 +196,10 @@ export default function ChartOfAccountsPage() {
         subtitle="Your account structure grouped by type"
         breadcrumbs={[{ label: 'Accounting', href: '/accounting' }, { label: 'Chart of Accounts' }]}
         actions={
-          <button
-            onClick={() => setShowAdd(true)}
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
+          <Button size="sm" onClick={() => setShowAdd(true)}>
+            <i className="bx bx-plus"></i>
             Add Account
-          </button>
+          </Button>
         }
       />
 
@@ -213,12 +211,9 @@ export default function ChartOfAccountsPage() {
           title="No accounts yet"
           description="Create your first account to build your chart of accounts"
           actions={
-            <button
-              onClick={() => setShowAdd(true)}
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-            >
+            <Button size="sm" onClick={() => setShowAdd(true)}>
               Add Account
-            </button>
+            </Button>
           }
         />
       ) : (
@@ -231,7 +226,7 @@ export default function ChartOfAccountsPage() {
                 key={type}
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden"
               >
-                <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide">
                     {TYPE_LABELS[type]}
                   </h2>
@@ -241,7 +236,7 @@ export default function ChartOfAccountsPage() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {rows.map((account) => (
                       <tr key={account.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] w-32">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm w-32">
                           <span
                             className="font-mono text-gray-600 dark:text-gray-400"
                             style={{ paddingLeft: `${account.depth * 20}px` }}
@@ -249,7 +244,7 @@ export default function ChartOfAccountsPage() {
                             {account.code}
                           </span>
                         </td>
-                        <td className="px-6 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2" style={{ paddingLeft: `${account.depth * 20}px` }}>
                             <span className="font-medium text-gray-900 dark:text-white">{account.name}</span>
                             {account.isSystem && (
@@ -271,14 +266,14 @@ export default function ChartOfAccountsPage() {
                             </p>
                           )}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] w-32">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm w-32">
                           <StatusBadge
                             variant={account.isActive ? 'success' : 'error'}
                             label={account.isActive ? 'Active' : 'Inactive'}
                             size="sm"
                           />
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-right text-sm w-32">
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm w-32">
                           {!account.isSystem ? (
                             <div className="flex items-center justify-end gap-1">
                               <button
@@ -291,14 +286,14 @@ export default function ChartOfAccountsPage() {
                                   })
                                 }
                                 title="Edit"
-                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                               >
                                 <i className="bx bx-edit" aria-hidden="true"></i>
                               </button>
                               <button
                                 onClick={() => toggleActive(account)}
                                 title={account.isActive ? 'Deactivate' : 'Activate'}
-                                className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full ${
+                                className={`h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
                                   account.isActive ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
                                 }`}
                               >
@@ -351,7 +346,7 @@ export default function ChartOfAccountsPage() {
             placeholder="e.g. Accounts Receivable"
           />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Parent account</label>
+            <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300">Parent account</label>
             <SearchableSelect
               options={parentOptions}
               value={addForm.parentId}
@@ -370,22 +365,12 @@ export default function ChartOfAccountsPage() {
             placeholder="Optional description"
           />
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowAdd(false)}
-              disabled={saving}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button variant="secondary" type="button" onClick={() => setShowAdd(false)} disabled={saving}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={saving}
-              className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type="button" onClick={handleAdd} disabled={saving}>
               {saving ? 'Saving...' : 'Create Account'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -416,22 +401,12 @@ export default function ChartOfAccountsPage() {
               checkboxLabel="Active"
             />
             <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditForm(null)}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
+              <Button variant="secondary" type="button" onClick={() => setEditForm(null)} disabled={saving}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleEdit}
-                disabled={saving}
-                className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
+              </Button>
+              <Button type="button" onClick={handleEdit} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </div>
         )}

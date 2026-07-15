@@ -7,6 +7,7 @@ import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
 import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import { formatMoney, todayIso, useCurrency } from '@/lib/format';
 
 interface CustomerOption {
@@ -156,7 +157,7 @@ export default function NewInvoicePage() {
       {/* Header fields */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300">
             Customer<span className="text-red-500 ml-0.5">*</span>
           </label>
           <SearchableSelect
@@ -273,7 +274,7 @@ export default function NewInvoicePage() {
                     onClick={() => removeLine(line.key)}
                     disabled={lines.length <= 1}
                     title="Remove line"
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <i className="bx bx-trash" aria-hidden="true"></i>
                   </button>
@@ -283,14 +284,10 @@ export default function NewInvoicePage() {
           })}
         </div>
         <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-start justify-between flex-wrap gap-4">
-          <button
-            type="button"
-            onClick={() => setLines((prev) => [...prev, newLine()])}
-            className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center"
-          >
-            <i className="bx bx-plus mr-1"></i>
+          <Button variant="ghost" size="sm" type="button" onClick={() => setLines((prev) => [...prev, newLine()])}>
+            <i className="bx bx-plus"></i>
             Add line
-          </button>
+          </Button>
           {/* Totals footer */}
           <div className="text-sm space-y-1 min-w-[240px]">
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
@@ -325,21 +322,12 @@ export default function NewInvoicePage() {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push('/sales/invoices')}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
+        <Button variant="secondary" type="button" onClick={() => router.push('/sales/invoices')}>
           Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-        >
+        </Button>
+        <Button type="button" onClick={handleSave} disabled={!canSave}>
           {saving ? 'Creating...' : 'Create Invoice'}
-        </button>
+        </Button>
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

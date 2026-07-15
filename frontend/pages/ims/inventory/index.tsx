@@ -9,6 +9,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn, type RowAction } from '@/components/ui/DataTable';
 import { useTenantStore } from '@/store/globalStore';
@@ -310,20 +311,14 @@ export default function InventoryPage() {
         ]}
         actions={
           <>
-            <button
-              onClick={() => setShowBulkUpload(true)}
-              className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <i className="bx bx-upload mr-2"></i>
+            <Button variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>
+              <i className="bx bx-upload"></i>
               {t('bulkUpload')}
-            </button>
+            </Button>
             <PermissionGuard permission="inventory.create">
-              <Link
-                href="/ims/inventory/create"
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
+              <Button href="/ims/inventory/create" variant="primary" size="sm">
                 {term(businessType, 'addItem')}
-              </Link>
+              </Button>
             </PermissionGuard>
           </>
         }
@@ -414,20 +409,14 @@ export default function InventoryPage() {
             actions={
               <>
                 <PermissionGuard permission="inventory.create">
-                  <Link
-                    href="/ims/inventory/create"
-                    className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-                  >
+                  <Button href="/ims/inventory/create" variant="primary" size="sm">
                     {term(businessType, 'addItem')}
-                  </Link>
+                  </Button>
                 </PermissionGuard>
-                <button
-                  onClick={() => setShowBulkUpload(true)}
-                  className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <i className="bx bx-upload mr-2"></i>
+                <Button variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>
+                  <i className="bx bx-upload"></i>
                   {t('bulkUpload')}
-                </button>
+                </Button>
               </>
             }
           />
@@ -450,19 +439,19 @@ export default function InventoryPage() {
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">{t('deleteWarning') || 'This action cannot be undone.'}</p>
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={deleting}
             >
               {t('cancel') || 'Cancel'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="danger"
               onClick={handleDeleteConfirm}
               disabled={deleting}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center"
             >
               {deleting ? (
                 <>
@@ -487,7 +476,7 @@ export default function InventoryPage() {
                   {t('delete') || 'Delete'}
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

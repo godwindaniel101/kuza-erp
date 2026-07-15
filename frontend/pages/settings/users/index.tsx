@@ -9,6 +9,7 @@ import Toast from '@/components/Toast';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function UsersPage() {
   const { t } = useTranslation('common');
@@ -97,24 +98,24 @@ export default function UsersPage() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('name')}</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('email')}</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('roles')}</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('status')}</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('actions')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('name')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('email')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('roles')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                 {users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="px-6 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">{user.email}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {user.roles?.map((r: any) => r.name).join(', ') || '-'}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {user.isActive ? (
                           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
                             {t('active')}
@@ -125,7 +126,7 @@ export default function UsersPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                         <PermissionGuard permission="users.edit">
                           <Link
                             href={`/settings/users/edit/${user.id}`}
@@ -165,32 +166,33 @@ export default function UsersPage() {
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('add')} {t('user')}</h3>
             <div className="space-y-3">
-              <input
+              <FormField
                 type="text"
+                name="newUserName"
                 value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                onChange={(value) => setNewUser({ ...newUser, name: value })}
                 placeholder={t('name')}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
-              <input
+              <FormField
                 type="email"
+                name="newUserEmail"
                 value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                onChange={(value) => setNewUser({ ...newUser, email: value })}
                 placeholder={t('email')}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
-              <input
-                type="password"
+              <FormField
+                type="text"
+                name="newUserPassword"
                 value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                onChange={(value) => setNewUser({ ...newUser, password: value })}
                 placeholder={t('password')}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                inputProps={{ type: 'password' }}
               />
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button className="h-9 px-4 inline-flex items-center border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md text-[13px]" onClick={() => setShowCreate(false)}>{t('cancel')}</button>
-              <button
-                className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors disabled:opacity-50"
+              <Button variant="secondary" onClick={() => setShowCreate(false)}>{t('cancel')}</Button>
+              <Button
+                variant="primary"
                 disabled={!newUser.name || !newUser.email || !newUser.password || saving}
                 onClick={async () => {
                   setSaving(true);
@@ -211,7 +213,7 @@ export default function UsersPage() {
                 }}
               >
                 {saving ? t('saving') || 'Saving...' : t('save')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

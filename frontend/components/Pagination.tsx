@@ -1,4 +1,5 @@
 import { useTranslation } from 'next-i18next';
+import Button from '@/components/ui/Button';
 
 interface PaginationProps {
   currentPage: number;
@@ -29,13 +30,13 @@ export default function Pagination({
         {t('showing') || 'Showing'} {startIndex + 1}-{endIndex} {t('of') || 'of'} {totalItems} {t('items') || 'items'}
       </div>
       <div className="flex space-x-2">
-        <button
+        <Button
+          variant="secondary"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           {t('previous') || 'Previous'}
-        </button>
+        </Button>
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
           // Show first page, last page, current page, and pages around current
           if (
@@ -44,30 +45,26 @@ export default function Pagination({
             (page >= currentPage - 1 && page <= currentPage + 1)
           ) {
             return (
-              <button
+              <Button
                 key={page}
+                variant={currentPage === page ? 'primary' : 'secondary'}
                 onClick={() => onPageChange(page)}
-                className={`px-4 py-2 border rounded-lg transition-colors ${
-                  currentPage === page
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
               >
                 {page}
-              </button>
+              </Button>
             );
           } else if (page === currentPage - 2 || page === currentPage + 2) {
             return <span key={page} className="px-2 text-gray-500">...</span>;
           }
           return null;
         })}
-        <button
+        <Button
+          variant="secondary"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           {t('next') || 'Next'}
-        </button>
+        </Button>
       </div>
     </div>
   );

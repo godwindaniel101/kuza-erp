@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import Link from 'next/link';
 
 export default function MyLeavesPage() {
@@ -40,13 +41,10 @@ export default function MyLeavesPage() {
         subtitle="Your time off, requested and approved"
         breadcrumbs={[{ label: 'Me' }, { label: t('myLeaves') }]}
         actions={
-          <button
-            onClick={createLeaveRequest}
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors inline-flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
-            {t('requestLeave')}
-          </button>
+          <Button size="sm" onClick={createLeaveRequest}>
+            <i className="bx bx-plus"></i>
+            <span>{t('requestLeave')}</span>
+          </Button>
         }
       />
 
@@ -59,22 +57,22 @@ export default function MyLeavesPage() {
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('leaveType')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('startDate')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('endDate')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('days')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('status')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('actions')}
                 </th>
               </tr>
@@ -82,26 +80,26 @@ export default function MyLeavesPage() {
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {leaves.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-3 text-center text-gray-500">
                     {t('noLeaveRequests')}
                   </td>
                 </tr>
               ) : (
                 leaves.map((leave) => (
                   <tr key={leave.id}>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {leave.leaveType?.name || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(leave.startDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(leave.endDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {leave.days || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           leave.status === 'approved'
@@ -114,7 +112,7 @@ export default function MyLeavesPage() {
                         {leave.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                       {leave.status === 'pending' && (
                         <button className="text-red-600 hover:text-red-900">{t('cancel')}</button>
                       )}

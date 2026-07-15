@@ -6,6 +6,8 @@ import { useTranslation } from 'next-i18next';
 import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
+import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 
 export default function CreatePerformanceReviewPage() {
   const { t } = useTranslation('common');
@@ -115,12 +117,9 @@ export default function CreatePerformanceReviewPage() {
           { label: t('create') || 'Create' },
         ]}
         actions={
-          <button
-            onClick={() => router.back()}
-            className="h-8 px-3 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center"
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
             {t('cancel')}
-          </button>
+          </Button>
         }
       />
 
@@ -133,78 +132,54 @@ export default function CreatePerformanceReviewPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('employee')} *
-              </label>
-              <select
-                required
-                value={formData.employeeId}
-                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('select')} {t('employee')}</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.firstName} {emp.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormField
+              type="select"
+              name="employeeId"
+              label={t('employee')}
+              required
+              value={formData.employeeId}
+              onChange={(value) => setFormData({ ...formData, employeeId: value })}
+              placeholder={`${t('select')} ${t('employee')}`}
+              options={employees.map((emp) => ({ value: emp.id, label: `${emp.firstName} ${emp.lastName}` }))}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('reviewPeriod')} *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.reviewPeriod}
-                onChange={(e) => setFormData({ ...formData, reviewPeriod: e.target.value })}
-                placeholder="e.g., Q1 2024"
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="text"
+              name="reviewPeriod"
+              label={t('reviewPeriod')}
+              required
+              value={formData.reviewPeriod}
+              onChange={(value) => setFormData({ ...formData, reviewPeriod: value })}
+              placeholder="e.g., Q1 2024"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('reviewDate')} *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.reviewDate}
-                onChange={(e) => setFormData({ ...formData, reviewDate: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="date"
+              name="reviewDate"
+              label={t('reviewDate')}
+              required
+              value={formData.reviewDate}
+              onChange={(value) => setFormData({ ...formData, reviewDate: value })}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('periodStart')} *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.periodStart}
-                onChange={(e) => setFormData({ ...formData, periodStart: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="date"
+              name="periodStart"
+              label={t('periodStart')}
+              required
+              value={formData.periodStart}
+              onChange={(value) => setFormData({ ...formData, periodStart: value })}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('periodEnd')} *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.periodEnd}
-                onChange={(e) => setFormData({ ...formData, periodEnd: e.target.value })}
-                min={formData.periodStart}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="date"
+              name="periodEnd"
+              label={t('periodEnd')}
+              required
+              value={formData.periodEnd}
+              onChange={(value) => setFormData({ ...formData, periodEnd: value })}
+              inputProps={{ min: formData.periodStart }}
+            />
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
@@ -216,29 +191,25 @@ export default function CreatePerformanceReviewPage() {
                 placeholder={t('goalTitle')}
                 value={newGoal.title}
                 onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
               <input
                 type="text"
                 placeholder={t('description')}
                 value={newGoal.description}
                 onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
               <input
                 type="number"
                 placeholder={t('targetValue')}
                 value={newGoal.targetValue}
                 onChange={(e) => setNewGoal({ ...newGoal, targetValue: parseFloat(e.target.value) || 0 })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
-              <button
-                type="button"
-                onClick={addGoal}
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-              >
+              <Button type="button" onClick={addGoal}>
                 {t('add')} {t('goal')}
-              </button>
+              </Button>
             </div>
 
             {formData.goals.length > 0 && (
@@ -253,7 +224,7 @@ export default function CreatePerformanceReviewPage() {
                     <button
                       type="button"
                       onClick={() => removeGoal(index)}
-                      className="ml-4 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      className="ml-4 h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                     >
                       <i className="bx bx-trash"></i>
                     </button>
@@ -272,7 +243,7 @@ export default function CreatePerformanceReviewPage() {
                 placeholder={t('criteria')}
                 value={newRating.criteria}
                 onChange={(e) => setNewRating({ ...newRating, criteria: e.target.value })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
               <input
                 type="number"
@@ -281,22 +252,18 @@ export default function CreatePerformanceReviewPage() {
                 placeholder={t('rating')}
                 value={newRating.rating}
                 onChange={(e) => setNewRating({ ...newRating, rating: parseInt(e.target.value) || 5 })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
               <input
                 type="text"
                 placeholder={t('comments')}
                 value={newRating.comments}
                 onChange={(e) => setNewRating({ ...newRating, comments: e.target.value })}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
-              <button
-                type="button"
-                onClick={addRating}
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-              >
+              <Button type="button" onClick={addRating}>
                 {t('add')} {t('rating')}
-              </button>
+              </Button>
             </div>
 
             {formData.ratings.length > 0 && (
@@ -311,7 +278,7 @@ export default function CreatePerformanceReviewPage() {
                     <button
                       type="button"
                       onClick={() => removeRating(index)}
-                      className="ml-4 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      className="ml-4 h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                     >
                       <i className="bx bx-trash"></i>
                     </button>
@@ -327,48 +294,34 @@ export default function CreatePerformanceReviewPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('strengths')}
-              </label>
-              <textarea
-                value={formData.strengths}
-                onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
-                rows={4}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                placeholder={t('enterStrengths')}
-              />
-            </div>
+            <FormField
+              type="textarea"
+              name="strengths"
+              label={t('strengths')}
+              rows={4}
+              value={formData.strengths}
+              onChange={(value) => setFormData({ ...formData, strengths: value })}
+              placeholder={t('enterStrengths')}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('areasForImprovement')}
-              </label>
-              <textarea
-                value={formData.areasForImprovement}
-                onChange={(e) => setFormData({ ...formData, areasForImprovement: e.target.value })}
-                rows={4}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                placeholder={t('enterAreasForImprovement')}
-              />
-            </div>
+            <FormField
+              type="textarea"
+              name="areasForImprovement"
+              label={t('areasForImprovement')}
+              rows={4}
+              value={formData.areasForImprovement}
+              onChange={(value) => setFormData({ ...formData, areasForImprovement: value })}
+              placeholder={t('enterAreasForImprovement')}
+            />
           </div>
 
           <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" disabled={loading}>
               {loading ? t('saving') : t('create')}
-            </button>
+            </Button>
           </div>
         </form>
       </Card>

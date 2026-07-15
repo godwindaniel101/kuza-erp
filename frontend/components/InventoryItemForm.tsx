@@ -5,6 +5,8 @@ import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import Modal from '@/components/Modal';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 interface InventoryItemFormProps {
   itemId?: string;
@@ -1083,47 +1085,37 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-4">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => router.push('/ims/inventory')}
-            className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
           >
             {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={saving}>
             {saving ? t('saving') || 'Saving...' : isEditMode ? t('save') || 'Save' : t('create') || 'Create'}
-          </button>
+          </Button>
         </div>
       </form>
 
       {/* Add Category Modal */}
       <Modal isOpen={showAddCategory} onClose={() => setShowAddCategory(false)} title={t('addCategory') || 'Add Category'}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('categoryName')}</label>
-            <input
-              type="text"
-              value={newCategory.name}
-              onChange={(e) => setNewCategory({ name: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('categoryName')}
-            />
-          </div>
+          <FormField
+            name="categoryName"
+            type="text"
+            label={t('categoryName')}
+            value={newCategory.name}
+            onChange={(value) => setNewCategory({ name: value })}
+            placeholder={t('categoryName')}
+          />
           <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setShowAddCategory(false)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
-            >
+            <Button type="button" variant="secondary" onClick={() => setShowAddCategory(false)}>
               {t('cancel')}
-            </button>
-            <button type="button" onClick={handleAddCategory} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+            </Button>
+            <Button type="button" variant="primary" onClick={handleAddCategory}>
               {t('add')}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1131,27 +1123,21 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       {/* Add Subcategory Modal */}
       <Modal isOpen={showAddSubcategory} onClose={() => setShowAddSubcategory(false)} title={t('addSubcategory') || 'Add Subcategory'}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('subcategoryName')}</label>
-            <input
-              type="text"
-              value={newSubcategory.name}
-              onChange={(e) => setNewSubcategory({ name: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('subcategoryName')}
-            />
-          </div>
+          <FormField
+            name="subcategoryName"
+            type="text"
+            label={t('subcategoryName')}
+            value={newSubcategory.name}
+            onChange={(value) => setNewSubcategory({ name: value })}
+            placeholder={t('subcategoryName')}
+          />
           <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setShowAddSubcategory(false)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
-            >
+            <Button type="button" variant="secondary" onClick={() => setShowAddSubcategory(false)}>
               {t('cancel')}
-            </button>
-            <button type="button" onClick={handleAddSubcategory} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+            </Button>
+            <Button type="button" variant="primary" onClick={handleAddSubcategory}>
               {t('add')}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1159,39 +1145,30 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       {/* Add UOM Modal */}
       <Modal isOpen={showAddUom} onClose={() => setShowAddUom(false)} title={t('addUom') || 'Add UOM'}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('name')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={newUom.name}
-              onChange={(e) => setNewUom({ ...newUom, name: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('name')}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('abbreviation')}</label>
-            <input
-              type="text"
-              value={newUom.abbreviation}
-              onChange={(e) => setNewUom({ ...newUom, abbreviation: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('abbreviation')}
-            />
-          </div>
+          <FormField
+            name="uomName"
+            type="text"
+            label={t('name')}
+            required
+            value={newUom.name}
+            onChange={(value) => setNewUom({ ...newUom, name: value })}
+            placeholder={t('name')}
+          />
+          <FormField
+            name="uomAbbreviation"
+            type="text"
+            label={t('abbreviation')}
+            value={newUom.abbreviation}
+            onChange={(value) => setNewUom({ ...newUom, abbreviation: value })}
+            placeholder={t('abbreviation')}
+          />
           <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setShowAddUom(false)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
-            >
+            <Button type="button" variant="secondary" onClick={() => setShowAddUom(false)}>
               {t('cancel')}
-            </button>
-            <button type="button" onClick={handleAddUom} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+            </Button>
+            <Button type="button" variant="primary" onClick={handleAddUom}>
               {t('add')}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1239,18 +1216,16 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('factor') || 'Factor'} <span className="text-red-500">*</span>
-            </label>
-            <input
+            <FormField
+              name="conversionFactor"
               type="number"
-              step="0.000001"
-              min="0.000001"
-              value={newConversion.factor}
-              onChange={(e) => setNewConversion({ ...newConversion, factor: e.target.value })}
-              placeholder="e.g., 0.5, 2, 10"
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+              label={t('factor') || 'Factor'}
               required
+              step={0.000001}
+              min={0.000001}
+              value={newConversion.factor}
+              onChange={(value) => setNewConversion({ ...newConversion, factor: value })}
+              placeholder="e.g., 0.5, 2, 10"
             />
             {conversionExample && (
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 italic">
@@ -1259,24 +1234,24 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             )}
           </div>
           <div className="flex justify-end space-x-3">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowAddConversion(false);
                 setNewConversion({ fromUomId: '', toUomId: '', factor: '' });
               }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
             >
               {t('cancel')}
-            </button>
-            <button 
-              type="button" 
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
               onClick={handleAddConversion}
               disabled={!newConversion.fromUomId || !newConversion.toUomId || !newConversion.factor || newConversion.fromUomId === newConversion.toUomId}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('add')}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1369,13 +1344,9 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           </div>
 
           <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowImageUpload(false)}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700"
-            >
+            <Button type="button" variant="primary" onClick={() => setShowImageUpload(false)}>
               {t('done')}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

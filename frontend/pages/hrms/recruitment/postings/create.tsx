@@ -6,6 +6,8 @@ import { useTranslation } from 'next-i18next';
 import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
+import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 
 export default function CreateJobPostingPage() {
   const { t } = useTranslation('common');
@@ -82,12 +84,9 @@ export default function CreateJobPostingPage() {
           { label: t('create') || 'Create' },
         ]}
         actions={
-          <button
-            onClick={() => router.back()}
-            className="h-8 px-3 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center"
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
             {t('cancel')}
-          </button>
+          </Button>
         }
       />
 
@@ -100,162 +99,115 @@ export default function CreateJobPostingPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('title')} *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder="e.g., Senior Software Engineer"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('department')}
-              </label>
-              <select
-                value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('select')} {t('department')}</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('position')}
-              </label>
-              <select
-                value={formData.positionId}
-                onChange={(e) => setFormData({ ...formData, positionId: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('select')} {t('position')}</option>
-                {positions.map((pos) => (
-                  <option key={pos.id} value={pos.id}>{pos.title}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('openings')} *
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={formData.openings}
-                onChange={(e) => setFormData({ ...formData, openings: parseInt(e.target.value) || 1 })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('salaryMin')}
-              </label>
-              <input
-                type="number"
-                value={formData.salaryMin}
-                onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder="Min salary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('salaryMax')}
-              </label>
-              <input
-                type="number"
-                value={formData.salaryMax}
-                onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder="Max salary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('closingDate')}
-              </label>
-              <input
-                type="date"
-                value={formData.closingDate}
-                onChange={(e) => setFormData({ ...formData, closingDate: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('status')}
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="open">{t('open')}</option>
-                <option value="closed">{t('closed')}</option>
-                <option value="draft">{t('draft')}</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('description')} *
-            </label>
-            <textarea
+            <FormField
+              className="md:col-span-3"
+              type="text"
+              name="title"
+              label={t('title')}
               required
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={6}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-              placeholder="Job description..."
+              value={formData.title}
+              onChange={(value) => setFormData({ ...formData, title: value })}
+              placeholder="e.g., Senior Software Engineer"
+            />
+
+            <FormField
+              type="select"
+              name="departmentId"
+              label={t('department')}
+              value={formData.departmentId}
+              onChange={(value) => setFormData({ ...formData, departmentId: value })}
+              placeholder={`${t('select')} ${t('department')}`}
+              options={departments.map((dept) => ({ value: dept.id, label: dept.name }))}
+            />
+
+            <FormField
+              type="select"
+              name="positionId"
+              label={t('position')}
+              value={formData.positionId}
+              onChange={(value) => setFormData({ ...formData, positionId: value })}
+              placeholder={`${t('select')} ${t('position')}`}
+              options={positions.map((pos) => ({ value: pos.id, label: pos.title }))}
+            />
+
+            <FormField
+              type="number"
+              name="openings"
+              label={t('openings')}
+              required
+              min={1}
+              value={formData.openings}
+              onChange={(value) => setFormData({ ...formData, openings: parseInt(value) || 1 })}
+            />
+
+            <FormField
+              type="number"
+              name="salaryMin"
+              label={t('salaryMin')}
+              value={formData.salaryMin}
+              onChange={(value) => setFormData({ ...formData, salaryMin: value })}
+              placeholder="Min salary"
+            />
+
+            <FormField
+              type="number"
+              name="salaryMax"
+              label={t('salaryMax')}
+              value={formData.salaryMax}
+              onChange={(value) => setFormData({ ...formData, salaryMax: value })}
+              placeholder="Max salary"
+            />
+
+            <FormField
+              type="date"
+              name="closingDate"
+              label={t('closingDate')}
+              value={formData.closingDate}
+              onChange={(value) => setFormData({ ...formData, closingDate: value })}
+            />
+
+            <FormField
+              type="select"
+              name="status"
+              label={t('status')}
+              value={formData.status}
+              onChange={(value) => setFormData({ ...formData, status: value })}
+              options={[
+                { value: 'open', label: t('open') },
+                { value: 'closed', label: t('closed') },
+                { value: 'draft', label: t('draft') },
+              ]}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('requirements')}
-            </label>
-            <textarea
-              value={formData.requirements}
-              onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-              placeholder="Requirements..."
-            />
-          </div>
+          <FormField
+            type="textarea"
+            name="description"
+            label={t('description')}
+            required
+            rows={6}
+            value={formData.description}
+            onChange={(value) => setFormData({ ...formData, description: value })}
+            placeholder="Job description..."
+          />
+
+          <FormField
+            type="textarea"
+            name="requirements"
+            label={t('requirements')}
+            rows={4}
+            value={formData.requirements}
+            onChange={(value) => setFormData({ ...formData, requirements: value })}
+            placeholder="Requirements..."
+          />
 
           <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" disabled={loading}>
               {loading ? t('saving') : t('create')}
-            </button>
+            </Button>
           </div>
         </form>
       </Card>

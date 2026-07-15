@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
@@ -181,12 +182,9 @@ export default function BillingPage() {
           title="Could not load billing information"
           description="Please try again"
           actions={
-            <button
-              onClick={load}
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700"
-            >
+            <Button variant="primary" size="sm" onClick={load}>
               Retry
-            </button>
+            </Button>
           }
         />
       ) : (
@@ -303,17 +301,14 @@ export default function BillingPage() {
                         </li>
                       ))}
                     </ul>
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => setSwitchTarget(plan)}
                       disabled={isCurrent}
-                      className={`mt-5 w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isCurrent
-                          ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                          : 'bg-brand-600 text-white hover:bg-brand-700'
-                      }`}
+                      className="mt-5 w-full"
                     >
                       {isCurrent ? 'Current plan' : 'Switch plan'}
-                    </button>
+                    </Button>
                   </div>
                 );
               })}
@@ -337,22 +332,22 @@ export default function BillingPage() {
               Plan limits apply immediately. Downgrading may restrict access to features above the new plan&apos;s limits.
             </p>
             <div className="flex justify-end space-x-3 pt-2">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setSwitchTarget(null)}
                 disabled={switching}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={handleSwitch}
                 disabled={switching}
-                className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 {switching ? 'Switching...' : 'Confirm Switch'}
-              </button>
+              </Button>
             </div>
           </div>
         )}

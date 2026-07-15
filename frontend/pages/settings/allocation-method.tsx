@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import Toast from '@/components/Toast';
 
 type AllocationMethod = 'FIFO' | 'LIFO' | 'FEFO';
@@ -141,11 +142,7 @@ export default function AllocationMethodSettingsPage() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-2"
-              >
+              <Button variant="primary" onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <>
                     <i className="bx bx-loader-alt bx-spin text-lg"></i>
@@ -157,7 +154,7 @@ export default function AllocationMethodSettingsPage() {
                     <span>{t('save') || 'Save'}</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

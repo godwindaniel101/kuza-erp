@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 
 interface InventoryItem {
@@ -153,7 +154,7 @@ export default function NewAdjustmentPage() {
 
       {/* Item rows */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-visible mb-6">
-        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid grid-cols-12 gap-3 text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid grid-cols-12 gap-3 text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
           <div className="col-span-5">Item</div>
           <div className="col-span-2 text-right">Qty Change (+/-)</div>
           <div className="col-span-4">Line Reason</div>
@@ -205,7 +206,7 @@ export default function NewAdjustmentPage() {
                     onClick={() => removeRow(row.key)}
                     disabled={rows.length <= 1}
                     title="Remove row"
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <i className="bx bx-trash" aria-hidden="true"></i>
                   </button>
@@ -227,21 +228,12 @@ export default function NewAdjustmentPage() {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push('/ims/adjustments')}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
+        <Button type="button" variant="secondary" onClick={() => router.push('/ims/adjustments')}>
           Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-        >
+        </Button>
+        <Button type="button" variant="primary" onClick={handleSave} disabled={!canSave}>
           {saving ? 'Saving...' : 'Create Adjustment'}
-        </button>
+        </Button>
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

@@ -301,22 +301,22 @@ export default function OrderViewPage() {
                   <table className="w-full divide-y divide-gray-100 dark:divide-gray-800">
                     <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('item')}
                         </th>
-                        <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('quantity')}
                         </th>
-                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('salesPrice') || 'Sales Price'}
                         </th>
-                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('totalCost') || 'Total Cost'}
                         </th>
-                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('soldFor') || 'Sold For'}
                         </th>
-                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('profit')}
                         </th>
                       </tr>
@@ -347,19 +347,19 @@ export default function OrderViewPage() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 {Number(item.quantity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.uom?.name || item.uom?.abbreviation || ''}
                               </td>
-                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
                                 {formatCurrency(item.unitPrice || 0)}
                               </td>
-                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-600 dark:text-gray-400">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">
                                 {formatCurrency(item.costTotal || 0)}
                               </td>
-                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right font-medium text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
                                 {formatCurrency(item.totalPrice || 0)}
                               </td>
-                              <td className={`px-6 py-3 whitespace-nowrap text-[13px] text-right font-semibold ${itemProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              <td className={`px-6 py-3 whitespace-nowrap text-sm text-right font-semibold ${itemProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {itemProfit >= 0 ? '+' : ''}{formatCurrency(itemProfit)}
                               </td>
                             </tr>

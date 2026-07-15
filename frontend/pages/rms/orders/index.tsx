@@ -10,6 +10,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import StatusBadge from '@/components/ui/StatusBadge';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 const PAGE_SIZE = 20;
 
@@ -245,20 +247,14 @@ export default function OrdersPage() {
         breadcrumbs={[{ label: 'Restaurant' }, { label: t('orders') || 'Orders' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Link
-              href="/pos"
-              className="h-8 px-3 border border-brand-600 text-brand-700 dark:text-brand-300 dark:border-brand-500 rounded-lg text-[13px] font-medium hover:bg-brand-50 dark:hover:bg-brand-900/30 flex items-center"
-            >
-              <i className="bx bx-store-alt mr-2" aria-hidden="true"></i>
+            <Button href="/pos" variant="secondary" size="sm">
+              <i className="bx bx-store-alt" aria-hidden="true"></i>
               {t('openPos') || 'Open POS'}
-            </Link>
-            <Link
-              href="/rms/orders/create"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-            >
-              <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+            </Button>
+            <Button href="/rms/orders/create" variant="primary" size="sm">
+              <i className="bx bx-plus" aria-hidden="true"></i>
               {t('create')} {t('order')}
-            </Link>
+            </Button>
           </div>
         }
       />
@@ -281,12 +277,9 @@ export default function OrdersPage() {
             title={t('noOrdersYet') || 'No orders yet'}
             description={t('createYourFirstOrder') || 'Create your first order to get started'}
             actions={
-              <Link
-                href="/rms/orders/create"
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
+              <Button href="/rms/orders/create" variant="primary" size="sm">
                 {t('create')} {t('order')}
-              </Link>
+              </Button>
             }
           />
         }
@@ -325,62 +318,54 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('paymentMode') || 'Payment Mode'} <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={paymentForm.paymentMode}
-                onChange={(e) => {
-                  const mode = e.target.value;
-                  const existingPayments = selectedOrder.payments || [];
-                  const totalPaid = existingPayments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
-                  const remainingBalance = Number(selectedOrder.totalAmount || 0) - totalPaid;
-                  setPaymentForm({
-                    ...paymentForm,
-                    paymentMode: mode,
-                    amount: mode === 'full' ? remainingBalance : paymentForm.amount,
-                  });
-                }}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              >
-                <option value="full">{t('fullPayment') || 'Full Payment'}</option>
-                <option value="partial">{t('partialPayment') || 'Partial Payment'}</option>
-              </select>
-            </div>
+            <FormField
+              name="paymentMode"
+              type="select"
+              label={t('paymentMode') || 'Payment Mode'}
+              required
+              value={paymentForm.paymentMode}
+              onChange={(value) => {
+                const mode = value;
+                const existingPayments = selectedOrder.payments || [];
+                const totalPaid = existingPayments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+                const remainingBalance = Number(selectedOrder.totalAmount || 0) - totalPaid;
+                setPaymentForm({
+                  ...paymentForm,
+                  paymentMode: mode,
+                  amount: mode === 'full' ? remainingBalance : paymentForm.amount,
+                });
+              }}
+              options={[
+                { value: 'full', label: t('fullPayment') || 'Full Payment' },
+                { value: 'partial', label: t('partialPayment') || 'Partial Payment' },
+              ]}
+            />
 
-            <div>
-              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('paymentMethod') || 'Payment Method'} <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={paymentForm.method}
-                onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              >
-                <option value="cash">{t('cash') || 'Cash'}</option>
-                <option value="bank_transfer">{t('bankTransfer') || 'Bank Transfer'}</option>
-                <option value="pos">{t('pos') || 'POS'}</option>
-                <option value="checkout">{t('checkout') || 'Checkout'}</option>
-              </select>
-            </div>
+            <FormField
+              name="method"
+              type="select"
+              label={t('paymentMethod') || 'Payment Method'}
+              required
+              value={paymentForm.method}
+              onChange={(value) => setPaymentForm({ ...paymentForm, method: value })}
+              options={[
+                { value: 'cash', label: t('cash') || 'Cash' },
+                { value: 'bank_transfer', label: t('bankTransfer') || 'Bank Transfer' },
+                { value: 'pos', label: t('pos') || 'POS' },
+                { value: 'checkout', label: t('checkout') || 'Checkout' },
+              ]}
+            />
 
-            <div>
-              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('amount') || 'Amount'} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={paymentForm.amount}
-                onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) || 0 })}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              />
-            </div>
+            <FormField
+              name="amount"
+              type="number"
+              label={t('amount') || 'Amount'}
+              required
+              step={0.01}
+              min={0.01}
+              value={paymentForm.amount}
+              onChange={(value) => setPaymentForm({ ...paymentForm, amount: Number(value) || 0 })}
+            />
 
             <div>
               <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -390,28 +375,28 @@ export default function OrdersPage() {
                 value={paymentForm.notes}
                 onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 text-[13px] border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   setShowPaymentModal(false);
                   setSelectedOrder(null);
                 }}
-                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center"
               >
                 {t('cancel') || 'Cancel'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={processingPayment}
-                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                variant="primary"
+                loading={processingPayment}
               >
                 {processingPayment ? (t('processing') || 'Processing...') : (t('processPayment') || 'Process Payment')}
-              </button>
+              </Button>
             </div>
           </form>
         )}

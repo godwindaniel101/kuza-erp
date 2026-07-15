@@ -208,13 +208,14 @@ export default function MenusPage() {
                       </Button>
                     </PermissionGuard>
                     <PermissionGuard permission="menus.delete">
-                      <button
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => handleDelete(menu.id, menu.name)}
-                        className="inline-flex items-center justify-center h-8 px-2.5 text-[13px] rounded-lg border border-red-300 dark:border-red-500/40 bg-white dark:bg-gray-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         title={t('delete') || 'Delete'}
                       >
                         <i className="bx bx-trash text-base"></i>
-                      </button>
+                      </Button>
                     </PermissionGuard>
                   </div>
                 </div>

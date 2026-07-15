@@ -7,8 +7,9 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 
 export default function CreatePositionPage() {
   const { t } = useTranslation('common');
@@ -72,29 +73,24 @@ export default function CreatePositionPage() {
         />
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('title')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('positionTitle') || 'Position title'}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('description')}</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                placeholder={t('positionDescription') || 'Position description (optional)'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="title"
+              label={t('title')}
+              required
+              value={formData.title}
+              onChange={(value) => setFormData({ ...formData, title: value })}
+              placeholder={t('positionTitle') || 'Position title'}
+            />
+            <FormField
+              type="textarea"
+              name="description"
+              label={t('description')}
+              rows={3}
+              value={formData.description}
+              onChange={(value) => setFormData({ ...formData, description: value })}
+              placeholder={t('positionDescription') || 'Position description (optional)'}
+            />
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('department')}</label>
               <SearchableSelect
@@ -107,16 +103,12 @@ export default function CreatePositionPage() {
               />
             </div>
             <div className="flex justify-end space-x-3 pt-4">
-              <Link href="/hrms/positions" className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <Button href="/hrms/positions" variant="secondary">
                 {t('cancel')}
-              </Link>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
-              >
+              </Button>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? t('creating') : t('create')}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

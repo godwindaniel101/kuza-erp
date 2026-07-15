@@ -6,6 +6,8 @@ import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateEmployeePage() {
   const { t } = useTranslation('common');
@@ -84,110 +86,79 @@ export default function CreateEmployeePage() {
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('firstName')}</label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('lastName')}</label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('employeeNumber')}
-              </label>
-              <input
-                type="text"
-                value={formData.employeeNumber}
-                onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('hireDate')}</label>
-              <input
-                type="date"
-                value={formData.hireDate}
-                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('department')}</label>
-              <select
-                value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('selectDepartment')}</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('position')}</label>
-              <select
-                value={formData.positionId}
-                onChange={(e) => setFormData({ ...formData, positionId: e.target.value })}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('selectPosition')}</option>
-                {positions.map((pos) => (
-                  <option key={pos.id} value={pos.id}>
-                    {pos.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('location')}</label>
-              <select
-                value={formData.locationId}
-                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
-                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              >
-                <option value="">{t('selectLocation')}</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormField
+              type="text"
+              name="firstName"
+              label={t('firstName')}
+              required
+              value={formData.firstName}
+              onChange={(value) => setFormData({ ...formData, firstName: value })}
+            />
+            <FormField
+              type="text"
+              name="lastName"
+              label={t('lastName')}
+              required
+              value={formData.lastName}
+              onChange={(value) => setFormData({ ...formData, lastName: value })}
+            />
+            <FormField
+              type="email"
+              name="email"
+              label={t('email')}
+              required
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
+            />
+            <FormField
+              type="text"
+              name="phone"
+              label={t('phone')}
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              inputProps={{ type: 'tel' }}
+            />
+            <FormField
+              type="text"
+              name="employeeNumber"
+              label={t('employeeNumber')}
+              value={formData.employeeNumber}
+              onChange={(value) => setFormData({ ...formData, employeeNumber: value })}
+            />
+            <FormField
+              type="date"
+              name="hireDate"
+              label={t('hireDate')}
+              value={formData.hireDate}
+              onChange={(value) => setFormData({ ...formData, hireDate: value })}
+            />
+            <FormField
+              type="select"
+              name="departmentId"
+              label={t('department')}
+              value={formData.departmentId}
+              onChange={(value) => setFormData({ ...formData, departmentId: value })}
+              placeholder={t('selectDepartment')}
+              options={departments.map((dept) => ({ value: dept.id, label: dept.name }))}
+            />
+            <FormField
+              type="select"
+              name="positionId"
+              label={t('position')}
+              value={formData.positionId}
+              onChange={(value) => setFormData({ ...formData, positionId: value })}
+              placeholder={t('selectPosition')}
+              options={positions.map((pos) => ({ value: pos.id, label: pos.title }))}
+            />
+            <FormField
+              type="select"
+              name="locationId"
+              label={t('location')}
+              value={formData.locationId}
+              onChange={(value) => setFormData({ ...formData, locationId: value })}
+              placeholder={t('selectLocation')}
+              options={locations.map((loc) => ({ value: loc.id, label: loc.name }))}
+            />
           </div>
 
           {/* Bank Account Information Section */}
@@ -196,121 +167,85 @@ export default function CreateEmployeePage() {
               {t('bankAccountInformation') || 'Bank Account Information'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('bankName') || 'Bank Name'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankName}
-                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('accountNumber') || 'Account Number'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankAccountNumber}
-                  onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('routingNumber') || 'Routing Number'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankRoutingNumber}
-                  onChange={(e) => setFormData({ ...formData, bankRoutingNumber: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('accountType') || 'Account Type'}
-                </label>
-                <select
-                  value={formData.bankAccountType}
-                  onChange={(e) => setFormData({ ...formData, bankAccountType: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                >
-                  <option value="">{t('selectAccountType') || 'Select Account Type'}</option>
-                  <option value="checking">{t('checking') || 'Checking'}</option>
-                  <option value="savings">{t('savings') || 'Savings'}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('accountHolderName') || 'Account Holder Name'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankAccountHolderName}
-                  onChange={(e) => setFormData({ ...formData, bankAccountHolderName: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('paymentMethod') || 'Payment Method'}
-                </label>
-                <select
-                  value={formData.paymentMethod}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                >
-                  <option value="">{t('selectPaymentMethod') || 'Select Payment Method'}</option>
-                  <option value="bank_transfer">{t('bankTransfer') || 'Bank Transfer'}</option>
-                  <option value="check">{t('check') || 'Check'}</option>
-                  <option value="cash">{t('cash') || 'Cash'}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('swiftCode') || 'SWIFT Code (Optional)'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankSwiftCode}
-                  onChange={(e) => setFormData({ ...formData, bankSwiftCode: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  placeholder="e.g. CHASUS33"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('iban') || 'IBAN (Optional)'}
-                </label>
-                <input
-                  type="text"
-                  value={formData.bankIban}
-                  onChange={(e) => setFormData({ ...formData, bankIban: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  placeholder="e.g. GB82WEST12345698765432"
-                />
-              </div>
+              <FormField
+                type="text"
+                name="bankName"
+                label={t('bankName') || 'Bank Name'}
+                value={formData.bankName}
+                onChange={(value) => setFormData({ ...formData, bankName: value })}
+              />
+              <FormField
+                type="text"
+                name="bankAccountNumber"
+                label={t('accountNumber') || 'Account Number'}
+                value={formData.bankAccountNumber}
+                onChange={(value) => setFormData({ ...formData, bankAccountNumber: value })}
+              />
+              <FormField
+                type="text"
+                name="bankRoutingNumber"
+                label={t('routingNumber') || 'Routing Number'}
+                value={formData.bankRoutingNumber}
+                onChange={(value) => setFormData({ ...formData, bankRoutingNumber: value })}
+              />
+              <FormField
+                type="select"
+                name="bankAccountType"
+                label={t('accountType') || 'Account Type'}
+                value={formData.bankAccountType}
+                onChange={(value) => setFormData({ ...formData, bankAccountType: value })}
+                placeholder={t('selectAccountType') || 'Select Account Type'}
+                options={[
+                  { value: 'checking', label: t('checking') || 'Checking' },
+                  { value: 'savings', label: t('savings') || 'Savings' },
+                ]}
+              />
+              <FormField
+                type="text"
+                name="bankAccountHolderName"
+                label={t('accountHolderName') || 'Account Holder Name'}
+                value={formData.bankAccountHolderName}
+                onChange={(value) => setFormData({ ...formData, bankAccountHolderName: value })}
+              />
+              <FormField
+                type="select"
+                name="paymentMethod"
+                label={t('paymentMethod') || 'Payment Method'}
+                value={formData.paymentMethod}
+                onChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                placeholder={t('selectPaymentMethod') || 'Select Payment Method'}
+                options={[
+                  { value: 'bank_transfer', label: t('bankTransfer') || 'Bank Transfer' },
+                  { value: 'check', label: t('check') || 'Check' },
+                  { value: 'cash', label: t('cash') || 'Cash' },
+                ]}
+              />
+              <FormField
+                type="text"
+                name="bankSwiftCode"
+                label={t('swiftCode') || 'SWIFT Code (Optional)'}
+                value={formData.bankSwiftCode}
+                onChange={(value) => setFormData({ ...formData, bankSwiftCode: value })}
+                placeholder="e.g. CHASUS33"
+              />
+              <FormField
+                type="text"
+                name="bankIban"
+                label={t('iban') || 'IBAN (Optional)'}
+                value={formData.bankIban}
+                onChange={(value) => setFormData({ ...formData, bankIban: value })}
+                placeholder="e.g. GB82WEST12345698765432"
+              />
             </div>
           </div>
 
           <div className="flex space-x-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50"
-            >
+            <Button type="submit" variant="primary" disabled={loading}>
               {loading ? t('saving') : t('save')}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               {t('cancel')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

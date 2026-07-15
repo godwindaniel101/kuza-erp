@@ -194,7 +194,7 @@ export default function AiDesignerPage() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder={t('describeYourMenuDesign') || 'Describe how you want your menu to look...'}
-                className="h-9 flex-1 px-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 flex-1 px-3 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 disabled={sending}
               />
               <Button type="submit" disabled={!inputMessage.trim() || sending}>

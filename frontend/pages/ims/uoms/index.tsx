@@ -7,6 +7,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function UomsPage() {
   const { t } = useTranslation('common');
@@ -66,9 +67,9 @@ export default function UomsPage() {
         breadcrumbs={[{ label: t('inventory') || 'Inventory', href: '/ims/inventory' }, { label: t('uoms') }]}
         actions={
           <PermissionGuard permission="uoms.create">
-            <button onClick={() => setShowCreate(true)} className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center">
+            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
               {t('create')} {t('uom')}
-            </button>
+            </Button>
           </PermissionGuard>
         }
       />
@@ -90,9 +91,9 @@ export default function UomsPage() {
             <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noUomsYet') || 'No units yet'}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('create')} {t('uoms').toLowerCase()}.</p>
             <PermissionGuard permission="uoms.create">
-              <button onClick={() => setShowCreate(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2">
+              <Button variant="primary" onClick={() => setShowCreate(true)} className="mt-4">
                 {t('create')} {t('uom')}
-              </button>
+              </Button>
             </PermissionGuard>
           </div>
         ) : (
@@ -101,16 +102,16 @@ export default function UomsPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('name')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('abbreviation')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('default')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
@@ -164,9 +165,9 @@ export default function UomsPage() {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('conversions') || 'Conversions'}</h2>
           <PermissionGuard permission="uoms.create">
-            <button onClick={() => setShowCreateConversion(true)} className="px-3 py-1 text-sm bg-brand-600 text-white rounded hover:bg-brand-700">
+            <Button variant="primary" size="sm" onClick={() => setShowCreateConversion(true)}>
               {t('add')} {t('conversion') || 'Conversion'}
-            </button>
+            </Button>
           </PermissionGuard>
         </div>
         {conversions.length === 0 ? (
@@ -177,9 +178,9 @@ export default function UomsPage() {
             <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noConversionsYet') || 'No conversions yet'}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('addConversionsToConvertBetweenUnits') || 'Add conversions to convert between units'}</p>
             <PermissionGuard permission="uoms.create">
-              <button onClick={() => setShowCreateConversion(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2">
+              <Button variant="primary" onClick={() => setShowCreateConversion(true)} className="mt-4">
                 {t('add')} {t('conversion') || 'Conversion'}
-              </button>
+              </Button>
             </PermissionGuard>
           </div>
         ) : (
@@ -188,19 +189,19 @@ export default function UomsPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('fromUnit') || 'From Unit'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('toUnit') || 'To Unit'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('conversionFactor') || 'Factor'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('formula') || 'Formula'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
@@ -282,9 +283,9 @@ export default function UomsPage() {
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button className="h-9 px-4 inline-flex items-center border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md text-[13px]" onClick={() => setShowCreate(false)}>{t('cancel')}</button>
-              <button
-                className="px-4 py-2 bg-brand-600 text-white rounded-md disabled:opacity-50"
+              <Button variant="secondary" onClick={() => setShowCreate(false)}>{t('cancel')}</Button>
+              <Button
+                variant="primary"
                 disabled={!newUom.name || !newUom.abbreviation}
                 onClick={async () => {
                   try {
@@ -302,7 +303,7 @@ export default function UomsPage() {
                 }}
               >
                 {t('save')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -351,9 +352,9 @@ export default function UomsPage() {
               )}
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md" onClick={() => setShowCreateConversion(false)}>{t('cancel')}</button>
-              <button
-                className="px-4 py-2 bg-brand-600 text-white rounded-md disabled:opacity-50"
+              <Button variant="secondary" onClick={() => setShowCreateConversion(false)}>{t('cancel')}</Button>
+              <Button
+                variant="primary"
                 disabled={!newConversion.fromUomId || !newConversion.toUomId || !newConversion.factor}
                 onClick={async () => {
                   try {
@@ -371,7 +372,7 @@ export default function UomsPage() {
                 }}
               >
                 {t('save')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

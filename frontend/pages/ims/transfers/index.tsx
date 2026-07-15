@@ -129,25 +129,25 @@ export default function TransfersPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('transferNumber') || 'Transfer #'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('fromBranch') || 'From'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('toBranch') || 'To'}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('date')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('items')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('status')}
                     </th>
-                    <th className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
@@ -182,14 +182,14 @@ export default function TransfersPage() {
                             <>
                               <button
                                 onClick={() => handleStatusUpdate(transfer.id, 'in_transit')}
-                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                                 title={t('markInTransit') || 'Mark In Transit'}
                               >
                                 <i className="bx bx-send text-lg"></i>
                               </button>
                               <button
                                 onClick={() => handleStatusUpdate(transfer.id, 'cancelled')}
-                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                 title={t('cancel')}
                               >
                                 <i className="bx bx-x text-lg"></i>
@@ -199,7 +199,7 @@ export default function TransfersPage() {
                           {transfer.status === 'in_transit' && (
                             <Link
                               href={`/ims/transfers/${transfer.id}/receive`}
-                              className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                               title={t('receive') || 'Receive'}
                             >
                               <i className="bx bx-check-circle text-lg"></i>
@@ -208,7 +208,7 @@ export default function TransfersPage() {
                           {(transfer.status === 'pending' || transfer.status === 'cancelled') && (
                             <button
                               onClick={() => handleDelete(transfer.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                               title={t('delete')}
                             >
                               <i className="bx bx-trash text-lg"></i>

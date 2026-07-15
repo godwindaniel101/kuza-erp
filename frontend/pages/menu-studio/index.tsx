@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import {
   MenuSiteRecord,
   PublicMenuData,
@@ -52,9 +53,9 @@ type SiteForm = Pick<
 >;
 
 const inputClass =
-  'w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500';
+  'h-9 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500';
 const labelClass =
-  'block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1';
+  'block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1';
 const sectionClass =
   'rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4';
 
@@ -348,13 +349,14 @@ export default function MenuStudioPage() {
             </span>
 
             {dirty && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleSave}
-                disabled={saving}
-                className="h-8 px-3 rounded-lg bg-brand-600 text-[13px] font-medium text-white hover:bg-brand-700 disabled:opacity-50 flex items-center"
+                loading={saving}
               >
                 {saving ? 'Saving…' : 'Save changes'}
-              </button>
+              </Button>
             )}
 
             <PermissionGuard permission="settings.edit">
@@ -375,13 +377,14 @@ export default function MenuStudioPage() {
               </button>
             </PermissionGuard>
 
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleDownloadQr}
-              disabled={downloadingQr}
-              className="h-8 px-3 rounded-lg border border-gray-300 dark:border-gray-700 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 flex items-center"
+              loading={downloadingQr}
             >
               {downloadingQr ? 'Generating…' : 'Download QR'}
-            </button>
+            </Button>
 
             <a
               href={publicUrl}

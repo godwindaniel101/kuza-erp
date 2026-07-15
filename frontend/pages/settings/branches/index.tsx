@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 import { handleBulkUploadResponse, logBulkUploadErrors, type BulkUploadResponse } from '@/utils/bulkUploadHandler';
 
 export default function BranchesPage() {
@@ -344,7 +345,7 @@ export default function BranchesPage() {
                         e.stopPropagation();
                         setOpenMenuId(openMenuId === branch.id ? null : branch.id);
                       }}
-                      className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={t('actions') || 'Actions'}
                     >
                       <i className="bx bx-dots-vertical-rounded text-xl"></i>
@@ -459,96 +460,74 @@ export default function BranchesPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* First Row: Name | Contact Number | Email (1/3 each) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('name')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('name') || 'Name'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="name"
+              label={t('name')}
+              required
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+              placeholder={t('name') || 'Name'}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('contactNumber') || t('phone')}
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('phone') || 'Phone'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="phone"
+              label={t('contactNumber') || t('phone')}
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              placeholder={t('phone') || 'Phone'}
+              inputProps={{ type: 'tel' }}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('email')}
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('email') || 'Email'}
-              />
-            </div>
-          </div>
-
-          {/* Second Row: Address (full width) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('address')}
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              rows={3}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-              placeholder={t('address') || 'Address'}
+            <FormField
+              type="email"
+              name="email"
+              label={t('email')}
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
+              placeholder={t('email') || 'Email'}
             />
           </div>
 
+          {/* Second Row: Address (full width) */}
+          <FormField
+            type="textarea"
+            name="address"
+            label={t('address')}
+            rows={3}
+            value={formData.address}
+            onChange={(value) => setFormData({ ...formData, address: value })}
+            placeholder={t('address') || 'Address'}
+          />
+
           <div className="flex items-center space-x-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('default')}</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</span>
-            </label>
+            <FormField
+              type="checkbox"
+              name="isDefault"
+              checked={formData.isDefault}
+              onChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+              checkboxLabel={t('default')}
+            />
+            <FormField
+              type="checkbox"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              checkboxLabel={t('active')}
+            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={handleCloseModals}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={saving}
             >
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !formData.name.trim()}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={saving || !formData.name.trim()}>
               {saving ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -557,7 +536,7 @@ export default function BranchesPage() {
               ) : (
                 t('save')
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -572,96 +551,74 @@ export default function BranchesPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* First Row: Name | Contact Number | Email (1/3 each) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('name')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('name') || 'Name'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="name"
+              label={t('name')}
+              required
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+              placeholder={t('name') || 'Name'}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('contactNumber') || t('phone')}
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('phone') || 'Phone'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="phone"
+              label={t('contactNumber') || t('phone')}
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              placeholder={t('phone') || 'Phone'}
+              inputProps={{ type: 'tel' }}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('email')}
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('email') || 'Email'}
-              />
-            </div>
-          </div>
-
-          {/* Second Row: Address (full width) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('address')}
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              rows={3}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
-              placeholder={t('address') || 'Address'}
+            <FormField
+              type="email"
+              name="email"
+              label={t('email')}
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
+              placeholder={t('email') || 'Email'}
             />
           </div>
 
+          {/* Second Row: Address (full width) */}
+          <FormField
+            type="textarea"
+            name="address"
+            label={t('address')}
+            rows={3}
+            value={formData.address}
+            onChange={(value) => setFormData({ ...formData, address: value })}
+            placeholder={t('address') || 'Address'}
+          />
+
           <div className="flex items-center space-x-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('default')}</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</span>
-            </label>
+            <FormField
+              type="checkbox"
+              name="isDefault"
+              checked={formData.isDefault}
+              onChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+              checkboxLabel={t('default')}
+            />
+            <FormField
+              type="checkbox"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              checkboxLabel={t('active')}
+            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={handleCloseModals}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={saving}
             >
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !formData.name.trim()}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={saving || !formData.name.trim()}>
               {saving ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -670,7 +627,7 @@ export default function BranchesPage() {
               ) : (
                 t('update') || t('save')
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -797,33 +754,29 @@ export default function BranchesPage() {
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowBulkUpload(false);
                 setFile(null);
               }}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('cancel') || 'Cancel'}
-            </button>
-            
-            <button
-              type="submit"
-              disabled={!file || uploading}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+
+            <Button type="submit" variant="primary" disabled={!file || uploading}>
               {uploading ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   {t('uploading') || 'Uploading...'}
                 </span>
               ) : (
-                file ? 
-                  `${t('upload') || 'Upload'} (${file.name})` : 
+                file ?
+                  `${t('upload') || 'Upload'} (${file.name})` :
                   `${t('upload') || 'Upload'} ${t('file') || 'File'}`
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

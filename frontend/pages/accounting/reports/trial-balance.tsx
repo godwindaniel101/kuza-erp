@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatMoney, formatDate, todayIso, downloadCsv, useCurrency } from '@/lib/format';
@@ -84,17 +85,13 @@ export default function TrialBalancePage() {
                 type="date"
                 value={asOf}
                 onChange={(e) => setAsOf(e.target.value)}
-                className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
               />
             </div>
-            <button
-              onClick={handleExport}
-              disabled={!data || data.rows.length === 0}
-              className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              <i className="bx bx-download mr-2"></i>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={!data || data.rows.length === 0}>
+              <i className="bx bx-download"></i>
               Export CSV
-            </button>
+            </Button>
           </>
         }
       />
@@ -129,23 +126,23 @@ export default function TrialBalancePage() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Code</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Account</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                  <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Debit</th>
-                  <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Credit</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Code</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Account</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Debit</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Credit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {data.rows.map((row) => (
                   <tr key={row.accountId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-mono text-gray-500 dark:text-gray-400">{row.code}</td>
-                    <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{row.name}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">{row.type}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-500 dark:text-gray-400">{row.code}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{row.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.type}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                       {Number(row.debit) !== 0 ? formatMoney(row.debit, currency) : '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                       {Number(row.credit) !== 0 ? formatMoney(row.credit, currency) : '-'}
                     </td>
                   </tr>
@@ -153,13 +150,13 @@ export default function TrialBalancePage() {
               </tbody>
               <tfoot className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">
+                  <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
                     Totals
                   </td>
-                  <td className="px-6 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
+                  <td className="px-4 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
                     {formatMoney(data.totals.debit, currency)}
                   </td>
-                  <td className="px-6 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
+                  <td className="px-4 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
                     {formatMoney(data.totals.credit, currency)}
                   </td>
                 </tr>

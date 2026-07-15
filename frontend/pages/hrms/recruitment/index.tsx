@@ -5,8 +5,8 @@ import { useTranslation } from 'next-i18next';
 import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
-import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function RecruitmentPage() {
   const { t } = useTranslation('common');
@@ -58,13 +58,10 @@ export default function RecruitmentPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('jobPostings')}</h2>
               <PermissionGuard permission="recruitment.create">
-                <Link
-                  href="/hrms/recruitment/postings/create"
-                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors inline-flex items-center"
-                >
-                  <i className="bx bx-plus mr-1"></i>
+                <Button href="/hrms/recruitment/postings/create" size="sm">
+                  <i className="bx bx-plus"></i>
                   {t('create')} {t('jobPosting')}
-                </Link>
+                </Button>
               </PermissionGuard>
             </div>
             {postings.length === 0 ? (
@@ -105,16 +102,16 @@ export default function RecruitmentPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t('name')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t('email')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t('position')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t('status')}
                       </th>
                     </tr>
@@ -122,14 +119,14 @@ export default function RecruitmentPage() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {applications.map((app) => (
                       <tr key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                           {app.firstName} {app.lastName}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">{app.email}</td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{app.email}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                           {app.jobPosting?.title || '—'}
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               app.status === 'approved'

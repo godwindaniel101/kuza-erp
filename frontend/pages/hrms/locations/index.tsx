@@ -9,6 +9,7 @@ import Toast from '@/components/Toast';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function LocationsPage() {
   const { t } = useTranslation('common');
@@ -56,13 +57,10 @@ export default function LocationsPage() {
           breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('locations') || 'Locations' }]}
           actions={
             <PermissionGuard permission="locations.create">
-              <Link
-                href="/hrms/locations/create"
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
-              >
-                <i className="bx bx-plus mr-2"></i>
+              <Button href="/hrms/locations/create" size="sm">
+                <i className="bx bx-plus"></i>
                 {t('addLocation')}
-              </Link>
+              </Button>
             </PermissionGuard>
           }
         />
@@ -79,13 +77,10 @@ export default function LocationsPage() {
               <i className="bx bx-map text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
               <p className="text-gray-500 dark:text-gray-400 mb-6">{t('noLocations')}</p>
               <PermissionGuard permission="locations.create">
-                <Link
-                  href="/hrms/locations/create"
-                  className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition"
-                >
-                  <i className="bx bx-plus mr-2"></i>
+                <Button href="/hrms/locations/create">
+                  <i className="bx bx-plus"></i>
                   {t('addLocation')}
-                </Link>
+                </Button>
               </PermissionGuard>
             </div>
           ) : (
@@ -94,30 +89,30 @@ export default function LocationsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('name')}</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('address')}</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('city')}</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('country')}</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('status')}</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('actions')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('name')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('address')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('city')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('country')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('status')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {locations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((location) => (
                       <tr key={location.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{location.name}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{location.address || '—'}</div>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-700 dark:text-gray-300">{location.address || '—'}</div>
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{location.city || '—'}</div>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="text-sm text-gray-700 dark:text-gray-300">{location.city || '—'}</div>
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{location.country || '—'}</div>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="text-sm text-gray-700 dark:text-gray-300">{location.country || '—'}</div>
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               location.isActive
@@ -128,12 +123,12 @@ export default function LocationsPage() {
                             {location.isActive ? t('active') : t('inactive')}
                           </span>
                         </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
                             <PermissionGuard permission="locations.edit">
                               <Link
                                 href={`/hrms/locations/${location.id}/edit`}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               >
                                 <i className="bx bx-edit"></i>
                               </Link>
@@ -141,7 +136,7 @@ export default function LocationsPage() {
                             <PermissionGuard permission="locations.delete">
                               <button
                                 onClick={() => handleDelete(location.id)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               >
                                 <i className="bx bx-trash"></i>
                               </button>

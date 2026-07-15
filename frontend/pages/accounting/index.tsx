@@ -224,12 +224,9 @@ export default function AccountingDashboardPage() {
           title="No journal entries yet"
           description="Create your first journal entry to start recording transactions"
           actions={
-            <Link
-              href="/accounting/journal-entries/new"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-            >
+            <Button href="/accounting/journal-entries/new" size="sm">
               New Journal Entry
-            </Link>
+            </Button>
           }
         />
       ) : (
@@ -238,11 +235,11 @@ export default function AccountingDashboardPage() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Entry #</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Memo</th>
-                  <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Amount</th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Entry #</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Memo</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
@@ -254,15 +251,15 @@ export default function AccountingDashboardPage() {
                       onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)}
                       className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     >
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {entry.entryNumber}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">{formatDate(entry.date)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">{entry.memo || '-'}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{formatDate(entry.date)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">{entry.memo || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                         {formatMoney(entryTotal(entry), currency)}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <StatusBadge variant={status.variant} label={status.label} size="sm" />
                       </td>
                     </tr>

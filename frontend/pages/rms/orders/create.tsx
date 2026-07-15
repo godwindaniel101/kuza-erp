@@ -8,6 +8,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import Toast from "@/components/Toast";
 import Link from "next/link";
 import SearchableSelect from "@/components/SearchableSelect";
+import Button from "@/components/ui/Button";
 
 interface OrderItemRow {
   id: number;
@@ -566,7 +567,7 @@ export default function CreateOrderPage() {
                 </div>
                 {/* Branch Selection - Inside the same card */}
                 <div className="mb-6 pb-6">
-                  {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {/* <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t("branch")} <span className="text-red-500">*</span>
                   </label> */}
                   <div className="">
@@ -749,7 +750,7 @@ export default function CreateOrderPage() {
                           setItemQuantity(Number(e.target.value) || 0)
                         }
                         onFocus={handleNumberInputFocus}
-                        className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                        className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                         placeholder={t("quantity")}
                         disabled={!selectedItem || !selectedUomId}
                       />
@@ -899,7 +900,7 @@ export default function CreateOrderPage() {
                                   )
                                 }
                                 onFocus={handleNumberInputFocus}
-                                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                                className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                                 disabled={!item.inventoryItemId || !item.uomId}
                               />
                               {item.stock !== undefined &&
@@ -1000,7 +1001,7 @@ export default function CreateOrderPage() {
                             min="0"
                             max="100"
                             step="0.1"
-                            className="h-9 w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                            className="h-9 w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                           />
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             %
@@ -1022,7 +1023,7 @@ export default function CreateOrderPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Table */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("table")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1036,7 +1037,7 @@ export default function CreateOrderPage() {
                                 tableId: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                           >
                             <option value="">
                               {t("selectTable") || "Select a table (optional)"}
@@ -1051,7 +1052,7 @@ export default function CreateOrderPage() {
 
                         {/* Order Type */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("orderType")}{" "}
                             <span className="text-red-500">*</span>
                           </label>
@@ -1061,7 +1062,7 @@ export default function CreateOrderPage() {
                               setFormData({ ...formData, type: e.target.value })
                             }
                             required
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                           >
                             <option value="dine_in">
                               {t("dineIn") || "Dine In"}
@@ -1077,7 +1078,7 @@ export default function CreateOrderPage() {
 
                         {/* Customer Name */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("customerName")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1092,14 +1093,14 @@ export default function CreateOrderPage() {
                                 customerName: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                             placeholder={t("optional") || "Optional"}
                           />
                         </div>
 
                         {/* Customer Phone */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("customerPhone")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1114,7 +1115,7 @@ export default function CreateOrderPage() {
                                 customerPhone: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                             placeholder={t("optional") || "Optional"}
                           />
                         </div>
@@ -1122,7 +1123,7 @@ export default function CreateOrderPage() {
 
                       {/* Notes */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t("notes")}{" "}
                           <span className="text-gray-400 dark:text-gray-500 text-xs">
                             ({t("optional")})
@@ -1134,7 +1135,7 @@ export default function CreateOrderPage() {
                             setFormData({ ...formData, notes: e.target.value })
                           }
                           rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                           placeholder={
                             t("orderNotes") ||
                             "Any special instructions or notes..."
@@ -1156,7 +1157,7 @@ export default function CreateOrderPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Table */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("table")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1170,7 +1171,7 @@ export default function CreateOrderPage() {
                                 tableId: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                           >
                             <option value="">
                               {t("selectTable") || "Select a table (optional)"}
@@ -1185,7 +1186,7 @@ export default function CreateOrderPage() {
 
                         {/* Order Type */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("orderType")}{" "}
                             <span className="text-red-500">*</span>
                           </label>
@@ -1195,7 +1196,7 @@ export default function CreateOrderPage() {
                               setFormData({ ...formData, type: e.target.value })
                             }
                             required
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                           >
                             <option value="dine_in">
                               {t("dineIn") || "Dine In"}
@@ -1211,7 +1212,7 @@ export default function CreateOrderPage() {
 
                         {/* Customer Name */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("customerName")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1226,14 +1227,14 @@ export default function CreateOrderPage() {
                                 customerName: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                             placeholder={t("optional") || "Optional"}
                           />
                         </div>
 
                         {/* Customer Phone */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t("customerPhone")}{" "}
                             <span className="text-gray-400 dark:text-gray-500 text-xs">
                               ({t("optional")})
@@ -1248,7 +1249,7 @@ export default function CreateOrderPage() {
                                 customerPhone: e.target.value,
                               })
                             }
-                            className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                            className="h-9 w-full px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                             placeholder={t("optional") || "Optional"}
                           />
                         </div>
@@ -1256,7 +1257,7 @@ export default function CreateOrderPage() {
 
                       {/* Notes */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                           {t("notes")}{" "}
                           <span className="text-gray-400 dark:text-gray-500 text-xs">
                             ({t("optional")})
@@ -1268,7 +1269,7 @@ export default function CreateOrderPage() {
                             setFormData({ ...formData, notes: e.target.value })
                           }
                           rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                           placeholder={
                             t("orderNotes") ||
                             "Any special instructions or notes..."
@@ -1355,10 +1356,12 @@ export default function CreateOrderPage() {
 
                 {/* Actions */}
                 <div className="flex flex-col space-y-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
+                    className="w-full"
+                    loading={saving}
                     disabled={
-                      saving ||
                       !branchId ||
                       (orderItems.length === 0 && !hasPendingItem()) ||
                       (orderItems.length > 0 &&
@@ -1366,21 +1369,21 @@ export default function CreateOrderPage() {
                           (item) => !item.inventoryItemId || !item.uomId,
                         ))
                     }
-                    className="w-full px-4 py-2 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   >
-                    <i className="bx bx-check text-xl"></i>
+                    {!saving && <i className="bx bx-check text-xl"></i>}
                     <span>
                       {saving
                         ? t("saving") || "Saving..."
                         : t("createOrder") || "Create Order"}
                     </span>
-                  </button>
-                  <Link
+                  </Button>
+                  <Button
                     href="/rms/orders"
-                    className="w-full px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                    variant="secondary"
+                    className="w-full"
                   >
                     {t("cancel")}
-                  </Link>
+                  </Button>
                 </div>
               </div>
             </div>

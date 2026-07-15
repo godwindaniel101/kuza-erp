@@ -6,6 +6,8 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 import Toast from '@/components/Toast';
 
 export default function CreateBranchPage() {
@@ -86,91 +88,65 @@ export default function CreateBranchPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* First Row: Name | Contact Number | Email (1/3 each) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('name')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="text"
+              name="name"
+              label={t('name')}
+              required
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('contactNumber') || t('phone')}
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
+            <FormField
+              type="text"
+              name="phone"
+              label={t('contactNumber') || t('phone')}
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              inputProps={{ type: 'tel' }}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('email')}
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-            </div>
-          </div>
-
-          {/* Second Row: Address (full width, 3/3) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('address')}
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              rows={3}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
+            <FormField
+              type="email"
+              name="email"
+              label={t('email')}
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
             />
           </div>
 
+          {/* Second Row: Address (full width, 3/3) */}
+          <FormField
+            type="textarea"
+            name="address"
+            label={t('address')}
+            rows={3}
+            value={formData.address}
+            onChange={(value) => setFormData({ ...formData, address: value })}
+          />
+
           <div className="flex items-center space-x-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('default')}</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus-visible:ring-brand-500"
-              />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</span>
-            </label>
+            <FormField
+              type="checkbox"
+              name="isDefault"
+              checked={formData.isDefault}
+              onChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+              checkboxLabel={t('default')}
+            />
+            <FormField
+              type="checkbox"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              checkboxLabel={t('active')}
+            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !formData.name.trim()}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading || !formData.name.trim()}>
               {loading ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -179,7 +155,7 @@ export default function CreateBranchPage() {
               ) : (
                 t('save')
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

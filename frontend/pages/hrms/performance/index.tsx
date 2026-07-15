@@ -6,7 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
+import Button from '@/components/ui/Button';
 
 export default function PerformancePage() {
   const { t } = useTranslation('common');
@@ -40,13 +40,10 @@ export default function PerformancePage() {
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('performance') }]}
         actions={
           <PermissionGuard permission="performance.create">
-            <Link
-              href="/hrms/performance/reviews/create"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
-            >
-              <i className="bx bx-plus mr-2"></i>
+            <Button href="/hrms/performance/reviews/create" size="sm">
+              <i className="bx bx-plus"></i>
               {t('create')} {t('performance')} {t('review')}
-            </Link>
+            </Button>
           </PermissionGuard>
         }
       />

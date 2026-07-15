@@ -6,7 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
+import Button from '@/components/ui/Button';
 
 export default function CompensationPage() {
   const { t } = useTranslation('common');
@@ -40,13 +40,10 @@ export default function CompensationPage() {
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('compensation') }]}
         actions={
           <PermissionGuard permission="compensation.structures.create">
-            <Link
-              href="/hrms/compensation/structures/create"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
-            >
-              <i className="bx bx-plus mr-2"></i>
+            <Button href="/hrms/compensation/structures/create" size="sm">
+              <i className="bx bx-plus"></i>
               {t('create')} {t('compensation')} {t('structure')}
-            </Link>
+            </Button>
           </PermissionGuard>
         }
       />
@@ -73,16 +70,16 @@ export default function CompensationPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('name')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('baseSalary')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('employees')}
                   </th>
-                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('status')}
                   </th>
                 </tr>
@@ -90,16 +87,16 @@ export default function CompensationPage() {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {structures.map((structure) => (
                   <tr key={structure.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {structure.name}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       ${structure.baseSalary || '0.00'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {structure.employeeSalaries?.length || 0}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           structure.isActive

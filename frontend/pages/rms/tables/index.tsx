@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
 
 export default function TablesPage() {
   const { t } = useTranslation('common');
@@ -41,13 +42,14 @@ export default function TablesPage() {
           breadcrumbs={[{ label: 'Restaurant' }, { label: t('tables') || 'Tables' }]}
           actions={
             <PermissionGuard permission="tables.create">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => router.push('/rms/tables/create')}
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
               >
-                <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+                <i className="bx bx-plus" aria-hidden="true"></i>
                 {t('create')} {t('table')}
-              </button>
+              </Button>
             </PermissionGuard>
           }
         />
@@ -62,13 +64,14 @@ export default function TablesPage() {
             description={t('createTablesToSeat') || 'Create tables to start seating guests'}
             actions={
               <PermissionGuard permission="tables.create">
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => router.push('/rms/tables/create')}
-                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
                 >
-                  <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+                  <i className="bx bx-plus" aria-hidden="true"></i>
                   {t('create')} {t('table')}
-                </button>
+                </Button>
               </PermissionGuard>
             }
           />

@@ -10,6 +10,7 @@ import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn, type RowAction } from '@/components/ui/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
 import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatMoney, useCurrency } from '@/lib/format';
 
@@ -203,13 +204,10 @@ export default function CustomersPage() {
         subtitle="Manage the people and businesses you invoice"
         breadcrumbs={[{ label: 'Sales' }, { label: 'Customers' }]}
         actions={
-          <button
-            onClick={() => setForm({ ...emptyForm })}
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
+          <Button size="sm" onClick={() => setForm({ ...emptyForm })}>
+            <i className="bx bx-plus"></i>
             Add Customer
-          </button>
+          </Button>
         }
       />
 
@@ -247,12 +245,9 @@ export default function CustomersPage() {
             title={debouncedSearch ? 'No customers found' : 'No customers yet'}
             description={debouncedSearch ? 'Try a different search term' : 'Add your first customer to start invoicing'}
             actions={
-              <button
-                onClick={() => setForm({ ...emptyForm })}
-                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-              >
+              <Button size="sm" onClick={() => setForm({ ...emptyForm })}>
                 Add Customer
-              </button>
+              </Button>
             }
           />
         }
@@ -315,22 +310,12 @@ export default function CustomersPage() {
               onChange={(v) => setForm((f) => (f ? { ...f, notes: v } : f))}
             />
             <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setForm(null)}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
+              <Button variant="secondary" type="button" onClick={() => setForm(null)} disabled={saving}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving...' : form.id ? 'Save Changes' : 'Create Customer'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -345,22 +330,12 @@ export default function CustomersPage() {
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">This action cannot be undone.</p>
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button variant="secondary" type="button" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button variant="danger" type="button" onClick={handleDelete} disabled={deleting}>
               {deleting ? 'Deleting...' : 'Delete'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

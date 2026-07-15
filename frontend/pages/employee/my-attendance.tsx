@@ -126,14 +126,14 @@ export default function MyAttendancePage() {
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('date')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('date')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('clockIn')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('clockOut')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('hours')}
                 </th>
               </tr>
@@ -141,23 +141,23 @@ export default function MyAttendancePage() {
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={4} className="px-4 py-3 text-center text-gray-500">
                     {t('noTimeEntries')}
                   </td>
                 </tr>
               ) : (
                 entries.map((entry) => (
                   <tr key={entry.id}>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {new Date(entry.date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {entry.clockIn ? new Date(entry.clockIn).toLocaleTimeString() : '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {entry.clockOut ? new Date(entry.clockOut).toLocaleTimeString() : '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {entry.hours || '-'}
                     </td>
                   </tr>
@@ -169,13 +169,13 @@ export default function MyAttendancePage() {
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('period')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('totalHours')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('status')}
                 </th>
               </tr>
@@ -183,20 +183,20 @@ export default function MyAttendancePage() {
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {timesheets.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={3} className="px-4 py-3 text-center text-gray-500">
                     {t('noTimesheets')}
                   </td>
                 </tr>
               ) : (
                 timesheets.map((sheet) => (
                   <tr key={sheet.id}>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {sheet.period || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {sheet.totalHours || 0} {t('hours')}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           sheet.status === 'approved'

@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function CategoriesSettingsPage() {
   const { t } = useTranslation('common');
@@ -206,21 +207,15 @@ export default function CategoriesSettingsPage() {
                 
                 <div className="flex gap-2 mt-4">
                   <PermissionGuard permission="inventory.create">
-                    <button
-                      onClick={() => handleAddSubcategory(category)}
-                      className="flex-1 px-3 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors flex items-center justify-center space-x-1"
-                    >
+                    <Button variant="primary" className="flex-1" onClick={() => handleAddSubcategory(category)}>
                       <i className="bx bx-plus text-xs"></i>
                       <span>{t('add')} {t('subcategory')}</span>
-                    </button>
+                    </Button>
                   </PermissionGuard>
-                  <button
-                    onClick={() => handleViewSubcategories(category)}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-1"
-                  >
+                  <Button variant="secondary" className="flex-1" onClick={() => handleViewSubcategories(category)}>
                     <i className="bx bx-list-ul text-xs"></i>
                     <span>{t('viewSubcategories') || 'View'}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
@@ -239,37 +234,29 @@ export default function CategoriesSettingsPage() {
         maxWidth="md"
       >
         <form onSubmit={handleCreateCategory} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('name')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={categoryForm.name}
-              onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('categoryName') || 'Category name'}
-            />
-          </div>
+          <FormField
+            type="text"
+            name="categoryName"
+            label={t('name')}
+            required
+            value={categoryForm.name}
+            onChange={(value) => setCategoryForm({ ...categoryForm, name: value })}
+            placeholder={t('categoryName') || 'Category name'}
+          />
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowCategoryModal(false);
                 setCategoryForm({ name: '' });
               }}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !categoryForm.name.trim()}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={saving || !categoryForm.name.trim()}>
               {saving ? t('creating') || 'Creating...' : t('create')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -303,37 +290,33 @@ export default function CategoriesSettingsPage() {
               </p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('name')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={subcategoryForm.name}
-              onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name: e.target.value })}
-              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              placeholder={t('subcategoryName') || 'Subcategory name'}
-            />
-          </div>
+          <FormField
+            type="text"
+            name="subcategoryName"
+            label={t('name')}
+            required
+            value={subcategoryForm.name}
+            onChange={(value) => setSubcategoryForm({ ...subcategoryForm, name: value })}
+            placeholder={t('subcategoryName') || 'Subcategory name'}
+          />
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowSubcategoryModal(false);
                 setSubcategoryForm({ categoryId: '', name: '' });
               }}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={saving || !subcategoryForm.categoryId || !subcategoryForm.name.trim()}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? t('creating') || 'Creating...' : t('create')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -358,15 +341,16 @@ export default function CategoriesSettingsPage() {
             <div className="text-center py-8">
               <p className="text-gray-500 dark:text-gray-400">{t('noSubcategoriesYet') || 'No subcategories yet'}</p>
               <PermissionGuard permission="inventory.create">
-                <button
+                <Button
+                  variant="primary"
+                  className="mt-4"
                   onClick={() => {
                     setShowViewSubcategoriesModal(false);
                     handleAddSubcategory(selectedCategory);
                   }}
-                  className="mt-4 h-9 px-3.5 inline-flex items-center bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors"
                 >
                   {t('add')} {t('subcategory')}
-                </button>
+                </Button>
               </PermissionGuard>
             </div>
           ) : (
@@ -374,10 +358,10 @@ export default function CategoriesSettingsPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('name')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
@@ -385,10 +369,10 @@ export default function CategoriesSettingsPage() {
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {categorySubcategories.map((subcategory) => (
                     <tr key={subcategory.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {subcategory.name}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                         <PermissionGuard permission="inventory.delete">
                           <button
                             onClick={async () => {
@@ -416,16 +400,16 @@ export default function CategoriesSettingsPage() {
             </div>
           )}
           <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => {
                 setShowViewSubcategoriesModal(false);
                 setSelectedCategory(null);
                 setCategorySubcategories([]);
               }}
-              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('close') || 'Close'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

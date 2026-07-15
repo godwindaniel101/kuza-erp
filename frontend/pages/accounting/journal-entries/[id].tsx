@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
@@ -107,22 +108,16 @@ export default function JournalEntryDetailPage() {
             <>
               {status && <StatusBadge variant={status.variant} label={status.label} size="lg" />}
               {entry.status === 'DRAFT' && (
-                <button
-                  onClick={() => setConfirmAction('post')}
-                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-                >
-                  <i className="bx bx-check mr-2"></i>
+                <Button size="sm" onClick={() => setConfirmAction('post')}>
+                  <i className="bx bx-check"></i>
                   Post
-                </button>
+                </Button>
               )}
               {entry.status === 'POSTED' && (
-                <button
-                  onClick={() => setConfirmAction('reverse')}
-                  className="h-8 px-3 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg text-[13px] font-medium hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
-                >
-                  <i className="bx bx-undo mr-2"></i>
+                <Button variant="danger" size="sm" onClick={() => setConfirmAction('reverse')}>
+                  <i className="bx bx-undo"></i>
                   Reverse
-                </button>
+                </Button>
               )}
             </>
           ) : undefined
@@ -140,12 +135,9 @@ export default function JournalEntryDetailPage() {
           title="Journal entry not found"
           description="It may have been removed, or the link is invalid"
           actions={
-            <button
-              onClick={() => router.push('/accounting/journal-entries')}
-              className="h-8 px-3 bg-red-600 dark:bg-red-700 text-white rounded-lg text-[13px] font-medium hover:bg-red-700 dark:hover:bg-red-600"
-            >
+            <Button size="sm" onClick={() => router.push('/accounting/journal-entries')}>
               Back to Journal Entries
-            </button>
+            </Button>
           }
         />
       ) : (
@@ -178,24 +170,24 @@ export default function JournalEntryDetailPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Account</th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Description</th>
-                    <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Debit</th>
-                    <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Credit</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Account</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Description</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Debit</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Credit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {entry.lines.map((line) => (
                     <tr key={line.id}>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px]">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <span className="font-mono text-gray-500 dark:text-gray-400 mr-2">{line.account?.code}</span>
                         <span className="font-medium text-gray-900 dark:text-white">{line.account?.name}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{line.description || '-'}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{line.description || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                         {Number(line.debit) > 0 ? formatMoney(line.debit, currency) : '-'}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
                         {Number(line.credit) > 0 ? formatMoney(line.credit, currency) : '-'}
                       </td>
                     </tr>
@@ -203,13 +195,13 @@ export default function JournalEntryDetailPage() {
                 </tbody>
                 <tfoot className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <td colSpan={2} className="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">
+                    <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
                       Totals
                     </td>
-                    <td className="px-6 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
                       {formatMoney(totalDebit, currency)}
                     </td>
-                    <td className="px-6 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm font-semibold text-right text-gray-900 dark:text-white">
                       {formatMoney(totalCredit, currency)}
                     </td>
                   </tr>
@@ -234,22 +226,12 @@ export default function JournalEntryDetailPage() {
               : 'Reversing creates an offsetting entry and marks this one as reversed. This cannot be undone. Continue?'}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={acting}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button variant="secondary" type="button" onClick={() => setConfirmAction(null)} disabled={acting}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={acting}
-              className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type="button" onClick={handleConfirm} disabled={acting}>
               {acting ? 'Working...' : confirmAction === 'post' ? 'Post Entry' : 'Reverse Entry'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

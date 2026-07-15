@@ -57,8 +57,8 @@ interface AnalyticsData {
 const SHARE_BAR_COLOR = '#6366f1';
 
 const thBase =
-  'py-2.5 px-4 text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
-const tdBase = 'py-3 px-4 text-[13px]';
+  'py-2.5 px-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400';
+const tdBase = 'py-3 px-4 text-sm';
 
 export default function ReportsPage() {
   const { t } = useTranslation('common');
@@ -157,7 +157,7 @@ export default function ReportsPage() {
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="h-9 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-[13px] text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                className="h-9 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
               >
                 <option value="today">{t('today')}</option>
                 <option value="week">{t('thisWeek')}</option>

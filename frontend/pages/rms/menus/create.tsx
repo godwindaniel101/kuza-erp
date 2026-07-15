@@ -9,6 +9,7 @@ import Toast from '@/components/Toast';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
 import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 import PageHeader from '@/components/ui/PageHeader';
 
 interface InventoryItem {
@@ -211,19 +212,16 @@ export default function CreateMenuPage() {
                 </div>
 
                 {/* Menu Name */}
-                <div className="mb-5">
-                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('menuName')} <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={t('e.g. Lunch Menu') || 'e.g., Lunch Menu, Drinks Menu'}
-                    required
-                    className="h-9 w-full px-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  />
-                </div>
+                <FormField
+                  name="name"
+                  type="text"
+                  label={t('menuName')}
+                  required
+                  value={formData.name}
+                  onChange={(value) => setFormData({ ...formData, name: value })}
+                  placeholder={t('e.g. Lunch Menu') || 'e.g., Lunch Menu, Drinks Menu'}
+                  className="mb-5"
+                />
 
                 {/* Description */}
                 <div className="mb-5">
@@ -235,7 +233,7 @@ export default function CreateMenuPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     placeholder={t('briefDescription')}
-                    className="w-full px-3 py-2 text-[13px] border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                   />
                 </div>
 
@@ -320,7 +318,7 @@ export default function CreateMenuPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={t('searchItemsByNameOrCategory') || 'Search items by name or category...'}
-                      className="h-9 block w-full pl-9 pr-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                      className="h-9 block w-full pl-9 pr-3 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                     />
                   </div>
                 </div>

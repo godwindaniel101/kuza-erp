@@ -7,6 +7,8 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateTablePage() {
   const { t } = useTranslation('common');
@@ -116,46 +118,38 @@ export default function CreateTablePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('tableName') || 'Table Name'} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t('tableNamePlaceholder') || 'e.g., Table 1, VIP 1'}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                autoFocus
-              />
-            </div>
+            <FormField
+              name="name"
+              type="text"
+              label={t('tableName') || 'Table Name'}
+              required
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+              placeholder={t('tableNamePlaceholder') || 'e.g., Table 1, VIP 1'}
+              inputProps={{ autoFocus: true }}
+            />
+
+            <FormField
+              name="capacity"
+              type="number"
+              label={t('capacity')}
+              required
+              min={1}
+              max={50}
+              value={formData.capacity}
+              onChange={(value) => setFormData({ ...formData, capacity: parseInt(value) || 1 })}
+              placeholder={t('numberOfPeople') || 'Number of people'}
+              help={t('maximumNumberOfGuests') || 'Maximum number of guests this table can accommodate'}
+            />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('capacity')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="50"
-                value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })}
-                placeholder={t('numberOfPeople') || 'Number of people'}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-              />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('maximumNumberOfGuests') || 'Maximum number of guests this table can accommodate'}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('status')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
               >
                 <option value="available">{t('available')}</option>
                 <option value="occupied">{t('occupied')}</option>
@@ -165,28 +159,22 @@ export default function CreateTablePage() {
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => router.back()}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 disabled={saving}
               >
                 {t('cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={saving || !formData.branchId || !formData.name.trim()}
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
+                variant="primary"
+                loading={saving}
+                disabled={!formData.branchId || !formData.name.trim()}
               >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    {t('creating') || 'Creating...'}
-                  </span>
-                ) : (
-                  t('save')
-                )}
-              </button>
+                {saving ? t('creating') || 'Creating...' : t('save')}
+              </Button>
             </div>
           </form>
         </div>

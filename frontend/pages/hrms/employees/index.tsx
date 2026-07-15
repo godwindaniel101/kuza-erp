@@ -88,12 +88,12 @@ export default function EmployeesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`${t('search')} ${t('employees').toLowerCase()}...`}
-              className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 text-[13px] flex-1 min-w-[220px]"
+              className="h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 text-sm flex-1 min-w-[220px]"
             />
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 text-[13px]"
+              className="h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 text-sm"
             >
               <option value="">{t('all')} {t('departments')}</option>
               {departments.map((dept) => (
@@ -105,7 +105,7 @@ export default function EmployeesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 text-[13px]"
+              className="h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 text-sm"
             >
               <option value="">{t('all')} {t('status')}</option>
               <option value="active">{t('active')}</option>
@@ -134,13 +134,10 @@ export default function EmployeesPage() {
               </h3>
               <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Add your first employee to get started</p>
               <PermissionGuard permission="employees.create">
-                <Link
-                  href="/hrms/employees/create"
-                  className="inline-flex items-center h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700"
-                >
-                  <i className="bx bx-plus mr-2"></i>
+                <Button href="/hrms/employees/create">
+                  <i className="bx bx-plus"></i>
                   {t('addEmployee')}
-                </Link>
+                </Button>
               </PermissionGuard>
             </div>
           ) : (
@@ -149,22 +146,22 @@ export default function EmployeesPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('employee')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('department')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('position')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('status')}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('hireDate')}
                       </th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t('actions')}
                       </th>
                     </tr>
@@ -182,7 +179,7 @@ export default function EmployeesPage() {
 
                       return (
                         <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
                                 <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
@@ -195,13 +192,13 @@ export default function EmployeesPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-[13px] text-gray-900 dark:text-gray-100">{employee.department?.name || '—'}</div>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-[13px] text-gray-900 dark:text-gray-100">{employee.position?.title || '—'}</div>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 statusColors[employee.employmentStatus] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
@@ -213,15 +210,15 @@ export default function EmployeesPage() {
                               }
                             </span>
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                           </td>
-                          <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] font-medium">
+                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end items-center space-x-2">
                               <PermissionGuard permission="employees.view">
                                 <Link
                                   href={`/hrms/employees/${employee.id}`}
-                                  className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+                                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                                   title={t('view')}
                                 >
                                   <i className="bx bx-show text-lg"></i>
@@ -230,7 +227,7 @@ export default function EmployeesPage() {
                               <PermissionGuard permission="employees.edit">
                                 <Link
                                   href={`/hrms/employees/${employee.id}/edit`}
-                                  className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+                                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                                   title={t('edit')}
                                 >
                                   <i className="bx bx-edit text-lg"></i>
@@ -243,7 +240,7 @@ export default function EmployeesPage() {
                                       api.delete(`/hrms/employees/${employee.id}`).then(() => loadData());
                                     }
                                   }}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                   title={t('delete')}
                                 >
                                   <i className="bx bx-trash text-lg"></i>

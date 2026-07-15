@@ -11,6 +11,7 @@ import SearchableSelect from "@/components/SearchableSelect";
 import DatePicker from "@/components/DatePicker";
 import Modal from "@/components/Modal";
 import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
 import { useTenantStore } from "@/store/globalStore";
 import { term } from "@/lib/terminology";
 
@@ -850,24 +851,21 @@ export default function CreateInflowPage() {
         </div>
 
         <div className="flex justify-end space-x-3">
-          <Link
-            href="/ims/inflows"
-            className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
-          >
+          <Button href="/ims/inflows" variant="secondary">
             {t("cancel")}
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="primary"
             disabled={
               saving ||
               !formData.branchId ||
               !formData.supplierId ||
               (inflowItems.length === 0 && !hasPendingItem())
             }
-            className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? t("saving") || "Saving..." : t("save")}
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -991,8 +989,9 @@ export default function CreateInflowPage() {
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowAddSupplier(false);
                 setNewSupplier({
@@ -1003,15 +1002,14 @@ export default function CreateInflowPage() {
                   address: "",
                 });
               }}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={creatingSupplier}
             >
               {t("cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={creatingSupplier || !newSupplier.name.trim()}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {creatingSupplier ? (
                 <span className="flex items-center gap-2">
@@ -1021,7 +1019,7 @@ export default function CreateInflowPage() {
               ) : (
                 t("save")
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

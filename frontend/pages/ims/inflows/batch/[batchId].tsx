@@ -6,6 +6,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 import StatCard from '@/components/ui/StatCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 
@@ -104,13 +105,10 @@ export default function BatchSummaryPage() {
           { label: t('batch') || 'Batch' },
         ]}
         actions={
-          <Link
-            href="/ims/inflows"
-            className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center"
-          >
-            <i className="bx bx-arrow-back mr-2" aria-hidden="true"></i>
+          <Button href="/ims/inflows" variant="secondary" size="sm">
+            <i className="bx bx-arrow-back" aria-hidden="true"></i>
             {t('backToInflows') || 'Back to inflows'}
-          </Link>
+          </Button>
         }
       />
 
@@ -182,7 +180,7 @@ export default function BatchSummaryPage() {
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     {[t('branch') || 'Branch', t('item') || 'Item', t('uom') || 'UOM', t('quantity') || 'Qty', t('costPerUnit') || 'Unit cost', t('totalAmount') || 'Total', t('batch') || 'Batch', t('supplier') || 'Supplier'].map((h, i) => (
-                      <th key={i} className={`px-4 py-2 text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase ${i >= 3 && i <= 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                      <th key={i} className={`px-4 py-2 text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase ${i >= 3 && i <= 5 ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>

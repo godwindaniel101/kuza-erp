@@ -6,6 +6,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
+import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -136,13 +137,10 @@ export default function AdjustmentDetailPage() {
               {status && <StatusBadge variant={status.variant} label={status.label} size="lg" />}
               {adjustment.status === 'DRAFT' && (
                 <>
-                  <button
-                    onClick={() => setConfirmAction('approve')}
-                    className="h-8 px-3 bg-red-600 dark:bg-red-700 text-white rounded-lg text-[13px] font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center"
-                  >
-                    <i className="bx bx-check mr-2"></i>
+                  <Button variant="danger" size="sm" onClick={() => setConfirmAction('approve')}>
+                    <i className="bx bx-check"></i>
                     Approve
-                  </button>
+                  </Button>
                   <button
                     onClick={() => setConfirmAction('reject')}
                     className="h-8 px-3 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg text-[13px] font-medium hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
@@ -181,17 +179,17 @@ export default function AdjustmentDetailPage() {
           {/* Meta */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <p className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Created</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Created</p>
               <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">{formatDate(adjustment.createdAt)}</p>
             </div>
             <div>
-              <p className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reason</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reason</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">
                 {REASON_LABELS[adjustment.reason] || adjustment.reason}
               </p>
             </div>
             <div className="col-span-2">
-              <p className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Notes</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Notes</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">{adjustment.notes || '-'}</p>
             </div>
           </div>
@@ -202,10 +200,10 @@ export default function AdjustmentDetailPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
-                    <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Qty Change</th>
-                    <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Unit Cost</th>
-                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Line Reason</th>
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Qty Change</th>
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Unit Cost</th>
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Line Reason</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -266,22 +264,12 @@ export default function AdjustmentDetailPage() {
             </p>
           )}
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={acting}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => setConfirmAction(null)} disabled={acting}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={acting}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type="button" variant="danger" onClick={handleConfirm} disabled={acting}>
               {acting ? 'Working...' : confirmAction === 'approve' ? 'Approve' : 'Reject'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

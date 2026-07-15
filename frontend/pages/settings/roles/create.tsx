@@ -6,6 +6,8 @@ import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 import Toast from '@/components/Toast';
 import Card from '@/components/Card';
 
@@ -126,13 +128,10 @@ export default function CreateRolePage() {
             { label: t('create') || 'Create' },
           ]}
           actions={
-            <button
-              onClick={() => router.back()}
-              className="h-8 px-3 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
-            >
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
               <i className="bx bx-arrow-back"></i>
               {t('back') || 'Back'}
-            </button>
+            </Button>
           }
         />
 
@@ -144,46 +143,36 @@ export default function CreateRolePage() {
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('basicInformation') || 'Basic Information'}</h2>
                 
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('name')} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                      placeholder="e.g., manager"
-                      required
-                    />
-                  </div>
+                  <FormField
+                    type="text"
+                    name="name"
+                    label={t('name')}
+                    required
+                    value={formData.name}
+                    onChange={(value) => setFormData({ ...formData, name: value })}
+                    placeholder="e.g., manager"
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('displayName') || 'Display Name'} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.displayName}
-                      onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                      placeholder="e.g., Manager"
-                      required
-                    />
-                  </div>
+                  <FormField
+                    type="text"
+                    name="displayName"
+                    label={t('displayName') || 'Display Name'}
+                    required
+                    value={formData.displayName}
+                    onChange={(value) => setFormData({ ...formData, displayName: value })}
+                    placeholder="e.g., Manager"
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('description')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={4}
-                      className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
-                      placeholder={t('roleDescription') || 'Enter role description...'}
-                    />
-                  </div>
+                  <FormField
+                    type="textarea"
+                    name="description"
+                    label={t('description')}
+                    help={`(${t('optional')})`}
+                    rows={4}
+                    value={formData.description}
+                    onChange={(value) => setFormData({ ...formData, description: value })}
+                    placeholder={t('roleDescription') || 'Enter role description...'}
+                  />
                 </div>
               </Card>
             </div>
@@ -285,18 +274,10 @@ export default function CreateRolePage() {
 
           {/* Action Buttons */}
           <div className="mt-6 flex items-center justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading}>
               {loading ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -305,7 +286,7 @@ export default function CreateRolePage() {
               ) : (
                 t('create') + ' ' + t('role')
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

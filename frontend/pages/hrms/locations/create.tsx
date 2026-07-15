@@ -7,8 +7,9 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
-import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import { countries, getCountryStates, getCountryName } from '@/utils/countries';
 
 export default function CreateLocationPage() {
@@ -81,40 +82,32 @@ export default function CreateLocationPage() {
         />
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('name')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('locationName') || 'Location name'}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('address')}</label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                placeholder={t('streetAddress') || 'Street address'}
-              />
-            </div>
+            <FormField
+              type="text"
+              name="name"
+              label={t('name')}
+              required
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+              placeholder={t('locationName') || 'Location name'}
+            />
+            <FormField
+              type="text"
+              name="address"
+              label={t('address')}
+              value={formData.address}
+              onChange={(value) => setFormData({ ...formData, address: value })}
+              placeholder={t('streetAddress') || 'Street address'}
+            />
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('city')}</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  placeholder={t('city') || 'City'}
-                />
-              </div>
+              <FormField
+                type="text"
+                name="city"
+                label={t('city')}
+                value={formData.city}
+                onChange={(value) => setFormData({ ...formData, city: value })}
+                placeholder={t('city') || 'City'}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('state')}</label>
                 {formData.country && stateOptions.length > 0 ? (
@@ -131,7 +124,7 @@ export default function CreateLocationPage() {
                     type="text"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+                    className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
                     placeholder={formData.country ? t('state') || 'State/Province (optional)' : t('selectCountryFirst') || 'Select country first'}
                     disabled={!formData.country}
                   />
@@ -139,16 +132,14 @@ export default function CreateLocationPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('postalCode')}</label>
-                <input
-                  type="text"
-                  value={formData.postalCode}
-                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
-                  placeholder={t('postalCode') || 'Postal code'}
-                />
-              </div>
+              <FormField
+                type="text"
+                name="postalCode"
+                label={t('postalCode')}
+                value={formData.postalCode}
+                onChange={(value) => setFormData({ ...formData, postalCode: value })}
+                placeholder={t('postalCode') || 'Postal code'}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('country')}</label>
                 <SearchableSelect
@@ -162,16 +153,12 @@ export default function CreateLocationPage() {
               </div>
             </div>
             <div className="flex justify-end space-x-3 pt-4">
-              <Link href="/hrms/locations" className="h-9 px-4 inline-flex items-center border border-gray-300 dark:border-gray-700 rounded-lg text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <Button href="/hrms/locations" variant="secondary">
                 {t('cancel')}
-              </Link>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
-              >
+              </Button>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? t('creating') : t('create')}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

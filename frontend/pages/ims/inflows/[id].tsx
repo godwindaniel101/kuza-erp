@@ -435,19 +435,19 @@ export default function InflowDetailsPage() {
                       <table className="w-full divide-y divide-gray-100 dark:divide-gray-800">
                         <thead className="bg-red-50 dark:bg-red-900/10 sticky top-0 z-10">
                           <tr>
-                            <th className="px-4 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
+                            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
                               {t("lineNumber") || "Line #"}
                             </th>
-                            <th className="px-4 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-48">
+                            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-48">
                               {t("itemName") || "Item Name"}
                             </th>
-                            <th className="px-4 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
                               {t("quantity") || "Quantity"}
                             </th>
-                            <th className="px-4 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
+                            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
                               {t("uom") || "UOM"}
                             </th>
-                            <th className="px-4 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               {t("errors") || "Errors"}
                             </th>
                           </tr>
@@ -552,28 +552,28 @@ export default function InflowDetailsPage() {
                 <table className="w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("item") || "Item"}
                       </th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("supplier") || "Supplier"}
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("quantity") || "Quantity"}
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("uom") || "UOM"}
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("unitCost") || "Unit Cost"}
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("soldQuantity") || "Sold Qty"}
                       </th>
-                      <th className="px-6 py-2.5 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("remaining") || "Remaining"}
                       </th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         {t("total") || "Total"}
                       </th>
                     </tr>

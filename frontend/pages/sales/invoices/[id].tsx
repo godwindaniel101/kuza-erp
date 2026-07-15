@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -8,6 +7,7 @@ import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import FormField from '@/components/ui/FormField';
+import Button from '@/components/ui/Button';
 import InvoiceStatusBadge from '@/components/ui/InvoiceStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
@@ -191,39 +191,27 @@ export default function InvoiceDetailPage() {
           actions={
             invoice ? (
               <>
-                <button
-                  onClick={() => window.print()}
-                  className="h-8 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
-                >
-                  <i className="bx bx-printer mr-2"></i>
+                <Button variant="secondary" size="sm" onClick={() => window.print()}>
+                  <i className="bx bx-printer"></i>
                   Print
-                </button>
+                </Button>
                 {invoice.status === 'DRAFT' && (
-                  <button
-                    onClick={() => setConfirmAction('send')}
-                    className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-                  >
-                    <i className="bx bx-send mr-2"></i>
+                  <Button size="sm" onClick={() => setConfirmAction('send')}>
+                    <i className="bx bx-send"></i>
                     Send
-                  </button>
+                  </Button>
                 )}
                 {canRecordPayment && (
-                  <button
-                    onClick={openPaymentModal}
-                    className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-                  >
-                    <i className="bx bx-money mr-2"></i>
+                  <Button size="sm" onClick={openPaymentModal}>
+                    <i className="bx bx-money"></i>
                     Record Payment
-                  </button>
+                  </Button>
                 )}
                 {invoice.status !== 'VOID' && invoice.status !== 'PAID' && (
-                  <button
-                    onClick={() => setConfirmAction('void')}
-                    className="h-8 px-3 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg text-[13px] font-medium hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
-                  >
-                    <i className="bx bx-block mr-2"></i>
+                  <Button variant="danger" size="sm" onClick={() => setConfirmAction('void')}>
+                    <i className="bx bx-block"></i>
                     Void
-                  </button>
+                  </Button>
                 )}
               </>
             ) : undefined
@@ -242,12 +230,9 @@ export default function InvoiceDetailPage() {
           title="Invoice not found"
           description="It may have been removed, or the link is invalid"
           actions={
-            <Link
-              href="/sales/invoices"
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700"
-            >
+            <Button href="/sales/invoices" size="sm">
               Back to Invoices
-            </Link>
+            </Button>
           }
         />
       ) : (
@@ -364,19 +349,19 @@ export default function InvoiceDetailPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Method</th>
-                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reference</th>
-                      <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Method</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reference</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {invoice.payments.map((p) => (
                       <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">{formatDate(p.date)}</td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">{methodLabel(p.method)}</td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">{p.reference || '-'}</td>
-                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right font-medium text-gray-900 dark:text-white">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{formatDate(p.date)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{methodLabel(p.method)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{p.reference || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">
                           {formatMoney(p.amount, currency)}
                         </td>
                       </tr>
@@ -429,22 +414,12 @@ export default function InvoiceDetailPage() {
               onChange={(v) => setPaymentForm((f) => (f ? { ...f, date: v } : f))}
             />
             <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPaymentForm(null)}
-                disabled={acting}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
+              <Button variant="secondary" type="button" onClick={() => setPaymentForm(null)} disabled={acting}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRecordPayment}
-                disabled={acting}
-                className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
+              </Button>
+              <Button type="button" onClick={handleRecordPayment} disabled={acting}>
                 {acting ? 'Saving...' : 'Record Payment'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -464,22 +439,12 @@ export default function InvoiceDetailPage() {
               : 'Voiding cancels this invoice permanently. It will no longer count toward receivables. This cannot be undone.'}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={acting}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Button variant="secondary" type="button" onClick={() => setConfirmAction(null)} disabled={acting}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmAction}
-              disabled={acting}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button variant="danger" type="button" onClick={handleConfirmAction} disabled={acting}>
               {acting ? 'Working...' : confirmAction === 'send' ? 'Send Invoice' : 'Void Invoice'}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

@@ -5,6 +5,8 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
 
 export default function InvitationsPage() {
   const { t } = useTranslation('common');
@@ -74,13 +76,10 @@ export default function InvitationsPage() {
         breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('invitations') }]}
         actions={
           <PermissionGuard permission="invitations.create">
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors inline-flex items-center"
-            >
-              <i className="bx bx-plus mr-2"></i>
-              {t('sendInvitation')}
-            </button>
+            <Button size="sm" onClick={() => setShowForm(!showForm)}>
+              <i className="bx bx-plus"></i>
+              <span>{t('sendInvitation')}</span>
+            </Button>
           </PermissionGuard>
         }
       />
@@ -88,30 +87,21 @@ export default function InvitationsPage() {
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <form onSubmit={sendInvitation} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-9 w-full px-3 border border-gray-300 rounded-md text-[13px]"
-                required
-              />
-            </div>
+            <FormField
+              type="email"
+              name="email"
+              label={t('email')}
+              required
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
+            />
             <div className="flex space-x-3">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2"
-              >
+              <Button type="submit" variant="primary">
                 {t('send')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                 {t('cancel')}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -126,28 +116,28 @@ export default function InvitationsPage() {
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('email')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('role')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('status')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('sentAt')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('actions')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('email')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('role')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('status')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('sentAt')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {invitations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-3 text-center text-gray-500">
                     {t('noInvitationsYet')}
                   </td>
                 </tr>
               ) : (
                 invitations.map((inv) => (
                   <tr key={inv.id}>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {inv.email}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">{inv.role?.name || '-'}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{inv.role?.name || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           inv.status === 'accepted'
@@ -160,10 +150,10 @@ export default function InvitationsPage() {
                         {inv.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                       {inv.status === 'pending' && (
                         <>
                           <button

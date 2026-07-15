@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function AiAnalyticsPage() {
   const { t } = useTranslation('common');
@@ -128,12 +129,9 @@ export default function AiAnalyticsPage() {
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">{t('reorderSuggestions')}</h2>
-          <button
-            onClick={loadSuggestions}
-            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2 text-sm"
-          >
+          <Button variant="primary" onClick={loadSuggestions}>
             {t('refresh')}
-          </button>
+          </Button>
         </div>
         {suggestionsLoading ? (
           <div className="text-center py-4">
@@ -203,7 +201,7 @@ export default function AiAnalyticsPage() {
                 setTimeout(() => loadPrediction(), 100);
               }
             }}
-            className="h-9 px-4 border border-gray-300 rounded-md text-[13px]"
+            className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
           >
             <option value="">{t('selectItem')}</option>
             {inventoryItems.map((item) => (
