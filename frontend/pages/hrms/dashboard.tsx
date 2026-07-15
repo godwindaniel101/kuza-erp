@@ -3,11 +3,47 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
-import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import Button from '@/components/ui/Button';
+import Card from '@/components/Card';
+import { CardSkeleton } from '@/components/ui/Skeleton';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials}
+    </span>
+  );
+}
+
+const leaveVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'approved') return 'success';
+  if (s === 'rejected') return 'error';
+  return 'warning';
+};
+
+const DEPT_BAR_TONES = ['bg-brand-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-rose-500', 'bg-violet-500'];
 
 export default function HRMSDashboard() {
   const { t } = useTranslation('common');
+  const [greeting, setGreeting] = useState('Welcome back');
   const [stats, setStats] = useState({
     totalEmployees: 0,
     activeEmployees: 0,
@@ -16,7 +52,10 @@ export default function HRMSDashboard() {
     onLeaveToday: 0,
     clockedIn: 0,
     todayAttendance: 0,
+    presentToday: 0,
+    absentToday: 0,
   });
+  const [deptDist, setDeptDist] = useState<{ name: string; count: number }[]>([]);
   const [recentEmployees, setRecentEmployees] = useState<any[]>([]);
   const [recentLeaves, setRecentLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +63,8 @@ export default function HRMSDashboard() {
   const isLoadingRef = useRef(false);
 
   useEffect(() => {
-    // Only load data once, prevent multiple simultaneous loads
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening');
     if (!hasLoadedRef.current && !isLoadingRef.current) {
       hasLoadedRef.current = true;
       isLoadingRef.current = true;
@@ -37,7 +77,6 @@ export default function HRMSDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Load HRMS stats in parallel
       const [employeesRes, leavesRes, attendanceRes, departmentsRes] = await Promise.all([
         api.get<{ success: boolean; data: any[] }>('/hrms/employees').catch(() => ({ success: false, data: [] })),
         api.get<{ success: boolean; data: any[] }>('/hrms/leaves').catch(() => ({ success: false, data: [] })),
@@ -45,54 +84,60 @@ export default function HRMSDashboard() {
         api.get<{ success: boolean; data: any[] }>('/hrms/departments').catch(() => ({ success: false, data: [] })),
       ]);
 
+      let employees: any[] = [];
       if (employeesRes.success && employeesRes.data) {
-        const employees = employeesRes.data;
-        setStats(prev => ({
-          ...prev,
-          totalEmployees: employees.length,
-          activeEmployees: employees.filter((e: any) => e.isActive !== false).length,
-        }));
+        employees = employeesRes.data;
         setRecentEmployees(employees.slice(0, 5));
+        // Department distribution
+        const byDept: Record<string, number> = {};
+        employees.forEach((e: any) => {
+          const d = e.department?.name || e.departmentName || (typeof e.department === 'string' ? e.department : 'Unassigned');
+          byDept[d] = (byDept[d] || 0) + 1;
+        });
+        setDeptDist(
+          Object.entries(byDept)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6),
+        );
       }
 
-      if (departmentsRes.success && departmentsRes.data) {
-        setStats(prev => ({
-          ...prev,
-          departmentsCount: departmentsRes.data.length,
-        }));
-      }
-
+      const today = new Date().toISOString().split('T')[0];
+      let onLeaveToday = 0;
+      let pendingLeaves = 0;
       if (leavesRes.success && leavesRes.data) {
         const leaves = leavesRes.data;
-        const today = new Date().toISOString().split('T')[0];
-        const pendingLeaves = leaves.filter((l: any) => l.status === 'pending');
-        const onLeaveToday = leaves.filter((l: any) => {
-          const startDate = l.startDate ? new Date(l.startDate).toISOString().split('T')[0] : null;
-          const endDate = l.endDate ? new Date(l.endDate).toISOString().split('T')[0] : null;
-          return l.status === 'approved' && startDate && endDate && startDate <= today && endDate >= today;
-        });
-        
-        setStats(prev => ({
-          ...prev,
-          pendingLeaves: pendingLeaves.length,
-          onLeaveToday: onLeaveToday.length,
-        }));
+        pendingLeaves = leaves.filter((l: any) => (l.status || '').toLowerCase() === 'pending').length;
+        onLeaveToday = leaves.filter((l: any) => {
+          const s = l.startDate ? new Date(l.startDate).toISOString().split('T')[0] : null;
+          const e = l.endDate ? new Date(l.endDate).toISOString().split('T')[0] : null;
+          return (l.status || '').toLowerCase() === 'approved' && s && e && s <= today && e >= today;
+        }).length;
         setRecentLeaves(leaves.slice(0, 5));
       }
 
+      let clockedIn = 0;
+      let presentToday = 0;
+      let todayAttendance = 0;
       if (attendanceRes.success && attendanceRes.data) {
-        const today = new Date().toISOString().split('T')[0];
-        const todayEntries = attendanceRes.data.filter((a: any) => 
-          a.date && a.date.startsWith(today)
-        );
-        const clockedIn = todayEntries.filter((a: any) => a.clockIn && !a.clockOut).length;
-        
-        setStats(prev => ({
-          ...prev,
-          todayAttendance: todayEntries.length,
-          clockedIn,
-        }));
+        const todayEntries = attendanceRes.data.filter((a: any) => a.date && String(a.date).startsWith(today));
+        todayAttendance = todayEntries.length;
+        clockedIn = todayEntries.filter((a: any) => a.clockIn && !a.clockOut).length;
+        presentToday = todayEntries.filter((a: any) => a.clockIn).length;
       }
+
+      const activeEmployees = employees.filter((e: any) => e.isActive !== false).length;
+      setStats({
+        totalEmployees: employees.length,
+        activeEmployees,
+        departmentsCount: departmentsRes.success ? departmentsRes.data.length : 0,
+        pendingLeaves,
+        onLeaveToday,
+        clockedIn,
+        todayAttendance,
+        presentToday,
+        absentToday: Math.max(0, activeEmployees - presentToday - onLeaveToday),
+      });
     } catch (err) {
       console.error('Failed to load HRMS dashboard data:', err);
     } finally {
@@ -100,243 +145,146 @@ export default function HRMSDashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
-      </div>
-    );
-  }
+  const attendanceRate = stats.activeEmployees > 0 ? Math.round((stats.presentToday / stats.activeEmployees) * 100) : 0;
+  const maxDept = Math.max(1, ...deptDist.map((d) => d.count));
 
   return (
     <div className="space-y-5">
-        <PageHeader
-          title={t('hrDashboard') || 'HR Dashboard'}
-          subtitle="Your workforce at a glance"
-          breadcrumbs={[{ label: 'HR' }]}
-        />
-        {/* Quick Actions Banner - Matching Laravel Pattern */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl p-5 text-white">
-          {/* Faint background image overlay */}
-          <div className="absolute inset-0 bg-[url('/images/hrms-daashboard.png')] bg-right bg-no-repeat bg-full opacity-10 pointer-events-none" aria-hidden="true"></div>
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">{t('welcomeToHRMS') || 'Welcome to HRMS'}</h3>
-              <p className="text-blue-100">{t('hrmsTagline') || 'Manage your human resources efficiently'}</p>
-            </div>
-            <div className="relative z-10 flex space-x-3">
-              <Link
-                href="/hrms/employees/create"
-                className="h-9 px-4 text-[13px] font-medium bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
-              >
-                <i className="bx bx-plus"></i>
-                <span>{t('addEmployee') || 'Add Employee'}</span>
-              </Link>
-              <Link
-                href="/hrms/departments/create"
-                className="h-9 px-4 text-[13px] font-medium bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
-              >
-                <i className="bx bx-buildings"></i>
-                <span>{t('addDepartment') || 'Add Department'}</span>
-              </Link>
-            </div>
+      <PageHeader
+        title={`${greeting} 👋`}
+        subtitle={
+          stats.pendingLeaves > 0
+            ? `You have ${stats.pendingLeaves} pending leave request${stats.pendingLeaves === 1 ? '' : 's'} to review`
+            : 'Your workforce at a glance'
+        }
+        breadcrumbs={[{ label: 'People', href: '/hrms/dashboard' }, { label: 'Dashboard' }]}
+        actions={
+          <div className="flex gap-2">
+            <Button href="/hrms/departments/create" variant="secondary" size="md">
+              <i className="bx bx-buildings" /> Department
+            </Button>
+            <Button href="/hrms/employees/create" size="md">
+              <i className="bx bx-plus" /> Add Employee
+            </Button>
           </div>
+        }
+      />
+
+      {/* KPI row */}
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((k) => (
+            <CardSkeleton key={k} />
+          ))}
         </div>
-
-        {/* Statistics Cards - First Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('totalEmployees') || 'Total Employees'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.totalEmployees}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <i className="bx bx-group text-brand-600 dark:text-brand-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('activeEmployees') || 'Active Employees'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.activeEmployees}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <i className="bx bx-check-circle text-green-600 dark:text-green-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('departments') || 'Departments'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.departmentsCount}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
-                <i className="bx bx-buildings text-brand-600 dark:text-brand-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('pendingLeaves') || 'Pending Leaves'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.pendingLeaves}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <i className="bx bx-calendar-check text-yellow-600 dark:text-yellow-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Total Workforce" value={stats.totalEmployees} icon="bx-group" tone="info" caption={`${stats.activeEmployees} active`} />
+          <StatCard label="Present Today" value={stats.presentToday} icon="bx-check-circle" tone="success" caption={`${attendanceRate}% attendance`} />
+          <StatCard label="On Leave Today" value={stats.onLeaveToday} icon="bx-calendar-x" tone="warning" />
+          <StatCard label="Departments" value={stats.departmentsCount} icon="bx-buildings" tone="default" caption={`${stats.pendingLeaves} leaves pending`} />
         </div>
+      )}
 
-        {/* Statistics Cards - Second Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('onLeaveToday') || 'On Leave Today'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.onLeaveToday}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <i className="bx bx-calendar-x text-orange-600 dark:text-orange-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('clockedIn') || 'Clocked In'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.clockedIn}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <i className="bx bx-time-five text-emerald-600 dark:text-emerald-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('todayAttendance') || 'Today Attendance'}</p>
-                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.todayAttendance}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <i className="bx bx-time text-purple-600 dark:text-purple-400 text-2xl"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Employees */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('recentEmployees') || 'Recent Employees'}</h3>
-                <Link
-                  href="/hrms/employees"
-                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
-                >
-                  {t('viewAll')}
-                </Link>
-              </div>
-            </div>
-            <div className="p-6">
-              {recentEmployees.length > 0 ? (
-                <div className="space-y-3">
-                  {recentEmployees.map((employee) => (
-                    <div key={employee.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                        <span className="text-brand-600 dark:text-brand-400 font-semibold">
-                          {employee.firstName?.charAt(0) || employee.name?.charAt(0) || 'E'}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {employee.firstName && employee.lastName 
-                            ? `${employee.firstName} ${employee.lastName}`
-                            : employee.name || 'Employee'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {employee.email || employee.employeeNumber || '—'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Department distribution */}
+        <Card title="Employees by department" className="lg:col-span-2">
+          {deptDist.length === 0 ? (
+            <p className="py-6 text-sm text-gray-400">No department data yet.</p>
+          ) : (
+            <div className="space-y-3 pt-1">
+              {deptDist.map((d, i) => (
+                <div key={d.name}>
+                  <div className="mb-1 flex items-center justify-between text-[13px]">
+                    <span className="text-gray-700 dark:text-gray-300">{d.name}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{d.count}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div className={`h-full rounded-full ${DEPT_BAR_TONES[i % DEPT_BAR_TONES.length]}`} style={{ width: `${(d.count / maxDept) * 100}%` }} />
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <i className="bx bx-user text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
-                  <p className="text-gray-500 dark:text-gray-400">{t('noEmployees') || 'No employees yet'}</p>
-                </div>
-              )}
+              ))}
             </div>
-          </div>
+          )}
+        </Card>
 
-          {/* Recent Leave Requests */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('recentLeaveRequests') || 'Recent Leave Requests'}</h3>
-                <Link
-                  href="/hrms/leaves"
-                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
-                >
-                  {t('viewAll')}
-                </Link>
+        {/* Attendance summary */}
+        <Card title="Today's attendance">
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            {[
+              { label: 'Present', value: stats.presentToday, tone: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+              { label: 'On leave', value: stats.onLeaveToday, tone: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+              { label: 'Clocked in', value: stats.clockedIn, tone: 'text-sky-600', bg: 'bg-sky-50 dark:bg-sky-500/10' },
+              { label: 'Absent', value: stats.absentToday, tone: 'text-red-600', bg: 'bg-red-50 dark:bg-red-500/10' },
+            ].map((b) => (
+              <div key={b.label} className={`rounded-xl p-3 ${b.bg}`}>
+                <p className={`text-2xl font-bold ${b.tone}`}>{b.value}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{b.label}</p>
               </div>
-            </div>
-            <div className="p-6">
-              {recentLeaves.length > 0 ? (
-                <div className="space-y-3">
-                  {recentLeaves.map((leave) => (
-                    <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {leave.employee?.name || leave.employee?.firstName || 'Employee'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {leave.leaveType?.name || 'Leave'} • {leave.startDate ? new Date(leave.startDate).toLocaleDateString() : '—'}
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          leave.status === 'approved'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                            : leave.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
-                        }`}
-                      >
-                        {leave.status ? leave.status.charAt(0).toUpperCase() + leave.status.slice(1) : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <i className="bx bx-calendar text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
-                  <p className="text-gray-500 dark:text-gray-400">{t('noLeaveRequests') || 'No leave requests yet'}</p>
-                </div>
-              )}
-            </div>
+            ))}
           </div>
-        </div>
+        </Card>
       </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Recent employees */}
+        <Card padding={false}>
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent employees</h3>
+            <Button href="/hrms/employees" variant="ghost" size="sm">View all</Button>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {recentEmployees.length === 0 ? (
+              <p className="p-5 text-sm text-gray-400">No employees yet.</p>
+            ) : (
+              recentEmployees.map((e, i) => {
+                const name = `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || e.email || 'Employee';
+                return (
+                  <div key={e.id || i} className="flex items-center gap-3 px-5 py-3">
+                    <Avatar name={name} i={i} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{name}</p>
+                      <p className="truncate text-xs text-gray-500">{e.position?.title || e.jobTitle || e.department?.name || '—'}</p>
+                    </div>
+                    {e.isActive !== false && <StatusBadge variant="success" label="Active" />}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+
+        {/* Recent leave requests */}
+        <Card padding={false}>
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Leave requests</h3>
+            <Button href="/hrms/leaves" variant="ghost" size="sm">View all</Button>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {recentLeaves.length === 0 ? (
+              <p className="p-5 text-sm text-gray-400">No leave requests.</p>
+            ) : (
+              recentLeaves.map((l, i) => {
+                const name = l.employee ? `${l.employee.firstName || ''} ${l.employee.lastName || ''}`.trim() : l.employeeName || 'Employee';
+                return (
+                  <div key={l.id || i} className="flex items-center gap-3 px-5 py-3">
+                    <Avatar name={name} i={i} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{name}</p>
+                      <p className="truncate text-xs text-gray-500">{l.leaveType?.name || l.type || 'Leave'}</p>
+                    </div>
+                    <StatusBadge variant={leaveVariant(l.status)} label={l.status || 'pending'} />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale || 'en', ['common'])),
-    },
-  };
-};
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: { ...(await serverSideTranslations(locale || 'en', ['common'])) },
+});
