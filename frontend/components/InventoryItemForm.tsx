@@ -628,7 +628,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t('subcategory')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
+                {t('subcategory')}
               </label>
               {formData.categoryId && (
                 <button

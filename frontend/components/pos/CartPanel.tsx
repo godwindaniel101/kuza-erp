@@ -23,9 +23,10 @@ interface CartPanelProps {
   onClose?: () => void;
 }
 
+// Retail POS order types — no "Dine in" (that's a Restaurant concept; the
+// restaurant order flow at /rms/orders/create has its own dine-in/tables UI).
 const ORDER_TYPES: { key: OrderType; label: string }[] = [
-  { key: 'dine_in', label: 'Dine in' },
-  { key: 'takeaway', label: 'Takeaway' },
+  { key: 'takeaway', label: 'Walk-in' },
   { key: 'delivery', label: 'Delivery' },
 ];
 
