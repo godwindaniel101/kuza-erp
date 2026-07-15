@@ -282,10 +282,6 @@ export default function OrdersPage() {
               <i className="bx bx-download" aria-hidden="true"></i>
               {t('export') || 'Export'} CSV
             </Button>
-            <Button href="/pos" variant="secondary" size="sm">
-              <i className="bx bx-store-alt" aria-hidden="true"></i>
-              {t('openPos') || 'Open POS'}
-            </Button>
             <Button href="/rms/orders/create" variant="primary" size="sm">
               <i className="bx bx-plus" aria-hidden="true"></i>
               {t('create')} {t('order')}
