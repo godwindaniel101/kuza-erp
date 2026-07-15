@@ -27,7 +27,8 @@ import type {
 const ALL_CATEGORIES = '__all__';
 
 const EMPTY_META: OrderMeta = {
-  type: 'dine_in',
+  // Retail counter sale — no dine-in / tables (those are Restaurant-only).
+  type: 'takeaway',
   tableId: '',
   customerName: '',
   customerPhone: '',
@@ -76,12 +77,9 @@ export default function PosPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [branchesRes, tablesRes] = await Promise.all([
-          api.get<{ success: boolean; data: PosBranch[] }>('/settings/branches'),
-          api
-            .get<{ success: boolean; data: PosTable[] }>('/rms/tables')
-            .catch(() => ({ success: false, data: [] as PosTable[] })),
-        ]);
+        // Retail POS: branches only. Tables/dine-in are a Restaurant concept and
+        // are intentionally not loaded here, so the table selector stays hidden.
+        const branchesRes = await api.get<{ success: boolean; data: PosBranch[] }>('/settings/branches');
         if (cancelled) return;
         if (branchesRes.success) {
           setBranches(branchesRes.data);
@@ -91,7 +89,6 @@ export default function PosPage() {
             setBranchId(preferred.id);
           }
         }
-        if (tablesRes.success) setTables(tablesRes.data);
       } catch (err) {
         if (!cancelled) {
           setToast({ message: 'Failed to load POS data', type: 'error' });
