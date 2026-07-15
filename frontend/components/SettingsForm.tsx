@@ -108,7 +108,7 @@ export default function SettingsForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <PageHeader
         title={title || t('restaurantSettings') || 'Business Settings'}

@@ -9,6 +9,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function MenusPage() {
   const { t } = useTranslation('common');
@@ -141,13 +142,14 @@ export default function MenusPage() {
                         <i className="bx bx-food-menu text-brand-500 dark:text-brand-400 mr-2"></i>
                         {menu.name}
                       </h3>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${
-                        menu.isActive
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20'
-                          : 'bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20'
-                      }`}>
-                        {menu.isActive ? t('active') || 'Active' : t('inactive') || 'Inactive'}
-                      </span>
+                      {menu.isActive ? (
+                        <StatusBadge variant="success" label={t('active') || 'Active'} size="sm" />
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                          <i className="bx bx-minus-circle" aria-hidden="true"></i>
+                          {t('inactive') || 'Inactive'}
+                        </span>
+                      )}
                     </div>
                     {menu.description && (
                       <p className="text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2">{menu.description}</p>

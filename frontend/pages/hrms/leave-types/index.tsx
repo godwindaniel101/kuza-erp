@@ -8,6 +8,24 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv, formatNumber } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function LeaveTypeIcon({ i }: { i: number }) {
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${AVATAR_TONES[i % AVATAR_TONES.length]}`} aria-hidden="true">
+      <i className="bx bx-calendar-event text-base"></i>
+    </span>
+  );
+}
 
 export default function LeaveTypesPage() {
   const { t } = useTranslation('common');
@@ -42,19 +60,40 @@ export default function LeaveTypesPage() {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv(
+      'leave-types.csv',
+      ['Name', 'Code', 'Max Days', 'Accrues', 'Status'],
+      leaveTypes.map((lt) => [
+        lt.name || '',
+        lt.code || '',
+        lt.maxDaysPerYear ?? '',
+        lt.accrues ? 'Yes' : 'No',
+        lt.isActive ? 'Active' : 'Inactive',
+      ]),
+    );
+  };
+
   return (
       <div className="space-y-5">
         <PageHeader
           title={t('leaveTypes') || 'Leave Types'}
           subtitle="The kinds of leave your team can take"
+          count={loading ? undefined : leaveTypes.length}
           breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('leaveTypes') || 'Leave Types' }]}
           actions={
-            <PermissionGuard permission="leaveTypes.create">
-              <Button size="sm" href="/hrms/leave-types/create">
-                <i className="bx bx-plus"></i>
-                {t('addLeaveType')}
+            <>
+              <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || leaveTypes.length === 0}>
+                <i className="bx bx-download"></i>
+                {t('export') === 'export' ? 'Export' : t('export')}
               </Button>
-            </PermissionGuard>
+              <PermissionGuard permission="leaveTypes.create">
+                <Button size="sm" href="/hrms/leave-types/create">
+                  <i className="bx bx-plus"></i>
+                  {t('addLeaveType')}
+                </Button>
+              </PermissionGuard>
+            </>
           }
         />
 
@@ -83,45 +122,32 @@ export default function LeaveTypesPage() {
                   <tr>
                     <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('name')}</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('code')}</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('maxDays')}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('maxDays')}</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('accrues')}</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('status')}</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {leaveTypes.map((leaveType) => (
+                  {leaveTypes.map((leaveType, idx) => (
                     <tr key={leaveType.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{leaveType.name}</div>
+                        <div className="flex items-center gap-3">
+                          <LeaveTypeIcon i={idx} />
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{leaveType.name}</div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm text-gray-500 dark:text-gray-400">{leaveType.code || '—'}</div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{leaveType.maxDaysPerYear || '—'}</div>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                        {leaveType.maxDaysPerYear != null ? formatNumber(leaveType.maxDaysPerYear) : '—'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            leaveType.accrues
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          {leaveType.accrues ? t('yes') : t('no')}
-                        </span>
+                        <StatusBadge variant={leaveType.accrues ? 'info' : 'warning'} label={leaveType.accrues ? t('yes') : t('no')} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            leaveType.isActive
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          {leaveType.isActive ? t('active') : t('inactive')}
-                        </span>
+                        <StatusBadge variant={leaveType.isActive ? 'success' : 'info'} label={leaveType.isActive ? t('active') : t('inactive')} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">

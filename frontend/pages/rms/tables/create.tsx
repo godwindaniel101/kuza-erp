@@ -95,7 +95,7 @@ export default function CreateTablePage() {
 
   return (
     <PermissionGuard permission="tables.create">
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <div className="mb-6">

@@ -10,6 +10,7 @@ import Toast from '@/components/Toast';
 import Card from '@/components/Card';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
+import { downloadCsv } from '@/lib/format';
 
 export default function RolesPage() {
   const { t } = useTranslation('common');
@@ -63,14 +64,37 @@ export default function RolesPage() {
         <PageHeader
           title={t('roles')}
           subtitle="Permission sets you assign to users"
+          count={loading ? undefined : roles.length}
           breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('roles') }]}
           actions={
-            <PermissionGuard permission="roles.create">
-              <Button href="/settings/roles/create" size="sm">
-                <i className="bx bx-plus"></i>
-                <span>{t('add')} {t('role')}</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  downloadCsv(
+                    'roles.csv',
+                    [t('name'), t('displayName') || 'Display Name', t('permissions'), t('users')],
+                    roles.map((r) => [
+                      r.name,
+                      r.displayName || '',
+                      r.permissions?.length || 0,
+                      r.users?.length || 0,
+                    ]),
+                  )
+                }
+                disabled={loading || roles.length === 0}
+              >
+                <i className="bx bx-download"></i>
+                <span>{t('export') || 'Export'} CSV</span>
               </Button>
-            </PermissionGuard>
+              <PermissionGuard permission="roles.create">
+                <Button href="/settings/roles/create" size="sm">
+                  <i className="bx bx-plus"></i>
+                  <span>{t('add')} {t('role')}</span>
+                </Button>
+              </PermissionGuard>
+            </div>
           }
         />
 
@@ -115,16 +139,27 @@ export default function RolesPage() {
                   {roles.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((role) => (
                     <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                            <i className="bx bx-shield-quarter text-lg" aria-hidden="true"></i>
+                          </span>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-gray-100">{role.displayName || '—'}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {role.permissions?.length || 0} {t('permissions')}
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="bx bx-key text-gray-400" aria-hidden="true"></i>
+                          <span className="tabular-nums">{role.permissions?.length || 0}</span> {t('permissions')}
+                        </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                        {role.users?.length || 0} {t('users')}
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="bx bx-user text-gray-400" aria-hidden="true"></i>
+                          <span className="tabular-nums">{role.users?.length || 0}</span> {t('users')}
+                        </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-center">
                         <div className="flex items-center justify-center gap-4">

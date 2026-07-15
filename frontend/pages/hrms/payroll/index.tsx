@@ -7,10 +7,51 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
 import Link from 'next/link';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials || 'U'}
+    </span>
+  );
+}
+
+const payrollStatusVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'approved') return 'success';
+  if (s === 'draft') return 'info';
+  return 'warning';
+};
+
+const paymentStatusVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'processed') return 'success';
+  if (s === 'failed') return 'error';
+  if (s === 'pending') return 'warning';
+  return 'info';
+};
 
 export default function PayrollPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const [payrolls, setPayrolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,19 +74,41 @@ export default function PayrollPage() {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv(
+      'payroll.csv',
+      ['Employee', 'Period', 'Gross Pay', 'Net Pay', 'Status', 'Payment Status'],
+      payrolls.map((p) => [
+        `${p.employee?.firstName || ''} ${p.employee?.lastName || ''}`.trim(),
+        p.payPeriod || '',
+        formatMoney(p.grossPay, currency),
+        formatMoney(p.netPay, currency),
+        p.status || 'draft',
+        p.paymentStatus || 'pending',
+      ]),
+    );
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
         title={t('payroll')}
         subtitle="Pay runs, past and pending"
+        count={loading ? undefined : payrolls.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('payroll') }]}
         actions={
-          <PermissionGuard permission="payroll.create">
-            <Button size="sm" href="/hrms/payroll/create">
-              <i className="bx bx-plus"></i>
-              {t('create')} {t('payroll')}
+          <>
+            <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || payrolls.length === 0}>
+              <i className="bx bx-download"></i>
+              {t('export') === 'export' ? 'Export' : t('export')}
             </Button>
-          </PermissionGuard>
+            <PermissionGuard permission="payroll.create">
+              <Button size="sm" href="/hrms/payroll/create">
+                <i className="bx bx-plus"></i>
+                {t('create')} {t('payroll')}
+              </Button>
+            </PermissionGuard>
+          </>
         }
       />
       <Card>
@@ -76,10 +139,10 @@ export default function PayrollPage() {
                   <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('period')}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('grossPay')}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('netPay')}
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
@@ -94,47 +157,30 @@ export default function PayrollPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {payrolls.map((payroll) => (
+                {payrolls.map((payroll, idx) => (
                   <tr key={payroll.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {payroll.employee?.firstName} {payroll.employee?.lastName}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={`${payroll.employee?.firstName || ''} ${payroll.employee?.lastName || ''}`.trim() || '?'} i={idx} />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {payroll.employee?.firstName} {payroll.employee?.lastName}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {payroll.payPeriod || '—'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      ${payroll.grossPay || '0.00'}
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                      {formatMoney(payroll.grossPay, currency)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      ${payroll.netPay || '0.00'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          payroll.status === 'approved'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                            : payroll.status === 'draft'
-                            ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                        }`}
-                      >
-                        {payroll.status || 'draft'}
-                      </span>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium tabular-nums text-gray-900 dark:text-gray-100">
+                      {formatMoney(payroll.netPay, currency)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          payroll.paymentStatus === 'processed'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
-                            : payroll.paymentStatus === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                            : payroll.paymentStatus === 'failed'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {payroll.paymentStatus || 'pending'}
-                      </span>
+                      <StatusBadge variant={payrollStatusVariant(payroll.status)} label={payroll.status || 'draft'} />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <StatusBadge variant={paymentStatusVariant(payroll.paymentStatus)} label={payroll.paymentStatus || 'pending'} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">

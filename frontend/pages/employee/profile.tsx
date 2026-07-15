@@ -32,7 +32,7 @@ export default function EmployeeProfilePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
@@ -43,7 +43,7 @@ export default function EmployeeProfilePage() {
   const employee = profile?.employee;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       <PageHeader
         title={t('myProfile')}
         subtitle="Your personal and employment details"

@@ -19,9 +19,15 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   const { t } = useTranslation('common');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLDivElement>(null);
+  const quickCreateRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const isHRMS = router.pathname.startsWith('/hrms');
   const { businessType, effectiveApps, availableGroups, setActiveWorkspace } = useTenantStore();
   const showNewOrder = !isHRMS && (businessType === 'restaurant' || businessType === null);
@@ -51,6 +57,35 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   const workspaceForApp = (appKey: string): string => {
     const candidates = APP_GROUP_CANDIDATES[appKey] ?? [];
     return candidates.find((c) => availableGroups.includes(c)) ?? 'all';
+  };
+
+  // Quick-create ("+") menu: common record-creation shortcuts across modules.
+  const quickCreateItems: { label: string; href: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
+    { label: 'New Sale', href: '/pos', icon: 'banknotes' },
+    { label: 'New Invoice', href: '/sales/invoices/new', icon: 'document-text' },
+    { label: 'Add Item', href: '/ims/inventory', icon: 'cube' },
+    { label: 'Add Employee', href: '/hrms/employees/create', icon: 'user' },
+    { label: 'New Journal Entry', href: '/accounting/journal-entries/new', icon: 'book-open' },
+  ];
+
+  // Global search routes the query to the most relevant list for the active module.
+  const SEARCH_TARGETS: [string, string][] = [
+    ['/hrms', '/hrms/employees'],
+    ['/pos', '/ims/inventory'],
+    ['/ims', '/ims/inventory'],
+    ['/sales', '/sales/invoices'],
+    ['/accounting', '/accounting/journal-entries'],
+    ['/rms', '/rms/orders'],
+  ];
+
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    const match = SEARCH_TARGETS.find(([prefix]) => router.pathname.startsWith(prefix));
+    const target = match ? match[1] : '/ims/inventory';
+    router.push({ pathname: target, query: { search: q } });
+    setMobileSearchOpen(false);
   };
 
   useEffect(() => {
@@ -120,6 +155,47 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
     };
   }, [launcherOpen]);
 
+  // Quick-create menu: close on outside click or Escape.
+  useEffect(() => {
+    if (!quickCreateOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (quickCreateRef.current && !quickCreateRef.current.contains(event.target as Node)) {
+        setQuickCreateOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setQuickCreateOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [quickCreateOpen]);
+
+  // Mobile search: close on outside click or Escape; focus input when opened.
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    mobileSearchInputRef.current?.focus();
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('#mobile-search-toggle')) return;
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(target)) {
+        setMobileSearchOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileSearchOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [mobileSearchOpen]);
+
   const toggleDarkMode = () => {
     const html = document.documentElement;
     const isDark = html.classList.contains('dark');
@@ -186,24 +262,26 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
           </nav>
         </div>
 
-        {/* Center: global search (visual) */}
+        {/* Center: global search */}
         <div className="hidden md:flex flex-1 justify-center px-4">
-          <div className="relative w-full max-w-md">
+          <form onSubmit={handleSearchSubmit} role="search" className="relative w-full max-w-md">
             <Icon
               name="search"
               size={16}
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
             />
             <input
-              type="text"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search') || 'Search'}
               aria-label="Search"
               className="h-9 w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 pl-10 pr-12 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
             />
             <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-0.5 text-2xs font-medium text-gray-400 dark:text-gray-500">
-              ⌘K
+              ↵
             </kbd>
-          </div>
+          </form>
         </div>
 
         {/* Right: actions */}
@@ -216,6 +294,60 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
               </Button>
             </div>
           )}
+
+          {/* Mobile: search toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileSearchOpen((v) => !v)}
+            id="mobile-search-toggle"
+            aria-label={t('search') || 'Search'}
+            aria-expanded={mobileSearchOpen}
+            title={t('search') || 'Search'}
+            className={`md:hidden ${iconButton}`}
+          >
+            <Icon name="search" size={18} />
+          </button>
+
+          {/* Quick-create ("+") menu */}
+          <div className="relative" ref={quickCreateRef}>
+            <button
+              type="button"
+              onClick={() => setQuickCreateOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={quickCreateOpen}
+              aria-label="Create new"
+              title="Create new"
+              className={iconButton}
+            >
+              <Icon name="plus" size={18} />
+            </button>
+
+            {quickCreateOpen && (
+              <div
+                role="menu"
+                aria-label="Create new"
+                className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
+              >
+                <p className="px-2.5 pb-1 pt-1 text-2xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  Create
+                </p>
+                {quickCreateItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    onClick={() => setQuickCreateOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                      <Icon name={item.icon} size={15} />
+                    </span>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* App launcher (Google-style grid) */}
           <div className="relative" ref={launcherRef}>
@@ -370,6 +502,31 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
           </div>
         </div>
       </div>
+
+      {/* Mobile: collapsible global search bar */}
+      {mobileSearchOpen && (
+        <div
+          ref={mobileSearchRef}
+          className="md:hidden absolute inset-x-0 top-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 shadow-popover"
+        >
+          <form onSubmit={handleSearchSubmit} role="search" className="relative">
+            <Icon
+              name="search"
+              size={16}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+            />
+            <input
+              ref={mobileSearchInputRef}
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('search') || 'Search'}
+              aria-label="Search"
+              className="h-9 w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 pl-10 pr-3 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+            />
+          </form>
+        </div>
+      )}
     </header>
   );
 }

@@ -8,6 +8,31 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials || 'U'}
+    </span>
+  );
+}
 
 export default function AttendancePage() {
   const { t } = useTranslation('common');
@@ -78,15 +103,33 @@ export default function AttendancePage() {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv(
+      'attendance.csv',
+      ['Employee', 'Clock In', 'Clock Out', 'Hours'],
+      records.map((r) => [
+        `${r.employee?.firstName || ''} ${r.employee?.lastName || ''}`.trim(),
+        r.clockIn ? new Date(r.clockIn).toLocaleString() : '',
+        r.clockOut ? new Date(r.clockOut).toLocaleString() : '',
+        r.totalHours ?? '',
+      ]),
+    );
+  };
+
   return (
     <div className="space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <PageHeader
         title={t('attendance')}
         subtitle="Who clocked in, and when"
+        count={loading ? undefined : records.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('attendance') }]}
         actions={
           <>
+            <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || records.length === 0}>
+              <i className="bx bx-download"></i>
+              {t('export') === 'export' ? 'Export' : t('export')}
+            </Button>
             <PermissionGuard permission="attendance.clock-in">
               <button
                 onClick={clockIn}
@@ -141,16 +184,30 @@ export default function AttendancePage() {
                   <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('clockOut')}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('hours')}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {records.map((record) => (
+                {records.map((record, idx) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {record.employee?.firstName} {record.employee?.lastName}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={`${record.employee?.firstName || ''} ${record.employee?.lastName || ''}`.trim() || '?'} i={idx} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {record.employee?.firstName} {record.employee?.lastName}
+                          </div>
+                          <div className="mt-0.5">
+                            {record.clockIn && !record.clockOut ? (
+                              <StatusBadge variant="info" size="sm" label={t('clockedIn') || 'Clocked in'} />
+                            ) : record.clockOut ? (
+                              <StatusBadge variant="success" size="sm" label={t('completed') === 'completed' ? 'Completed' : t('completed')} />
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {record.clockIn ? new Date(record.clockIn).toLocaleString() : '—'}
@@ -158,7 +215,7 @@ export default function AttendancePage() {
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {record.clockOut ? new Date(record.clockOut).toLocaleString() : '—'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
                       {record.totalHours || '—'}
                     </td>
                   </tr>

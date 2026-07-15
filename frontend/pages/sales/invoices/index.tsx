@@ -12,7 +12,34 @@ import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import InvoiceStatusBadge from '@/components/ui/InvoiceStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { formatMoney, formatDate, useCurrency } from '@/lib/format';
+import { formatMoney, formatDate, downloadCsv, useCurrency } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name }: { name: string }) {
+  const initials =
+    (name || '?')
+      .split(' ')
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?';
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  const tone = AVATAR_TONES[hash % AVATAR_TONES.length];
+  return (
+    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${tone}`}>
+      {initials}
+    </span>
+  );
+}
 
 interface Invoice {
   id: string;
@@ -112,7 +139,19 @@ export default function InvoicesPage() {
       label: 'Invoice #',
       render: (inv) => <span className="font-medium text-gray-900 dark:text-white">{inv.invoiceNumber}</span>,
     },
-    { key: 'customer', label: 'Customer', render: (inv) => inv.customer?.name || '-' },
+    {
+      key: 'customer',
+      label: 'Customer',
+      render: (inv) =>
+        inv.customer?.name ? (
+          <div className="flex items-center gap-3">
+            <Avatar name={inv.customer.name} />
+            <span className="text-gray-900 dark:text-gray-100">{inv.customer.name}</span>
+          </div>
+        ) : (
+          '-'
+        ),
+    },
     { key: 'issueDate', label: 'Issued', render: (inv) => formatDate(inv.issueDate) },
     {
       key: 'dueDate',
@@ -142,6 +181,24 @@ export default function InvoicesPage() {
     },
   ];
 
+  const handleExport = () => {
+    if (invoices.length === 0) return;
+    downloadCsv(
+      `invoices-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Invoice #', 'Customer', 'Issued', 'Due', 'Total', 'Paid', 'Balance', 'Status'],
+      invoices.map((inv) => [
+        inv.invoiceNumber,
+        inv.customer?.name || '',
+        formatDate(inv.issueDate),
+        formatDate(inv.dueDate),
+        Number(inv.total ?? 0).toFixed(2),
+        Number(inv.amountPaid ?? 0).toFixed(2),
+        Number(inv.balance ?? 0).toFixed(2),
+        inv.status,
+      ]),
+    );
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
   const hasFilters = !!status || !!customerId || !!debouncedSearch;
@@ -154,10 +211,16 @@ export default function InvoicesPage() {
         subtitle="Bill customers and track payments"
         breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices' }]}
         actions={
-          <Button href="/sales/invoices/new" size="sm">
-            <i className="bx bx-plus"></i>
-            New Invoice
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || invoices.length === 0}>
+              <i className="bx bx-download"></i>
+              Export CSV
+            </Button>
+            <Button href="/sales/invoices/new" size="sm">
+              <i className="bx bx-plus"></i>
+              New Invoice
+            </Button>
+          </>
         }
       />
 

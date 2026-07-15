@@ -10,6 +10,24 @@ import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function LocationBadge({ name, i }: { name: string; i: number }) {
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${AVATAR_TONES[i % AVATAR_TONES.length]}`} aria-hidden="true">
+      <i className="bx bx-map text-base"></i>
+    </span>
+  );
+}
 
 export default function LocationsPage() {
   const { t } = useTranslation('common');
@@ -48,6 +66,14 @@ export default function LocationsPage() {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv(
+      'locations.csv',
+      ['Name', 'Address', 'City', 'Country', 'Status'],
+      locations.map((l) => [l.name || '', l.address || '', l.city || '', l.country || '', l.isActive ? 'Active' : 'Inactive']),
+    );
+  };
+
   return (
       <div className="space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -56,12 +82,18 @@ export default function LocationsPage() {
           subtitle="Where your teams work"
           breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('locations') || 'Locations' }]}
           actions={
-            <PermissionGuard permission="locations.create">
-              <Button href="/hrms/locations/create" size="sm">
-                <i className="bx bx-plus"></i>
-                {t('addLocation')}
+            <>
+              <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || locations.length === 0}>
+                <i className="bx bx-download"></i>
+                {t('export') === 'export' ? 'Export' : t('export')}
               </Button>
-            </PermissionGuard>
+              <PermissionGuard permission="locations.create">
+                <Button href="/hrms/locations/create" size="sm">
+                  <i className="bx bx-plus"></i>
+                  {t('addLocation')}
+                </Button>
+              </PermissionGuard>
+            </>
           }
         />
 
@@ -98,10 +130,13 @@ export default function LocationsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {locations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((location) => (
+                    {locations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((location, idx) => (
                       <tr key={location.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{location.name}</div>
+                          <div className="flex items-center gap-3">
+                            <LocationBadge name={location.name || ''} i={idx} />
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{location.name}</div>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm text-gray-700 dark:text-gray-300">{location.address || '—'}</div>
@@ -113,15 +148,7 @@ export default function LocationsPage() {
                           <div className="text-sm text-gray-700 dark:text-gray-300">{location.country || '—'}</div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              location.isActive
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            {location.isActive ? t('active') : t('inactive')}
-                          </span>
+                          <StatusBadge variant={location.isActive ? 'success' : 'info'} label={location.isActive ? t('active') : t('inactive')} />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">

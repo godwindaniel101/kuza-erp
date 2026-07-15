@@ -145,7 +145,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
           label: 'Menu',
           items: [
             { href: '/rms/menus', label: 'Menus', icon: 'menu-book', permission: 'menus.view' },
-            { href: '/menu-studio', label: 'Menu Studio', icon: 'sparkles' },
+            { href: '/menu-studio', label: 'QR Menu', icon: 'sparkles' },
           ],
         },
         {

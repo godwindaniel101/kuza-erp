@@ -66,7 +66,7 @@ export default function CreateBranchPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       {toast && (
         <Toast
           message={toast.message}

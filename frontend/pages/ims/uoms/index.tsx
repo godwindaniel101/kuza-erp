@@ -8,6 +8,7 @@ import Toast from '@/components/Toast';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function UomsPage() {
   const { t } = useTranslation('common');
@@ -118,19 +119,18 @@ export default function UomsPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {uoms.slice((uomCurrentPage - 1) * itemsPerPage, uomCurrentPage * itemsPerPage).map((uom) => (
-                    <tr key={uom.id}>
+                    <tr key={uom.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
-                        {uom.name}
+                        <span className="inline-flex items-center gap-2">
+                          <i className="bx bx-ruler text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                          {uom.name}
+                        </span>
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         {uom.abbreviation}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap">
-                        {uom.isDefault && (
-                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                            {t('default')}
-                          </span>
-                        )}
+                        {uom.isDefault && <StatusBadge variant="info" label={t('default')} size="sm" />}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                         <PermissionGuard permission="uoms.edit">
@@ -208,7 +208,7 @@ export default function UomsPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {conversions.slice((conversionCurrentPage - 1) * itemsPerPage, conversionCurrentPage * itemsPerPage).map((conversion) => (
-                    <tr key={conversion.id}>
+                    <tr key={conversion.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                         {conversion.fromUom?.name} ({conversion.fromUom?.abbreviation})
                       </td>

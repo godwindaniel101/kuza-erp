@@ -60,7 +60,7 @@ export default function CreatePositionPage() {
 
   return (
     <PermissionGuard permission="positions.create">
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
           title={t('createPosition') || 'Create Position'}

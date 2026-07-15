@@ -12,7 +12,34 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import FormField from '@/components/ui/FormField';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
-import { formatMoney, useCurrency } from '@/lib/format';
+import { formatMoney, downloadCsv, useCurrency } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name }: { name: string }) {
+  const initials =
+    (name || '?')
+      .split(' ')
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?';
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  const tone = AVATAR_TONES[hash % AVATAR_TONES.length];
+  return (
+    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${tone}`}>
+      {initials}
+    </span>
+  );
+}
 
 interface Customer {
   id: string;
@@ -142,7 +169,12 @@ export default function CustomersPage() {
     {
       key: 'name',
       label: 'Name',
-      render: (c) => <span className="font-medium text-gray-900 dark:text-white">{c.name}</span>,
+      render: (c) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={c.name} />
+          <span className="font-medium text-gray-900 dark:text-white">{c.name}</span>
+        </div>
+      ),
     },
     { key: 'email', label: 'Email', render: (c) => c.email || '-' },
     { key: 'phone', label: 'Phone', render: (c) => c.phone || '-' },
@@ -193,6 +225,21 @@ export default function CustomersPage() {
     },
   ];
 
+  const handleExport = () => {
+    if (customers.length === 0) return;
+    downloadCsv(
+      `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Name', 'Email', 'Phone', 'Credit Limit', 'Status'],
+      customers.map((c) => [
+        c.name,
+        c.email || '',
+        c.phone || '',
+        c.creditLimit != null ? Number(c.creditLimit).toFixed(2) : '',
+        c.isActive ? 'Active' : 'Inactive',
+      ]),
+    );
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
 
@@ -204,10 +251,16 @@ export default function CustomersPage() {
         subtitle="Manage the people and businesses you invoice"
         breadcrumbs={[{ label: 'Sales' }, { label: 'Customers' }]}
         actions={
-          <Button size="sm" onClick={() => setForm({ ...emptyForm })}>
-            <i className="bx bx-plus"></i>
-            Add Customer
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || customers.length === 0}>
+              <i className="bx bx-download"></i>
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setForm({ ...emptyForm })}>
+              <i className="bx bx-plus"></i>
+              Add Customer
+            </Button>
+          </>
         }
       />
 

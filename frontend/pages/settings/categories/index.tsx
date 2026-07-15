@@ -198,11 +198,16 @@ export default function CategoriesSettingsPage() {
                 key={category.id}
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
               >
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{category.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {subcategoryCount} {subcategoryCount === 1 ? t('subcategory') || 'subcategory' : t('subcategories') || 'subcategories'}
-                  </p>
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                    <i className="bx bx-folder text-xl" aria-hidden="true"></i>
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{category.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="tabular-nums">{subcategoryCount}</span> {subcategoryCount === 1 ? t('subcategory') || 'subcategory' : t('subcategories') || 'subcategories'}
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex gap-2 mt-4">

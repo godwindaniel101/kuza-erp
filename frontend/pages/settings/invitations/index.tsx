@@ -7,6 +7,34 @@ import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import { downloadCsv, formatDate } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?').slice(0, 2).toUpperCase();
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
+    >
+      {initials}
+    </span>
+  );
+}
+
+const invitationVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'accepted') return 'success';
+  if (s === 'expired') return 'error';
+  return 'pending';
+};
 
 export default function InvitationsPage() {
   const { t } = useTranslation('common');
@@ -75,12 +103,34 @@ export default function InvitationsPage() {
         subtitle="Pending invites to your workspace"
         breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('invitations') }]}
         actions={
-          <PermissionGuard permission="invitations.create">
-            <Button size="sm" onClick={() => setShowForm(!showForm)}>
-              <i className="bx bx-plus"></i>
-              <span>{t('sendInvitation')}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                downloadCsv(
+                  'invitations.csv',
+                  [t('email'), t('role'), t('status'), t('sentAt')],
+                  invitations.map((inv) => [
+                    inv.email,
+                    inv.role?.name || '',
+                    inv.status,
+                    inv.createdAt ? formatDate(inv.createdAt) : '',
+                  ]),
+                )
+              }
+              disabled={loading || invitations.length === 0}
+            >
+              <i className="bx bx-download"></i>
+              <span>{t('export') || 'Export'} CSV</span>
             </Button>
-          </PermissionGuard>
+            <PermissionGuard permission="invitations.create">
+              <Button size="sm" onClick={() => setShowForm(!showForm)}>
+                <i className="bx bx-plus"></i>
+                <span>{t('sendInvitation')}</span>
+              </Button>
+            </PermissionGuard>
+          </div>
         }
       />
 
@@ -112,7 +162,7 @@ export default function InvitationsPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
@@ -131,24 +181,17 @@ export default function InvitationsPage() {
                   </td>
                 </tr>
               ) : (
-                invitations.map((inv) => (
-                  <tr key={inv.id}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {inv.email}
+                invitations.map((inv, idx) => (
+                  <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={inv.email || '?'} i={idx} />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{inv.email}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{inv.role?.name || '-'}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          inv.status === 'accepted'
-                            ? 'bg-green-100 text-green-800'
-                            : inv.status === 'expired'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {inv.status}
-                      </span>
+                      <StatusBadge variant={invitationVariant(inv.status)} label={inv.status} size="sm" />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '-'}

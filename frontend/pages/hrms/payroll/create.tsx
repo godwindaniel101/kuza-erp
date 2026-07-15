@@ -95,7 +95,7 @@ export default function CreatePayrollPage() {
   const totals = calculateTotal();
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       <PageHeader
         title={<>{t('create')} {t('payroll')}</>}
         subtitle="Set up a new pay run"
@@ -112,7 +112,7 @@ export default function CreatePayrollPage() {
       />
 
       <Card>
-        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-3xl space-y-5">
+        <form onSubmit={handleSubmit} className="w-full max-w-3xl space-y-5">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-600 dark:text-red-400">
               {error}

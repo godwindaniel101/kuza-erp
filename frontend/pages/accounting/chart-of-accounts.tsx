@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { downloadCsv } from '@/lib/format';
 
 type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
 
@@ -32,6 +33,13 @@ const TYPE_LABELS: Record<AccountType, string> = {
   EQUITY: 'Equity',
   INCOME: 'Income',
   EXPENSE: 'Expenses',
+};
+const TYPE_META: Record<AccountType, { icon: string; tone: string }> = {
+  ASSET: { icon: 'bx-wallet', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' },
+  LIABILITY: { icon: 'bx-credit-card', tone: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
+  EQUITY: { icon: 'bx-pie-chart-alt-2', tone: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300' },
+  INCOME: { icon: 'bx-trending-up', tone: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' },
+  EXPENSE: { icon: 'bx-trending-down', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300' },
 };
 
 interface AddForm {
@@ -178,6 +186,14 @@ export default function ChartOfAccountsPage() {
     }
   };
 
+  const handleExport = () => {
+    if (accounts.length === 0) return;
+    const rows = TYPE_ORDER.flatMap((type) =>
+      grouped[type].map((a) => [a.code, a.name, TYPE_LABELS[type], a.isActive ? 'Active' : 'Inactive']),
+    );
+    downloadCsv(`chart-of-accounts-${new Date().toISOString().slice(0, 10)}.csv`, ['Code', 'Account', 'Type', 'Status'], rows);
+  };
+
   const toggleActive = async (account: Account) => {
     try {
       await api.patch(`/accounting/accounts/${account.id}`, { isActive: !account.isActive });
@@ -196,10 +212,16 @@ export default function ChartOfAccountsPage() {
         subtitle="Your account structure grouped by type"
         breadcrumbs={[{ label: 'Accounting', href: '/accounting' }, { label: 'Chart of Accounts' }]}
         actions={
-          <Button size="sm" onClick={() => setShowAdd(true)}>
-            <i className="bx bx-plus"></i>
-            Add Account
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || accounts.length === 0}>
+              <i className="bx bx-download"></i>
+              Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setShowAdd(true)}>
+              <i className="bx bx-plus"></i>
+              Add Account
+            </Button>
+          </>
         }
       />
 
@@ -227,7 +249,10 @@ export default function ChartOfAccountsPage() {
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden"
               >
                 <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide">
+                  <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide">
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${TYPE_META[type].tone}`}>
+                      <i className={`bx ${TYPE_META[type].icon} text-base`} aria-hidden="true"></i>
+                    </span>
                     {TYPE_LABELS[type]}
                   </h2>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{rows.length} accounts</span>

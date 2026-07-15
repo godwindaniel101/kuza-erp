@@ -147,7 +147,7 @@ export default function NewInvoicePage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       <PageHeader
         title="New Invoice"
         subtitle="Pick items from inventory or add free-text lines"

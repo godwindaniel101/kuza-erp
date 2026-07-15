@@ -9,7 +9,7 @@ import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-import { formatDate, formatNumber } from '@/lib/format';
+import { formatDate, formatNumber, downloadCsv } from '@/lib/format';
 
 type MovementType = 'INFLOW' | 'SALE' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT' | 'WRITE_OFF' | 'RETURN';
 
@@ -185,6 +185,33 @@ export default function StockMovementsPage() {
     },
   ];
 
+  const resolveItemName = (id: string, name?: string) =>
+    name || items.find((i) => i.id === id)?.name || id;
+
+  const handleExportLedgerCsv = () => {
+    const headers = ['Date', 'Item', 'Type', 'Qty', 'Balance After', 'Source'];
+    const rows = movements.map((m) => [
+      formatDate(m.createdAt),
+      resolveItemName(m.itemId, m.itemName),
+      TYPE_TOKENS[m.movementType]?.label || m.movementType,
+      Number(m.quantity || 0),
+      Number(m.balanceAfter || 0),
+      m.sourceType || '',
+    ]);
+    downloadCsv(`stock-ledger-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
+  const handleExportReconCsv = () => {
+    const headers = ['Item', 'Current Stock', 'Ledger Balance', 'Drift'];
+    const rows = reconRows.map((r) => [
+      resolveItemName(r.itemId, r.itemName),
+      Number(r.currentStock || 0),
+      Number(r.ledgerBalance || 0),
+      Number(r.drift || 0),
+    ]);
+    downloadCsv(`stock-reconciliation-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
   const hasFilters = !!itemId || !!type || !!fromDate || !!toDate;
@@ -203,6 +230,21 @@ export default function StockMovementsPage() {
         title="Stock Ledger"
         subtitle="Every stock movement, and reconciliation against current stock"
         breadcrumbs={[{ label: 'IMS', href: '/ims/inventory' }, { label: 'Stock Ledger' }]}
+        actions={
+          tab === 'ledger' ? (
+            movements.length > 0 ? (
+              <Button size="sm" variant="secondary" onClick={handleExportLedgerCsv}>
+                <i className="bx bx-download"></i>
+                Export CSV
+              </Button>
+            ) : undefined
+          ) : reconRows.length > 0 ? (
+            <Button size="sm" variant="secondary" onClick={handleExportReconCsv}>
+              <i className="bx bx-download"></i>
+              Export CSV
+            </Button>
+          ) : undefined
+        }
       />
 
       {/* Tabs */}

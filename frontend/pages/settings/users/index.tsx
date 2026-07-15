@@ -10,6 +10,32 @@ import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
+    >
+      {initials}
+    </span>
+  );
+}
 
 export default function UsersPage() {
   const { t } = useTranslation('common');
@@ -65,12 +91,34 @@ export default function UsersPage() {
         count={loading ? undefined : users.length}
         breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('users') }]}
         actions={
-          <PermissionGuard permission="users.create">
-            <Button size="sm" onClick={() => setShowCreate(true)}>
-              <i className="bx bx-plus"></i>
-              <span>{t('add')} {t('user')}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                downloadCsv(
+                  'users.csv',
+                  [t('name'), t('email'), t('roles'), t('status')],
+                  users.map((u) => [
+                    u.name,
+                    u.email,
+                    u.roles?.map((r: any) => r.name).join(' | ') || '',
+                    u.isActive ? t('active') : t('inactive'),
+                  ]),
+                )
+              }
+              disabled={loading || users.length === 0}
+            >
+              <i className="bx bx-download"></i>
+              <span>{t('export') || 'Export'} CSV</span>
             </Button>
-          </PermissionGuard>
+            <PermissionGuard permission="users.create">
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                <i className="bx bx-plus"></i>
+                <span>{t('add')} {t('user')}</span>
+              </Button>
+            </PermissionGuard>
+          </div>
         }
       />
 
@@ -106,10 +154,16 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
-                {users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user) => (
+                {users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user, idx) => (
                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={user.name || user.email || '?'} i={idx} />
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100 truncate">{user.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate sm:hidden">{user.email}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -117,11 +171,10 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {user.isActive ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
-                            {t('active')}
-                          </span>
+                          <StatusBadge variant="success" label={t('active')} size="sm" />
                         ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                            <i className="bx bx-minus-circle" aria-hidden="true"></i>
                             {t('inactive')}
                           </span>
                         )}

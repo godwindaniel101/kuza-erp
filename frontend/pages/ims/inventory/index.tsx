@@ -18,6 +18,7 @@ import StockStatusBadge from '@/components/ui/StockStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import { useTableState } from '@/hooks/useTableState';
+import { downloadCsv } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
@@ -210,7 +211,7 @@ export default function InventoryPage() {
       label: t('uoms') === 'uoms' ? 'UOM' : t('uoms'),
       render: (item) => item.baseUom?.abbreviation || item.baseUom?.name || item.uom?.abbreviation || item.uom?.name || '-',
     },
-    currentStock: { key: 'currentStock', label: t('currentStock'), sortable: true, render: (item) => formatStock(item) },
+    currentStock: { key: 'currentStock', label: t('currentStock'), sortable: true, align: 'right', cellClassName: 'tabular-nums', render: (item) => formatStock(item) },
     binLocation: {
       key: 'binLocation',
       label: 'Location',
@@ -225,6 +226,8 @@ export default function InventoryPage() {
     batches: {
       key: 'batches',
       label: 'Batches',
+      align: 'right',
+      cellClassName: 'tabular-nums',
       render: (item) => {
         const count = item.batchCount ?? (Array.isArray(item.batches) ? item.batches.length : undefined);
         return count != null ? String(count) : <span className="text-gray-400 dark:text-gray-500">—</span>;
@@ -233,6 +236,8 @@ export default function InventoryPage() {
     unitCost: {
       key: 'unitCost',
       label: 'Unit cost',
+      align: 'right',
+      cellClassName: 'tabular-nums',
       render: (item) => {
         const cost = item.unitCost ?? item.costPrice;
         return cost != null && cost !== '' ? (
@@ -246,6 +251,8 @@ export default function InventoryPage() {
       key: 'salePrice',
       label: t('unitPrice'),
       sortable: true,
+      align: 'right',
+      cellClassName: 'tabular-nums',
       render: (item) => formatCurrency(Number(item.salePrice || 0)),
     },
     status: {
@@ -276,6 +283,22 @@ export default function InventoryPage() {
   };
   const presetKeys = COLUMN_PRESETS[businessType ?? 'general'] ?? COLUMN_PRESETS.general;
   const columns: DataTableColumn<InventoryItem>[] = presetKeys.map((k) => allColumns[k]).filter(Boolean);
+
+  const handleExportCsv = () => {
+    const headers = ['Name', 'Category', 'Subcategory', 'Barcode', 'UOM', 'Current stock', 'Location', 'Unit cost', 'Sale price'];
+    const rows = table.sorted.map((item) => [
+      item.name || '',
+      item.category || '',
+      item.subcategory || '',
+      item.barcode || '',
+      item.baseUom?.abbreviation || item.baseUom?.name || item.uom?.abbreviation || item.uom?.name || '',
+      Math.floor(Number(item.currentStock || 0)),
+      item.binLocation || '',
+      item.unitCost != null && item.unitCost !== '' ? Number(item.unitCost) : item.costPrice != null && item.costPrice !== '' ? Number(item.costPrice) : '',
+      Number(item.salePrice || 0),
+    ]);
+    downloadCsv(`inventory-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
 
   const rowActions: RowAction<InventoryItem>[] = [
     {
@@ -311,6 +334,12 @@ export default function InventoryPage() {
         ]}
         actions={
           <>
+            {!loading && items.length > 0 && (
+              <Button variant="secondary" size="sm" onClick={handleExportCsv}>
+                <i className="bx bx-download"></i>
+                {t('exportCsv') || 'Export CSV'}
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>
               <i className="bx bx-upload"></i>
               {t('bulkUpload')}

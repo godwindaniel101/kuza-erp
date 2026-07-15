@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function LearningPage() {
   const { t } = useTranslation('common');
@@ -37,6 +38,7 @@ export default function LearningPage() {
       <PageHeader
         title={t('learning')}
         subtitle="Courses and training progress"
+        count={loading ? undefined : courses.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('learning') }]}
         actions={
           <PermissionGuard permission="learning.courses.create">
@@ -69,19 +71,16 @@ export default function LearningPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
               <div key={course.id} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{course.title}</h3>
+                <div className="flex items-start gap-3 mb-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300" aria-hidden="true">
+                    <i className="bx bx-book text-base"></i>
+                  </span>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-0">{course.title}</h3>
+                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{course.description || '—'}</p>
                 <div className="flex justify-between items-center">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      course.status === 'published'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {course.status || 'draft'}
-                  </span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <StatusBadge variant={course.status === 'published' ? 'success' : 'info'} label={course.status || 'draft'} />
+                  <span className="text-sm tabular-nums text-gray-600 dark:text-gray-400">
                     {course.enrollments?.length || 0} {t('enrollments')}
                   </span>
                 </div>

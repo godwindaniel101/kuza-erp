@@ -106,7 +106,7 @@ export default function NewAdjustmentPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       <PageHeader
         title="New Stock Adjustment"
         subtitle="Use positive quantities to add stock, negative to remove"

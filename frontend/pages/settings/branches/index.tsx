@@ -10,6 +10,7 @@ import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import StatusBadge from '@/components/ui/StatusBadge';
 import { handleBulkUploadResponse, logBulkUploadErrors, type BulkUploadResponse } from '@/utils/bulkUploadHandler';
 
 export default function BranchesPage() {
@@ -322,22 +323,28 @@ export default function BranchesPage() {
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {branch.name}
-                      {branch.isDefault && (
-                        <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({t('default')})</span>
-                      )}
-                    </h3>
-                    <span
-                      className={`inline-block mt-2 px-2 py-1 text-xs rounded-full ${
-                        branch.isActive
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                      }`}
-                    >
-                      {branch.isActive ? t('active') : t('inactive')}
+                  <div className="flex flex-1 items-start gap-3 min-w-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                      <i className="bx bx-store text-lg" aria-hidden="true"></i>
                     </span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        {branch.name}
+                        {branch.isDefault && (
+                          <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({t('default')})</span>
+                        )}
+                      </h3>
+                      <div className="mt-2">
+                        {branch.isActive ? (
+                          <StatusBadge variant="success" label={t('active')} size="sm" />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                            <i className="bx bx-minus-circle" aria-hidden="true"></i>
+                            {t('inactive')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="relative">
                     <button

@@ -69,7 +69,7 @@ export default function CreateLocationPage() {
 
   return (
     <PermissionGuard permission="locations.create">
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
           title={t('createLocation') || 'Create Location'}

@@ -9,7 +9,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
-import { TableSkeleton, CardSkeleton } from '@/components/ui/Skeleton';
+import { CardSkeleton } from '@/components/ui/Skeleton';
 import { formatMoney, formatDate, firstOfMonthIso, todayIso, useCurrency } from '@/lib/format';
 import Card from '@/components/Card';
 import Button from '@/components/ui/Button';
@@ -33,10 +33,10 @@ interface JournalEntry {
   lines: JournalEntryLine[];
 }
 
-const entryStatusVariant: Record<JournalEntry['status'], { variant: StatusBadgeVariant; label: string }> = {
-  DRAFT: { variant: 'pending', label: 'Draft' },
-  POSTED: { variant: 'success', label: 'Posted' },
-  REVERSED: { variant: 'error', label: 'Reversed' },
+const entryStatusVariant: Record<JournalEntry['status'], { variant: StatusBadgeVariant; label: string; icon: string }> = {
+  DRAFT: { variant: 'pending', label: 'Draft', icon: 'bx-edit' },
+  POSTED: { variant: 'success', label: 'Posted', icon: 'bx-check-circle' },
+  REVERSED: { variant: 'error', label: 'Reversed', icon: 'bx-undo' },
 };
 
 const reportLinks = [
@@ -50,9 +50,12 @@ export default function AccountingDashboardPage() {
   const router = useRouter();
   const currency = useCurrency();
   const [loading, setLoading] = useState(true);
+  const [revenue, setRevenue] = useState<number | null>(null);
+  const [expenses, setExpenses] = useState<number | null>(null);
   const [netProfit, setNetProfit] = useState<number | null>(null);
   const [outstandingAr, setOutstandingAr] = useState<number | null>(null);
   const [cashAndBank, setCashAndBank] = useState<number | null>(null);
+  const [inBalance, setInBalance] = useState<boolean | null>(null);
   const [recentEntries, setRecentEntries] = useState<JournalEntry[]>([]);
   const [monthlySeries, setMonthlySeries] = useState<GroupedBarPoint[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -65,7 +68,7 @@ export default function AccountingDashboardPage() {
   const loadDashboard = async () => {
     setLoading(true);
     const results = await Promise.allSettled([
-      api.get<{ success: boolean; data: { netProfit: number } }>(
+      api.get<{ success: boolean; data: { netProfit: number; totalIncome?: number; totalExpenses?: number } }>(
         `/accounting/reports/profit-loss?from=${firstOfMonthIso()}&to=${todayIso()}`,
       ),
       api.get<{ success: boolean; data: { summary?: { totalOutstanding: number } } }>('/invoices?page=1&limit=1'),
@@ -73,13 +76,16 @@ export default function AccountingDashboardPage() {
         success: boolean;
         data: { rows: Array<{ code: string; debit: number; credit: number }> };
       }>(`/accounting/reports/trial-balance?asOf=${todayIso()}`),
-      api.get<{ success: boolean; data: { items: JournalEntry[] } }>('/accounting/journal-entries?page=1&limit=5'),
+      api.get<{ success: boolean; data: { items: JournalEntry[] } }>('/accounting/journal-entries?page=1&limit=6'),
     ]);
 
     const [pnlRes, invoicesRes, tbRes, entriesRes] = results;
 
     if (pnlRes.status === 'fulfilled' && pnlRes.value.success) {
-      setNetProfit(Number(pnlRes.value.data.netProfit ?? 0));
+      const pnl = pnlRes.value.data;
+      setNetProfit(Number(pnl.netProfit ?? 0));
+      setRevenue(Number(pnl.totalIncome ?? 0));
+      setExpenses(Number(pnl.totalExpenses ?? 0));
     }
     if (invoicesRes.status === 'fulfilled' && invoicesRes.value.success) {
       setOutstandingAr(Number(invoicesRes.value.data.summary?.totalOutstanding ?? 0));
@@ -90,6 +96,9 @@ export default function AccountingDashboardPage() {
         .filter((r) => r.code === '1000' || r.code === '1010')
         .reduce((sum, r) => sum + (Number(r.debit || 0) - Number(r.credit || 0)), 0);
       setCashAndBank(cash);
+      const totalDebit = rows.reduce((sum, r) => sum + Number(r.debit || 0), 0);
+      const totalCredit = rows.reduce((sum, r) => sum + Number(r.credit || 0), 0);
+      setInBalance(Math.abs(totalDebit - totalCredit) < 0.01);
     }
     if (entriesRes.status === 'fulfilled' && entriesRes.value.success) {
       setRecentEntries(entriesRes.value.data.items || []);
@@ -136,54 +145,200 @@ export default function AccountingDashboardPage() {
   const entryTotal = (entry: JournalEntry) =>
     (entry.lines || []).reduce((sum, l) => sum + Number(l.debit || 0), 0);
 
+  // Sparklines derived from the same 6-month series the chart uses
+  const incomeSpark = monthlySeries.map((m) => m.a);
+  const expenseSpark = monthlySeries.map((m) => m.b);
+  const netSpark = monthlySeries.map((m) => m.a - m.b);
+  const draftCount = recentEntries.filter((e) => e.status === 'DRAFT').length;
+
+  const statusLine = loading
+    ? 'Loading your books…'
+    : draftCount > 0
+    ? `${draftCount} draft ${draftCount === 1 ? 'entry' : 'entries'} awaiting posting`
+    : inBalance === true
+    ? 'Trial balance in balance ✓'
+    : inBalance === false
+    ? 'Trial balance is out of balance — review the ledger'
+    : 'Financial overview of your business';
+
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Accounting"
-        subtitle="Financial overview of your business"
+        title="Books overview"
+        subtitle={statusLine}
         breadcrumbs={[{ label: 'Accounting' }]}
         actions={
-          <Button size="sm" href="/accounting/journal-entries/new">
-            <i className="bx bx-plus" aria-hidden="true"></i>
-            New Journal Entry
-          </Button>
+          <div className="flex gap-2">
+            <Button href="/accounting/reports" variant="secondary" size="md">
+              <i className="bx bx-bar-chart-alt-2" aria-hidden="true"></i> Reports
+            </Button>
+            <Button href="/accounting/journal-entries/new" size="md">
+              <i className="bx bx-plus" aria-hidden="true"></i> New Journal Entry
+            </Button>
+          </div>
         }
       />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <CardSkeleton count={3} />
-        ) : (
-          <>
-            <StatCard
-              label="Net Profit (this month)"
-              value={formatMoney(netProfit ?? 0, currency)}
-              icon="bx-trending-up"
-              tone={(netProfit ?? 0) >= 0 ? 'success' : 'error'}
-              caption={`${formatDate(firstOfMonthIso())} – ${formatDate(todayIso())}`}
-            />
-            <StatCard
-              label="Outstanding Receivables"
-              value={formatMoney(outstandingAr ?? 0, currency)}
-              icon="bx-receipt"
-              tone="warning"
-              caption="Unpaid invoice balances"
-            />
-            <StatCard
-              label="Cash & Bank"
-              value={formatMoney(cashAndBank ?? 0, currency)}
-              icon="bx-wallet"
-              tone="info"
-              caption="Accounts 1000 / 1010"
-            />
-          </>
-        )}
+      {/* KPI row */}
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <CardSkeleton count={4} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Revenue (this month)"
+            value={formatMoney(revenue ?? 0, currency)}
+            icon="bx-trending-up"
+            tone="info"
+            caption={`${formatDate(firstOfMonthIso())} – ${formatDate(todayIso())}`}
+            spark={incomeSpark.length > 1 ? incomeSpark : undefined}
+          />
+          <StatCard
+            label="Expenses (this month)"
+            value={formatMoney(expenses ?? 0, currency)}
+            icon="bx-credit-card"
+            tone="warning"
+            caption="Operating outflow"
+            spark={expenseSpark.length > 1 ? expenseSpark : undefined}
+          />
+          <StatCard
+            label="Net Profit (this month)"
+            value={formatMoney(netProfit ?? 0, currency)}
+            icon="bx-line-chart"
+            tone={(netProfit ?? 0) >= 0 ? 'success' : 'error'}
+            caption={(netProfit ?? 0) >= 0 ? 'In the black' : 'Running at a loss'}
+            spark={netSpark.length > 1 ? netSpark : undefined}
+          />
+          <StatCard
+            label="Accounts Receivable"
+            value={formatMoney(outstandingAr ?? 0, currency)}
+            icon="bx-receipt"
+            tone="default"
+            caption="Unpaid invoice balances"
+          />
+        </div>
+      )}
+
+      {/* Income vs expenses + financial position */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card title="Income vs expenses" subtitle="Last 6 months" className="lg:col-span-2">
+          <GroupedBarChart data={monthlySeries} formatValue={(v) => formatMoney(v, currency)} />
+        </Card>
+
+        <Card title="Financial position">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 -my-1">
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
+                  <i className="bx bx-wallet text-lg" aria-hidden="true"></i>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Cash &amp; Bank</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Accounts 1000 / 1010</p>
+                </div>
+              </div>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {formatMoney(cashAndBank ?? 0, currency)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                  <i className="bx bx-receipt text-lg" aria-hidden="true"></i>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Receivables</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Outstanding from customers</p>
+                </div>
+              </div>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {formatMoney(outstandingAr ?? 0, currency)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <i className="bx bx-list-check text-lg" aria-hidden="true"></i>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Trial balance</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">As of {formatDate(todayIso())}</p>
+                </div>
+              </div>
+              {inBalance == null ? (
+                <span className="text-sm text-gray-400">—</span>
+              ) : (
+                <StatusBadge variant={inBalance ? 'success' : 'error'} label={inBalance ? 'Balanced' : 'Off'} size="sm" />
+              )}
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Income vs expenses */}
-      <Card title="Income vs expenses" subtitle="Last 6 months">
-        <GroupedBarChart data={monthlySeries} formatValue={(v) => formatMoney(v, currency)} />
+      {/* Recent journal entries */}
+      <Card padding={false}>
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent journal entries</h3>
+          <Button href="/accounting/journal-entries" variant="ghost" size="sm">
+            View all
+          </Button>
+        </div>
+        {loading ? (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {[0, 1, 2, 3, 4].map((k) => (
+              <div key={k} className="flex items-center gap-3 px-5 py-3">
+                <div className="h-9 w-9 shrink-0 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+                  <div className="h-2.5 w-20 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : recentEntries.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              icon="bx-book"
+              title="No journal entries yet"
+              description="Create your first journal entry to start recording transactions"
+              actions={
+                <Button href="/accounting/journal-entries/new" size="sm">
+                  New Journal Entry
+                </Button>
+              }
+            />
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {recentEntries.map((entry) => {
+              const status = entryStatusVariant[entry.status] ?? entryStatusVariant.DRAFT;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)}
+                  className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                    <i className="bx bx-book-content text-lg" aria-hidden="true"></i>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{entry.entryNumber}</p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(entry.date)}
+                      {entry.memo ? ` · ${entry.memo}` : ''}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatMoney(entryTotal(entry), currency)}
+                  </span>
+                  <StatusBadge variant={status.variant} label={status.label} icon={status.icon} size="sm" className="shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Report quick links */}
@@ -204,72 +359,6 @@ export default function AccountingDashboardPage() {
           </Link>
         ))}
       </div>
-
-      {/* Recent journal entries */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent Journal Entries</h2>
-        <Link
-          href="/accounting/journal-entries"
-          className="text-[13px] text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-        >
-          View all <i className="bx bx-chevron-right" aria-hidden="true"></i>
-        </Link>
-      </div>
-
-      {loading ? (
-        <TableSkeleton rows={5} columns={5} />
-      ) : recentEntries.length === 0 ? (
-        <EmptyState
-          icon="bx-book"
-          title="No journal entries yet"
-          description="Create your first journal entry to start recording transactions"
-          actions={
-            <Button href="/accounting/journal-entries/new" size="sm">
-              New Journal Entry
-            </Button>
-          }
-        />
-      ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Entry #</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Memo</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Amount</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
-                {recentEntries.map((entry) => {
-                  const status = entryStatusVariant[entry.status] ?? entryStatusVariant.DRAFT;
-                  return (
-                    <tr
-                      key={entry.id}
-                      onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)}
-                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {entry.entryNumber}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{formatDate(entry.date)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">{entry.memo || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                        {formatMoney(entryTotal(entry), currency)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <StatusBadge variant={status.variant} label={status.label} size="sm" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

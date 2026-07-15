@@ -9,6 +9,15 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import { downloadCsv } from '@/lib/format';
+
+const transferStatusVariant: Record<string, StatusBadgeVariant> = {
+  pending: 'pending',
+  in_transit: 'info',
+  received: 'success',
+  cancelled: 'rejected',
+};
 
 export default function TransfersPage() {
   const { t } = useTranslation('common');
@@ -63,20 +72,32 @@ export default function TransfersPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bg: string; text: string }> = {
-      pending: { bg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200', text: t('pending') || 'Pending' },
-      in_transit: { bg: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200', text: t('inTransit') || 'In Transit' },
-      received: { bg: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200', text: t('received') || 'Received' },
-      cancelled: { bg: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200', text: t('cancelled') || 'Cancelled' },
-    };
+  const statusLabels: Record<string, string> = {
+    pending: t('pending') || 'Pending',
+    in_transit: t('inTransit') || 'In Transit',
+    received: t('received') || 'Received',
+    cancelled: t('cancelled') || 'Cancelled',
+  };
 
-    const statusStyle = statusMap[status] || statusMap.pending;
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyle.bg}`}>
-        {statusStyle.text}
-      </span>
-    );
+  const getStatusBadge = (status: string) => (
+    <StatusBadge
+      variant={transferStatusVariant[status] || 'pending'}
+      label={statusLabels[status] || status}
+      size="sm"
+    />
+  );
+
+  const handleExportCsv = () => {
+    const headers = ['Transfer #', 'From', 'To', 'Date', 'Items', 'Status'];
+    const rows = transfers.map((tr) => [
+      tr.transferNumber || '',
+      tr.fromBranch?.name || '',
+      tr.toBranch?.name || '',
+      tr.transferDate ? new Date(tr.transferDate).toLocaleDateString() : '',
+      tr.items?.length || 0,
+      tr.status || '',
+    ]);
+    downloadCsv(`transfers-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
 
   if (loading) {
@@ -100,10 +121,18 @@ export default function TransfersPage() {
           subtitle={t('manageBranchTransfers') || 'Manage inventory transfers between branches'}
           breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: t('transfers') || 'Transfers' }]}
           actions={
-            <Button size="sm" href="/ims/transfers/create">
-              <i className="bx bx-plus"></i>
-              {t('createTransfer') || 'Create Transfer'}
-            </Button>
+            <>
+              {transfers.length > 0 && (
+                <Button size="sm" variant="secondary" onClick={handleExportCsv}>
+                  <i className="bx bx-download"></i>
+                  {t('exportCsv') || 'Export CSV'}
+                </Button>
+              )}
+              <Button size="sm" href="/ims/transfers/create">
+                <i className="bx bx-plus"></i>
+                {t('createTransfer') || 'Create Transfer'}
+              </Button>
+            </>
           }
         />
 
@@ -141,7 +170,7 @@ export default function TransfersPage() {
                     <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('date')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('items')}
                     </th>
                     <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
@@ -164,15 +193,21 @@ export default function TransfersPage() {
                         </Link>
                       </td>
                       <td className="px-6 py-3 text-[13px] text-gray-900 dark:text-gray-100">
-                        {transfer.fromBranch?.name || '—'}
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="bx bx-store text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                          {transfer.fromBranch?.name || '—'}
+                        </span>
                       </td>
                       <td className="px-6 py-3 text-[13px] text-gray-900 dark:text-gray-100">
-                        {transfer.toBranch?.name || '—'}
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="bx bx-store text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                          {transfer.toBranch?.name || '—'}
+                        </span>
                       </td>
                       <td className="px-6 py-3 text-[13px] text-gray-700 dark:text-gray-300">
                         {transfer.transferDate ? new Date(transfer.transferDate).toLocaleDateString() : '—'}
                       </td>
-                      <td className="px-6 py-3 text-[13px] text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-3 text-right text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
                         {transfer.items?.length || 0} {t('items') || 'items'}
                       </td>
                       <td className="px-6 py-3 text-[13px]">{getStatusBadge(transfer.status)}</td>

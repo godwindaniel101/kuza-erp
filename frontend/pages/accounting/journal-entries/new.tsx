@@ -116,7 +116,7 @@ export default function NewJournalEntryPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="w-full max-w-3xl space-y-5">
       <PageHeader
         title="New Journal Entry"
         subtitle="Debits must equal credits before you can save"

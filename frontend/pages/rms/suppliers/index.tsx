@@ -10,6 +10,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import { downloadCsv } from '@/lib/format';
 
 export default function SuppliersPage() {
   const { t } = useTranslation('common');
@@ -91,12 +92,29 @@ export default function SuppliersPage() {
           subtitle="Everyone you buy from, in one list"
           breadcrumbs={[{ label: 'Restaurant' }, { label: t('suppliers') || 'Suppliers' }]}
           actions={
-            <PermissionGuard permission="suppliers.create">
-              <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
-                <i className="bx bx-plus" aria-hidden="true"></i>
-                {t('add')} {t('supplier')}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  downloadCsv(
+                    'suppliers.csv',
+                    [t('name'), t('contactPerson') || 'Contact Person', t('email'), t('phone'), t('address')],
+                    suppliers.map((s) => [s.name, s.contactPerson || '', s.email || '', s.phone || '', s.address || '']),
+                  )
+                }
+                disabled={loading || suppliers.length === 0}
+              >
+                <i className="bx bx-download" aria-hidden="true"></i>
+                {t('export') || 'Export'} CSV
               </Button>
-            </PermissionGuard>
+              <PermissionGuard permission="suppliers.create">
+                <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
+                  <i className="bx bx-plus" aria-hidden="true"></i>
+                  {t('add')} {t('supplier')}
+                </Button>
+              </PermissionGuard>
+            </div>
           }
         />
         {loading ? (

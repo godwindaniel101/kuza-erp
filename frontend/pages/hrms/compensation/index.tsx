@@ -7,9 +7,35 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv, formatMoney, formatNumber, useCurrency } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials || '#'}
+    </span>
+  );
+}
 
 export default function CompensationPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const [structures, setStructures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,19 +58,39 @@ export default function CompensationPage() {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv(
+      'compensation-structures.csv',
+      ['Name', 'Base Salary', 'Employees', 'Status'],
+      structures.map((s) => [
+        s.name || '',
+        formatMoney(s.baseSalary, currency),
+        s.employeeSalaries?.length || 0,
+        s.isActive ? 'Active' : 'Inactive',
+      ]),
+    );
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
         title={t('compensation')}
         subtitle="Salary bands and adjustments"
+        count={loading ? undefined : structures.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('compensation') }]}
         actions={
-          <PermissionGuard permission="compensation.structures.create">
-            <Button href="/hrms/compensation/structures/create" size="sm">
-              <i className="bx bx-plus"></i>
-              {t('create')} {t('compensation')} {t('structure')}
+          <>
+            <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || structures.length === 0}>
+              <i className="bx bx-download"></i>
+              {t('export') === 'export' ? 'Export' : t('export')}
             </Button>
-          </PermissionGuard>
+            <PermissionGuard permission="compensation.structures.create">
+              <Button href="/hrms/compensation/structures/create" size="sm">
+                <i className="bx bx-plus"></i>
+                {t('create')} {t('compensation')} {t('structure')}
+              </Button>
+            </PermissionGuard>
+          </>
         }
       />
 
@@ -73,10 +119,10 @@ export default function CompensationPage() {
                   <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('name')}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('baseSalary')}
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t('employees')}
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -85,27 +131,22 @@ export default function CompensationPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {structures.map((structure) => (
+                {structures.map((structure, idx) => (
                   <tr key={structure.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {structure.name}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={structure.name || '#'} i={idx} />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{structure.name}</span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                      ${structure.baseSalary || '0.00'}
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                      {formatMoney(structure.baseSalary, currency)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                      {structure.employeeSalaries?.length || 0}
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                      {formatNumber(structure.employeeSalaries?.length || 0)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          structure.isActive
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {structure.isActive ? t('active') : t('inactive')}
-                      </span>
+                      <StatusBadge variant={structure.isActive ? 'success' : 'info'} label={structure.isActive ? t('active') : t('inactive')} />
                     </td>
                   </tr>
                 ))}

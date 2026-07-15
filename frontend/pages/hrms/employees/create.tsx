@@ -73,7 +73,7 @@ export default function CreateEmployeePage() {
 
   return (
     <PermissionGuard permission="employees.create">
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         <PageHeader
           title={<>{t('create')} {t('employee')}</>}
           subtitle="Add a new person to your team"

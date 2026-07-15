@@ -5,6 +5,15 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+
+const priorityVariant = (priority: string): StatusBadgeVariant => {
+  const p = (priority || '').toLowerCase();
+  if (p === 'high') return 'error';
+  if (p === 'medium') return 'warning';
+  if (p === 'low') return 'success';
+  return 'info';
+};
 
 export default function AiAnalyticsPage() {
   const { t } = useTranslation('common');
@@ -79,15 +88,6 @@ export default function AiAnalyticsPage() {
     }
   };
 
-  const getPriorityClass = (priority: string) => {
-    const classes: Record<string, string> = {
-      high: 'bg-red-100 text-red-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      low: 'bg-green-100 text-green-800',
-    };
-    return classes[priority] || 'bg-gray-100 text-gray-800';
-  };
-
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <PageHeader
@@ -144,42 +144,43 @@ export default function AiAnalyticsPage() {
             <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('item')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('currentStock')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('daysUntilStockout')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('recommendedQty')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('priority')}
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                 {suggestions.map((suggestion) => (
-                  <tr key={suggestion.itemId}>
+                  <tr key={suggestion.itemId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
-                      {suggestion.itemName}
+                      <span className="inline-flex items-center gap-2">
+                        <i className="bx bx-package text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                        {suggestion.itemName}
+                      </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
                       {suggestion.currentStock}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
                       {suggestion.daysUntilStockout} {t('days')}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
                       {suggestion.recommendedQuantity}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(suggestion.priority)}`}>
-                        {suggestion.priority}
-                      </span>
+                      <StatusBadge variant={priorityVariant(suggestion.priority)} label={suggestion.priority} size="sm" />
                     </td>
                   </tr>
                 ))}

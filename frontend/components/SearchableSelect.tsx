@@ -145,9 +145,9 @@ export default function SearchableSelect({
           className={`
           w-full border rounded-md
           ${size === 'sm' ? 'px-3 h-9 text-sm' : 'px-3 h-9 text-sm'}
-          bg-white dark:bg-gray-700
+          bg-white dark:bg-gray-800
           text-gray-900 dark:text-gray-100
-          border-gray-300 dark:border-gray-600
+          border-gray-200 dark:border-gray-700
           focus:outline-none focus-visible:ring-1 focus-visible:border-transparent ${focusRingColor}
           disabled:opacity-50 disabled:cursor-not-allowed
           flex items-center justify-between gap-2

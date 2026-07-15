@@ -9,7 +9,7 @@ export default function Profile() {
   const { user } = useAuthStore();
 
   return (
-      <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-3xl space-y-5">
         <PageHeader
           title={t('profile') || 'Profile'}
           subtitle="Your account details and preferences"

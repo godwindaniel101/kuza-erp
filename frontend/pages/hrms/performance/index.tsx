@@ -7,6 +7,37 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials || 'U'}
+    </span>
+  );
+}
+
+const reviewVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'completed') return 'success';
+  if (s === 'in_progress' || s === 'in progress') return 'info';
+  return 'warning';
+};
 
 export default function PerformancePage() {
   const { t } = useTranslation('common');
@@ -37,6 +68,7 @@ export default function PerformancePage() {
       <PageHeader
         title={t('performance')}
         subtitle="Reviews and goals across the team"
+        count={loading ? undefined : reviews.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('performance') }]}
         actions={
           <PermissionGuard permission="performance.create">
@@ -67,27 +99,23 @@ export default function PerformancePage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {reviews.map((review) => (
+            {reviews.map((review, idx) => (
               <div key={review.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {review.employee?.firstName} {review.employee?.lastName}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{review.reviewPeriod || '—'}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {t('overallRating')}: {review.overallRating?.toFixed(1) || 'N/A'}
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={`${review.employee?.firstName || ''} ${review.employee?.lastName || ''}`.trim() || '?'} i={idx} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {review.employee?.firstName} {review.employee?.lastName}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{review.reviewPeriod || '—'}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 inline-flex items-center gap-1">
+                        <i className="bx bxs-star text-amber-400"></i>
+                        {t('overallRating')}: {review.overallRating?.toFixed(1) || 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      review.status === 'completed'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {review.status || 'pending'}
-                  </span>
+                  <StatusBadge variant={reviewVariant(review.status)} label={review.status || 'pending'} />
                 </div>
               </div>
             ))}

@@ -10,7 +10,8 @@ import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
-import { formatDate } from '@/lib/format';
+import Button from '@/components/ui/Button';
+import { formatDate, downloadCsv } from '@/lib/format';
 
 type AdjustmentReason = 'DAMAGE' | 'THEFT' | 'COUNT' | 'EXPIRY' | 'OTHER';
 type AdjustmentStatus = 'DRAFT' | 'APPROVED' | 'REJECTED';
@@ -39,6 +40,14 @@ const REASON_LABELS: Record<AdjustmentReason, string> = {
   COUNT: 'Stock count',
   EXPIRY: 'Expiry',
   OTHER: 'Other',
+};
+
+const REASON_ICONS: Record<AdjustmentReason, string> = {
+  DAMAGE: 'bx-error-circle',
+  THEFT: 'bx-shield-x',
+  COUNT: 'bx-list-check',
+  EXPIRY: 'bx-calendar-x',
+  OTHER: 'bx-dots-horizontal-rounded',
 };
 
 const adjustmentStatusVariant: Record<AdjustmentStatus, { variant: StatusBadgeVariant; label: string }> = {
@@ -96,8 +105,17 @@ export default function AdjustmentsPage() {
       render: (a) => <span className="font-medium text-gray-900 dark:text-white">{a.adjustmentNumber}</span>,
     },
     { key: 'createdAt', label: 'Date', render: (a) => formatDate(a.createdAt) },
-    { key: 'reason', label: 'Reason', render: (a) => REASON_LABELS[a.reason] || a.reason },
-    { key: 'items', label: 'Items', align: 'center', render: (a) => (a.items || []).length },
+    {
+      key: 'reason',
+      label: 'Reason',
+      render: (a) => (
+        <span className="inline-flex items-center gap-1.5">
+          <i className={`bx ${REASON_ICONS[a.reason] || 'bx-dots-horizontal-rounded'} text-gray-400 dark:text-gray-500`} aria-hidden="true"></i>
+          {REASON_LABELS[a.reason] || a.reason}
+        </span>
+      ),
+    },
+    { key: 'items', label: 'Items', align: 'right', cellClassName: 'tabular-nums', render: (a) => (a.items || []).length },
     {
       key: 'netChange',
       label: 'Net Qty Change',
@@ -121,6 +139,19 @@ export default function AdjustmentsPage() {
     },
   ];
 
+  const handleExportCsv = () => {
+    const headers = ['Adjustment #', 'Date', 'Reason', 'Items', 'Net Qty Change', 'Status'];
+    const rows = adjustments.map((a) => [
+      a.adjustmentNumber || '',
+      formatDate(a.createdAt),
+      REASON_LABELS[a.reason] || a.reason,
+      (a.items || []).length,
+      (a.items || []).reduce((s, i) => s + Number(i.quantityChange || 0), 0),
+      adjustmentStatusVariant[a.status]?.label || a.status,
+    ]);
+    downloadCsv(`adjustments-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
   const hasFilters = !!status || !!reason;
@@ -133,13 +164,21 @@ export default function AdjustmentsPage() {
         subtitle="Correct stock levels for damage, theft, counts and more"
         breadcrumbs={[{ label: 'IMS', href: '/ims/inventory' }, { label: 'Adjustments' }]}
         actions={
-          <Link
-            href="/ims/adjustments/new"
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2"></i>
-            New Adjustment
-          </Link>
+          <>
+            {!loading && adjustments.length > 0 && (
+              <Button size="sm" variant="secondary" onClick={handleExportCsv}>
+                <i className="bx bx-download"></i>
+                Export CSV
+              </Button>
+            )}
+            <Link
+              href="/ims/adjustments/new"
+              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+            >
+              <i className="bx bx-plus mr-2"></i>
+              New Adjustment
+            </Link>
+          </>
         }
       />
 

@@ -8,6 +8,15 @@ import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
+import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+
+const tableStatusVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'available') return 'success';
+  if (s === 'occupied') return 'error';
+  if (s === 'reserved') return 'pending';
+  return 'info';
+};
 
 export default function TablesPage() {
   const { t } = useTranslation('common');
@@ -83,23 +92,17 @@ export default function TablesPage() {
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
               >
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{table.name}</h3>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      table.status === 'available'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                        : table.status === 'occupied'
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                        : table.status === 'reserved'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                    }`}
-                  >
-                    {table.status}
-                  </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                      <i className="bx bx-grid-alt text-lg" aria-hidden="true"></i>
+                    </span>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{table.name}</h3>
+                  </div>
+                  <StatusBadge variant={tableStatusVariant(table.status)} label={table.status} size="sm" />
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('capacity')}: {table.capacity} {t('people')}
+                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                  <i className="bx bx-user text-gray-400" aria-hidden="true"></i>
+                  {t('capacity')}: <span className="tabular-nums font-medium text-gray-700 dark:text-gray-300">{table.capacity}</span> {t('people')}
                 </p>
               </div>
             ))}

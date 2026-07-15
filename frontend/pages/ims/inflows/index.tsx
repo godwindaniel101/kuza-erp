@@ -10,8 +10,17 @@ import Toast from '@/components/Toast';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
+import { downloadCsv } from '@/lib/format';
+
+const inflowStatusVariant = (status?: string): StatusBadgeVariant => {
+  const s = (status || '').toLowerCase();
+  if (s === 'approved') return 'approved';
+  if (s === 'rejected') return 'rejected';
+  return 'pending';
+};
 
 export default function InflowsPage() {
   const { t } = useTranslation('common');
@@ -110,6 +119,22 @@ export default function InflowsPage() {
     }
   };
 
+  const handleExportCsv = () => {
+    const headers = ['Invoice #', 'Batch', 'Branch', 'Date', 'Time', 'Items', 'Failed', 'Total Amount', 'Status'];
+    const rows = filteredInflows.map((inflow) => [
+      inflow.invoiceNumber || inflow.inflowNumber || inflow.reference || inflow.id || '',
+      inflow.batch?.batchNumber || inflow.batchNumber || inflow.batchId || '',
+      inflow.branch?.name || '',
+      inflow.receivedDate ? new Date(inflow.receivedDate).toLocaleDateString() : '',
+      inflow.createdAt ? new Date(inflow.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
+      inflow.items?.length || 0,
+      inflow.failedUploadsCount || 0,
+      Number(inflow.totalAmount || 0).toFixed(2),
+      inflow.status || '',
+    ]);
+    downloadCsv(`inflows-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   // Filter inflows based on search query
   const filteredInflows = inflows.filter((inflow) => {
     if (!searchQuery) return true;
@@ -159,6 +184,12 @@ export default function InflowsPage() {
               >
                 <i className="bx bx-x"></i>
                 {t('clearFilter')}
+              </Button>
+            )}
+            {!loading && filteredInflows.length > 0 && (
+              <Button size="sm" variant="secondary" onClick={handleExportCsv}>
+                <i className="bx bx-download"></i>
+                {t('exportCsv') || 'Export CSV'}
               </Button>
             )}
             <PermissionGuard permission="inflows.create">
@@ -292,13 +323,13 @@ export default function InflowsPage() {
                     <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('time')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('itemsCount')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('failedUploads')}
                     </th>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('totalAmount')}
                     </th>
                     <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
@@ -334,8 +365,11 @@ export default function InflowsPage() {
                           </Link>
                         ) : (inflow.type === 'bulk' ? t('manual') : '-')}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
-                        {inflow.branch?.name || '-'}
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-700 dark:text-gray-300">
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="bx bx-store text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                          {inflow.branch?.name || '-'}
+                        </span>
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.receivedDate ? new Date(inflow.receivedDate).toLocaleDateString() : '-'}
@@ -343,29 +377,19 @@ export default function InflowsPage() {
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.createdAt ? new Date(inflow.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
                         {inflow.items?.length || 0}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
-                         <span className={`px-2 py-1 rounded-full text-xs ${inflow.failedUploadsCount > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+                      <td className="px-6 py-3 whitespace-nowrap text-right text-[13px]">
+                         <span className={`px-2 py-1 rounded-full text-xs tabular-nums ${inflow.failedUploadsCount > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
                             {inflow.failedUploadsCount || 0}
                          </span>
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] tabular-nums font-medium text-gray-900 dark:text-gray-100">
                         {formatCurrency(Number(inflow.totalAmount || 0), inflow.currency)}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            inflow.status === 'approved'
-                              ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                              : inflow.status === 'rejected'
-                              ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300'
-                              : 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
-                          }`}
-                        >
-                          {inflow.status}
-                        </span>
+                        <StatusBadge variant={inflowStatusVariant(inflow.status)} label={inflow.status} size="sm" />
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium" onClick={(e) => e.stopPropagation()}>
                         {inflow.status === 'pending' && (

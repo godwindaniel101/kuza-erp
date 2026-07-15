@@ -7,6 +7,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import { downloadCsv } from '@/lib/format';
 
 export default function BranchItemsPage() {
   const { t } = useTranslation('common');
@@ -100,6 +101,27 @@ export default function BranchItemsPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedItems = sortedItems.slice(startIndex, startIndex + itemsPerPage);
 
+  const handleExportCsv = () => {
+    const headers = [
+      t('inventoryItem') || 'Item',
+      t('category') || 'Category',
+      ...branches.map((b) => b.name),
+      t('totalStock') || 'Total Stock',
+      t('unit') || 'Unit',
+    ];
+    const rows = sortedItems.map((item) => [
+      item.name || '',
+      item.category || '',
+      ...branches.map((b) => {
+        const bs = item.branchStocks?.[b.id];
+        return bs && bs.stock !== undefined && bs.stock !== null ? Number(bs.stock) : 0;
+      }),
+      Number(item.totalStock || 0),
+      item.unit && item.unit !== 'Unknown' ? item.unit : '',
+    ]);
+    downloadCsv(`branch-items-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -136,6 +158,14 @@ export default function BranchItemsPage() {
           count={loading ? undefined : filteredItems.length}
           subtitle={t('viewItemsAcrossBranches') || 'View items across all branches'}
           breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: t('branchItems') || 'Branch Items' }]}
+          actions={
+            !loading && filteredItems.length > 0 ? (
+              <Button size="sm" variant="secondary" onClick={handleExportCsv}>
+                <i className="bx bx-download"></i>
+                {t('exportCsv') || 'Export CSV'}
+              </Button>
+            ) : undefined
+          }
         />
 
         {/* Search and Filters */}
@@ -236,9 +266,18 @@ export default function BranchItemsPage() {
                   });
                   
                   return (
-                    <tr key={item.id} className={hasLowStock ? 'bg-red-50/50 dark:bg-red-900/10' : ''}>
+                    <tr
+                      key={item.id}
+                      className={
+                        hasLowStock
+                          ? 'bg-red-50/50 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors'
+                      }
+                    >
                       <td className="sticky left-0 z-10 px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-                        <div>
+                        <div className="flex items-center gap-2">
+                          <i className="bx bx-package text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
+                          <div>
                           <div className="font-medium">{item.name}</div>
                           {item.subcategory && (
                             <div className="text-xs text-gray-500 dark:text-gray-400">{item.category} / {item.subcategory}</div>
@@ -246,6 +285,7 @@ export default function BranchItemsPage() {
                           {!item.subcategory && item.category && (
                             <div className="text-xs text-gray-500 dark:text-gray-400">{item.category}</div>
                           )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">

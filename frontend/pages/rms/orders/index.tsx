@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import { downloadCsv } from '@/lib/format';
 
 const PAGE_SIZE = 20;
 
@@ -132,6 +133,36 @@ export default function OrdersPage() {
   const rowTotalPaid = (order: any) =>
     (order.payments || []).reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
 
+  const handleExport = () => {
+    downloadCsv(
+      'orders.csv',
+      [
+        t('orderNumber'),
+        t('itemsSold') || 'Items Sold',
+        t('totalPaid') || 'Total Paid',
+        t('createdDate') || 'Date/Time',
+        t('totalCost') || 'Total Cost',
+        t('totalSale') || 'Total Sale',
+        t('profit'),
+        t('status'),
+      ],
+      orders.map((order) => {
+        const totalSale = rowTotalSale(order);
+        const totalCost = rowTotalCost(order);
+        return [
+          order.orderNumber,
+          rowItemsSold(order),
+          rowTotalPaid(order).toFixed(2),
+          order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
+          totalCost.toFixed(2),
+          totalSale.toFixed(2),
+          (totalSale - totalCost).toFixed(2),
+          order.status,
+        ];
+      }),
+    );
+  };
+
   const columns: DataTableColumn<any>[] = [
     {
       key: 'orderNumber',
@@ -247,6 +278,10 @@ export default function OrdersPage() {
         breadcrumbs={[{ label: 'Restaurant' }, { label: t('orders') || 'Orders' }]}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || orders.length === 0}>
+              <i className="bx bx-download" aria-hidden="true"></i>
+              {t('export') || 'Export'} CSV
+            </Button>
             <Button href="/pos" variant="secondary" size="sm">
               <i className="bx bx-store-alt" aria-hidden="true"></i>
               {t('openPos') || 'Open POS'}

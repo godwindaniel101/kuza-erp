@@ -8,6 +8,46 @@ import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import { downloadCsv, formatDate } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}>
+      {initials || 'U'}
+    </span>
+  );
+}
+
+const employmentVariant = (status?: string): StatusBadgeVariant => {
+  switch ((status || '').toLowerCase()) {
+    case 'active':
+      return 'success';
+    case 'on_leave':
+      return 'warning';
+    case 'suspended':
+      return 'error';
+    case 'terminated':
+      return 'info';
+    default:
+      return 'success';
+  }
+};
 
 export default function EmployeesPage() {
   const { t } = useTranslation('common');
@@ -59,6 +99,22 @@ export default function EmployeesPage() {
     setCurrentPage(1);
   }, [search, departmentFilter, statusFilter]);
 
+  const handleExport = () => {
+    downloadCsv(
+      'employees.csv',
+      ['Employee', 'Employee Number', 'Email', 'Department', 'Position', 'Status', 'Hire Date'],
+      filteredEmployees.map((e) => [
+        `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || '',
+        e.employeeNumber || '',
+        e.email || '',
+        e.department?.name || '',
+        e.position?.title || '',
+        e.employmentStatus || '',
+        e.hireDate ? formatDate(e.hireDate) : '',
+      ]),
+    );
+  };
+
   return (
       <div className="space-y-5">
         <PageHeader
@@ -67,16 +123,22 @@ export default function EmployeesPage() {
           count={loading ? undefined : filteredEmployees.length}
           breadcrumbs={[{ label: t('humanResources') }, { label: t('employees') }]}
           actions={
-            <PermissionGuard permission="employees.create">
-              <Button size="sm" variant="secondary" href="/hrms/employees/invite-from-rms">
-                <i className="bx bx-user-plus"></i>
-                {t('addUsersFromRMS')}
+            <>
+              <Button size="sm" variant="secondary" onClick={handleExport} disabled={loading || filteredEmployees.length === 0}>
+                <i className="bx bx-download"></i>
+                {t('export') === 'export' ? 'Export' : t('export')}
               </Button>
-              <Button size="sm" href="/hrms/employees/create">
-                <i className="bx bx-plus"></i>
-                {t('addEmployee')}
-              </Button>
-            </PermissionGuard>
+              <PermissionGuard permission="employees.create">
+                <Button size="sm" variant="secondary" href="/hrms/employees/invite-from-rms">
+                  <i className="bx bx-user-plus"></i>
+                  {t('addUsersFromRMS')}
+                </Button>
+                <Button size="sm" href="/hrms/employees/create">
+                  <i className="bx bx-plus"></i>
+                  {t('addEmployee')}
+                </Button>
+              </PermissionGuard>
+            </>
           }
         />
 
@@ -167,26 +229,15 @@ export default function EmployeesPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
-                    {filteredEmployees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((employee) => {
-                      const initials = `${employee.firstName?.[0] || ''}${employee.lastName?.[0] || ''}`.toUpperCase();
+                    {filteredEmployees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((employee, idx) => {
                       const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
-                      const statusColors: Record<string, string> = {
-                        active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-                        on_leave: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-                        suspended: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-                        terminated: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-                      };
 
                       return (
                         <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                  <span className="text-brand-600 dark:text-brand-400 font-medium">{initials || 'U'}</span>
-                                </div>
-                              </div>
-                              <div className="ml-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={fullName || employee.name || '?'} i={idx} />
+                              <div className="min-w-0">
                                 <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{fullName || employee.name || '—'}</div>
                                 <div className="text-[13px] text-gray-500 dark:text-gray-400">{employee.employeeNumber || '—'}</div>
                               </div>
@@ -199,16 +250,14 @@ export default function EmployeesPage() {
                             <div className="text-[13px] text-gray-900 dark:text-gray-100">{employee.position?.title || '—'}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                statusColors[employee.employmentStatus] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                              }`}
-                            >
-                              {employee.employmentStatus
-                                ? employee.employmentStatus.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-                                : t('active')
+                            <StatusBadge
+                              variant={employmentVariant(employee.employmentStatus)}
+                              label={
+                                employee.employmentStatus
+                                  ? employee.employmentStatus.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                                  : t('active')
                               }
-                            </span>
+                            />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}

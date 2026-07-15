@@ -10,7 +10,7 @@ import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
-import { formatMoney, formatDate, useCurrency } from '@/lib/format';
+import { formatMoney, formatDate, downloadCsv, useCurrency } from '@/lib/format';
 
 interface JournalEntryLine {
   id: string;
@@ -116,6 +116,22 @@ export default function JournalEntriesPage() {
     },
   ];
 
+  const handleExport = () => {
+    if (entries.length === 0) return;
+    downloadCsv(
+      `journal-entries-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Entry #', 'Date', 'Memo', 'Lines', 'Amount', 'Status'],
+      entries.map((e) => [
+        e.entryNumber,
+        formatDate(e.date),
+        e.memo || '',
+        (e.lines || []).length,
+        entryTotal(e).toFixed(2),
+        entryStatusVariant[e.status]?.label ?? e.status,
+      ]),
+    );
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
   const hasFilters = !!status || !!fromDate || !!toDate;
@@ -128,10 +144,16 @@ export default function JournalEntriesPage() {
         subtitle="Record and review double-entry transactions"
         breadcrumbs={[{ label: 'Accounting', href: '/accounting' }, { label: 'Journal Entries' }]}
         actions={
-          <Button href="/accounting/journal-entries/new" size="sm">
-            <i className="bx bx-plus"></i>
-            New Entry
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || entries.length === 0}>
+              <i className="bx bx-download"></i>
+              Export CSV
+            </Button>
+            <Button href="/accounting/journal-entries/new" size="sm">
+              <i className="bx bx-plus"></i>
+              New Entry
+            </Button>
+          </>
         }
       />
 
