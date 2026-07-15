@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
@@ -6,9 +6,18 @@ import { useTenantStore } from '@/store/globalStore';
 import PermissionGuard from './PermissionGuard';
 import { useTranslation } from 'next-i18next';
 import NavItem from './NavItem';
-import ServiceSwitcher from './ServiceSwitcher';
 import Icon, { IconName } from './ui/Icon';
 import { term } from '@/lib/terminology';
+
+/**
+ * App-isolated sidebar (Odoo-style). The product is a set of APPS. You are
+ * always inside exactly ONE app, determined by the current route. The sidebar
+ * shows only that app's navigation, landing on that app's own dashboard. An
+ * app launcher (grid button in the header) switches between apps.
+ *
+ * This replaces the old flat catalog where every module rendered at once and
+ * "Home" always meant the restaurant/IMS dashboard regardless of context.
+ */
 
 interface NavLeaf {
   href: string;
@@ -21,42 +30,43 @@ interface NavLeaf {
   also?: string[];
   /** Prefixes that must NOT count as active (carve-outs from the prefix match). */
   exclude?: string[];
-  /** App registry key this route belongs to (docs/APPS-MODEL.md). Absent = always shown. */
-  appKey?: string;
-  /** Any-of app keys (alternative to single appKey). */
-  appKeys?: string[];
 }
 
-interface NavSection {
-  id: string;
+interface NavGroup {
+  /** Group heading (omit for the top, ungrouped items like the dashboard). */
   label?: string;
-  /** Any-of permissions gate for the whole section. */
-  permissions?: string[];
-  permission?: string;
-  /** Plan-module keys this section belongs to (any-of). Absent = always. */
-  moduleKeys?: string[];
   items: NavLeaf[];
 }
 
+interface AppDef {
+  id: string;
+  name: string;
+  icon: IconName;
+  /** One-line description shown in the launcher. */
+  blurb: string;
+  /** Landing route for this app (its dashboard). */
+  home: string;
+  /** Plan-module keys this app maps to (any-of). Absent = always available. */
+  moduleKeys?: string[];
+  /** effective-apps registry keys that enable this app (any-of). Absent = not app-gated. */
+  appKeys?: string[];
+  groups: NavGroup[];
+}
+
 interface AppSidebarProps {
-  /** Render for the mobile drawer (no fixed positioning). */
   mobile?: boolean;
-  /** Called after a nav link is clicked (used to close the mobile drawer). */
   onNavigate?: () => void;
 }
 
 /** Plan-module vocabulary is fuzzy across backends — match by alias substring. */
 const MODULE_ALIASES: Record<string, string[]> = {
-  rms: ['rms', 'restaurant', 'hospitality', 'menu', 'order', 'table'],
+  rms: ['rms', 'restaurant', 'hospitality', 'menu', 'order', 'table', 'pos'],
   ims: ['ims', 'inventory', 'stock'],
   sales: ['sales', 'invoice', 'customer'],
   accounting: ['accounting', 'finance', 'ledger'],
   hrms: ['hrms', 'hr', 'people', 'payroll'],
 };
 
-const ALL_MODULES_KEY = 'kuza.showAllModules';
-
-/** Edition chip shown in the business block (legacy types map to their edition). */
 const EDITION_CHIPS: Record<string, string> = {
   hospitality: 'Hospitality',
   restaurant: 'Hospitality',
@@ -79,51 +89,214 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
     subscriptionStatus,
     effectiveApps,
     fetchTenantContext,
-    activeWorkspace,
-    setAvailableGroups,
-    hydrateWorkspace,
   } = useTenantStore();
-  /** i18next returns the raw key when a translation is missing — fall back to English. */
+
   const tr = (key: string, fallback: string) => {
     const v = t(key);
     return !v || v === key ? fallback : v;
   };
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [showAll, setShowAll] = useState(false);
 
-  // Tenant context (business type + plan modules) — fetched once, cached in the store.
-  // NOTE: keyed on `user`, not user.businessId — /me may not carry a business object
-  // in the multi-tenant setup (businessId normalizes to ''), but /settings is tenant-scoped.
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const launcherRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (user) {
-      fetchTenantContext();
-    }
+    if (user) fetchTenantContext();
   }, [user, fetchTenantContext]);
 
-  // "All modules" preference + persisted workspace
+  // Close launcher on outside click / Escape.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setShowAll(localStorage.getItem(ALL_MODULES_KEY) === 'true');
-    }
-    hydrateWorkspace();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!launcherOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (launcherRef.current && !launcherRef.current.contains(e.target as Node)) setLauncherOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setLauncherOpen(false);
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [launcherOpen]);
 
-  const toggleShowAll = () => {
-    setShowAll((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(ALL_MODULES_KEY, String(next));
-      }
-      return next;
-    });
-  };
+  // ---- App catalog -----------------------------------------------------
+
+  const apps: AppDef[] = [
+    {
+      id: 'pos',
+      name: term(businessType, 'posSection') || 'Point of Sale',
+      icon: 'building-storefront',
+      blurb: 'Ring up sales, manage orders, tables and menus',
+      home: '/',
+      moduleKeys: ['rms'],
+      appKeys: ['pos', 'tables', 'menu'],
+      groups: [
+        { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+        {
+          label: 'Sell',
+          items: [
+            { href: '/pos', label: term(businessType, 'pos') || 'New Sale', icon: 'building-storefront', permission: 'orders.create', exact: true },
+            { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+            { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
+          ],
+        },
+        {
+          label: 'Menu',
+          items: [
+            { href: '/rms/menus', label: businessType === 'restaurant' || businessType === 'hospitality' ? 'Dishes' : 'Products', icon: 'menu-book', permission: 'menus.view' },
+            { href: '/menu-studio', label: 'Menu Studio', icon: 'sparkles' },
+          ],
+        },
+        {
+          label: 'Insights',
+          items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
+        },
+      ],
+    },
+    {
+      id: 'inventory',
+      name: term(businessType, 'inventorySection') || 'Inventory',
+      icon: 'cube',
+      blurb: 'Track stock, receive goods and value your inventory',
+      home: '/ims',
+      moduleKeys: ['ims'],
+      appKeys: ['items', 'goods-in'],
+      groups: [
+        { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+        {
+          label: 'Stock',
+          items: [
+            { href: '/ims/inventory', label: 'Stock Items', icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+            { href: '/ims/inflows', label: 'Receive Stock', icon: 'inbox-arrow', permission: 'inflows.view' },
+            { href: '/ims/branch-items', label: 'Branch Stock', icon: 'building-storefront' },
+            { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
+            { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
+            { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
+          ],
+        },
+        {
+          label: 'Purchasing',
+          items: [{ href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' }],
+        },
+        {
+          label: 'Setup',
+          items: [
+            { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
+            { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
+            { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'sales',
+      name: 'Sales',
+      icon: 'banknotes',
+      blurb: 'Customers, invoices and getting paid',
+      home: '/sales',
+      moduleKeys: ['sales'],
+      appKeys: ['customers', 'invoicing'],
+      groups: [
+        { items: [{ href: '/sales', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+        {
+          items: [
+            { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view' },
+            { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', permission: 'sales.view' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'accounting',
+      name: 'Accounting',
+      icon: 'calculator',
+      blurb: 'Double-entry books, ledger and financial reports',
+      home: '/accounting',
+      moduleKeys: ['accounting'],
+      appKeys: ['books'],
+      groups: [
+        {
+          items: [
+            { href: '/accounting', label: 'Overview', icon: 'home', exact: true },
+            { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open' },
+            { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square' },
+            { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'hr',
+      name: 'People',
+      icon: 'users',
+      blurb: 'Employees, attendance, leave and payroll',
+      home: '/hrms/dashboard',
+      moduleKeys: ['hrms'],
+      appKeys: ['people', 'payroll'],
+      groups: [
+        { items: [{ href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+        {
+          label: 'People',
+          items: [
+            { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view' },
+            { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view' },
+            { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view' },
+            { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view' },
+          ],
+        },
+        {
+          label: 'Talent',
+          items: [
+            { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view' },
+            { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view' },
+            { href: '/hrms/learning', label: tr('learning', 'Learning'), icon: 'academic-cap', permission: 'learning.view' },
+          ],
+        },
+        {
+          label: 'Rewards',
+          items: [
+            { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view' },
+            { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view' },
+          ],
+        },
+        {
+          label: 'Setup',
+          items: [
+            { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view' },
+            { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view' },
+            { href: '/hrms/locations', label: tr('locations', 'Locations'), icon: 'map-pin', permission: 'locations.view' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'settings',
+      name: 'Settings',
+      icon: 'cog',
+      blurb: 'Users, roles, branches and billing',
+      home: '/settings',
+      groups: [
+        {
+          items: [
+            { href: '/settings', label: 'General', icon: 'cog', exact: true },
+            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
+            { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
+            { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
+            { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
+            { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
+            { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
+          ],
+        },
+      ],
+    },
+  ];
+
+  // ---- App availability (plan / effective-apps gating) -----------------
 
   const hasModule = useCallback(
     (keys?: string[]) => {
       if (!keys || keys.length === 0) return true;
-      if (!planModules) return true; // unknown -> never hide (graceful fallback)
+      if (!planModules) return true; // unknown -> never hide
       return keys.some((key) => {
         const aliases = MODULE_ALIASES[key] ?? [key];
         return planModules.some((m) => aliases.some((a) => m.includes(a) || a.includes(m)));
@@ -132,323 +305,89 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
     [planModules],
   );
 
-  // ---- Section catalog -------------------------------------------------
-
-  const overview: NavSection = {
-    id: 'overview',
-    items: [{ href: '/', label: tr('dashboard', 'Home'), icon: 'home', exact: true }],
-  };
-
-  const restaurant: NavSection = {
-    id: 'restaurant',
-    label: term(businessType, 'posSection'),
-    moduleKeys: ['rms'],
-    permissions: ['menus.view', 'orders.view', 'tables.view', 'reports.view'],
-    items: [
-      {
-        href: '/rms/orders/create',
-        label: term(businessType, 'pos'),
-        icon: 'building-storefront',
-        permission: 'orders.create',
-        appKey: 'pos',
-        exact: true,
-      },
-      {
-        href: '/rms/orders',
-        label: tr('orders', 'Orders'),
-        icon: 'receipt',
-        permission: 'orders.view',
-        appKey: 'pos',
-        exclude: ['/rms/orders/create'],
-      },
-      { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view', appKey: 'tables' },
-      { href: '/rms/menus', label: tr('menuManagement', 'Menus'), icon: 'menu-book', permission: 'menus.view', appKey: 'menu' },
-      { href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view', appKey: 'pos' },
-    ],
-  };
-
-  const menuStudio: NavSection = {
-    id: 'menu-studio',
-    label: 'Menu Studio',
-    moduleKeys: ['rms'],
-    items: [{ href: '/menu-studio', label: 'Menu Studio', icon: 'sparkles', appKey: 'menu' }],
-  };
-
-  const inventory: NavSection = {
-    id: 'inventory',
-    label: term(businessType, 'inventorySection'),
-    moduleKeys: ['ims'],
-    permission: 'inventory.view',
-    items: [
-      { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', also: ['/inventory'], appKey: 'items' },
-      { href: '/ims/inflows', label: term(businessType, 'goodsIn'), icon: 'inbox-arrow', permission: 'inflows.view', appKey: 'goods-in' },
-      { href: '/ims/branch-items', label: tr('branchItems', 'Branch Items'), icon: 'building-storefront', appKey: 'items' },
-      { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments', appKey: 'items' },
-      { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left', appKey: 'items' },
-    ],
-  };
-
-  const sales: NavSection = {
-    id: 'sales',
-    label: 'Sales',
-    moduleKeys: ['sales'],
-    permission: 'sales.view',
-    items: [
-      { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', appKey: 'customers' },
-      { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', appKey: 'invoicing' },
-    ],
-  };
-
-  const accounting: NavSection = {
-    id: 'accounting',
-    label: 'Accounting',
-    moduleKeys: ['accounting'],
-    permission: 'accounting.view',
-    items: [
-      { href: '/accounting', label: 'Overview', icon: 'calculator', exact: true, appKey: 'books' },
-      { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open', appKey: 'books' },
-      { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square', appKey: 'books' },
-      { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar', appKey: 'books' },
-    ],
-  };
-
-  // Condensed money section for the hospitality edition
-  const money: NavSection = {
-    id: 'money',
-    label: 'Money',
-    moduleKeys: ['sales', 'accounting'],
-    permissions: ['sales.view', 'accounting.view'],
-    items: [
-      { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', permission: 'sales.view', appKey: 'invoicing' },
-      { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view', appKey: 'customers' },
-      {
-        href: '/accounting/reports',
-        label: tr('reports', 'Reports'),
-        icon: 'chart-bar',
-        permission: 'accounting.view',
-        also: ['/accounting'],
-        appKey: 'books',
-      },
-    ],
-  };
-
-  const hr: NavSection = {
-    id: 'hr',
-    label: 'Human Resources',
-    moduleKeys: ['hrms'],
-    permissions: [
-      'employees.view',
-      'attendance.view',
-      'leaves.view',
-      'payroll.view',
-      'recruitment.view',
-      'performance.view',
-      'learning.view',
-      'benefits.view',
-      'compensation.view',
-    ],
-    items: [
-      { href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true, appKey: 'people' },
-      { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view', appKey: 'people' },
-      { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view', appKey: 'people' },
-      { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view', appKey: 'people' },
-      { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view', appKey: 'payroll' },
-      { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view', appKey: 'people' },
-      { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view', appKey: 'people' },
-      { href: '/hrms/learning', label: tr('learning', 'Learning'), icon: 'academic-cap', permission: 'learning.view', appKey: 'people' },
-      { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view', appKey: 'people' },
-      { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view', appKey: 'people' },
-    ],
-  };
-
-  const workspace: NavSection = {
-    id: 'workspace',
-    label: 'Settings',
-    items: [
-      { href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view', appKey: 'goods-in' },
-      { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view', appKeys: ['items', 'pos', 'people'] },
-      { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view', appKey: 'items' },
-      { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view', appKey: 'items' },
-      { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view', appKeys: ['items', 'pos'] },
-      { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view', appKey: 'people' },
-      { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view', appKey: 'people' },
-      { href: '/hrms/locations', label: tr('locations', 'Locations'), icon: 'map-pin', permission: 'locations.view', appKey: 'people' },
-      { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
-      { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
-      { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
-      { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
-      { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
-      { href: '/settings', label: 'General', icon: 'cog', exact: true },
-    ],
-  };
-
-  // ---- Progressive disclosure ------------------------------------------
-
-  const fullCatalog: NavSection[] = [overview, restaurant, menuStudio, inventory, sales, accounting, hr, workspace];
-
-  const isAppEnabled = useCallback(
-    (item: NavLeaf) => {
-      if (!effectiveApps) return true; // legacy backend: show all
-      const keys = item.appKeys ?? (item.appKey ? [item.appKey] : []);
-      if (keys.length === 0) return true; // always-on item (Users, Roles, General, ...)
-      return keys.some((k) => effectiveApps.includes(k));
+  const isAppAvailable = useCallback(
+    (app: AppDef) => {
+      if (app.id === 'settings') return true; // system app always available
+      if (effectiveApps && app.appKeys) {
+        return app.appKeys.some((k) => effectiveApps.includes(k));
+      }
+      return hasModule(app.moduleKeys);
     },
-    [effectiveApps],
+    [effectiveApps, hasModule],
   );
 
-  // Effective sections = tenant's apps/plan filtering, independent of UI toggles.
-  let effectiveSections: NavSection[];
-  if (effectiveApps) {
-    // Apps model: render whatever is enabled, in registry/catalog order.
-    // Sections whose every route belongs to a disabled app disappear.
-    effectiveSections = fullCatalog
-      .map((s) => ({ ...s, items: s.items.filter(isAppEnabled) }))
-      .filter((s) => s.items.length > 0);
-  } else if (businessType === 'restaurant' || businessType === 'hospitality') {
-    effectiveSections = [overview, restaurant, menuStudio, inventory, money, workspace].filter((s) =>
-      hasModule(s.moduleKeys),
-    );
-  } else if (businessType === 'accounts') {
-    effectiveSections = [overview, sales, accounting, workspace].filter((s) => hasModule(s.moduleKeys));
-  } else if (businessType === 'hr') {
-    effectiveSections = [overview, hr, workspace].filter((s) => hasModule(s.moduleKeys));
-  } else if (businessType === 'warehouse') {
-    effectiveSections = [overview, inventory, workspace].filter((s) => hasModule(s.moduleKeys));
-  } else {
-    // general / retail / services (and unknown -> safe default)
-    effectiveSections = [overview, inventory, sales, accounting, hr, workspace].filter((s) =>
-      hasModule(s.moduleKeys),
-    );
-  }
+  const availableApps = apps.filter(isAppAvailable);
+  // Settings is always reachable via the launcher, but only listed among the
+  // "business apps" grid separately.
+  const businessApps = availableApps.filter((a) => a.id !== 'settings');
 
-  // App groupings the workspace switcher offers (everything except Home/Settings).
-  const groups = effectiveSections.filter((s) => s.id !== 'overview' && s.id !== 'workspace');
-  const groupIdsKey = groups.map((g) => g.id).join(',');
-  useEffect(() => {
-    setAvailableGroups(groupIdsKey ? groupIdsKey.split(',') : []);
-  }, [groupIdsKey, setAvailableGroups]);
+  // ---- Which app am I in? (route-driven) -------------------------------
 
-  // Resolve the workspace: single-app tenants are auto-locked to their group;
-  // a stale/ineffective persisted choice falls back to "all". Composes on top
-  // of effective-apps filtering — it can only narrow, never widen.
-  const resolvedWorkspace =
-    groups.length === 1
-      ? groups[0].id
-      : activeWorkspace !== 'all' && groups.some((g) => g.id === activeWorkspace)
-      ? activeWorkspace
-      : 'all';
+  const appForPath = useCallback(
+    (path: string): AppDef => {
+      // System-settings subpaths that belong to a *module* app, not Settings.
+      const inventorySetup = ['/settings/categories', '/settings/uoms', '/settings/allocation-method'];
+      if (inventorySetup.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'inventory')!;
 
-  /** Apps model + "All modules": locked apps render greyed with a lock, not hidden. */
-  let showLocked = false;
-  let sections: NavSection[];
-  if (showAll) {
-    // Debug reveal: everything, bypassing workspace + app filters.
-    showLocked = !!effectiveApps;
-    sections = fullCatalog;
-  } else if (resolvedWorkspace === 'all') {
-    sections = effectiveSections;
-  } else {
-    sections = effectiveSections.filter(
-      (s) => s.id === 'overview' || s.id === 'workspace' || s.id === resolvedWorkspace,
-    );
-  }
+      if (path.startsWith('/hrms')) return apps.find((a) => a.id === 'hr')!;
+      if (path.startsWith('/ims') || path.startsWith('/inventory')) return apps.find((a) => a.id === 'inventory')!;
+      if (path.startsWith('/sales')) return apps.find((a) => a.id === 'sales')!;
+      if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
+      if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
+      if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
+      if (
+        path === '/' ||
+        path.startsWith('/rms') ||
+        path.startsWith('/pos') ||
+        path.startsWith('/menu-studio')
+      )
+        return apps.find((a) => a.id === 'pos')!;
+      // Fallback: first available business app, else settings.
+      return businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [businessApps.length],
+  );
+
+  const activeApp = appForPath(pathname);
 
   const isItemActive = useCallback(
     (item: NavLeaf) => {
       if ((item.exclude ?? []).some((p) => pathname.startsWith(p))) return false;
-      if (item.exact) {
-        if (pathname === item.href) return true;
-      } else if (pathname.startsWith(item.href)) {
-        return true;
-      }
+      if (item.exact) return pathname === item.href;
+      if (pathname.startsWith(item.href)) return true;
       return (item.also ?? []).some((p) => pathname.startsWith(p));
     },
     [pathname],
   );
 
-  // Keep the section that owns the current route expanded.
-  useEffect(() => {
-    const active = sections.find((s) => s.items.some(isItemActive));
-    if (active) {
-      setCollapsed((prev) => (prev[active.id] ? { ...prev, [active.id]: false } : prev));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  // ---- Render ----------------------------------------------------------
 
-  const toggleSection = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
-
-  const renderSection = (section: NavSection) => {
-    const isCollapsed = !!collapsed[section.id];
-    const body = (
-      <div className={section.label ? 'mt-6' : ''}>
-        {section.label && (
-          <button
-            type="button"
-            onClick={() => toggleSection(section.id)}
-            aria-expanded={!isCollapsed}
-            className="group flex w-full items-center justify-between rounded-md px-3 pb-1.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors duration-150">
-              {section.label}
-            </span>
-            <Icon
-              name="chevron-down"
-              size={12}
-              className={`text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-150 ${
-                isCollapsed ? '-rotate-90' : ''
-              }`}
-            />
-          </button>
-        )}
-        {!isCollapsed && (
-          <div className="space-y-px">
-            {section.items.map((item) => {
-              const locked = showLocked && !isAppEnabled(item);
-              const link = locked ? (
-                <Link
-                  href="/settings/apps"
-                  onClick={onNavigate}
-                  title="Not in your apps — enable it in Settings → Apps or upgrade your plan"
-                  className="group flex items-center gap-2.5 rounded-lg px-3 h-9 text-sm text-gray-400 dark:text-gray-600 opacity-60 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  <Icon name={item.icon} size={18} className="text-gray-300 dark:text-gray-600" />
-                  <span className="flex-1 truncate">{item.label}</span>
-                  <Icon name="lock" size={13} className="text-gray-300 dark:text-gray-600" />
-                </Link>
-              ) : (
-                <NavItem href={item.href} icon={item.icon} active={isItemActive(item)} onClick={onNavigate}>
-                  {item.label}
-                </NavItem>
-              );
-              return item.permission ? (
-                <PermissionGuard key={item.href} permission={item.permission}>
-                  {link}
-                </PermissionGuard>
-              ) : (
-                <div key={item.href}>{link}</div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+  const renderItem = (item: NavLeaf) => {
+    const link = (
+      <NavItem href={item.href} icon={item.icon} active={isItemActive(item)} onClick={onNavigate}>
+        {item.label}
+      </NavItem>
     );
-
-    if (section.permissions) {
-      return (
-        <PermissionGuard key={section.id} permissions={section.permissions}>
-          {body}
-        </PermissionGuard>
-      );
-    }
-    if (section.permission) {
-      return (
-        <PermissionGuard key={section.id} permission={section.permission}>
-          {body}
-        </PermissionGuard>
-      );
-    }
-    return <div key={section.id}>{body}</div>;
+    return item.permission ? (
+      <PermissionGuard key={item.href} permission={item.permission}>
+        {link}
+      </PermissionGuard>
+    ) : (
+      <div key={item.href}>{link}</div>
+    );
   };
+
+  const renderGroup = (group: NavGroup, idx: number) => (
+    <div key={group.label ?? `g${idx}`} className={group.label ? 'mt-5' : ''}>
+      {group.label && (
+        <p className="px-3 pb-1.5 text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          {group.label}
+        </p>
+      )}
+      <div className="space-y-px">{group.items.map(renderItem)}</div>
+    </div>
+  );
 
   const userRole = user?.roles?.[0]
     ? user.roles[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -461,22 +400,85 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       } flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800`}
       style={mobile ? undefined : { width: 'var(--sidebar-width)' }}
     >
-      {/* Business block + workspace switcher (~64px) */}
-      <div className="px-2 pt-2.5 pb-1.5 shrink-0">
-        <ServiceSwitcher
-          businessName={businessName}
-          edition={EDITION_CHIPS[businessType ?? ''] ?? null}
-          groups={groups.map((g) => ({ id: g.id, name: g.label ?? g.id }))}
-          activeWorkspace={resolvedWorkspace}
-        />
+      {/* App switcher header — current app + launcher */}
+      <div className="relative shrink-0 px-2 pt-2.5 pb-2" ref={launcherRef}>
+        <button
+          type="button"
+          onClick={() => setLauncherOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={launcherOpen}
+          className="flex w-full items-center gap-2.5 rounded-xl p-2 text-left transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white">
+            <Icon name={activeApp.icon} size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {activeApp.name}
+            </span>
+            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+              {businessName || 'Kuza'}
+              {EDITION_CHIPS[businessType ?? ''] ? ` · ${EDITION_CHIPS[businessType ?? '']}` : ''}
+            </span>
+          </span>
+          <Icon name="squares-2x2" size={16} className="text-gray-400 dark:text-gray-500" />
+        </button>
+
+        {launcherOpen && (
+          <div
+            role="menu"
+            className="absolute left-2 right-2 top-full z-50 mt-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 shadow-popover"
+          >
+            <p className="px-2 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Apps
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {businessApps.map((app) => (
+                <Link
+                  key={app.id}
+                  href={app.home}
+                  role="menuitem"
+                  onClick={() => {
+                    setLauncherOpen(false);
+                    onNavigate?.();
+                  }}
+                  className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 transition-colors duration-150 ${
+                    app.id === activeApp.id
+                      ? 'border-brand-200 bg-brand-50/70 dark:border-brand-500/30 dark:bg-brand-500/10'
+                      : 'border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800/70'
+                  }`}
+                  title={app.blurb}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-gradient text-white">
+                    <Icon name={app.icon} size={15} />
+                  </span>
+                  <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{app.name}</span>
+                </Link>
+              ))}
+            </div>
+            <div className="my-1.5 border-t border-gray-200 dark:border-gray-800" />
+            <Link
+              href="/settings"
+              role="menuitem"
+              onClick={() => {
+                setLauncherOpen(false);
+                onNavigate?.();
+              }}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
+            >
+              <Icon name="cog" size={16} className="text-gray-400 dark:text-gray-500" />
+              Settings
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Navigation */}
+      {/* Active app navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3">
-        {sections.map(renderSection)}
+        {activeApp.groups.map(renderGroup)}
       </nav>
 
-      {/* Upgrade promo — only for FREE / TRIALING tenants */}
+      {/* Upgrade promo — FREE / TRIALING only */}
       {(planCode === 'FREE' || subscriptionStatus === 'TRIALING') && (
         <div className="shrink-0 px-2 pb-2">
           <div className="rounded-2xl bg-brand-50/80 dark:bg-brand-500/10 ring-1 ring-brand-100 dark:ring-brand-500/20 p-3">
@@ -486,9 +488,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
               </span>
               <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Upgrade plan</p>
             </div>
-            <p className="mt-1.5 text-xs leading-4 text-gray-500 dark:text-gray-400">
-              Unlock your full business
-            </p>
+            <p className="mt-1.5 text-xs leading-4 text-gray-500 dark:text-gray-400">Unlock your full business</p>
             <Link
               href="/settings/billing"
               onClick={onNavigate}
@@ -499,31 +499,6 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
           </div>
         </div>
       )}
-
-      {/* All modules toggle */}
-      <div className="shrink-0 px-2 pb-1">
-        <button
-          type="button"
-          onClick={toggleShowAll}
-          aria-pressed={showAll}
-          className="flex w-full items-center gap-2 rounded-md px-2 h-7 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          <Icon name="squares-2x2" size={14} />
-          <span className="flex-1 text-left">All modules</span>
-          <span
-            className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors duration-150 ${
-              showAll ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700'
-            }`}
-            aria-hidden="true"
-          >
-            <span
-              className={`inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform duration-150 ${
-                showAll ? 'translate-x-3' : 'translate-x-0.5'
-              }`}
-            />
-          </span>
-        </button>
-      </div>
 
       {/* User block */}
       <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 p-2">
