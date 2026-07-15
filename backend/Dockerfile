@@ -42,7 +42,7 @@ COPY --from=builder /app/src/modules/notifications/templates ./templates
 RUN mkdir -p uploads/inventory
 
 # Expose port
-EXPOSE 3000
+EXPOSE 4001
 
 # Start application
 CMD ["node", "dist/main.js"]

@@ -85,6 +85,17 @@ services:
       - /app/.next
     command: npm run dev -- -H 0.0.0.0
 
+  website:
+    build:
+      context: ./website
+      dockerfile: Dockerfile
+    container_name: erp_website
+    ports:
+      - "${WEBSITE_PORT:-8080}:80"
+    networks:
+      - erp_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   backend_uploads:

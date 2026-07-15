@@ -9,6 +9,7 @@ import {
 import { I18nModule } from 'nestjs-i18n';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { i18nConfig } from './config/i18n.config';
 import { getDatabaseConfig } from './config/database.config';
 import { AuthModule } from './modules/auth/auth.module';
@@ -92,6 +93,19 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     {
       provide: APP_GUARD,
       useClass: TenantGuard,
+    },
+    // Permissions Guard runs last in the guard chain, after JwtAuthGuard has
+    // populated request.user. Global registration closes the "forgotten
+    // @UseGuards = open endpoint" gap: @Public() routes are open, all other
+    // routes require a valid JWT (enforced by JwtAuthGuard), and IF a
+    // handler/controller declares @RequirePermissions(...) those permissions
+    // are enforced. Routes with no @RequirePermissions remain allowed for any
+    // authenticated user — the guard returns true when no permissions metadata
+    // is present, preserving today's behavior (no default-deny). Per-controller
+    // @UseGuards(PermissionsGuard) still work and are now redundant.
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
     {
       provide: APP_INTERCEPTOR,

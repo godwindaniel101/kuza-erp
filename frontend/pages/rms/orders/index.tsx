@@ -244,13 +244,22 @@ export default function OrdersPage() {
         subtitle="Every sale rung up, paid and settled"
         breadcrumbs={[{ label: 'Restaurant' }, { label: t('orders') || 'Orders' }]}
         actions={
-          <Link
-            href="/rms/orders/create"
-            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
-          >
-            <i className="bx bx-plus mr-2" aria-hidden="true"></i>
-            {t('create')} {t('order')}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/pos"
+              className="h-8 px-3 border border-brand-600 text-brand-700 dark:text-brand-300 dark:border-brand-500 rounded-lg text-[13px] font-medium hover:bg-brand-50 dark:hover:bg-brand-900/30 flex items-center"
+            >
+              <i className="bx bx-store-alt mr-2" aria-hidden="true"></i>
+              {t('openPos') || 'Open POS'}
+            </Link>
+            <Link
+              href="/rms/orders/create"
+              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+            >
+              <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+              {t('create')} {t('order')}
+            </Link>
+          </div>
         }
       />
 
