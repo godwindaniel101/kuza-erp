@@ -1,0 +1,203 @@
+Name,Category,Subcategory,UOM,Track Stock,Minimum Stock,Maximum Stock,Sales Price,Barcode,Image Link
+Organic Whole Milk,Dairy,Milk,Liter,Yes,50,300,4.99,8901234567890,https://images.unsplash.com/photo-1500000000000
+Cheddar Cheese Block,Dairy,Cheese,Kilogram,Yes,30,150,12.99,8901234567891,https://images.unsplash.com/photo-1500001000000
+Greek Yogurt Plain,Dairy,Yogurt,Unit,Yes,40,200,3.49,8901234567892,https://images.unsplash.com/photo-1500002000000
+Butter Salted,Dairy,Butter,Unit,Yes,25,120,5.99,8901234567893,https://images.unsplash.com/photo-1500003000000
+Fresh Orange Juice,Beverages,Juices,Liter,Yes,35,180,6.49,8901234567894,https://images.unsplash.com/photo-1500004000000
+Coca Cola 2L,Beverages,Soft Drinks,Unit,Yes,60,400,2.99,8901234567895,https://images.unsplash.com/photo-1500005000000
+Mineral Water 500ml,Beverages,Water,Unit,Yes,100,600,1.29,8901234567896,https://images.unsplash.com/photo-1500006000000
+Green Tea Bags,Beverages,Tea,Unit,Yes,20,100,8.99,8901234567897,https://images.unsplash.com/photo-1500007000000
+Arabica Coffee Beans,Beverages,Coffee,Kilogram,Yes,15,80,24.99,8901234567898,https://images.unsplash.com/photo-1500008000000
+Fresh Bananas,Produce,Fruits,Kilogram,Yes,40,200,2.49,8901234567899,https://images.unsplash.com/photo-1500009000000
+Red Apples,Produce,Fruits,Kilogram,Yes,50,250,3.99,8901234567900,https://images.unsplash.com/photo-1500010000000
+Organic Tomatoes,Produce,Vegetables,Kilogram,Yes,35,180,4.49,8901234567901,https://images.unsplash.com/photo-1500011000000
+Fresh Carrots,Produce,Vegetables,Kilogram,Yes,30,150,2.99,8901234567902,https://images.unsplash.com/photo-1500012000000
+Broccoli Crowns,Produce,Vegetables,Kilogram,Yes,20,100,5.49,8901234567903,https://images.unsplash.com/photo-1500013000000
+Iceberg Lettuce,Produce,Vegetables,Unit,Yes,25,120,2.79,8901234567904,https://images.unsplash.com/photo-1500014000000
+Chicken Breast Boneless,Meat,Poultry,Kilogram,Yes,30,150,11.99,8901234567905,https://images.unsplash.com/photo-1500015000000
+Ground Beef 85/15,Meat,Beef,Kilogram,Yes,25,120,9.99,8901234567906,https://images.unsplash.com/photo-1500016000000
+Pork Chops,Meat,Pork,Kilogram,Yes,20,100,10.49,8901234567907,https://images.unsplash.com/photo-1500017000000
+Fresh Salmon Fillet,Seafood,Fish,Kilogram,Yes,15,80,18.99,8901234567908,https://images.unsplash.com/photo-1500018000000
+Jumbo Shrimp,Seafood,Shellfish,Kilogram,Yes,10,60,22.99,8901234567909,https://images.unsplash.com/photo-1500019000000
+White Bread Loaf,Bakery,Bread,Unit,Yes,40,200,3.49,8901234567910,https://images.unsplash.com/photo-1500020000000
+Whole Wheat Bread,Bakery,Bread,Unit,Yes,35,180,4.29,8901234567911,https://images.unsplash.com/photo-1500021000000
+Croissants 6-Pack,Bakery,Pastries,Unit,Yes,20,100,6.99,8901234567912,https://images.unsplash.com/photo-1500022000000
+Chocolate Chip Cookies,Bakery,Cookies,Unit,Yes,30,150,5.49,8901234567913,https://images.unsplash.com/photo-1500023000000
+Birthday Cake 8 inch,Bakery,Cakes,Unit,Yes,5,30,24.99,8901234567914,https://images.unsplash.com/photo-1500024000000
+Jasmine Rice 5kg,Pantry,Rice & Grains,Unit,Yes,25,120,14.99,8901234567915,https://images.unsplash.com/photo-1500025000000
+Spaghetti Pasta 500g,Pantry,Pasta,Unit,Yes,40,200,2.99,8901234567916,https://images.unsplash.com/photo-1500026000000
+All-Purpose Flour 2kg,Pantry,Baking,Unit,Yes,30,150,5.99,8901234567917,https://images.unsplash.com/photo-1500027000000
+White Sugar 1kg,Pantry,Baking,Unit,Yes,35,180,3.49,8901234567918,https://images.unsplash.com/photo-1500028000000
+Olive Oil Extra Virgin 1L,Pantry,Oils,Unit,Yes,20,100,12.99,8901234567919,https://images.unsplash.com/photo-1500029000000
+Tomato Sauce 400g,Pantry,Canned Goods,Unit,Yes,50,250,1.99,8901234567920,https://images.unsplash.com/photo-1500030000000
+Black Beans Can 400g,Pantry,Canned Goods,Unit,Yes,40,200,1.79,8901234567921,https://images.unsplash.com/photo-1500031000000
+Tuna in Water Can,Pantry,Canned Goods,Unit,Yes,45,220,2.49,8901234567922,https://images.unsplash.com/photo-1500032000000
+Peanut Butter Creamy 500g,Pantry,Spreads,Unit,Yes,25,120,6.99,8901234567923,https://images.unsplash.com/photo-1500033000000
+Strawberry Jam 340g,Pantry,Spreads,Unit,Yes,30,150,4.99,8901234567924,https://images.unsplash.com/photo-1500034000000
+Honey Pure 500g,Pantry,Spreads,Unit,Yes,20,100,9.99,8901234567925,https://images.unsplash.com/photo-1500035000000
+Corn Flakes 500g,Breakfast,Cereal,Unit,Yes,35,180,5.49,8901234567926,https://images.unsplash.com/photo-1500036000000
+Granola Mix 400g,Breakfast,Cereal,Unit,Yes,25,120,7.99,8901234567927,https://images.unsplash.com/photo-1500037000000
+Oatmeal Quick 1kg,Breakfast,Cereal,Unit,Yes,30,150,6.49,8901234567928,https://images.unsplash.com/photo-1500038000000
+Pancake Mix 1kg,Breakfast,Mixes,Unit,Yes,20,100,5.99,8901234567929,https://images.unsplash.com/photo-1500039000000
+Maple Syrup 250ml,Breakfast,Syrups,Unit,Yes,15,80,8.99,8901234567930,https://images.unsplash.com/photo-1500040000000
+Potato Chips BBQ 200g,Snacks,Chips,Unit,Yes,50,250,3.99,8901234567931,https://images.unsplash.com/photo-1500041000000
+Tortilla Chips 300g,Snacks,Chips,Unit,Yes,40,200,4.49,8901234567932,https://images.unsplash.com/photo-1500042000000
+Mixed Nuts 250g,Snacks,Nuts,Unit,Yes,25,120,8.99,8901234567933,https://images.unsplash.com/photo-1500043000000
+Chocolate Bar Dark 100g,Snacks,Candy,Unit,Yes,60,300,2.99,8901234567934,https://images.unsplash.com/photo-1500044000000
+Gummy Bears 200g,Snacks,Candy,Unit,Yes,45,220,3.49,8901234567935,https://images.unsplash.com/photo-1500045000000
+Popcorn Kernels 500g,Snacks,Popcorn,Unit,Yes,30,150,4.99,8901234567936,https://images.unsplash.com/photo-1500046000000
+Protein Bar Chocolate 60g,Snacks,Bars,Unit,Yes,40,200,2.49,8901234567937,https://images.unsplash.com/photo-1500047000000
+Salsa Mild 500g,Condiments,Sauces,Unit,Yes,25,120,4.99,8901234567938,https://images.unsplash.com/photo-1500048000000
+Ketchup 500ml,Condiments,Sauces,Unit,Yes,35,180,3.49,8901234567939,https://images.unsplash.com/photo-1500049000000
+Mustard Yellow 350g,Condiments,Sauces,Unit,Yes,30,150,2.99,8901234567940,https://images.unsplash.com/photo-1500050000000
+Mayonnaise 500ml,Condiments,Sauces,Unit,Yes,30,150,4.49,8901234567941,https://images.unsplash.com/photo-1500051000000
+Soy Sauce 500ml,Condiments,Asian Sauces,Unit,Yes,25,120,3.99,8901234567942,https://images.unsplash.com/photo-1500052000000
+Hot Sauce 150ml,Condiments,Sauces,Unit,Yes,20,100,5.49,8901234567943,https://images.unsplash.com/photo-1500053000000
+Ice Cream Vanilla 1L,Frozen Foods,Ice Cream,Unit,Yes,30,150,7.99,8901234567944,https://images.unsplash.com/photo-1500054000000
+Ice Cream Chocolate 1L,Frozen Foods,Ice Cream,Unit,Yes,30,150,7.99,8901234567945,https://images.unsplash.com/photo-1500055000000
+Frozen Pizza Margherita,Frozen Foods,Pizza,Unit,Yes,25,120,8.99,8901234567946,https://images.unsplash.com/photo-1500056000000
+Frozen Vegetables Mix 1kg,Frozen Foods,Vegetables,Unit,Yes,35,180,5.99,8901234567947,https://images.unsplash.com/photo-1500057000000
+Frozen French Fries 1kg,Frozen Foods,Potatoes,Unit,Yes,40,200,4.99,8901234567948,https://images.unsplash.com/photo-1500058000000
+Chicken Nuggets 500g,Frozen Foods,Poultry,Unit,Yes,30,150,9.99,8901234567949,https://images.unsplash.com/photo-1500059000000
+Laundry Detergent 2L,Household,Cleaning,Unit,Yes,25,120,12.99,8901234567950,https://images.unsplash.com/photo-1500060000000
+Dish Soap 750ml,Household,Cleaning,Unit,Yes,30,150,3.99,8901234567951,https://images.unsplash.com/photo-1500061000000
+All-Purpose Cleaner 1L,Household,Cleaning,Unit,Yes,25,120,5.49,8901234567952,https://images.unsplash.com/photo-1500062000000
+Paper Towels 6-Pack,Household,Paper Products,Unit,Yes,40,200,8.99,8901234567953,https://images.unsplash.com/photo-1500063000000
+Toilet Paper 12-Pack,Household,Paper Products,Unit,Yes,50,250,12.99,8901234567954,https://images.unsplash.com/photo-1500064000000
+Trash Bags 30-Pack,Household,Bags,Unit,Yes,35,180,9.99,8901234567955,https://images.unsplash.com/photo-1500065000000
+Aluminum Foil 30m,Household,Kitchen Supplies,Unit,Yes,20,100,6.99,8901234567956,https://images.unsplash.com/photo-1500066000000
+Plastic Wrap 100m,Household,Kitchen Supplies,Unit,Yes,20,100,4.99,8901234567957,https://images.unsplash.com/photo-1500067000000
+Shampoo 500ml,Personal Care,Hair Care,Unit,Yes,30,150,7.99,8901234567958,https://images.unsplash.com/photo-1500068000000
+Conditioner 500ml,Personal Care,Hair Care,Unit,Yes,25,120,7.99,8901234567959,https://images.unsplash.com/photo-1500069000000
+Body Wash 400ml,Personal Care,Bath,Unit,Yes,30,150,6.49,8901234567960,https://images.unsplash.com/photo-1500070000000
+Bar Soap 4-Pack,Personal Care,Bath,Unit,Yes,35,180,5.99,8901234567961,https://images.unsplash.com/photo-1500071000000
+Toothpaste 150g,Personal Care,Oral Care,Unit,Yes,40,200,4.49,8901234567962,https://images.unsplash.com/photo-1500072000000
+Toothbrush Soft,Personal Care,Oral Care,Unit,Yes,50,250,3.49,8901234567963,https://images.unsplash.com/photo-1500073000000
+Deodorant Spray 150ml,Personal Care,Deodorants,Unit,Yes,35,180,5.99,8901234567964,https://images.unsplash.com/photo-1500074000000
+Razors 5-Pack,Personal Care,Shaving,Unit,Yes,25,120,9.99,8901234567965,https://images.unsplash.com/photo-1500075000000
+Shaving Cream 300ml,Personal Care,Shaving,Unit,Yes,20,100,6.49,8901234567966,https://images.unsplash.com/photo-1500076000000
+Face Moisturizer 100ml,Personal Care,Skin Care,Unit,Yes,20,100,14.99,8901234567967,https://images.unsplash.com/photo-1500077000000
+Sunscreen SPF 50 200ml,Personal Care,Skin Care,Unit,Yes,25,120,12.99,8901234567968,https://images.unsplash.com/photo-1500078000000
+Hand Sanitizer 500ml,Personal Care,Hygiene,Unit,Yes,40,200,5.99,8901234567969,https://images.unsplash.com/photo-1500079000000
+Cotton Swabs 200-Pack,Personal Care,Hygiene,Unit,Yes,30,150,3.99,8901234567970,https://images.unsplash.com/photo-1500080000000
+Baby Diapers Size 4 40-Pack,Baby Care,Diapers,Unit,Yes,30,150,24.99,8901234567971,https://images.unsplash.com/photo-1500081000000
+Baby Wipes 80-Pack,Baby Care,Wipes,Unit,Yes,40,200,6.99,8901234567972,https://images.unsplash.com/photo-1500082000000
+Baby Formula 800g,Baby Care,Formula,Unit,Yes,20,100,29.99,8901234567973,https://images.unsplash.com/photo-1500083000000
+Baby Shampoo 400ml,Baby Care,Bath,Unit,Yes,25,120,7.99,8901234567974,https://images.unsplash.com/photo-1500084000000
+Pacifiers 2-Pack,Baby Care,Accessories,Unit,Yes,20,100,8.99,8901234567975,https://images.unsplash.com/photo-1500085000000
+Dog Food Dry 5kg,Pet Care,Dog Food,Unit,Yes,20,100,24.99,8901234567976,https://images.unsplash.com/photo-1500086000000
+Cat Food Dry 3kg,Pet Care,Cat Food,Unit,Yes,25,120,19.99,8901234567977,https://images.unsplash.com/photo-1500087000000
+Dog Treats 500g,Pet Care,Dog Treats,Unit,Yes,30,150,9.99,8901234567978,https://images.unsplash.com/photo-1500088000000
+Cat Litter 5kg,Pet Care,Litter,Unit,Yes,25,120,14.99,8901234567979,https://images.unsplash.com/photo-1500089000000
+Pet Shampoo 500ml,Pet Care,Grooming,Unit,Yes,15,80,11.99,8901234567980,https://images.unsplash.com/photo-1500090000000
+AA Batteries 8-Pack,Electronics,Batteries,Unit,Yes,40,200,8.99,8901234567981,https://images.unsplash.com/photo-1500091000000
+AAA Batteries 8-Pack,Electronics,Batteries,Unit,Yes,35,180,8.99,8901234567982,https://images.unsplash.com/photo-1500092000000
+USB Cable Type-C 1m,Electronics,Cables,Unit,Yes,30,150,12.99,8901234567983,https://images.unsplash.com/photo-1500093000000
+Phone Charger 20W,Electronics,Chargers,Unit,Yes,25,120,19.99,8901234567984,https://images.unsplash.com/photo-1500094000000
+Earbuds Wireless,Electronics,Audio,Unit,Yes,15,80,49.99,8901234567985,https://images.unsplash.com/photo-1500095000000
+LED Light Bulb 10W,Electronics,Lighting,Unit,Yes,40,200,6.99,8901234567986,https://images.unsplash.com/photo-1500096000000
+Extension Cord 3m,Electronics,Cables,Unit,Yes,20,100,14.99,8901234567987,https://images.unsplash.com/photo-1500097000000
+Ballpoint Pens 10-Pack,Stationery,Writing,Unit,Yes,50,250,5.99,8901234567988,https://images.unsplash.com/photo-1500098000000
+Notebooks A5 3-Pack,Stationery,Paper,Unit,Yes,40,200,8.99,8901234567989,https://images.unsplash.com/photo-1500099000000
+Sticky Notes 400-Sheets,Stationery,Paper,Unit,Yes,30,150,4.99,8901234567990,https://images.unsplash.com/photo-1500100000000
+Highlighters 6-Pack,Stationery,Writing,Unit,Yes,35,180,6.99,8901234567991,https://images.unsplash.com/photo-1500101000000
+Stapler with Staples,Stationery,Office,Unit,Yes,25,120,7.99,8901234567992,https://images.unsplash.com/photo-1500102000000
+Scissors 8-inch,Stationery,Office,Unit,Yes,30,150,5.49,8901234567993,https://images.unsplash.com/photo-1500103000000
+Tape Dispenser with Tape,Stationery,Office,Unit,Yes,25,120,6.99,8901234567994,https://images.unsplash.com/photo-1500104000000
+File Folders 25-Pack,Stationery,Filing,Unit,Yes,20,100,9.99,8901234567995,https://images.unsplash.com/photo-1500105000000
+Markers 12-Pack,Stationery,Writing,Unit,Yes,30,150,8.99,8901234567996,https://images.unsplash.com/photo-1500106000000
+Pencils 12-Pack,Stationery,Writing,Unit,Yes,45,220,4.99,8901234567997,https://images.unsplash.com/photo-1500107000000
+T-Shirt Cotton White M,Clothing,Men,Unit,Yes,30,150,14.99,8901234567998,https://images.unsplash.com/photo-1500108000000
+T-Shirt Cotton Black L,Clothing,Men,Unit,Yes,30,150,14.99,8901234567999,https://images.unsplash.com/photo-1500109000000
+Jeans Blue Size 32,Clothing,Men,Unit,Yes,20,100,39.99,8901234568000,https://images.unsplash.com/photo-1500110000000
+Hoodie Gray L,Clothing,Men,Unit,Yes,25,120,34.99,8901234568001,https://images.unsplash.com/photo-1500111000000
+Dress Shirt White M,Clothing,Men,Unit,Yes,20,100,29.99,8901234568002,https://images.unsplash.com/photo-1500112000000
+Dress Black Size 8,Clothing,Women,Unit,Yes,15,80,49.99,8901234568003,https://images.unsplash.com/photo-1500113000000
+Blouse White M,Clothing,Women,Unit,Yes,25,120,24.99,8901234568004,https://images.unsplash.com/photo-1500114000000
+Leggings Black S,Clothing,Women,Unit,Yes,30,150,19.99,8901234568005,https://images.unsplash.com/photo-1500115000000
+Sneakers White Size 9,Clothing,Footwear,Unit,Yes,20,100,59.99,8901234568006,https://images.unsplash.com/photo-1500116000000
+Running Shoes Black Size 10,Clothing,Footwear,Unit,Yes,20,100,69.99,8901234568007,https://images.unsplash.com/photo-1500117000000
+Socks Cotton 6-Pack,Clothing,Accessories,Unit,Yes,40,200,12.99,8901234568008,https://images.unsplash.com/photo-1500118000000
+Baseball Cap Black,Clothing,Accessories,Unit,Yes,25,120,18.99,8901234568009,https://images.unsplash.com/photo-1500119000000
+Winter Scarf Wool,Clothing,Accessories,Unit,Yes,20,100,22.99,8901234568010,https://images.unsplash.com/photo-1500120000000
+Belt Leather Brown,Clothing,Accessories,Unit,Yes,30,150,24.99,8901234568011,https://images.unsplash.com/photo-1500121000000
+Sunglasses UV Protection,Clothing,Accessories,Unit,Yes,25,120,29.99,8901234568012,https://images.unsplash.com/photo-1500122000000
+Backpack 20L Black,Bags,Backpacks,Unit,Yes,15,80,39.99,8901234568013,https://images.unsplash.com/photo-1500123000000
+Handbag Leather Brown,Bags,Handbags,Unit,Yes,10,60,79.99,8901234568014,https://images.unsplash.com/photo-1500124000000
+Laptop Bag 15-inch,Bags,Laptop Bags,Unit,Yes,15,80,49.99,8901234568015,https://images.unsplash.com/photo-1500125000000
+Gym Duffel Bag,Bags,Sports Bags,Unit,Yes,20,100,34.99,8901234568016,https://images.unsplash.com/photo-1500126000000
+Yoga Mat 6mm,Sports,Fitness,Unit,Yes,20,100,24.99,8901234568017,https://images.unsplash.com/photo-1500127000000
+Dumbbells 5kg Pair,Sports,Fitness,Unit,Yes,15,80,39.99,8901234568018,https://images.unsplash.com/photo-1500128000000
+Resistance Bands Set,Sports,Fitness,Unit,Yes,25,120,19.99,8901234568019,https://images.unsplash.com/photo-1500129000000
+Water Bottle 1L,Sports,Accessories,Unit,Yes,40,200,12.99,8901234568020,https://images.unsplash.com/photo-1500130000000
+Tennis Racket,Sports,Tennis,Unit,Yes,10,60,89.99,8901234568021,https://images.unsplash.com/photo-1500131000000
+Basketball Size 7,Sports,Basketball,Unit,Yes,15,80,29.99,8901234568022,https://images.unsplash.com/photo-1500132000000
+Soccer Ball Size 5,Sports,Soccer,Unit,Yes,20,100,24.99,8901234568023,https://images.unsplash.com/photo-1500133000000
+Bicycle 26-inch,Sports,Cycling,Unit,Yes,5,30,299.99,8901234568024,https://images.unsplash.com/photo-1500134000000
+Helmet Cycling,Sports,Cycling,Unit,Yes,15,80,44.99,8901234568025,https://images.unsplash.com/photo-1500135000000
+Fishing Rod 7ft,Sports,Fishing,Unit,Yes,10,60,69.99,8901234568026,https://images.unsplash.com/photo-1500136000000
+Camping Tent 4-Person,Outdoor,Camping,Unit,Yes,8,40,149.99,8901234568027,https://images.unsplash.com/photo-1500137000000
+Sleeping Bag -5°C,Outdoor,Camping,Unit,Yes,15,80,79.99,8901234568028,https://images.unsplash.com/photo-1500138000000
+Flashlight LED Rechargeable,Outdoor,Lighting,Unit,Yes,25,120,24.99,8901234568029,https://images.unsplash.com/photo-1500139000000
+Cooler Box 40L,Outdoor,Camping,Unit,Yes,12,70,59.99,8901234568030,https://images.unsplash.com/photo-1500140000000
+Hiking Boots Size 10,Outdoor,Footwear,Unit,Yes,15,80,89.99,8901234568031,https://images.unsplash.com/photo-1500141000000
+Board Game Family Pack,Toys,Games,Unit,Yes,20,100,34.99,8901234568032,https://images.unsplash.com/photo-1500142000000
+Puzzle 1000 Pieces,Toys,Puzzles,Unit,Yes,25,120,19.99,8901234568033,https://images.unsplash.com/photo-1500143000000
+Action Figure Superhero,Toys,Figures,Unit,Yes,30,150,24.99,8901234568034,https://images.unsplash.com/photo-1500144000000
+Doll House,Toys,Dolls,Unit,Yes,10,60,79.99,8901234568035,https://images.unsplash.com/photo-1500145000000
+RC Car Monster Truck,Toys,RC Toys,Unit,Yes,15,80,59.99,8901234568036,https://images.unsplash.com/photo-1500146000000
+Building Blocks 500pcs,Toys,Construction,Unit,Yes,20,100,44.99,8901234568037,https://images.unsplash.com/photo-1500147000000
+Stuffed Bear 30cm,Toys,Plush,Unit,Yes,25,120,19.99,8901234568038,https://images.unsplash.com/photo-1500148000000
+Painting Canvas Set,Arts & Crafts,Painting,Unit,Yes,15,80,29.99,8901234568039,https://images.unsplash.com/photo-1500149000000
+Acrylic Paint Set 24 Colors,Arts & Crafts,Painting,Unit,Yes,20,100,34.99,8901234568040,https://images.unsplash.com/photo-1500150000000
+Sketchbook A4,Arts & Crafts,Drawing,Unit,Yes,25,120,12.99,8901234568041,https://images.unsplash.com/photo-1500151000000
+Colored Pencils 48 Pack,Arts & Crafts,Drawing,Unit,Yes,30,150,24.99,8901234568042,https://images.unsplash.com/photo-1500152000000
+Clay Modeling Set,Arts & Crafts,Sculpting,Unit,Yes,20,100,19.99,8901234568043,https://images.unsplash.com/photo-1500153000000
+Craft Glue 500ml,Arts & Crafts,Supplies,Unit,Yes,25,120,6.99,8901234568044,https://images.unsplash.com/photo-1500154000000
+Yarn Mixed Colors 10 Pack,Arts & Crafts,Knitting,Unit,Yes,15,80,29.99,8901234568045,https://images.unsplash.com/photo-1500155000000
+Novel Bestseller Fiction,Books,Fiction,Unit,Yes,20,100,19.99,8901234568046,https://images.unsplash.com/photo-1500156000000
+Cookbook Mediterranean,Books,Cooking,Unit,Yes,15,80,24.99,8901234568047,https://images.unsplash.com/photo-1500157000000
+Self-Help Book Mindfulness,Books,Self-Help,Unit,Yes,20,100,16.99,8901234568048,https://images.unsplash.com/photo-1500158000000
+Children's Book Adventure,Books,Children,Unit,Yes,30,150,12.99,8901234568049,https://images.unsplash.com/photo-1500159000000
+Magazine Monthly Lifestyle,Books,Magazines,Unit,Yes,40,200,7.99,8901234568050,https://images.unsplash.com/photo-1500160000000
+Watch Digital Smartwatch,Jewelry,Watches,Unit,Yes,10,60,199.99,8901234568051,https://images.unsplash.com/photo-1500161000000
+Necklace Silver Chain,Jewelry,Necklaces,Unit,Yes,15,80,49.99,8901234568052,https://images.unsplash.com/photo-1500162000000
+Earrings Gold Studs,Jewelry,Earrings,Unit,Yes,20,100,39.99,8901234568053,https://images.unsplash.com/photo-1500163000000
+Bracelet Leather Brown,Jewelry,Bracelets,Unit,Yes,25,120,29.99,8901234568054,https://images.unsplash.com/photo-1500164000000
+Ring Diamond Engagement,Jewelry,Rings,Unit,Yes,5,30,999.99,8901234568055,https://images.unsplash.com/photo-1500165000000
+Hammer Claw 16oz,Tools,Hand Tools,Unit,Yes,20,100,19.99,8901234568056,https://images.unsplash.com/photo-1500166000000
+Screwdriver Set 20pcs,Tools,Hand Tools,Unit,Yes,25,120,34.99,8901234568057,https://images.unsplash.com/photo-1500167000000
+Drill Cordless 18V,Tools,Power Tools,Unit,Yes,10,60,129.99,8901234568058,https://images.unsplash.com/photo-1500168000000
+Wrench Set Metric,Tools,Hand Tools,Unit,Yes,15,80,44.99,8901234568059,https://images.unsplash.com/photo-1500169000000
+Tape Measure 25ft,Tools,Measuring,Unit,Yes,30,150,12.99,8901234568060,https://images.unsplash.com/photo-1500170000000
+Pliers Set 3pcs,Tools,Hand Tools,Unit,Yes,25,120,24.99,8901234568061,https://images.unsplash.com/photo-1500171000000
+Ladder 6ft Aluminum,Tools,Hand Tools,Unit,Yes,8,40,89.99,8901234568062,https://images.unsplash.com/photo-1500172000000
+Paint Brush Set 10pcs,Tools,Painting,Unit,Yes,20,100,19.99,8901234568063,https://images.unsplash.com/photo-1500173000000
+Toolbox Portable 20-inch,Tools,Storage,Unit,Yes,15,80,29.99,8901234568064,https://images.unsplash.com/photo-1500174000000
+Safety Goggles,Tools,Safety,Unit,Yes,35,180,14.99,8901234568065,https://images.unsplash.com/photo-1500175000000
+Garden Gloves Leather,Garden,Tools,Unit,Yes,30,150,16.99,8901234568066,https://images.unsplash.com/photo-1500176000000
+Lawn Mower Electric,Garden,Equipment,Unit,Yes,5,30,249.99,8901234568067,https://images.unsplash.com/photo-1500177000000
+Garden Hose 50ft,Garden,Watering,Unit,Yes,15,80,39.99,8901234568068,https://images.unsplash.com/photo-1500178000000
+Fertilizer Organic 5kg,Garden,Soil,Unit,Yes,20,100,24.99,8901234568069,https://images.unsplash.com/photo-1500179000000
+Plant Pots 6-inch Set of 5,Garden,Containers,Unit,Yes,25,120,19.99,8901234568070,https://images.unsplash.com/photo-1500180000000
+Pruning Shears,Garden,Tools,Unit,Yes,30,150,22.99,8901234568071,https://images.unsplash.com/photo-1500181000000
+Garden Rake,Garden,Tools,Unit,Yes,20,100,18.99,8901234568072,https://images.unsplash.com/photo-1500182000000
+Wheelbarrow Steel,Garden,Equipment,Unit,Yes,8,40,79.99,8901234568073,https://images.unsplash.com/photo-1500183000000
+Watering Can 10L,Garden,Watering,Unit,Yes,25,120,14.99,8901234568074,https://images.unsplash.com/photo-1500184000000
+Compost Bin 50L,Garden,Containers,Unit,Yes,10,60,39.99,8901234568075,https://images.unsplash.com/photo-1500185000000
+Espresso Machine,Electronics,Appliances,Unit,Yes,5,30,299.99,8901234568076,https://images.unsplash.com/photo-1500186000000
+Blender 800W,Electronics,Appliances,Unit,Yes,10,60,89.99,8901234568077,https://images.unsplash.com/photo-1500188000000
+Microwave Oven 800W,Electronics,Appliances,Unit,Yes,8,40,149.99,8901234568078,https://images.unsplash.com/photo-1500190000000
+Air Fryer 4L,Electronics,Appliances,Unit,Yes,12,70,119.99,8901234568079,https://images.unsplash.com/photo-1500192000000
+Electric Kettle 1.7L,Electronics,Appliances,Unit,Yes,20,100,39.99,8901234568080,https://images.unsplash.com/photo-1500194000000
+Vacuum Cleaner Bagless,Electronics,Appliances,Unit,Yes,8,40,179.99,8901234568081,https://images.unsplash.com/photo-1500196000000
+Iron Steam 2400W,Electronics,Appliances,Unit,Yes,15,80,49.99,8901234568082,https://images.unsplash.com/photo-1500198000000
+Hair Dryer 2000W,Electronics,Appliances,Unit,Yes,20,100,54.99,8901234568083,https://images.unsplash.com/photo-1500200000000
+Electric Toothbrush,Personal Care,Oral Care,Unit,Yes,15,80,79.99,8901234568084,https://images.unsplash.com/photo-1500202000000
+Massage Gun,Sports,Fitness,Unit,Yes,10,60,129.99,8901234568085,https://images.unsplash.com/photo-1500204000000
+Jump Rope Speed,Sports,Fitness,Unit,Yes,30,150,14.99,8901234568086,https://images.unsplash.com/photo-1500206000000
+Foam Roller,Sports,Fitness,Unit,Yes,20,100,24.99,8901234568087,https://images.unsplash.com/photo-1500208000000
+Kettlebell 10kg,Sports,Fitness,Unit,Yes,12,70,44.99,8901234568088,https://images.unsplash.com/photo-1500210000000
+Thermos 500ml,Outdoor,Camping,Unit,Yes,25,120,29.99,8901234568089,https://images.unsplash.com/photo-1500212000000
+First Aid Kit,Outdoor,Safety,Unit,Yes,15,80,34.99,8901234568090,https://images.unsplash.com/photo-1500214000000
+Candles Scented 3-Pack,Household,Decor,Unit,Yes,30,150,19.99,8901234568091,https://images.unsplash.com/photo-1500216000000

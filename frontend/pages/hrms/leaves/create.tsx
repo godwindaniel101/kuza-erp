@@ -6,6 +6,7 @@ import { useTranslation } from 'next-i18next';
 import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 import SearchableSelect from '@/components/SearchableSelect';
 import DatePicker from '@/components/DatePicker';
 
@@ -70,19 +71,27 @@ export default function CreateLeaveRequestPage() {
   const selectedLeaveType = leaveTypes.find(lt => lt.id === formData.leaveTypeId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('create')} {t('leaveRequest')}</h1>
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          {t('cancel')}
-        </button>
-      </div>
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <PageHeader
+        title={<>{t('create')} {t('leaveRequest')}</>}
+        subtitle="Request time off for an employee"
+        breadcrumbs={[
+          { label: 'HR', href: '/hrms/dashboard' },
+          { label: t('leaves') || 'Leaves', href: '/hrms/leaves' },
+          { label: t('create') || 'Create' },
+        ]}
+        actions={
+          <button
+            onClick={() => router.back()}
+            className="h-8 px-3 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center"
+          >
+            {t('cancel')}
+          </button>
+        }
+      />
 
       <Card>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-3xl space-y-5">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-600 dark:text-red-400">
               {error}
@@ -98,7 +107,7 @@ export default function CreateLeaveRequestPage() {
                 required
                 value={formData.leaveTypeId}
                 onChange={(e) => setFormData({ ...formData, leaveTypeId: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               >
                 <option value="">{t('select')} {t('leaveType')}</option>
                 {leaveTypes.map((lt) => (
@@ -165,7 +174,7 @@ export default function CreateLeaveRequestPage() {
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               rows={4}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               placeholder={t('enterReason')}
             />
           </div>
@@ -181,7 +190,7 @@ export default function CreateLeaveRequestPage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600"
+              className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {loading ? t('saving') : t('submit')}
             </button>

@@ -6,6 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function AttendancePage() {
   const { t } = useTranslation('common');
@@ -77,42 +78,46 @@ export default function AttendancePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('attendance')}</h1>
-        <div className="flex space-x-2">
-          <PermissionGuard permission="attendance.clock-in">
-            <button
-              onClick={clockIn}
-              disabled={clockingIn || clockingOut}
-              className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors dark:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {clockingIn ? t('clockingIn') || 'Clocking in...' : t('clockIn')}
-            </button>
-          </PermissionGuard>
-          <PermissionGuard permission="attendance.clock-out">
-            <button
-              onClick={clockOut}
-              disabled={clockingIn || clockingOut}
-              className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {clockingOut ? t('clockingOut') || 'Clocking out...' : t('clockOut')}
-            </button>
-          </PermissionGuard>
-        </div>
-      </div>
+      <PageHeader
+        title={t('attendance')}
+        subtitle="Who clocked in, and when"
+        breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('attendance') }]}
+        actions={
+          <>
+            <PermissionGuard permission="attendance.clock-in">
+              <button
+                onClick={clockIn}
+                disabled={clockingIn || clockingOut}
+                className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {clockingIn ? t('clockingIn') || 'Clocking in...' : t('clockIn')}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard permission="attendance.clock-out">
+              <button
+                onClick={clockOut}
+                disabled={clockingIn || clockingOut}
+                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {clockingOut ? t('clockingOut') || 'Clocking out...' : t('clockOut')}
+              </button>
+            </PermissionGuard>
+          </>
+        }
+      />
 
       <Card>
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : error ? (
           <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
         ) : records.length === 0 ? (
           <div className="text-center py-12">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-8">
               <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
                 <i className="bx bx-time text-gray-400 dark:text-gray-500 text-2xl"></i>
               </div>
@@ -123,35 +128,35 @@ export default function AttendancePage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('employee')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('clockIn')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('clockOut')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('hours')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                       {record.employee?.firstName} {record.employee?.lastName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {record.clockIn ? new Date(record.clockIn).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {record.clockOut ? new Date(record.clockOut).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {record.totalHours || '—'}
                     </td>
                   </tr>

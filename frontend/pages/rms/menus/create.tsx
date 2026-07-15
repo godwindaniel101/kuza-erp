@@ -8,6 +8,8 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import Button from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface InventoryItem {
   id: string;
@@ -158,44 +160,41 @@ export default function CreateMenuPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
     <PermissionGuard permission="menus.create">
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-3">
-              <Link href="/rms/menus" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <i className="bx bx-arrow-back text-xl"></i>
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('createNewMenu')}</h1>
-            </div>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400 ml-10">Select a branch and items to create your menu</p>
-        </div>
+        <PageHeader
+          title={t('createNewMenu')}
+          subtitle="Select a branch and items to create your menu"
+          breadcrumbs={[
+            { label: t('menus') || 'Menus', href: '/rms/menus' },
+            { label: t('create') || 'Create' },
+          ]}
+        />
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left Column - Menu Details */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 sticky top-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
-                  <i className="bx bx-food-menu text-red-500 mr-2"></i>
+              <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5 sticky top-6">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-5 flex items-center">
+                  <i className="bx bx-food-menu text-brand-500 dark:text-brand-400 mr-2"></i>
                   {t('menuDetails') || 'Menu Details'}
                 </h2>
 
                 {/* Branch Selection */}
                 <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('branch')} <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
@@ -213,7 +212,7 @@ export default function CreateMenuPage() {
 
                 {/* Menu Name */}
                 <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('menuName')} <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -222,13 +221,13 @@ export default function CreateMenuPage() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={t('e.g. Lunch Menu') || 'e.g., Lunch Menu, Drinks Menu'}
                     required
-                    className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                    className="h-9 w-full px-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   />
                 </div>
 
                 {/* Description */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="mb-5">
+                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('description')} <span className="text-gray-400 text-xs">({t('optional') || 'Optional'})</span>
                   </label>
                   <textarea
@@ -236,15 +235,15 @@ export default function CreateMenuPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     placeholder={t('briefDescription')}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent resize-none"
+                    className="w-full px-3 py-2 text-[13px] border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                   />
                 </div>
 
                 {/* Selected Items Summary */}
-                <div className="pt-5 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-5 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('selectedItems')}</span>
-                    <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-semibold">
+                    <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300">{t('selectedItems')}</span>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset bg-brand-50 text-brand-700 ring-brand-600/20 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/20">
                       {selectedItemIds.length}
                     </span>
                   </div>
@@ -252,7 +251,7 @@ export default function CreateMenuPage() {
                   <div className="space-y-2 h-64 overflow-y-auto pr-2">
                     {selectedItems.length > 0 ? (
                       selectedItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm">
+                        <div key={item.id} className="flex items-center justify-between py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-[13px]">
                           <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.name}</span>
                           <span className="text-gray-700 dark:text-gray-300 ml-2">
                             ₦{Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -269,80 +268,72 @@ export default function CreateMenuPage() {
                 </div>
 
                 {/* Submit Button */}
-                <button
+                <Button
                   type="submit"
+                  className="w-full mt-5"
                   disabled={submitting || selectedItemIds.length === 0 || !formData.branchId || !formData.name}
-                  className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-semibold hover:from-red-700 hover:to-red-800 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-2"
                 >
                   {submitting ? (
                     <>
-                      <i className="bx bx-loader-alt bx-spin text-xl"></i>
+                      <i className="bx bx-loader-alt bx-spin text-base"></i>
                       <span>{t('creating') || 'Creating'}...</span>
                     </>
                   ) : (
                     <>
-                      <i className="bx bx-arrow-right text-xl"></i>
+                      <i className="bx bx-arrow-right text-base"></i>
                       <span>{t('createMenu')}</span>
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Right Column - Item Selection */}
             <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5">
+                <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                      <i className="bx bx-package text-red-500 mr-2"></i>
+                    <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                      <i className="bx bx-package text-brand-500 dark:text-brand-400 mr-2"></i>
                       {t('selectItems')}
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
                       {t('clickItemsToAddToMenu')}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={selectAll}
-                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                    >
+                    <Button type="button" variant="secondary" size="sm" onClick={selectAll}>
                       {t('selectAll')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={deselectAll}
-                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                    >
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={deselectAll}>
                       {t('clear') || 'Clear'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {/* Search & Filter */}
-                <div className="mb-6">
+                <div className="mb-5">
                   <div className="relative">
-                    <i className="bx bx-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={t('searchItemsByNameOrCategory') || 'Search items by name or category...'}
-                      className="block w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                      className="h-9 block w-full pl-9 pr-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                     />
                   </div>
                 </div>
 
                 {/* Category Filter */}
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-5">
                   <button
                     type="button"
                     onClick={() => setFilterCategory('')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                       filterCategory === ''
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                   >
                     {t('all') || 'All'}
@@ -352,10 +343,10 @@ export default function CreateMenuPage() {
                       key={category}
                       type="button"
                       onClick={() => setFilterCategory(category)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                         filterCategory === category
-                          ? 'bg-red-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
                       {category}
@@ -364,7 +355,7 @@ export default function CreateMenuPage() {
                 </div>
 
                 {/* Items Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-[600px] overflow-y-auto pr-1 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-[600px] overflow-y-auto pr-1 border-t border-gray-100 dark:border-gray-800 pt-4">
                   {filteredItems.length > 0 ? (
                     filteredItems.map((item) => {
                       const isSelected = selectedItemIds.includes(item.id);
@@ -372,18 +363,18 @@ export default function CreateMenuPage() {
                         <div
                           key={item.id}
                           onClick={() => toggleItem(item.id)}
-                          className={`relative border rounded-lg p-3 cursor-pointer transition-all group flex justify-between ${
+                          className={`relative border rounded-lg p-3 cursor-pointer transition-colors duration-150 group flex justify-between ${
                             isSelected
-                              ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900'
+                              ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-500/10 border-brand-200 dark:border-brand-500/30'
+                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                           }`}
                         >
                           {/* Selection Indicator */}
                           <div
-                            className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                            className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-150 ${
                               isSelected
-                                ? 'bg-red-500'
-                                : 'bg-gray-200 dark:bg-gray-600 group-hover:bg-gray-300 dark:group-hover:bg-gray-500'
+                                ? 'bg-brand-500'
+                                : 'bg-gray-200 dark:bg-gray-700 group-hover:bg-gray-300 dark:group-hover:bg-gray-600'
                             }`}
                           >
                             {isSelected && <i className="bx bx-check text-white text-sm"></i>}
@@ -391,13 +382,13 @@ export default function CreateMenuPage() {
 
                           <div className="pr-20 w-full">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-gray-900 dark:text-gray-100">{item.name}</h4>
-                              <div className="text-sm font-semibold text-red-600 dark:text-red-400">
+                              <h4 className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{item.name}</h4>
+                              <div className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                                 ₦{Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 text-xs mt-1">
-                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">
                                 {item.category || t('uncategorized') || 'Uncategorized'}
                               </span>
                               {item.subcategory && (
@@ -416,12 +407,12 @@ export default function CreateMenuPage() {
                       <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
                         <i className="bx bx-package text-3xl text-gray-400"></i>
                       </div>
-                      <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('noInventoryItems')}</h4>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">{t('addInventoryItemsFirst')}</p>
-                      <Link href="/ims/inventory/create" className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                        <i className="bx bx-plus mr-2"></i>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('noInventoryItems')}</h4>
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-4">{t('addInventoryItemsFirst')}</p>
+                      <Button href="/ims/inventory/create">
+                        <i className="bx bx-plus"></i>
                         {t('addInventoryItem')}
-                      </Link>
+                      </Button>
                     </div>
                   ) : (
                     <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">

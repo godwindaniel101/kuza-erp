@@ -1,648 +1,600 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuthStore } from '@/store/authStore';
+import { useTenantStore } from '@/store/globalStore';
 import PermissionGuard from './PermissionGuard';
 import { useTranslation } from 'next-i18next';
 import NavItem from './NavItem';
-import { api } from '@/lib/api';
+import ServiceSwitcher from './ServiceSwitcher';
+import Icon, { IconName } from './ui/Icon';
+import { term } from '@/lib/terminology';
 
-export default function AppSidebar() {
+interface NavLeaf {
+  href: string;
+  label: string;
+  icon: IconName;
+  permission?: string;
+  /** Match exactly instead of by prefix. */
+  exact?: boolean;
+  /** Extra prefixes that should also count as active. */
+  also?: string[];
+  /** Prefixes that must NOT count as active (carve-outs from the prefix match). */
+  exclude?: string[];
+  /** App registry key this route belongs to (docs/APPS-MODEL.md). Absent = always shown. */
+  appKey?: string;
+  /** Any-of app keys (alternative to single appKey). */
+  appKeys?: string[];
+}
+
+interface NavSection {
+  id: string;
+  label?: string;
+  /** Any-of permissions gate for the whole section. */
+  permissions?: string[];
+  permission?: string;
+  /** Plan-module keys this section belongs to (any-of). Absent = always. */
+  moduleKeys?: string[];
+  items: NavLeaf[];
+}
+
+interface AppSidebarProps {
+  /** Render for the mobile drawer (no fixed positioning). */
+  mobile?: boolean;
+  /** Called after a nav link is clicked (used to close the mobile drawer). */
+  onNavigate?: () => void;
+}
+
+/** Plan-module vocabulary is fuzzy across backends — match by alias substring. */
+const MODULE_ALIASES: Record<string, string[]> = {
+  rms: ['rms', 'restaurant', 'hospitality', 'menu', 'order', 'table'],
+  ims: ['ims', 'inventory', 'stock'],
+  sales: ['sales', 'invoice', 'customer'],
+  accounting: ['accounting', 'finance', 'ledger'],
+  hrms: ['hrms', 'hr', 'people', 'payroll'],
+};
+
+const ALL_MODULES_KEY = 'kuza.showAllModules';
+
+/** Edition chip shown in the business block (legacy types map to their edition). */
+const EDITION_CHIPS: Record<string, string> = {
+  hospitality: 'Hospitality',
+  restaurant: 'Hospitality',
+  accounts: 'Digital Accounts',
+  retail: 'Retail',
+  hr: 'Human Resources',
+  warehouse: 'Warehouse',
+};
+
+export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
   const router = useRouter();
-  const { pathname, locale } = router;
-  const { t, i18n } = useTranslation('common');
+  const { pathname } = router;
+  const { t } = useTranslation('common');
   const { user } = useAuthStore();
-  const [inventoryOpen, setInventoryOpen] = useState(
-    pathname.startsWith('/ims') || pathname.startsWith('/inventory')
-  );
-  const [appSettingsOpen, setAppSettingsOpen] = useState(
-    pathname.startsWith('/rms/suppliers') ||
-    pathname.startsWith('/settings/branches') || 
-    pathname.startsWith('/settings/uoms') || 
-    pathname.startsWith('/settings/categories') ||
-    pathname.startsWith('/settings/allocation-method') || 
-    pathname.startsWith('/settings/users') || 
-    pathname.startsWith('/settings/roles') || 
-    pathname.startsWith('/settings/invitations') ||
-    pathname.startsWith('/hrms/departments') ||
-    pathname.startsWith('/hrms/positions') ||
-    pathname.startsWith('/hrms/locations')
-  );
+  const {
+    businessType,
+    businessName,
+    planModules,
+    planCode,
+    subscriptionStatus,
+    effectiveApps,
+    fetchTenantContext,
+    activeWorkspace,
+    setAvailableGroups,
+    hydrateWorkspace,
+  } = useTenantStore();
+  /** i18next returns the raw key when a translation is missing — fall back to English. */
+  const tr = (key: string, fallback: string) => {
+    const v = t(key);
+    return !v || v === key ? fallback : v;
+  };
   const [profileOpen, setProfileOpen] = useState(false);
-  const [restaurantName, setRestaurantName] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [showAll, setShowAll] = useState(false);
 
-  const isActive = (path: string) => pathname.startsWith(path);
-  const isExactActive = (path: string) => pathname === path;
-
-  // Determine service context (RMS or HRMS)
-  const isHRMS = pathname.startsWith('/hrms');
-  const serviceColor = isHRMS ? 'blue' : 'red';
-  const serviceName = isHRMS ? 'HRMS' : 'RMS';
-
-  // Detect dark mode
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // Tenant context (business type + plan modules) — fetched once, cached in the store.
+  // NOTE: keyed on `user`, not user.businessId — /me may not carry a business object
+  // in the multi-tenant setup (businessId normalizes to ''), but /settings is tenant-scoped.
   useEffect(() => {
-    const checkDarkMode = () => {
-      if (typeof window !== 'undefined') {
-        setIsDarkMode(document.documentElement.classList.contains('dark'));
-      }
-    };
-    checkDarkMode();
-    // Listen for dark mode changes
-    if (typeof window !== 'undefined') {
-      const observer = new MutationObserver(checkDarkMode);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      });
-      // Also listen for storage events (if dark mode is changed elsewhere)
-      window.addEventListener('storage', checkDarkMode);
-      return () => {
-        observer.disconnect();
-        window.removeEventListener('storage', checkDarkMode);
-      };
+    if (user) {
+      fetchTenantContext();
     }
+  }, [user, fetchTenantContext]);
+
+  // "All modules" preference + persisted workspace
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setShowAll(localStorage.getItem(ALL_MODULES_KEY) === 'true');
+    }
+    hydrateWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Determine logo path - use icon-only logo since we display business name separately
-  const getLogoPath = () => {
-    const color = serviceColor; // 'red' or 'blue'
-    const mode = isDarkMode ? 'dark' : 'light';
-    return `/images/logos/kuza_logo_${mode}_${color}.svg`;
+  const toggleShowAll = () => {
+    setShowAll((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ALL_MODULES_KEY, String(next));
+      }
+      return next;
+    });
   };
 
-  // Update open states when pathname changes
-  useEffect(() => {
-    setInventoryOpen(pathname.startsWith('/ims') || pathname.startsWith('/inventory'));
-    setAppSettingsOpen(
-      pathname.startsWith('/rms/suppliers') ||
-      pathname.startsWith('/settings/branches') || 
-      pathname.startsWith('/settings/uoms') || 
-      pathname.startsWith('/settings/users') ||
-      pathname.startsWith('/settings/allocation-method') || 
-      pathname.startsWith('/settings/roles') || 
-      pathname.startsWith('/settings/invitations') ||
-      pathname.startsWith('/hrms/departments') ||
-      pathname.startsWith('/hrms/positions') ||
-      pathname.startsWith('/hrms/locations')
+  const hasModule = useCallback(
+    (keys?: string[]) => {
+      if (!keys || keys.length === 0) return true;
+      if (!planModules) return true; // unknown -> never hide (graceful fallback)
+      return keys.some((key) => {
+        const aliases = MODULE_ALIASES[key] ?? [key];
+        return planModules.some((m) => aliases.some((a) => m.includes(a) || a.includes(m)));
+      });
+    },
+    [planModules],
+  );
+
+  // ---- Section catalog -------------------------------------------------
+
+  const overview: NavSection = {
+    id: 'overview',
+    items: [{ href: '/', label: tr('dashboard', 'Home'), icon: 'home', exact: true }],
+  };
+
+  const restaurant: NavSection = {
+    id: 'restaurant',
+    label: term(businessType, 'posSection'),
+    moduleKeys: ['rms'],
+    permissions: ['menus.view', 'orders.view', 'tables.view', 'reports.view'],
+    items: [
+      {
+        href: '/rms/orders/create',
+        label: term(businessType, 'pos'),
+        icon: 'building-storefront',
+        permission: 'orders.create',
+        appKey: 'pos',
+        exact: true,
+      },
+      {
+        href: '/rms/orders',
+        label: tr('orders', 'Orders'),
+        icon: 'receipt',
+        permission: 'orders.view',
+        appKey: 'pos',
+        exclude: ['/rms/orders/create'],
+      },
+      { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view', appKey: 'tables' },
+      { href: '/rms/menus', label: tr('menuManagement', 'Menus'), icon: 'menu-book', permission: 'menus.view', appKey: 'menu' },
+      { href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view', appKey: 'pos' },
+    ],
+  };
+
+  const menuStudio: NavSection = {
+    id: 'menu-studio',
+    label: 'Menu Studio',
+    moduleKeys: ['rms'],
+    items: [{ href: '/menu-studio', label: 'Menu Studio', icon: 'sparkles', appKey: 'menu' }],
+  };
+
+  const inventory: NavSection = {
+    id: 'inventory',
+    label: term(businessType, 'inventorySection'),
+    moduleKeys: ['ims'],
+    permission: 'inventory.view',
+    items: [
+      { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', also: ['/inventory'], appKey: 'items' },
+      { href: '/ims/inflows', label: term(businessType, 'goodsIn'), icon: 'inbox-arrow', permission: 'inflows.view', appKey: 'goods-in' },
+      { href: '/ims/branch-items', label: tr('branchItems', 'Branch Items'), icon: 'building-storefront', appKey: 'items' },
+      { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments', appKey: 'items' },
+      { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left', appKey: 'items' },
+    ],
+  };
+
+  const sales: NavSection = {
+    id: 'sales',
+    label: 'Sales',
+    moduleKeys: ['sales'],
+    permission: 'sales.view',
+    items: [
+      { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', appKey: 'customers' },
+      { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', appKey: 'invoicing' },
+    ],
+  };
+
+  const accounting: NavSection = {
+    id: 'accounting',
+    label: 'Accounting',
+    moduleKeys: ['accounting'],
+    permission: 'accounting.view',
+    items: [
+      { href: '/accounting', label: 'Overview', icon: 'calculator', exact: true, appKey: 'books' },
+      { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open', appKey: 'books' },
+      { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square', appKey: 'books' },
+      { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar', appKey: 'books' },
+    ],
+  };
+
+  // Condensed money section for the hospitality edition
+  const money: NavSection = {
+    id: 'money',
+    label: 'Money',
+    moduleKeys: ['sales', 'accounting'],
+    permissions: ['sales.view', 'accounting.view'],
+    items: [
+      { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', permission: 'sales.view', appKey: 'invoicing' },
+      { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view', appKey: 'customers' },
+      {
+        href: '/accounting/reports',
+        label: tr('reports', 'Reports'),
+        icon: 'chart-bar',
+        permission: 'accounting.view',
+        also: ['/accounting'],
+        appKey: 'books',
+      },
+    ],
+  };
+
+  const hr: NavSection = {
+    id: 'hr',
+    label: 'Human Resources',
+    moduleKeys: ['hrms'],
+    permissions: [
+      'employees.view',
+      'attendance.view',
+      'leaves.view',
+      'payroll.view',
+      'recruitment.view',
+      'performance.view',
+      'learning.view',
+      'benefits.view',
+      'compensation.view',
+    ],
+    items: [
+      { href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true, appKey: 'people' },
+      { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view', appKey: 'people' },
+      { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view', appKey: 'people' },
+      { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view', appKey: 'people' },
+      { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view', appKey: 'payroll' },
+      { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view', appKey: 'people' },
+      { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view', appKey: 'people' },
+      { href: '/hrms/learning', label: tr('learning', 'Learning'), icon: 'academic-cap', permission: 'learning.view', appKey: 'people' },
+      { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view', appKey: 'people' },
+      { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view', appKey: 'people' },
+    ],
+  };
+
+  const workspace: NavSection = {
+    id: 'workspace',
+    label: 'Settings',
+    items: [
+      { href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view', appKey: 'goods-in' },
+      { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view', appKeys: ['items', 'pos', 'people'] },
+      { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view', appKey: 'items' },
+      { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view', appKey: 'items' },
+      { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view', appKeys: ['items', 'pos'] },
+      { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view', appKey: 'people' },
+      { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view', appKey: 'people' },
+      { href: '/hrms/locations', label: tr('locations', 'Locations'), icon: 'map-pin', permission: 'locations.view', appKey: 'people' },
+      { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
+      { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
+      { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
+      { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
+      { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
+      { href: '/settings', label: 'General', icon: 'cog', exact: true },
+    ],
+  };
+
+  // ---- Progressive disclosure ------------------------------------------
+
+  const fullCatalog: NavSection[] = [overview, restaurant, menuStudio, inventory, sales, accounting, hr, workspace];
+
+  const isAppEnabled = useCallback(
+    (item: NavLeaf) => {
+      if (!effectiveApps) return true; // legacy backend: show all
+      const keys = item.appKeys ?? (item.appKey ? [item.appKey] : []);
+      if (keys.length === 0) return true; // always-on item (Users, Roles, General, ...)
+      return keys.some((k) => effectiveApps.includes(k));
+    },
+    [effectiveApps],
+  );
+
+  // Effective sections = tenant's apps/plan filtering, independent of UI toggles.
+  let effectiveSections: NavSection[];
+  if (effectiveApps) {
+    // Apps model: render whatever is enabled, in registry/catalog order.
+    // Sections whose every route belongs to a disabled app disappear.
+    effectiveSections = fullCatalog
+      .map((s) => ({ ...s, items: s.items.filter(isAppEnabled) }))
+      .filter((s) => s.items.length > 0);
+  } else if (businessType === 'restaurant' || businessType === 'hospitality') {
+    effectiveSections = [overview, restaurant, menuStudio, inventory, money, workspace].filter((s) =>
+      hasModule(s.moduleKeys),
     );
-  }, [pathname]); 
+  } else if (businessType === 'accounts') {
+    effectiveSections = [overview, sales, accounting, workspace].filter((s) => hasModule(s.moduleKeys));
+  } else if (businessType === 'hr') {
+    effectiveSections = [overview, hr, workspace].filter((s) => hasModule(s.moduleKeys));
+  } else if (businessType === 'warehouse') {
+    effectiveSections = [overview, inventory, workspace].filter((s) => hasModule(s.moduleKeys));
+  } else {
+    // general / retail / services (and unknown -> safe default)
+    effectiveSections = [overview, inventory, sales, accounting, hr, workspace].filter((s) =>
+      hasModule(s.moduleKeys),
+    );
+  }
 
-  // Force re-render when locale changes
+  // App groupings the workspace switcher offers (everything except Home/Settings).
+  const groups = effectiveSections.filter((s) => s.id !== 'overview' && s.id !== 'workspace');
+  const groupIdsKey = groups.map((g) => g.id).join(',');
   useEffect(() => {
-    // This effect will trigger when locale changes, causing component to re-render
-  }, [locale, i18n.language]);
+    setAvailableGroups(groupIdsKey ? groupIdsKey.split(',') : []);
+  }, [groupIdsKey, setAvailableGroups]);
 
-  // Fetch restaurant name
-  useEffect(() => {
-    const fetchRestaurantName = async () => {
-      try {
-        const response = await api.get<{ success: boolean; data: { name?: string } }>('/settings');
-        if (response.success && response.data?.name) {
-          setRestaurantName(response.data.name);
-        }
-      } catch (err) {
-        console.error('Failed to fetch restaurant name:', err);
-        // Silently fail - don't show error to user
+  // Resolve the workspace: single-app tenants are auto-locked to their group;
+  // a stale/ineffective persisted choice falls back to "all". Composes on top
+  // of effective-apps filtering — it can only narrow, never widen.
+  const resolvedWorkspace =
+    groups.length === 1
+      ? groups[0].id
+      : activeWorkspace !== 'all' && groups.some((g) => g.id === activeWorkspace)
+      ? activeWorkspace
+      : 'all';
+
+  /** Apps model + "All modules": locked apps render greyed with a lock, not hidden. */
+  let showLocked = false;
+  let sections: NavSection[];
+  if (showAll) {
+    // Debug reveal: everything, bypassing workspace + app filters.
+    showLocked = !!effectiveApps;
+    sections = fullCatalog;
+  } else if (resolvedWorkspace === 'all') {
+    sections = effectiveSections;
+  } else {
+    sections = effectiveSections.filter(
+      (s) => s.id === 'overview' || s.id === 'workspace' || s.id === resolvedWorkspace,
+    );
+  }
+
+  const isItemActive = useCallback(
+    (item: NavLeaf) => {
+      if ((item.exclude ?? []).some((p) => pathname.startsWith(p))) return false;
+      if (item.exact) {
+        if (pathname === item.href) return true;
+      } else if (pathname.startsWith(item.href)) {
+        return true;
       }
-    };
+      return (item.also ?? []).some((p) => pathname.startsWith(p));
+    },
+    [pathname],
+  );
 
-    if (user?.businessId) {
-      fetchRestaurantName();
+  // Keep the section that owns the current route expanded.
+  useEffect(() => {
+    const active = sections.find((s) => s.items.some(isItemActive));
+    if (active) {
+      setCollapsed((prev) => (prev[active.id] ? { ...prev, [active.id]: false } : prev));
     }
-  }, [user?.businessId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const toggleSection = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const renderSection = (section: NavSection) => {
+    const isCollapsed = !!collapsed[section.id];
+    const body = (
+      <div className={section.label ? 'mt-6' : ''}>
+        {section.label && (
+          <button
+            type="button"
+            onClick={() => toggleSection(section.id)}
+            aria-expanded={!isCollapsed}
+            className="group flex w-full items-center justify-between rounded-md px-3 pb-1.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors duration-150">
+              {section.label}
+            </span>
+            <Icon
+              name="chevron-down"
+              size={12}
+              className={`text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-150 ${
+                isCollapsed ? '-rotate-90' : ''
+              }`}
+            />
+          </button>
+        )}
+        {!isCollapsed && (
+          <div className="space-y-px">
+            {section.items.map((item) => {
+              const locked = showLocked && !isAppEnabled(item);
+              const link = locked ? (
+                <Link
+                  href="/settings/apps"
+                  onClick={onNavigate}
+                  title="Not in your apps — enable it in Settings → Apps or upgrade your plan"
+                  className="group flex items-center gap-2.5 rounded-lg px-3 h-9 text-sm text-gray-400 dark:text-gray-600 opacity-60 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                >
+                  <Icon name={item.icon} size={18} className="text-gray-300 dark:text-gray-600" />
+                  <span className="flex-1 truncate">{item.label}</span>
+                  <Icon name="lock" size={13} className="text-gray-300 dark:text-gray-600" />
+                </Link>
+              ) : (
+                <NavItem href={item.href} icon={item.icon} active={isItemActive(item)} onClick={onNavigate}>
+                  {item.label}
+                </NavItem>
+              );
+              return item.permission ? (
+                <PermissionGuard key={item.href} permission={item.permission}>
+                  {link}
+                </PermissionGuard>
+              ) : (
+                <div key={item.href}>{link}</div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
+    if (section.permissions) {
+      return (
+        <PermissionGuard key={section.id} permissions={section.permissions}>
+          {body}
+        </PermissionGuard>
+      );
+    }
+    if (section.permission) {
+      return (
+        <PermissionGuard key={section.id} permission={section.permission}>
+          {body}
+        </PermissionGuard>
+      );
+    }
+    return <div key={section.id}>{body}</div>;
+  };
+
+  const userRole = user?.roles?.[0]
+    ? user.roles[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : user?.email || '';
 
   return (
     <aside
-      className="hidden lg:flex flex-col fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-30"
-      style={{ width: 'var(--sidebar-width)' }}
+      className={`${
+        mobile ? 'flex h-full w-full' : 'hidden lg:flex fixed left-0 top-0 h-full z-30'
+      } flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800`}
+      style={mobile ? undefined : { width: 'var(--sidebar-width)' }}
     >
-      {/* Logo Section - Fixed at Top */}
-      <div className="p-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
-        <Link href={isHRMS ? '/hrms/dashboard' : '/'} className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-          <div className="relative w-12 h-12 flex-shrink-0">
-            <Image
-              src={getLogoPath()}
-              alt={serviceColor === 'red' ? 'Kuza RMS' : 'Kuza HRMS'}
-              width={48}
-              height={48}
-              className="object-contain"
-              priority
-            />
-          </div>
-          {restaurantName && (
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {restaurantName}
-              </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{serviceName}</p>
-            </div>
-          )}
-        </Link>
+      {/* Business block + workspace switcher (~64px) */}
+      <div className="px-2 pt-2.5 pb-1.5 shrink-0">
+        <ServiceSwitcher
+          businessName={businessName}
+          edition={EDITION_CHIPS[businessType ?? ''] ?? null}
+          groups={groups.map((g) => ({ id: g.id, name: g.label ?? g.id }))}
+          activeWorkspace={resolvedWorkspace}
+        />
       </div>
 
-      {/* Navigation - Scrollable */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-        {/* Dashboard */}
-        <NavItem
-          href={isHRMS ? '/hrms/dashboard' : '/'}
-          active={isExactActive(isHRMS ? '/hrms/dashboard' : '/')}
-          icon="bx-home"
-        >
-          {t('dashboard')}
-        </NavItem>
-
-        {/* RMS Routes */}
-        {!isHRMS && (
-          <>
-            <PermissionGuard permission="menus.view">
-              <NavItem
-                href="/rms/menus"
-                active={isActive('/rms/menus')}
-                icon="bx-food-menu"
-              >
-                {t('menuManagement') || 'Menu Management'}
-              </NavItem>
-            </PermissionGuard>
-
-            {/* Inventory - Collapsible */}
-            <PermissionGuard permission="inventory.view">
-              <div>
-                <div className="flex items-center justify-between">
-                  <Link
-                    href="/ims/inventory"
-                    className={`flex-1 flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive('/ims') || isActive('/inventory')
-                        ? 'bg-red-50 dark:bg-red-900/20 text-gray-900 dark:text-gray-100'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className="bx bx-package text-xl"></i>
-                    <span className="font-medium">{t('inventory')}</span>
-                  </Link>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setInventoryOpen(!inventoryOpen);
-                    }}
-                    className={`px-2 py-3 rounded-lg transition-colors ${
-                      isActive('/ims') || isActive('/inventory')
-                        ? 'bg-red-50 dark:bg-red-900/20 text-gray-700 dark:text-gray-300'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className={`bx text-lg transition-transform ${inventoryOpen ? 'bx-chevron-up' : 'bx-chevron-down'}`}></i>
-                  </button>
-                </div>
-                {inventoryOpen && (
-                  <div
-                    className="mt-1 ml-4 space-y-1"
-                    style={{ display: inventoryOpen ? 'block' : 'none' }}
-                  >
-                    <Link
-                      href="/ims/inventory"
-                      key={`inventory-link-${locale || i18n.language}`}
-                      className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                        isActive('/ims/inventory') || isActive('/inventory')
-                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }`}
-                    >
-                      <i className="bx bx-list-ul text-lg"></i>
-                      <span className="text-sm">{t('invetoryItems')}</span>
-                    </Link>
-                    <PermissionGuard permission="inflows.view">
-                      <Link
-                        href="/ims/inflows"
-                        key={`inflow-link-${locale || i18n.language}`}
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/ims/inflows')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-box text-lg"></i>
-                        <span className="text-sm">{t('inventoryInflow')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <Link
-                      href="/ims/branch-items"
-                      className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                        isActive('/ims/branch-items')
-                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }`}
-                    >
-                      <i className="bx bx-package text-lg"></i>
-                      <span className="text-sm">{t('branchItems') || 'Branch Items'}</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </PermissionGuard>
-
-            <PermissionGuard permission="orders.view">
-              <NavItem
-                href="/rms/orders"
-                active={isActive('/rms/orders')}
-                icon="bx-receipt"
-              >
-                {t('orders')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="tables.view">
-              <NavItem
-                href="/rms/tables"
-                active={isActive('/rms/tables')}
-                icon="bx-table"
-              >
-                {t('tables')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="reports.view">
-              <NavItem
-                href="/rms/reports"
-                active={isActive('/rms/reports')}
-                icon="bx-stats"
-              >
-                {t('analytics')}
-              </NavItem>
-            </PermissionGuard>
-
-            {/* App Settings - Collapsible (RMS: Suppliers, Branches, UOMs, Categories, Users, Roles) */}
-            <PermissionGuard permissions={['suppliers.view', 'branches.view', 'uoms.view', 'inventory.view', 'users.view', 'roles.view']}>
-              <div>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setAppSettingsOpen(!appSettingsOpen)}
-                    className={`flex-1 flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive('/rms/suppliers') || isActive('/settings/branches') || isActive('/settings/uoms') || isActive('/settings/categories') || isActive('/settings/users') || isActive('/settings/roles') || isActive('/settings/invitations') || isActive('/settings/allocation-method')
-                        ? 'bg-red-50 dark:bg-red-900/20 text-gray-900 dark:text-gray-100'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className="bx bx-cog text-xl"></i>
-                    <span className="font-medium">{t('appSettings') || 'App Settings'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAppSettingsOpen(!appSettingsOpen)}
-                    className={`px-2 py-3 rounded-lg transition-colors ${
-                      isActive('/rms/suppliers') || isActive('/settings/branches') || isActive('/settings/uoms') || isActive('/settings/categories') || isActive('/settings/users') || isActive('/settings/roles') || isActive('/settings/invitations') || isActive('/settings/allocation-method')
-                        ? 'bg-red-50 dark:bg-red-900/20 text-gray-700 dark:text-gray-300'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className={`bx text-lg transition-transform ${appSettingsOpen ? 'bx-chevron-up' : 'bx-chevron-down'}`}></i>
-                  </button>
-                </div>
-                {appSettingsOpen && (
-                  <div
-                    className="mt-1 ml-4 space-y-1"
-                    style={{ display: appSettingsOpen ? 'block' : 'none' }}
-                  >
-                    <PermissionGuard permission="suppliers.view">
-                      <Link
-                        href="/rms/suppliers"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/rms/suppliers')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-bus text-lg"></i>
-                        <span className="text-sm">{t('suppliers')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="branches.view">
-                      <Link
-                        href="/settings/branches"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/branches')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-git-branch text-lg"></i>
-                        <span className="text-sm">{t('branch')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="uoms.view">
-                      <Link
-                        href="/settings/uoms"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/uoms')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-ruler text-lg"></i>
-                        <span className="text-sm">{t('uoms')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="inventory.view">
-                      <Link
-                        href="/settings/categories"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/categories')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-folder text-lg"></i>
-                        <span className="text-sm">{t('categories')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="settings.view">
-                      <Link
-                        href="/settings/allocation-method"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/allocation-method')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-sort text-lg"></i>
-                        <span className="text-sm">{t('allocationMethod')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="users.view">
-                      <Link
-                        href="/settings/users"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/users') || isActive('/settings/invitations')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-user text-lg"></i>
-                        <span className="text-sm">{t('users')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="roles.view">
-                      <Link
-                        href="/settings/roles"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/roles')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-group text-lg"></i>
-                        <span className="text-sm">{t('roles')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="invitations.view">
-                      <Link
-                        href="/settings/invitations"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/settings/invitations')
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-envelope text-lg"></i>
-                        <span className="text-sm">{t('invitations')}</span>
-                      </Link>
-                    </PermissionGuard>
-                  </div>
-                )}
-              </div>
-            </PermissionGuard>
-          </>
-        )}
-
-        {/* HRMS Routes */}
-        {isHRMS && (
-          <>
-            <PermissionGuard permission="employees.view">
-              <NavItem
-                href="/hrms/employees"
-                active={isActive('/hrms/employees')}
-                icon="bx-user"
-              >
-                {t('employees')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="attendance.view">
-              <NavItem
-                href="/hrms/attendance"
-                active={isActive('/hrms/attendance')}
-                icon="bx-time"
-              >
-                {t('attendance')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="leaves.view">
-              <NavItem
-                href="/hrms/leaves"
-                active={isActive('/hrms/leaves')}
-                icon="bx-calendar"
-              >
-                {t('leaves')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="payroll.view">
-              <NavItem
-                href="/hrms/payroll"
-                active={isActive('/hrms/payroll')}
-                icon="bx-money"
-              >
-                {t('payroll')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="recruitment.view">
-              <NavItem
-                href="/hrms/recruitment"
-                active={isActive('/hrms/recruitment')}
-                icon="bx-briefcase"
-              >
-                {t('recruitment')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="performance.view">
-              <NavItem
-                href="/hrms/performance"
-                active={isActive('/hrms/performance')}
-                icon="bx-trophy"
-              >
-                {t('performance')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="learning.view">
-              <NavItem
-                href="/hrms/learning"
-                active={isActive('/hrms/learning')}
-                icon="bx-book"
-              >
-                {t('learning')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="benefits.view">
-              <NavItem
-                href="/hrms/benefits"
-                active={isActive('/hrms/benefits')}
-                icon="bx-heart"
-              >
-                {t('benefits')}
-              </NavItem>
-            </PermissionGuard>
-
-            <PermissionGuard permission="compensation.view">
-              <NavItem
-                href="/hrms/compensation"
-                active={isActive('/hrms/compensation')}
-                icon="bx-wallet"
-              >
-                {t('compensation')}
-              </NavItem>
-            </PermissionGuard>
-
-            {/* App Settings - Collapsible (HRMS: Departments, Positions, Locations) */}
-            <PermissionGuard permissions={['departments.view', 'positions.view', 'locations.view']}>
-              <div>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setAppSettingsOpen(!appSettingsOpen)}
-                    className={`flex-1 flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive('/hrms/departments') || isActive('/hrms/positions') || isActive('/hrms/locations')
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-gray-900 dark:text-gray-100'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className="bx bx-cog text-xl"></i>
-                    <span className="font-medium">{t('appSettings') || 'App Settings'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAppSettingsOpen(!appSettingsOpen)}
-                    className={`px-2 py-3 rounded-lg transition-colors ${
-                      isActive('/hrms/departments') || isActive('/hrms/positions') || isActive('/hrms/locations')
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-gray-700 dark:text-gray-300'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <i className={`bx text-lg transition-transform ${appSettingsOpen ? 'bx-chevron-up' : 'bx-chevron-down'}`}></i>
-                  </button>
-                </div>
-                {appSettingsOpen && (
-                  <div
-                    className="mt-1 ml-4 space-y-1"
-                    style={{ display: appSettingsOpen ? 'block' : 'none' }}
-                  >
-                    <PermissionGuard permission="departments.view">
-                      <Link
-                        href="/hrms/departments"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/hrms/departments')
-                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-buildings text-lg"></i>
-                        <span className="text-sm">{t('departments')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="positions.view">
-                      <Link
-                        href="/hrms/positions"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/hrms/positions')
-                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-briefcase text-lg"></i>
-                        <span className="text-sm">{t('positions')}</span>
-                      </Link>
-                    </PermissionGuard>
-                    <PermissionGuard permission="locations.view">
-                      <Link
-                        href="/hrms/locations"
-                        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive('/hrms/locations')
-                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <i className="bx bx-map text-lg"></i>
-                        <span className="text-sm">{t('locations')}</span>
-                      </Link>
-                    </PermissionGuard>
-                  </div>
-                )}
-              </div>
-            </PermissionGuard>
-          </>
-        )}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3">
+        {sections.map(renderSection)}
       </nav>
 
-      {/* User Profile - Fixed at Bottom */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-800">
-        <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors relative">
-          <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center space-x-3 w-full">
-            <div
-              className={`w-10 h-10 rounded-full bg-gradient-to-br ${
-                serviceColor === 'red' ? 'from-red-500 to-red-600' : 'from-blue-500 to-blue-600'
-              } flex items-center justify-center text-white font-semibold shadow-sm flex-shrink-0`}
+      {/* Upgrade promo — only for FREE / TRIALING tenants */}
+      {(planCode === 'FREE' || subscriptionStatus === 'TRIALING') && (
+        <div className="shrink-0 px-2 pb-2">
+          <div className="rounded-2xl bg-brand-50/80 dark:bg-brand-500/10 ring-1 ring-brand-100 dark:ring-brand-500/20 p-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white">
+                <Icon name="sparkles" size={13} />
+              </span>
+              <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Upgrade plan</p>
+            </div>
+            <p className="mt-1.5 text-xs leading-4 text-gray-500 dark:text-gray-400">
+              Unlock your full business
+            </p>
+            <Link
+              href="/settings/billing"
+              onClick={onNavigate}
+              className="mt-2.5 flex h-8 w-full items-center justify-center rounded-lg bg-brand-gradient text-xs font-semibold text-white transition-opacity duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
+              Upgrade now
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* All modules toggle */}
+      <div className="shrink-0 px-2 pb-1">
+        <button
+          type="button"
+          onClick={toggleShowAll}
+          aria-pressed={showAll}
+          className="flex w-full items-center gap-2 rounded-md px-2 h-7 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <Icon name="squares-2x2" size={14} />
+          <span className="flex-1 text-left">All modules</span>
+          <span
+            className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors duration-150 ${
+              showAll ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700'
+            }`}
+            aria-hidden="true"
+          >
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform duration-150 ${
+                showAll ? 'translate-x-3' : 'translate-x-0.5'
+              }`}
+            />
+          </span>
+        </button>
+      </div>
+
+      {/* User block */}
+      <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 p-2">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen}
+            className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-[13px] font-semibold text-gray-700 dark:text-gray-200">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {user?.businessId ? 'Restaurant' : user?.email || 'User'}
-              </p>
-            </div>
-            <i className={`bx bx-chevron-down text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform ${profileOpen ? 'transform rotate-180' : ''}`}></i>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                {user?.name || 'User'}
+              </span>
+              <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{userRole}</span>
+            </span>
+            <Icon
+              name="chevron-down"
+              size={14}
+              className={`text-gray-400 dark:text-gray-500 transition-transform duration-150 ${
+                profileOpen ? 'rotate-180' : ''
+              }`}
+            />
           </button>
 
-          {/* Dropdown */}
           {profileOpen && (
             <div
-              className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50"
-              style={{ display: profileOpen ? 'block' : 'none' }}
+              role="menu"
+              className="absolute bottom-full left-0 right-0 z-50 mb-1.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
             >
               <Link
                 href="/profile"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                onClick={() => setProfileOpen(false)}
+                role="menuitem"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onNavigate?.();
+                }}
               >
-                <i className="bx bx-user mr-3 text-lg"></i> {t('profile')}
+                <Icon name="user" size={16} className="text-gray-400 dark:text-gray-500" />
+                {t('profile')}
               </Link>
               <Link
-                href={isHRMS ? '/hrms/settings' : '/settings'}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                onClick={() => setProfileOpen(false)}
+                href="/settings"
+                role="menuitem"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onNavigate?.();
+                }}
               >
-                <i className="bx bx-cog mr-3 text-lg"></i> {t('settings')}
+                <Icon name="cog" size={16} className="text-gray-400 dark:text-gray-500" />
+                {t('settings')}
               </Link>
-              <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+              <div className="my-1 border-t border-gray-200 dark:border-gray-800" />
               <button
+                type="button"
+                role="menuitem"
                 onClick={() => {
                   const { logout } = useAuthStore.getState();
                   logout();
                   router.push('/login');
                 }}
-                className={`flex items-center w-full px-4 py-2 text-sm ${
-                  serviceColor === 'red'
-                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                }`}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-red-600 dark:text-red-400 transition-colors duration-150 hover:bg-red-50 dark:hover:bg-red-500/10"
               >
-                <i className="bx bx-log-out mr-3 text-lg"></i> {t('signOut')}
+                <Icon name="logout" size={16} />
+                {t('signOut')}
               </button>
             </div>
           )}

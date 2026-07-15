@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function AiAnalyticsPage() {
   const { t } = useTranslation('common');
@@ -87,15 +88,19 @@ export default function AiAnalyticsPage() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('aiAnalytics')}</h1>
+    <div className="mx-auto w-full max-w-5xl space-y-5">
+      <PageHeader
+        title={t('aiAnalytics')}
+        subtitle="Ask questions about your stock and sales"
+        breadcrumbs={[{ label: t('inventory') || 'Inventory', href: '/ims/inventory' }, { label: t('aiAnalytics') }]}
+      />
 
       {/* Inventory Health */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">{t('inventoryHealth')}</h2>
         {healthLoading ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : health ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -125,21 +130,21 @@ export default function AiAnalyticsPage() {
           <h2 className="text-lg font-semibold">{t('reorderSuggestions')}</h2>
           <button
             onClick={loadSuggestions}
-            className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm text-sm"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2 text-sm"
           >
             {t('refresh')}
           </button>
         </div>
         {suggestionsLoading ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : suggestions.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('noSuggestions')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     {t('item')}
@@ -158,22 +163,22 @@ export default function AiAnalyticsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                 {suggestions.map((suggestion) => (
                   <tr key={suggestion.itemId}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                       {suggestion.itemName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {suggestion.currentStock}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {suggestion.daysUntilStockout} {t('days')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {suggestion.recommendedQuantity}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(suggestion.priority)}`}>
                         {suggestion.priority}
                       </span>
@@ -198,7 +203,7 @@ export default function AiAnalyticsPage() {
                 setTimeout(() => loadPrediction(), 100);
               }
             }}
-            className="px-4 py-2 border border-gray-300 rounded-md"
+            className="h-9 px-4 border border-gray-300 rounded-md text-[13px]"
           >
             <option value="">{t('selectItem')}</option>
             {inventoryItems.map((item) => (
@@ -210,7 +215,7 @@ export default function AiAnalyticsPage() {
         </div>
         {predictionLoading ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : prediction ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

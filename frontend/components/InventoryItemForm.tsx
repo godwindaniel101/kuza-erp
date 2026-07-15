@@ -46,6 +46,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     maximumStock: 0,
     salePrice: 0,
     barcode: '',
+    binLocation: '',
     isTrackable: true,
     frontImage: '',
     additionalImages: [] as string[],
@@ -94,6 +95,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       maximumStock: Number(itemData.maximumStock || 0),
       salePrice: Number(itemData.salePrice || 0),
       barcode: itemData.barcode || '',
+      binLocation: itemData.binLocation || '',
       isTrackable: itemData.isTrackable !== false,
       frontImage: itemData.frontImage || '',
       additionalImages: itemData.additionalImages || [],
@@ -459,7 +461,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
     setSaving(true);
     try {
-      const submitData = {
+      const submitData: any = {
         name: formData.name,
         categoryId: formData.categoryId || undefined,
         subcategoryId: formData.subcategoryId || undefined,
@@ -468,6 +470,9 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         maximumStock: formData.isTrackable ? formData.maximumStock : 0,
         salePrice: formData.salePrice,
         barcode: formData.barcode || undefined,
+        // Warehouse row-rack-bin location; backend column lands in parallel and
+        // simply ignores the field until then.
+        binLocation: formData.binLocation.trim() || undefined,
         isTrackable: formData.isTrackable,
         frontImage: formData.frontImage || undefined,
         additionalImages: formData.additionalImages.length > 0 ? formData.additionalImages : undefined,
@@ -559,7 +564,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
@@ -568,7 +573,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-6">
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Name */}
@@ -580,7 +585,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               required
             />
           </div>
@@ -669,7 +674,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                 type="text"
                 value={currentBaseUom?.name ? `${currentBaseUom.name}${currentBaseUom.abbreviation ? ` (${currentBaseUom.abbreviation})` : ''}` : 'N/A'}
                 disabled
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-[13px]"
               />
             ) : (
               <SearchableSelect
@@ -715,7 +720,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               {loadingConvertible ? (
                 <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
                   </div>
                 </div>
               ) : convertibleUoms.filter((u) => u.id !== formData.baseUomId).length === 0 ? (
@@ -779,7 +784,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                   </div>
 
                   {uomMultiSelectOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-popover max-h-60 overflow-auto">
                       {getFilteredConvertibleUoms().length === 0 ? (
                         <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
                           {t('noUnitsFound') || 'No units found'}
@@ -838,7 +843,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               {loadingConvertible ? (
                 <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
                   </div>
                 </div>
               ) : existingConversions.length > 0 ? (
@@ -897,7 +902,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                   e.target.value = '';
                 }
               }}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               required
             />
           </div>
@@ -911,7 +916,21 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={formData.barcode}
               onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
+            />
+          </div>
+
+          {/* Location (row-rack-bin) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Location (row-rack-bin) <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
+            </label>
+            <input
+              type="text"
+              value={formData.binLocation}
+              onChange={(e) => setFormData({ ...formData, binLocation: e.target.value })}
+              placeholder="e.g. A-03-2"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
             />
           </div>
 
@@ -933,7 +952,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                     maximumStock: isTrackable ? formData.maximumStock : 0,
                   });
                 }}
-                className="h-4 w-4 text-red-600 focus-visible:ring-red-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                className="h-4 w-4 text-red-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
               />
               <label 
                 className="ml-2 block text-sm text-gray-900 dark:text-gray-300 cursor-pointer"
@@ -968,7 +987,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                     e.target.value = '';
                   }
                 }}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div>
@@ -985,7 +1004,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                     e.target.value = '';
                   }
                 }}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div></div>
@@ -1067,14 +1086,14 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           <button
             type="button"
             onClick={() => router.push('/ims/inventory')}
-            className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
           >
             {t('cancel')}
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
+            className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
           >
             {saving ? t('saving') || 'Saving...' : isEditMode ? t('save') || 'Save' : t('create') || 'Create'}
           </button>
@@ -1090,7 +1109,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={newCategory.name}
               onChange={(e) => setNewCategory({ name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('categoryName')}
             />
           </div>
@@ -1102,7 +1121,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             >
               {t('cancel')}
             </button>
-            <button type="button" onClick={handleAddCategory} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button type="button" onClick={handleAddCategory} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
               {t('add')}
             </button>
           </div>
@@ -1118,7 +1137,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={newSubcategory.name}
               onChange={(e) => setNewSubcategory({ name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('subcategoryName')}
             />
           </div>
@@ -1130,7 +1149,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             >
               {t('cancel')}
             </button>
-            <button type="button" onClick={handleAddSubcategory} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button type="button" onClick={handleAddSubcategory} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
               {t('add')}
             </button>
           </div>
@@ -1148,7 +1167,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={newUom.name}
               onChange={(e) => setNewUom({ ...newUom, name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('name')}
             />
           </div>
@@ -1158,7 +1177,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="text"
               value={newUom.abbreviation}
               onChange={(e) => setNewUom({ ...newUom, abbreviation: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('abbreviation')}
             />
           </div>
@@ -1170,7 +1189,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             >
               {t('cancel')}
             </button>
-            <button type="button" onClick={handleAddUom} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            <button type="button" onClick={handleAddUom} className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
               {t('add')}
             </button>
           </div>
@@ -1230,7 +1249,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               value={newConversion.factor}
               onChange={(e) => setNewConversion({ ...newConversion, factor: e.target.value })}
               placeholder="e.g., 0.5, 2, 10"
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               required
             />
             {conversionExample && (
@@ -1254,7 +1273,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               type="button" 
               onClick={handleAddConversion}
               disabled={!newConversion.fromUomId || !newConversion.toUomId || !newConversion.factor || newConversion.fromUomId === newConversion.toUomId}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('add')}
             </button>
@@ -1353,7 +1372,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             <button
               type="button"
               onClick={() => setShowImageUpload(false)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700"
             >
               {t('done')}
             </button>

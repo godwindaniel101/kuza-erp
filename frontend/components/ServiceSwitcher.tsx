@@ -1,154 +1,156 @@
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-import { useAuthStore } from '@/store/authStore';
-import Link from 'next/link';
-import Cookies from 'js-cookie';
+import { useTenantStore } from '@/store/globalStore';
+import Icon, { IconName } from './ui/Icon';
 
-interface Service {
+/**
+ * Workspace switcher — the business block at the top of the sidebar.
+ *
+ * Lists the tenant's effective APP GROUPINGS (the sidebar's section groups),
+ * not pages. Picking a group filters the sidebar to Home + that group +
+ * Settings, so a single-app business (only accounting, only the QR menu)
+ * experiences the product as THAT app. "All apps" restores every effective
+ * group. Selection persists (localStorage via the tenant store); tenants with
+ * a single group are auto-locked to it (no dropdown noise).
+ */
+
+export interface WorkspaceGroup {
   id: string;
-  code: string;
   name: string;
-  description?: string;
-  icon: string;
-  color: 'red' | 'blue';
 }
 
-export default function ServiceSwitcher() {
-  const router = useRouter();
-  const { user } = useAuthStore();
+/** Icons per sidebar group id (mirrors the section catalog). */
+const GROUP_ICONS: Record<string, IconName> = {
+  restaurant: 'building-storefront',
+  'menu-studio': 'sparkles',
+  inventory: 'cube',
+  sales: 'banknotes',
+  money: 'banknotes',
+  accounting: 'calculator',
+  hr: 'users',
+};
+
+interface ServiceSwitcherProps {
+  businessName?: string | null;
+  /** Edition chip, e.g. "Hospitality" for restaurant tenants. */
+  edition?: string | null;
+  /** The tenant's effective app groups (from AppSidebar's section catalog). */
+  groups: WorkspaceGroup[];
+  /** Resolved active workspace: 'all' or a group id. */
+  activeWorkspace: string;
+}
+
+export default function ServiceSwitcher({
+  businessName,
+  edition,
+  groups,
+  activeWorkspace,
+}: ServiceSwitcherProps) {
+  const { setActiveWorkspace } = useTenantStore();
   const [open, setOpen] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [currentService, setCurrentService] = useState<Service | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadServices();
-  }, [router.pathname]);
+  // Single-group tenants are locked to that group — no dropdown.
+  const locked = groups.length <= 1;
 
   useEffect(() => {
+    if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     };
-
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [open]);
 
-  const loadServices = () => {
-    // Determine current service from route
-    const path = router.pathname;
-    let current: Service | null = null;
+  const activeGroup = groups.find((g) => g.id === activeWorkspace);
+  const workspaceName = activeGroup ? activeGroup.name : 'All apps';
 
-    if (path.startsWith('/hrms')) {
-      current = {
-        id: 'hrms',
-        code: 'hrms',
-        name: 'HRMS',
-        icon: 'bx-group',
-        color: 'blue',
-      };
-    } else {
-      current = {
-        id: 'rms',
-        code: 'rms',
-        name: 'RMS',
-        icon: 'bx-restaurant',
-        color: 'red',
-      };
-    }
-
-  setCurrentService(current);
-  // Keep a cookie with last selected service for refresh persistence
-  Cookies.set('service', current.code, { expires: 7 });
-    setServices([
-      current,
-      {
-        id: current.code === 'rms' ? 'hrms' : 'rms',
-        code: current.code === 'rms' ? 'hrms' : 'rms',
-        name: current.code === 'rms' ? 'HRMS' : 'RMS',
-        icon: current.code === 'rms' ? 'bx-group' : 'bx-restaurant',
-        color: current.code === 'rms' ? 'blue' : 'red',
-      },
-    ]);
-  };
-
-  const handleSwitch = (serviceCode: string) => {
+  const handleSelect = (id: string) => {
     setOpen(false);
-    Cookies.set('service', serviceCode, { expires: 7 });
-    if (serviceCode === 'hrms') {
-      router.push('/hrms/dashboard');
-    } else {
-      router.push('/');
-    }
+    setActiveWorkspace(id);
   };
 
-  if (services.length <= 1) return null;
+  const initial = (businessName || 'K').charAt(0).toUpperCase();
 
-  const colorClass = currentService?.color === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400';
-  const displayName = currentService?.name === 'Restaurant Management' || currentService?.code === 'rms' ? 'RMS' : currentService?.name || 'Select Service';
+  const blockInner = (
+    <>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-sm font-semibold text-white">
+        {initial}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {businessName || 'Kuza'}
+          </span>
+          {edition && (
+            <span className="shrink-0 rounded-full bg-brand-50 dark:bg-brand-500/10 px-1.5 py-px text-2xs font-medium text-brand-700 dark:text-brand-300 ring-1 ring-inset ring-brand-600/20 dark:ring-brand-400/20">
+              {edition}
+            </span>
+          )}
+        </span>
+        <span className="block truncate text-xs text-gray-400 dark:text-gray-500">{workspaceName}</span>
+      </span>
+    </>
+  );
+
+  if (locked) {
+    return <div className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left">{blockInner}</div>;
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="w-full flex items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
       >
-        {currentService && (
-          <>
-            <i className={`bx ${currentService.icon} ${colorClass} text-xl`}></i>
-            <span className="font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
-          </>
-        )}
-        {!currentService && <span className="font-medium text-gray-900 dark:text-gray-100">Select Service</span>}
-        <i className="bx bx-chevron-down text-gray-600 dark:text-gray-400"></i>
+        {blockInner}
+        <Icon name="chevron-up-down" size={16} className="text-gray-400 dark:text-gray-500" />
       </button>
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
-          style={{ display: open ? 'block' : 'none' }}
+          role="menu"
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
         >
-          <div className="p-2">
-            {services.map((service) => {
-              const isActive = currentService?.id === service.id;
-              const serviceColorClass = service.color === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400';
-              const serviceBgClass =
-                service.color === 'red'
-                  ? isActive
-                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                    : ''
-                  : isActive
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                  : '';
-              const serviceDisplayName = service.name === 'Restaurant Management' || service.code === 'rms' ? 'RMS' : service.name;
-
-              return (
-                <button
-                  key={service.id}
-                  onClick={() => handleSwitch(service.code)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${serviceBgClass}`}
-                >
-                  <i className={`bx ${service.icon} ${serviceColorClass} text-xl`}></i>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{serviceDisplayName}</div>
-                    {service.description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {service.description.substring(0, 40)}
-                      </div>
-                    )}
-                  </div>
-                  {isActive && <i className={`bx bx-check ${serviceColorClass}`}></i>}
-                </button>
-              );
-            })}
-          </div>
+          <p className="px-2.5 pb-1 pt-1.5 text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Workspace
+          </p>
+          {[{ id: 'all', name: 'All apps' }, ...groups].map((group) => {
+            const isActive = group.id === activeWorkspace || (group.id === 'all' && !activeGroup);
+            const icon: IconName = group.id === 'all' ? 'squares-2x2' : GROUP_ICONS[group.id] ?? 'folder';
+            return (
+              <button
+                key={group.id}
+                type="button"
+                role="menuitem"
+                onClick={() => handleSelect(group.id)}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 font-medium'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/70'
+                }`}
+              >
+                <Icon
+                  name={icon}
+                  size={18}
+                  className={isActive ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'}
+                />
+                <span className="flex-1">{group.name}</span>
+                {isActive && <Icon name="check" size={14} className="text-brand-600 dark:text-brand-400" />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

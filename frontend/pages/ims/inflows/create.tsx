@@ -10,6 +10,9 @@ import Link from "next/link";
 import SearchableSelect from "@/components/SearchableSelect";
 import DatePicker from "@/components/DatePicker";
 import Modal from "@/components/Modal";
+import PageHeader from "@/components/ui/PageHeader";
+import { useTenantStore } from "@/store/globalStore";
+import { term } from "@/lib/terminology";
 
 interface InflowItem {
   inventoryItemId: string;
@@ -22,6 +25,7 @@ interface InflowItem {
 
 export default function CreateInflowPage() {
   const { t } = useTranslation("common");
+  const { businessType } = useTenantStore();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -432,13 +436,13 @@ export default function CreateInflowPage() {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-5">
       {toast && (
         <Toast
           message={toast.message}
@@ -447,22 +451,21 @@ export default function CreateInflowPage() {
         />
       )}
 
-      <div className="mb-6">
-        <Link
-          href="/ims/inflows"
-          className="text-blue-600 dark:text-blue-400 hover:underline mb-2 inline-block"
-        >
-          ← {t("backToInflows") || "Back to Inflows"}
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {t("recordInflow") || "Record Inflow"}
-        </h1>
+      <div className="mx-auto w-full max-w-5xl">
+        <PageHeader
+          title={term(businessType, "recordGoodsIn")}
+          subtitle="Record stock coming in — supplier, items and costs"
+          breadcrumbs={[
+            { label: term(businessType, "goodsIn"), href: "/ims/inflows" },
+            { label: t("record") || "Record" },
+          ]}
+        />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+      <form onSubmit={handleSubmit} className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {t("inflowDetails")}
             </h2>
             <div className="w-48">
@@ -536,7 +539,7 @@ export default function CreateInflowPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, invoiceNumber: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
               <div className="mt-2 flex justify-end">
                 <button
@@ -560,15 +563,15 @@ export default function CreateInflowPage() {
                   setFormData({ ...formData, notes: e.target.value })
                 }
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                 placeholder={t("notes") || "Add any additional notes..."}
               />
             </div>
           )}
         </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t("addItems")}
           </h2>
 
@@ -649,7 +652,7 @@ export default function CreateInflowPage() {
                 value={itemQuantity || ""}
                 onChange={(e) => setItemQuantity(Number(e.target.value) || 0)}
                 onFocus={handleNumberInputFocus}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t("quantity")}
               />
             </div>
@@ -685,7 +688,7 @@ export default function CreateInflowPage() {
                 value={itemUnitCost || ""}
                 onChange={(e) => setItemUnitCost(Number(e.target.value) || 0)}
                 onFocus={handleNumberInputFocus}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t("unitCost")}
               />
             </div>
@@ -714,7 +717,7 @@ export default function CreateInflowPage() {
                 type="button"
                 onClick={addItemToInflow}
                 disabled={!selectedItem || !itemUnitCost || itemUnitCost <= 0}
-                className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-h-[48px]"
+                className="w-full px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-h-[48px]"
                 title={t("add") || "Add Item"}
               >
                 <i className="bx bx-plus text-lg"></i>
@@ -760,7 +763,7 @@ export default function CreateInflowPage() {
                             )
                           }
                           onFocus={handleNumberInputFocus}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                         />
                       </div>
                       <div className="overflow-hidden">
@@ -796,7 +799,7 @@ export default function CreateInflowPage() {
                             )
                           }
                           onFocus={handleNumberInputFocus}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                         />
                       </div>
                       <div>
@@ -849,7 +852,7 @@ export default function CreateInflowPage() {
         <div className="flex justify-end space-x-3">
           <Link
             href="/ims/inflows"
-            className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
           >
             {t("cancel")}
           </Link>
@@ -861,7 +864,7 @@ export default function CreateInflowPage() {
               !formData.supplierId ||
               (inflowItems.length === 0 && !hasPendingItem())
             }
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? t("saving") || "Saving..." : t("save")}
           </button>
@@ -903,7 +906,7 @@ export default function CreateInflowPage() {
                 onChange={(e) =>
                   setNewSupplier({ ...newSupplier, name: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t("supplierName") || "Supplier name"}
                 autoFocus
               />
@@ -925,7 +928,7 @@ export default function CreateInflowPage() {
                     contactPerson: e.target.value,
                   })
                 }
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t("contactPersonName") || "Contact person name"}
               />
             </div>
@@ -944,7 +947,7 @@ export default function CreateInflowPage() {
                   onChange={(e) =>
                     setNewSupplier({ ...newSupplier, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   placeholder={t("emailAddress") || "email@example.com"}
                 />
               </div>
@@ -962,7 +965,7 @@ export default function CreateInflowPage() {
                   onChange={(e) =>
                     setNewSupplier({ ...newSupplier, phone: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   placeholder={t("phoneNumber") || "+1234567890"}
                 />
               </div>
@@ -981,7 +984,7 @@ export default function CreateInflowPage() {
                   setNewSupplier({ ...newSupplier, address: e.target.value })
                 }
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 placeholder={t("address") || "Address"}
               />
             </div>
@@ -1008,7 +1011,7 @@ export default function CreateInflowPage() {
             <button
               type="submit"
               disabled={creatingSupplier || !newSupplier.name.trim()}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-red-700 dark:hover:bg-red-600"
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {creatingSupplier ? (
                 <span className="flex items-center gap-2">

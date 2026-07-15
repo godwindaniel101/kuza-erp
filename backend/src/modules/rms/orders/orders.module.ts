@@ -9,7 +9,9 @@ import { OrderItemInflowItem } from '../entities/order-item-inflow-item.entity';
 import { InventoryItem } from '../../ims/entities/inventory-item.entity';
 import { InventoryInflowItem } from '../../ims/entities/inventory-inflow-item.entity';
 import { BranchInventoryItem } from '../../ims/entities/branch-inventory-item.entity';
+import { Business } from '../../../common/entities/business.entity';
 import { UomConversionsModule } from '../../ims/uom-conversions/uom-conversions.module';
+import { AccountingModule } from '../../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -21,8 +23,10 @@ import { UomConversionsModule } from '../../ims/uom-conversions/uom-conversions.
       InventoryItem,
       InventoryInflowItem,
       BranchInventoryItem,
+      Business,
     ]),
     UomConversionsModule,
+    AccountingModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

@@ -6,6 +6,7 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
 
@@ -58,16 +59,18 @@ export default function CreatePositionPage() {
 
   return (
     <PermissionGuard permission="positions.create">
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className="mx-auto w-full max-w-3xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        <div className="mb-6">
-          <Link href="/hrms/positions" className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
-            <i className="bx bx-arrow-back mr-2"></i>
-            {t('back')}
-          </Link>
-        </div>
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">{t('createPosition') || 'Create Position'}</h1>
+        <PageHeader
+          title={t('createPosition') || 'Create Position'}
+          subtitle="Define a role people are hired into"
+          breadcrumbs={[
+            { label: 'HR', href: '/hrms/dashboard' },
+            { label: t('positions') || 'Positions', href: '/hrms/positions' },
+            { label: t('create') || 'Create' },
+          ]}
+        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -78,7 +81,7 @@ export default function CreatePositionPage() {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('positionTitle') || 'Position title'}
               />
             </div>
@@ -88,7 +91,7 @@ export default function CreatePositionPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
                 placeholder={t('positionDescription') || 'Position description (optional)'}
               />
             </div>
@@ -104,13 +107,13 @@ export default function CreatePositionPage() {
               />
             </div>
             <div className="flex justify-end space-x-3 pt-4">
-              <Link href="/hrms/positions" className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <Link href="/hrms/positions" className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 {t('cancel')}
               </Link>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
               >
                 {submitting ? t('creating') : t('create')}
               </button>

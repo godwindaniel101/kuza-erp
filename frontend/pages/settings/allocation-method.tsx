@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 import Toast from '@/components/Toast';
 
 type AllocationMethod = 'FIFO' | 'LIFO' | 'FEFO';
@@ -54,9 +55,9 @@ export default function AllocationMethodSettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="mx-auto w-full max-w-3xl space-y-5">
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </div>
     );
@@ -69,12 +70,13 @@ export default function AllocationMethodSettingsPage() {
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('allocationMethod') || 'Allocation Method'}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('allocationMethodDescription') || 'Choose how items are allocated during outflow'}</p>
-        </div>
+        <PageHeader
+          title={t('allocationMethod') || 'Allocation Method'}
+          subtitle={t('allocationMethodDescription') || 'Choose how stock costs are applied when items go out'}
+          breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('allocationMethod') || 'Allocation Method' }]}
+        />
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
@@ -82,7 +84,7 @@ export default function AllocationMethodSettingsPage() {
               </label>
               
               <div className="space-y-3">
-                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   style={{ borderColor: allocationMethod === 'FIFO' ? '#dc2626' : 'transparent' }}>
                   <input
                     type="radio"
@@ -90,7 +92,7 @@ export default function AllocationMethodSettingsPage() {
                     value="FIFO"
                     checked={allocationMethod === 'FIFO'}
                     onChange={(e) => setAllocationMethod(e.target.value as AllocationMethod)}
-                    className="mt-1 mr-3 text-red-600 focus:ring-red-500"
+                    className="mt-1 mr-3 text-red-600 focus:ring-brand-500"
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 dark:text-gray-100">{t('fifo') || 'FIFO — First In, First Out'}</div>
@@ -100,7 +102,7 @@ export default function AllocationMethodSettingsPage() {
                   </div>
                 </label>
 
-                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   style={{ borderColor: allocationMethod === 'LIFO' ? '#dc2626' : 'transparent' }}>
                   <input
                     type="radio"
@@ -108,7 +110,7 @@ export default function AllocationMethodSettingsPage() {
                     value="LIFO"
                     checked={allocationMethod === 'LIFO'}
                     onChange={(e) => setAllocationMethod(e.target.value as AllocationMethod)}
-                    className="mt-1 mr-3 text-red-600 focus:ring-red-500"
+                    className="mt-1 mr-3 text-red-600 focus:ring-brand-500"
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 dark:text-gray-100">{t('lifo') || 'LIFO — Last In, First Out'}</div>
@@ -118,7 +120,7 @@ export default function AllocationMethodSettingsPage() {
                   </div>
                 </label>
 
-                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   style={{ borderColor: allocationMethod === 'FEFO' ? '#dc2626' : 'transparent' }}>
                   <input
                     type="radio"
@@ -126,7 +128,7 @@ export default function AllocationMethodSettingsPage() {
                     value="FEFO"
                     checked={allocationMethod === 'FEFO'}
                     onChange={(e) => setAllocationMethod(e.target.value as AllocationMethod)}
-                    className="mt-1 mr-3 text-red-600 focus:ring-red-500"
+                    className="mt-1 mr-3 text-red-600 focus:ring-brand-500"
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 dark:text-gray-100">{t('fefo') || 'FEFO — First Expiry, First Out'}</div>
@@ -142,7 +144,7 @@ export default function AllocationMethodSettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-2"
               >
                 {saving ? (
                   <>

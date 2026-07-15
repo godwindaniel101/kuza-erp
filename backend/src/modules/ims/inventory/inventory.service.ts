@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository, In, DataSource } from "typeorm";
 import { InventoryItem } from "../entities/inventory-item.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
 import { CreateInventoryItemDto } from "./dto/create-inventory-item.dto";
@@ -12,6 +12,10 @@ import { InventoryCategory } from "../entities/inventory-category.entity";
 import { InventorySubcategory } from "../entities/inventory-subcategory.entity";
 import { OrderItem } from "../../rms/entities/order-item.entity";
 import { Order } from "../../rms/entities/order.entity";
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
+import * as sharp from "sharp";
 
 @Injectable()
 export class InventoryService {
@@ -32,14 +36,15 @@ export class InventoryService {
     private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
-    private uomConversionsService: UomConversionsService
+    private uomConversionsService: UomConversionsService,
+    private dataSource: DataSource,
   ) {}
 
-  async create(businessId: string, createDto: CreateInventoryItemDto) {
+  async create(createDto: CreateInventoryItemDto) {
     // Validate category if provided
     if (createDto.categoryId) {
       const category = await this.categoryRepository.findOne({
-        where: { id: createDto.categoryId, businessId },
+        where: { id: createDto.categoryId },
       });
       if (!category) {
         throw new NotFoundException("Category not found");
@@ -49,7 +54,7 @@ export class InventoryService {
     // Validate subcategory if provided
     if (createDto.subcategoryId) {
       const subcategory = await this.subcategoryRepository.findOne({
-        where: { id: createDto.subcategoryId, businessId },
+        where: { id: createDto.subcategoryId },
       });
       if (!subcategory) {
         throw new NotFoundException("Subcategory not found");
@@ -60,7 +65,7 @@ export class InventoryService {
         subcategory.categoryId !== createDto.categoryId
       ) {
         throw new NotFoundException(
-          "Subcategory does not belong to the selected category"
+          "Subcategory does not belong to the selected category",
         );
       }
     }
@@ -68,32 +73,39 @@ export class InventoryService {
     const item = this.inventoryItemRepository.create({
       ...createDto,
       unitCost: 0, // Cost is captured during inflow, not when creating items
-      businessId,
     });
-    return this.inventoryItemRepository.save(item);
+    const savedItem = await this.inventoryItemRepository.save(item);
+    
+    // Explicitly load the item with relations to ensure they're available immediately
+    const itemWithRelations = await this.inventoryItemRepository.findOne({
+      where: { id: savedItem.id },
+      relations: ["category", "subcategory", "baseUom"],
+    });
+    
+    return itemWithRelations || savedItem;
   }
 
-  async findAll(businessId: string, branchId?: string) {
-    const items = await this.inventoryItemRepository.find({
-      where: { businessId },
-      relations: [
-        "baseUom",
-        "branches",
-        "branches.branch",
-        "category",
-        "subcategory",
-      ],
-    });
+  async findAll(branchId?: string) {
+    // Use QueryBuilder to ensure relations are properly loaded
+    const items = await this.inventoryItemRepository
+      .createQueryBuilder("item")
+      .leftJoinAndSelect("item.baseUom", "baseUom")
+      .leftJoinAndSelect("item.branches", "branches")
+      .leftJoinAndSelect("branches.branch", "branch")
+      .leftJoinAndSelect("item.category", "category")
+      .leftJoinAndSelect("item.subcategory", "subcategory")
+      .orderBy("item.name", "ASC")
+      .getMany();
 
     // Guard: return early if no items
     if (!items || items.length === 0) {
       return [];
     }
 
-    // Get all UOM conversions and all UOMs for this restaurant
+    // Get all UOM conversions and all UOMs for this business
     const [conversions, allUoms] = await Promise.all([
-      this.uomConversionsService.findAll(businessId),
-      this.uomRepository.find({ where: { businessId } }),
+      this.uomConversionsService.findAll(),
+      this.uomRepository.find({}),
     ]);
 
     // Create a map of all UOMs for quick lookup
@@ -115,12 +127,11 @@ export class InventoryService {
       ...new Set(items.map((item) => item.baseUomId).filter(Boolean)),
     ];
 
-    // Manually load baseUoms with businessId constraint (use already loaded allUomsMap as fallback)
+    // Manually load baseUoms with  constraint (use already loaded allUomsMap as fallback)
     const baseUomsMap = new Map<string, Uom>();
     if (baseUomIds.length > 0) {
       const baseUoms = await this.uomRepository.find({
         where: {
-          businessId,
           id: baseUomIds.length === 1 ? baseUomIds[0] : In(baseUomIds),
         },
       });
@@ -135,12 +146,11 @@ export class InventoryService {
       });
     }
 
-    // Manually load categories and subcategories with businessId constraint
+    // Manually load categories and subcategories with constraint (fallback for QueryBuilder)
     const categoriesMap = new Map<string, InventoryCategory>();
     if (categoryIds.length > 0) {
       const categories = await this.categoryRepository.find({
         where: {
-          businessId,
           id: categoryIds.length === 1 ? categoryIds[0] : In(categoryIds),
         },
       });
@@ -155,7 +165,6 @@ export class InventoryService {
     if (subcategoryIds.length > 0) {
       const subcategories = await this.subcategoryRepository.find({
         where: {
-          businessId,
           id:
             subcategoryIds.length === 1
               ? subcategoryIds[0]
@@ -248,7 +257,7 @@ export class InventoryService {
           }
         }
 
-        // Use manually loaded category/subcategory if relation didn't load
+        // Use manually loaded category/subcategory if relation didn't load (should be rare with QueryBuilder)
         const category =
           item.category ||
           (item.categoryId ? categoriesMap.get(item.categoryId) : null);
@@ -278,7 +287,7 @@ export class InventoryService {
     return itemsWithUoms;
   }
 
-  async findAllWithBranchStock(businessId: string) {
+  async findAllWithBranchStock() {
     // Use query builder to ensure all relations load correctly
     const items = await this.inventoryItemRepository
       .createQueryBuilder("item")
@@ -286,13 +295,11 @@ export class InventoryService {
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .where("item.businessId = :businessId", { businessId })
       .orderBy("item.name", "ASC")
       .getMany();
 
-    // Get all branches for this restaurant
+    // Get all branches for this business
     const branches = await this.branchRepository.find({
-      where: { businessId },
       order: { isDefault: "DESC", name: "ASC" },
     });
 
@@ -301,7 +308,7 @@ export class InventoryService {
     const baseUomsMap = new Map<string, Uom>();
     if (baseUomIds.length > 0) {
       const baseUoms = await this.uomRepository.find({
-        where: { businessId, id: In(baseUomIds) },
+        where: { id: In(baseUomIds) },
       });
       baseUoms.forEach((uom) => {
         if (uom && uom.id) {
@@ -315,7 +322,7 @@ export class InventoryService {
     const categoriesMap = new Map<string, InventoryCategory>();
     if (categoryIds.length > 0) {
       const categories = await this.categoryRepository.find({
-        where: { businessId, id: In(categoryIds) },
+        where: { id: In(categoryIds) },
       });
       categories.forEach((cat) => {
         if (cat && cat.id) {
@@ -331,7 +338,7 @@ export class InventoryService {
     const subcategoriesMap = new Map<string, InventorySubcategory>();
     if (subcategoryIds.length > 0) {
       const subcategories = await this.subcategoryRepository.find({
-        where: { businessId, id: In(subcategoryIds) },
+        where: { id: In(subcategoryIds) },
       });
       subcategories.forEach((sub) => {
         if (sub && sub.id) {
@@ -414,6 +421,7 @@ export class InventoryService {
               branchItem && branchItem.salePrice
                 ? Number(branchItem.salePrice || 0)
                 : null,
+            binLocation: branchItem?.binLocation || null,
           };
         });
 
@@ -447,6 +455,7 @@ export class InventoryService {
           unit: unitName,
           baseUomId: item.baseUomId || null,
           isTrackable: item.isTrackable !== false,
+          binLocation: item.binLocation || null,
           branchStocks,
           totalStock,
           minimumStock: Number(item.minimumStock || 0),
@@ -457,9 +466,9 @@ export class InventoryService {
       .filter((item) => item !== null); // Filter out any null items
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const item = await this.inventoryItemRepository.findOne({
-      where: { id, businessId },
+      where: { id },
       relations: [
         "baseUom",
         "branches",
@@ -481,88 +490,74 @@ export class InventoryService {
     };
   }
 
-  async getItemStats(id: string, businessId: string) {
+  async getItemStats(id: string) {
     // Get the item with basic info
-    const item = await this.findOne(id, businessId);
+    const item = await this.findOne(id);
 
-    // Get branch stocks
-    const branchStocks = await this.branchInventoryRepository.find({
-      where: { inventoryItemId: id },
-      relations: ["branch"],
-    });
+    // Get branch stocks using Query Builder for safety
+    const branchStocks = await this.branchInventoryRepository
+      .createQueryBuilder("bs")
+      .leftJoinAndSelect("bs.branch", "branch")
+      .where("bs.inventoryItemId = :id", { id })
+      .getMany();
 
-    // Get sales data from order items (include all orders, not just completed ones)
-    const orderItemsQuery = `
-      SELECT 
-        oi.inventoryItemId,
-        COUNT(DISTINCT oi.orderId) as orderCount,
-        SUM(oi.quantityBase) as totalQuantitySold,
-        SUM(oi.totalPrice) as totalSalesAmount,
-        SUM(oi.costTotal) as totalCost,
-        SUM(oi.totalPrice - oi.costTotal) as totalProfit,
-        CASE 
-          WHEN SUM(oi.totalPrice) > 0 
-          THEN ((SUM(oi.totalPrice - oi.costTotal) / SUM(oi.totalPrice)) * 100)
-          ELSE 0 
-        END as profitMargin
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-      GROUP BY oi.inventoryItemId
-    `;
+    // Use Query Builder for all stats to ensure tenant isolation
+    const salesQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("COUNT(DISTINCT oi.orderId)", "orderCount")
+      .addSelect("SUM(oi.quantityBase)", "totalQuantitySold")
+      .addSelect("SUM(oi.totalPrice)", "totalSalesAmount")
+      .addSelect("SUM(oi.costTotal)", "totalCost")
+      .innerJoin("oi.order", "o")
+      .where("oi.inventoryItemId = :id", { id });
 
-    const recentSalesQuery = `
-      SELECT 
-        SUM(oi.quantityBase) as recentQuantity,
-        SUM(oi.totalPrice) as recentAmount
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-        AND o.createdAt >= NOW() - INTERVAL '30 days'
-    `;
+    const recentSalesQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("SUM(oi.quantityBase)", "recentQuantity")
+      .addSelect("SUM(oi.totalPrice)", "recentAmount")
+      .innerJoin("oi.order", "o")
+      .where("oi.inventoryItemId = :id", { id })
+      .andWhere("o.createdAt >= NOW() - INTERVAL '30 days'");
 
-    const salesByBranchQuery = `
-      SELECT 
-        o.branchId,
-        b.name as branchName,
-        COUNT(DISTINCT oi.orderId) as orderCount,
-        SUM(oi.quantityBase) as totalQuantity,
-        SUM(oi.totalPrice) as totalAmount,
-        SUM(oi.costTotal) as totalCost,
-        SUM(oi.totalPrice - oi.costTotal) as totalProfit
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      INNER JOIN branches b ON o.branchId = b.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-      GROUP BY o.branchId, b.name
-      ORDER BY totalAmount DESC
-    `;
+    const salesByBranchQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("o.branchId", "branchid")
+      .addSelect("b.name", "branchname")
+      .addSelect("COUNT(DISTINCT oi.orderId)", "ordercount")
+      .addSelect("SUM(oi.quantityBase)", "totalquantity")
+      .addSelect("SUM(oi.totalPrice)", "totalamount")
+      .addSelect("SUM(oi.costTotal)", "totalcost")
+      .innerJoin("oi.order", "o")
+      .innerJoin("o.branch", "b")
+      .where("oi.inventoryItemId = :id", { id })
+      .groupBy("o.branchId, b.name")
+      .orderBy("totalamount", "DESC");
 
     try {
       const [salesData, recentSales, salesByBranch] = await Promise.all([
-        this.inventoryItemRepository.query(orderItemsQuery, [id, businessId]),
-        this.inventoryItemRepository.query(recentSalesQuery, [id, businessId]),
-        this.inventoryItemRepository.query(salesByBranchQuery, [
-          id,
-          businessId,
-        ]),
+        salesQuery.getRawOne(),
+        recentSalesQuery.getRawOne(),
+        salesByBranchQuery.getRawMany(),
       ]);
 
-      const sales = salesData[0] || {
-        orderCount: 0,
-        totalQuantitySold: 0,
-        totalSalesAmount: 0,
-        totalCost: 0,
-        totalProfit: 0,
-        profitMargin: 0,
+      const totalSalesAmount = Number(salesData?.totalsalesamount || 0);
+      const totalCost = Number(salesData?.totalcost || 0);
+      const totalProfit = totalSalesAmount - totalCost;
+      const profitMargin =
+        totalSalesAmount > 0 ? (totalProfit / totalSalesAmount) * 100 : 0;
+
+      const sales = {
+        orderCount: Number(salesData?.ordercount || 0),
+        totalQuantitySold: Number(salesData?.totalquantitysold || 0),
+        totalSalesAmount,
+        totalCost,
+        totalProfit,
+        profitMargin,
       };
 
-      const recent30Days = recentSales[0] || {
-        recentQuantity: 0,
-        recentAmount: 0,
+      const recent30Days = {
+        recentQuantity: Number(recentSales?.recentquantity || 0),
+        recentAmount: Number(recentSales?.recentamount || 0),
       };
 
       return {
@@ -576,15 +571,15 @@ export class InventoryService {
           salePrice: Number(bs.salePrice || 0),
         })),
         sales: {
-          orderCount: Number(sales.ordercount || 0),
-          totalQuantity: Number(sales.totalquantitysold || 0),
-          totalAmount: Number(sales.totalsalesamount || 0),
-          totalCost: Number(sales.totalcost || 0),
-          totalProfit: Number(sales.totalprofit || 0),
-          profitMargin: Number(sales.profitmargin || 0),
+          orderCount: sales.orderCount,
+          totalQuantity: sales.totalQuantitySold,
+          totalAmount: sales.totalSalesAmount,
+          totalCost: sales.totalCost,
+          totalProfit: sales.totalProfit,
+          profitMargin: sales.profitMargin,
           recent30Days: {
-            quantity: Number(recent30Days.recentquantity || 0),
-            amount: Number(recent30Days.recentamount || 0),
+            quantity: recent30Days.recentQuantity,
+            amount: recent30Days.recentAmount,
           },
         },
         salesByBranch: salesByBranch.map((branch: any) => ({
@@ -594,7 +589,8 @@ export class InventoryService {
           totalQuantity: Number(branch.totalquantity || 0),
           totalAmount: Number(branch.totalamount || 0),
           totalCost: Number(branch.totalcost || 0),
-          totalProfit: Number(branch.totalprofit || 0),
+          totalProfit:
+            Number(branch.totalamount || 0) - Number(branch.totalcost || 0),
         })),
       };
     } catch (error) {
@@ -629,10 +625,10 @@ export class InventoryService {
 
   async update(
     id: string,
-    businessId: string,
-    updateDto: UpdateInventoryItemDto
+
+    updateDto: UpdateInventoryItemDto,
   ) {
-    await this.findOne(id, businessId);
+    await this.findOne(id);
 
     // Prevent baseUomId and unitCost from being changed
     const { baseUomId, unitCost, ...updateData } = updateDto as any;
@@ -644,7 +640,7 @@ export class InventoryService {
     // Validate category if provided
     if (updateData.categoryId) {
       const category = await this.categoryRepository.findOne({
-        where: { id: updateData.categoryId, businessId },
+        where: { id: updateData.categoryId },
       });
       if (!category) {
         throw new NotFoundException("Category not found");
@@ -654,7 +650,7 @@ export class InventoryService {
     // Validate subcategory if provided
     if (updateData.subcategoryId) {
       const subcategory = await this.subcategoryRepository.findOne({
-        where: { id: updateData.subcategoryId, businessId },
+        where: { id: updateData.subcategoryId },
       });
       if (!subcategory) {
         throw new NotFoundException("Subcategory not found");
@@ -666,22 +662,22 @@ export class InventoryService {
           ?.categoryId;
       if (categoryId && subcategory.categoryId !== categoryId) {
         throw new NotFoundException(
-          "Subcategory does not belong to the selected category"
+          "Subcategory does not belong to the selected category",
         );
       }
     }
 
     await this.inventoryItemRepository.update({ id }, updateData);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.inventoryItemRepository.delete({ id });
   }
 
-  async getLowStockItems(businessId: string, branchId?: string) {
-    const items = await this.findAll(businessId, branchId);
+  async getLowStockItems(branchId?: string) {
+    const items = await this.findAll(branchId);
 
     return items.filter((item: any) => {
       if (branchId && item.branchStock) {
@@ -696,25 +692,41 @@ export class InventoryService {
   }
 
   async generateTemplate(): Promise<string> {
-    // Match Laravel template pattern: Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price, Barcode
+    // Template with image support: Name, Category, Subcategory, UOM, Track Stock, Minimum Stock, Maximum Stock, Sales Price, Barcode, Image Link
     const headers = [
       "Name",
       "Category",
       "Subcategory",
-      "Unit",
+      "UOM",
       "Track Stock",
       "Minimum Stock",
       "Maximum Stock",
       "Sales Price",
       "Barcode",
+      "Image Link",
     ];
     return headers.join(",") + "\n";
   }
 
   async bulkUpload(
-    businessId: string,
-    csv: string
-  ): Promise<{ success: number; errors: string[]; skipped: number }> {
+    csv: string,
+  ): Promise<{ 
+    success: number; 
+    errors: string[]; 
+    skipped: number;
+    detailedErrors?: Array<{
+      line: number;
+      data: string;
+      errors: string[];
+    }>;
+    summary?: {
+      total: number;
+      processed: number;
+      successful: number;
+      failed: number;
+      skipped: number;
+    };
+  }> {
     // Remove BOM if present
     let csvContent = csv;
     if (csvContent.charCodeAt(0) === 0xfeff) {
@@ -735,6 +747,11 @@ export class InventoryService {
     const dataRows = lines.slice(1);
 
     const errors: string[] = [];
+    const detailedErrors: Array<{
+      line: number;
+      data: string;
+      errors: string[];
+    }> = [];
     let success = 0;
     let skipped = 0;
     let duplicateCount = 0;
@@ -771,17 +788,21 @@ export class InventoryService {
 
       // Validate minimum columns: Name, Category, Subcategory, Unit, Track Stock, Min Stock, Max Stock, Sales Price (at least 7)
       if (row.length < 7) {
-        errors.push(
-          `Line ${lineNumber}: Insufficient columns. Expected at least 7 columns (Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price).`
-        );
+        const errorMessage = `Insufficient columns. Expected at least 7 columns (Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price).`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
         continue;
       }
 
-      // Map CSV columns based on Laravel pattern:
-      // 0: Name, 1: Category, 2: Subcategory, 3: Unit, 4: Track Stock, 5: Minimum Stock, 6: Maximum Stock, 7: Sales Price, 8: Barcode
+      // Map CSV columns with image support:
+      // 0: Name, 1: Category, 2: Subcategory, 3: UOM, 4: Track Stock, 5: Minimum Stock, 6: Maximum Stock, 7: Sales Price, 8: Barcode, 9: Image Link
       const trackStockValue = (row[4] || "yes").toLowerCase().trim();
       const isTrackable = ["yes", "y", "1", "true", "on"].includes(
-        trackStockValue
+        trackStockValue,
       );
 
       const itemData: any = {
@@ -795,43 +816,53 @@ export class InventoryService {
           isTrackable && row[6] ? parseFloat(row[6]) || undefined : undefined,
         salePrice: parseFloat(row[7] || "0") || 0,
         barcode: (row[8] || "").trim() || undefined,
+        imageLink: (row[9] || "").trim() || undefined, // New image link field
         currentStock: 0, // Always start at 0
         unitCost: 0, // Cost is captured during inflow
       };
 
       // Validate required fields
+      const currentRowErrors: string[] = [];
+      
       if (!itemData.name) {
-        errors.push(`Line ${lineNumber}: Name is required. Skipping.`);
-        continue;
+        currentRowErrors.push("Name is required");
       }
 
-      // Category is now optional (can be null)
-
       if (!itemData.unit) {
-        errors.push(`Line ${lineNumber}: Unit (UOM) is required. Skipping.`);
-        continue;
+        currentRowErrors.push("Unit (UOM) is required");
       }
 
       if (!itemData.salePrice || itemData.salePrice < 0) {
-        errors.push(
-          `Line ${lineNumber}: Sales Price must be a valid number >= 0. Skipping.`
-        );
+        currentRowErrors.push("Sales Price must be a valid number >= 0");
+      }
+
+      if (currentRowErrors.length > 0) {
+        const errorMessage = currentRowErrors.join(", ");
+        errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: currentRowErrors
+        });
         continue;
       }
 
       // Check for duplicate by name (case-insensitive)
       const existingItem = await this.inventoryItemRepository.findOne({
         where: {
-          businessId,
           name: itemData.name,
         },
       });
 
       if (existingItem) {
         duplicateCount++;
-        errors.push(
-          `Line ${lineNumber}: Item '${itemData.name}' already exists. Skipping.`
-        );
+        const errorMessage = `Item '${itemData.name}' already exists`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
         continue;
       }
 
@@ -839,16 +870,19 @@ export class InventoryService {
       if (itemData.barcode) {
         const existingBarcode = await this.inventoryItemRepository.findOne({
           where: {
-            businessId,
             barcode: itemData.barcode,
           },
         });
 
         if (existingBarcode) {
           duplicateCount++;
-          errors.push(
-            `Line ${lineNumber}: Barcode '${itemData.barcode}' already exists. Skipping.`
-          );
+          const errorMessage = `Barcode '${itemData.barcode}' already exists`;
+          errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+          detailedErrors.push({
+            line: lineNumber,
+            data: dataRows[i],
+            errors: [errorMessage]
+          });
           continue;
         }
       }
@@ -856,34 +890,34 @@ export class InventoryService {
       // Find or create UOM for the unit
       let uom = await this.uomRepository.findOne({
         where: {
-          businessId,
           name: itemData.unit,
         },
       });
 
       if (!uom) {
         // Try case-insensitive search
-        const allUoms = await this.uomRepository.find({
-          where: { businessId },
-        });
+        const allUoms = await this.uomRepository.find({});
         uom = allUoms.find(
-          (u) => u.name.toLowerCase() === itemData.unit.toLowerCase()
+          (u) => u.name.toLowerCase() === itemData.unit.toLowerCase(),
         );
 
         if (!uom) {
           // Create UOM if it doesn't exist
           try {
             uom = this.uomRepository.create({
-              businessId,
               name: itemData.unit,
               abbreviation: itemData.unit.substring(0, 3).toUpperCase(),
               isDefault: false,
             });
             uom = await this.uomRepository.save(uom);
           } catch (uomError) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create UOM '${itemData.unit}'. Skipping item.`
-            );
+            const errorMessage = `Failed to create UOM '${itemData.unit}'`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping item.`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -893,17 +927,15 @@ export class InventoryService {
       let categoryId: string | undefined;
       if (itemData.category && itemData.category.trim()) {
         let category = await this.categoryRepository.findOne({
-          where: { businessId, name: itemData.category.trim() },
+          where: { name: itemData.category.trim() },
         });
 
         // Try case-insensitive search if not found
         if (!category) {
-          const allCategories = await this.categoryRepository.find({
-            where: { businessId },
-          });
+          const allCategories = await this.categoryRepository.find({});
           category = allCategories.find(
             (c) =>
-              c.name.toLowerCase() === itemData.category.trim().toLowerCase()
+              c.name.toLowerCase() === itemData.category.trim().toLowerCase(),
           );
         }
 
@@ -913,13 +945,16 @@ export class InventoryService {
             category = this.categoryRepository.create({
               name: itemData.category.trim(),
               description: null,
-              businessId,
             });
             category = await this.categoryRepository.save(category);
           } catch (categoryError: any) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create category '${itemData.category}'. ${categoryError.message || "Unknown error"}`
-            );
+            const errorMessage = `Failed to create category '${itemData.category}': ${categoryError.message || "Unknown error"}`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -930,24 +965,29 @@ export class InventoryService {
       let subcategoryId: string | undefined;
       if (itemData.subcategory && itemData.subcategory.trim()) {
         if (!categoryId) {
-          errors.push(
-            `Line ${lineNumber}: Subcategory '${itemData.subcategory}' specified but no category provided. Skipping item.`
-          );
+          const errorMessage = `Subcategory '${itemData.subcategory}' specified but no category provided`;
+          errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping item.`);
+          detailedErrors.push({
+            line: lineNumber,
+            data: dataRows[i],
+            errors: [errorMessage]
+          });
           continue;
         }
 
         let subcategory = await this.subcategoryRepository.findOne({
-          where: { businessId, categoryId, name: itemData.subcategory.trim() },
+          where: { categoryId, name: itemData.subcategory.trim() },
         });
 
         // Try case-insensitive search if not found
         if (!subcategory) {
           const allSubcategories = await this.subcategoryRepository.find({
-            where: { businessId, categoryId },
+            where: { categoryId },
           });
           subcategory = allSubcategories.find(
             (s) =>
-              s.name.toLowerCase() === itemData.subcategory.trim().toLowerCase()
+              s.name.toLowerCase() ===
+              itemData.subcategory.trim().toLowerCase(),
           );
         }
 
@@ -958,13 +998,16 @@ export class InventoryService {
               name: itemData.subcategory.trim(),
               description: null,
               categoryId,
-              businessId,
             });
             subcategory = await this.subcategoryRepository.save(subcategory);
           } catch (subcategoryError: any) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create subcategory '${itemData.subcategory}' under category '${itemData.category}'. ${subcategoryError.message || "Unknown error"}`
-            );
+            const errorMessage = `Failed to create subcategory '${itemData.subcategory}' under category '${itemData.category}': ${subcategoryError.message || "Unknown error"}`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -987,19 +1030,54 @@ export class InventoryService {
           isTrackable: itemData.isTrackable,
         };
 
-        await this.create(businessId, createDto);
+        const createdItem = await this.create(createDto);
+        
+        // Process image if provided
+        if (itemData.imageLink && createdItem && createdItem.id) {
+          try {
+            const imageUrl = await this.processItemImage(itemData.imageLink, createdItem.id, itemData.name);
+            if (imageUrl) {
+              // Update the item with the processed image URL
+              await this.inventoryItemRepository.update(createdItem.id, { frontImage: imageUrl });
+              console.log(`[BulkUpload] Successfully processed image for item: ${itemData.name}`);
+            }
+          } catch (imageError: any) {
+            console.warn(`[BulkUpload] Failed to process image for item ${itemData.name}:`, imageError.message);
+            // Don't fail the entire import if image processing fails
+          }
+        }
+        
         success++;
       } catch (error: any) {
-        errors.push(
-          `Line ${lineNumber}: Failed to create item - ${error.message || "Unknown error"}`
-        );
+        const errorMessage = `Failed to create item - ${error.message || "Unknown error"}`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
       }
     }
 
-    return { success, errors, skipped };
+    const total = dataRows.length;
+    const failed = detailedErrors.length;
+
+    return { 
+      success, 
+      errors, 
+      skipped,
+      detailedErrors,
+      summary: {
+        total,
+        processed: total - skipped,
+        successful: success,
+        failed,
+        skipped
+      }
+    };
   }
 
-  async findForOrders(businessId: string, branchId?: string) {
+  async findForOrders(branchId?: string) {
     // Use query builder to ensure branches relation is loaded correctly
     // Don't filter branches in WHERE clause - load all and filter in code
     const queryBuilder = this.inventoryItemRepository
@@ -1008,7 +1086,6 @@ export class InventoryService {
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .where("item.businessId = :businessId", { businessId })
       .orderBy("item.name", "ASC");
 
     let items = await queryBuilder.getMany();
@@ -1021,7 +1098,7 @@ export class InventoryService {
     if (baseUomIds.length > 0) {
       const uniqueBaseUomIds = [...new Set(baseUomIds)];
       const loadedBaseUoms = await this.uomRepository.find({
-        where: { businessId, id: In(uniqueBaseUomIds) },
+        where: { id: In(uniqueBaseUomIds) },
       });
       loadedBaseUoms.forEach((uom) => {
         baseUomsMap.set(uom.id, uom);
@@ -1083,13 +1160,13 @@ export class InventoryService {
       });
     }
 
-    // Get all UOM conversions for this restaurant
-    const conversions = await this.uomConversionsService.findAll(businessId);
+    // Get all UOM conversions for this business
+    const conversions = await this.uomConversionsService.findAll();
     const conversionMap = new Map<string, number>();
     conversions.forEach((conv) => {
       conversionMap.set(
         `${conv.fromUomId}-${conv.toUomId}`,
-        Number(conv.factor)
+        Number(conv.factor),
       );
     });
 
@@ -1100,7 +1177,7 @@ export class InventoryService {
           // ONLY show items that have branch inventory with stock > 0
           // No fallback to global stock - only items with stock in the selected branch
           const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
+            (b) => b.branchId === branchId,
           );
           if (branchStock) {
             // Item has branch inventory - use branch stock
@@ -1118,7 +1195,7 @@ export class InventoryService {
         let stock = Number(item.currentStock || 0);
         if (branchId) {
           const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
+            (b) => b.branchId === branchId,
           );
           if (branchStock) {
             // Use branch stock if branch inventory exists
@@ -1131,7 +1208,7 @@ export class InventoryService {
         let price = Number(item.salePrice || 0);
         if (branchId) {
           const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
+            (b) => b.branchId === branchId,
           );
           if (branchStock && branchStock.salePrice) {
             price = Number(branchStock.salePrice || 0);
@@ -1217,5 +1294,71 @@ export class InventoryService {
           uomPrices,
         };
       });
+  }
+
+  /**
+   * Process and store image from URL for inventory item
+   */
+  private async processItemImage(imageUrl: string, itemId: string, itemName: string): Promise<string | null> {
+    try {
+      console.log(`[ImageProcessing] Processing image for item: ${itemName}`);
+      
+      // Download image from URL
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.statusText}`);
+      }
+
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      
+      // Generate unique filename
+      const imageHash = crypto.createHash('md5').update(imageBuffer).digest('hex');
+      const fileExtension = this.getImageExtension(response.headers.get('content-type') || 'image/jpeg');
+      const fileName = `${itemId}_${imageHash}${fileExtension}`;
+      
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'inventory');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Resize and optimize image using Sharp
+      await sharp(imageBuffer)
+        .resize(800, 600, { 
+          fit: 'inside',
+          withoutEnlargement: true 
+        })
+        .jpeg({ quality: 85 })
+        .toFile(filePath);
+      
+      // Return the relative path for storage in database
+      const relativePath = `/uploads/inventory/${fileName}`;
+      console.log(`[ImageProcessing] Successfully processed image: ${relativePath}`);
+      
+      return relativePath;
+    } catch (error: any) {
+      console.error(`[ImageProcessing] Error processing image for ${itemName}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get file extension based on content type
+   */
+  private getImageExtension(contentType: string): string {
+    switch (contentType.toLowerCase()) {
+      case 'image/png':
+        return '.png';
+      case 'image/gif':
+        return '.gif';
+      case 'image/webp':
+        return '.webp';
+      case 'image/jpeg':
+      case 'image/jpg':
+      default:
+        return '.jpg';
+    }
   }
 }

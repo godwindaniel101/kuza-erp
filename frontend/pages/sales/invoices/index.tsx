@@ -1,0 +1,267 @@
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { GetServerSideProps } from 'next';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { api } from '@/lib/api';
+import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
+import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
+import InvoiceStatusBadge from '@/components/ui/InvoiceStatusBadge';
+import EmptyState from '@/components/ui/EmptyState';
+import { CardSkeleton } from '@/components/ui/Skeleton';
+import { formatMoney, formatDate, useCurrency } from '@/lib/format';
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  customerId: string;
+  customer?: { name: string };
+  issueDate: string;
+  dueDate: string;
+  status: 'DRAFT' | 'SENT' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'VOID';
+  currency?: string;
+  total: number;
+  amountPaid: number;
+  balance: number;
+}
+
+interface InvoiceSummary {
+  totalOutstanding: number;
+  totalOverdue: number;
+  paidThisMonth: number;
+}
+
+interface CustomerOption {
+  id: string;
+  name: string;
+}
+
+const PAGE_SIZE = 15;
+
+export default function InvoicesPage() {
+  const router = useRouter();
+  const currency = useCurrency();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [summary, setSummary] = useState<InvoiceSummary | null>(null);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [filters, setFilters] = useState<FilterValues>({ search: '', status: '', customerId: '' });
+  const search = (filters.search as string) || '';
+  const status = (filters.status as string) || '';
+  const customerId = (filters.customerId as string) || '';
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: { items: CustomerOption[] } }>('/customers?page=1&limit=100');
+        if (res.success) setCustomers(res.data.items || []);
+      } catch (err) {
+        console.error('Failed to load customers:', err);
+      }
+    };
+    loadCustomers();
+  }, []);
+
+  const loadInvoices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (status) params.set('status', status);
+      if (customerId) params.set('customerId', customerId);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const res = await api.get<{
+        success: boolean;
+        data: { items: Invoice[]; total: number; summary?: InvoiceSummary };
+      }>(`/invoices?${params.toString()}`);
+      if (res.success) {
+        setInvoices(res.data.items || []);
+        setTotal(res.data.total || 0);
+        if (res.data.summary) setSummary(res.data.summary);
+      }
+    } catch (err: any) {
+      console.error('Failed to load invoices:', err);
+      setToast({ message: err.response?.data?.message || 'Failed to load invoices', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, [page, status, customerId, debouncedSearch]);
+
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status, customerId, debouncedSearch]);
+
+  const columns: DataTableColumn<Invoice>[] = [
+    {
+      key: 'invoiceNumber',
+      label: 'Invoice #',
+      render: (inv) => <span className="font-medium text-gray-900 dark:text-white">{inv.invoiceNumber}</span>,
+    },
+    { key: 'customer', label: 'Customer', render: (inv) => inv.customer?.name || '-' },
+    { key: 'issueDate', label: 'Issued', render: (inv) => formatDate(inv.issueDate) },
+    {
+      key: 'dueDate',
+      label: 'Due',
+      render: (inv) => (
+        <span className={inv.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
+          {formatDate(inv.dueDate)}
+        </span>
+      ),
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      align: 'right',
+      render: (inv) => formatMoney(inv.total, inv.currency || currency),
+    },
+    {
+      key: 'amountPaid',
+      label: 'Paid',
+      align: 'right',
+      render: (inv) => formatMoney(inv.amountPaid, inv.currency || currency),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (inv) => <InvoiceStatusBadge status={inv.status} size="sm" />,
+    },
+  ];
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const hasFilters = !!status || !!customerId || !!debouncedSearch;
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Invoices"
+        count={loading ? undefined : total}
+        subtitle="Bill customers and track payments"
+        breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices' }]}
+        actions={
+          <Link
+            href="/sales/invoices/new"
+            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+          >
+            <i className="bx bx-plus mr-2"></i>
+            New Invoice
+          </Link>
+        }
+      />
+
+      {/* Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {loading && !summary ? (
+          <CardSkeleton count={3} />
+        ) : (
+          <>
+            <StatCard
+              label="Outstanding"
+              value={formatMoney(summary?.totalOutstanding ?? 0, currency)}
+              icon="bx-hourglass"
+              tone="warning"
+            />
+            <StatCard
+              label="Overdue"
+              value={formatMoney(summary?.totalOverdue ?? 0, currency)}
+              icon="bx-time-five"
+              tone="error"
+            />
+            <StatCard
+              label="Paid This Month"
+              value={formatMoney(summary?.paidThisMonth ?? 0, currency)}
+              icon="bx-check-circle"
+              tone="success"
+            />
+          </>
+        )}
+      </div>
+
+      <FilterBar
+        filters={[
+          { key: 'search', type: 'text', placeholder: 'Search invoices...', className: 'flex-1 min-w-[220px]' },
+          {
+            key: 'status',
+            type: 'select',
+            placeholder: 'All statuses',
+            className: 'w-full sm:w-52',
+            options: [
+              { value: '', label: 'All statuses' },
+              { value: 'DRAFT', label: 'Draft' },
+              { value: 'SENT', label: 'Sent' },
+              { value: 'PARTIALLY_PAID', label: 'Partially paid' },
+              { value: 'PAID', label: 'Paid' },
+              { value: 'OVERDUE', label: 'Overdue' },
+              { value: 'VOID', label: 'Void' },
+            ],
+          },
+          {
+            key: 'customerId',
+            type: 'select',
+            placeholder: 'All customers',
+            className: 'w-full sm:w-64',
+            options: [{ value: '', label: 'All customers' }, ...customers.map((c) => ({ value: c.id, label: c.name }))],
+          },
+        ]}
+        values={filters}
+        onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
+        onClear={() => setFilters({ search: '', status: '', customerId: '' })}
+      />
+
+      <DataTable<Invoice>
+        columns={columns}
+        data={invoices}
+        loading={loading}
+        onRowClick={(inv) => router.push(`/sales/invoices/${inv.id}`)}
+        pagination={{
+          page,
+          totalPages,
+          startIndex,
+          endIndex: Math.min(startIndex + invoices.length, total),
+          totalItems: total,
+          onPageChange: setPage,
+        }}
+        emptyState={
+          <EmptyState
+            icon="bx-receipt"
+            title={hasFilters ? 'No invoices match your filters' : 'No invoices yet'}
+            description={hasFilters ? 'Try adjusting your filters' : 'Create your first invoice to start billing customers'}
+            actions={
+              <Link
+                href="/sales/invoices/new"
+                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+              >
+                New Invoice
+              </Link>
+            }
+          />
+        }
+      />
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale || 'en', ['common'])),
+    },
+  };
+};

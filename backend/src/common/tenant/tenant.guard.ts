@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { LandlordService } from '../landlord/services/landlord.service';
-import { TenantConnectionService } from './tenant-connection.service';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 /**
  * Guard that extracts tenant from JWT and switches database schema
@@ -11,15 +11,13 @@ export class TenantGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly landlordService: LandlordService,
-    private readonly tenantConnectionService: TenantConnectionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
+    
     // Skip tenant setup for public routes (login, register)
-    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -28,8 +26,16 @@ export class TenantGuard implements CanActivate {
       return true;
     }
 
+    // Check if user exists (JWT should have been validated by JwtAuthGuard first)
+    const user = request.user;
+    
+    // If no user, this means JWT auth failed or wasn't applied yet
+    if (!user) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     // Extract tenantId from JWT payload
-    if (!user || !user.tenantId) {
+    if (!user.tenantId) {
       throw new UnauthorizedException('Tenant ID not found in token');
     }
 
@@ -41,14 +47,17 @@ export class TenantGuard implements CanActivate {
         throw new UnauthorizedException('Tenant is not active');
       }
 
-      // Switch database connection to tenant schema
-      await this.tenantConnectionService.switchToTenantSchema(tenant.schemaName);
-
-      // Attach tenant info to request
+      // Attach tenant info to request. The actual schema switch is performed by
+      // TenantTransactionInterceptor, which pins one connection per request and
+      // sets `SET LOCAL search_path` on it — reliable under connection pooling.
       request.tenant = tenant;
+      request.businessId = user.businessId; // Also attach businessId for convenience
 
       return true;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException(`Failed to set up tenant connection: ${error.message}`);
     }
   }

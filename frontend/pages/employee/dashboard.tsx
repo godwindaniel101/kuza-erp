@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
 import Link from 'next/link';
 
 export default function EmployeeDashboard() {
@@ -40,17 +41,21 @@ export default function EmployeeDashboard() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="space-y-5">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('employeeDashboard')}</h1>
+    <div className="space-y-5">
+      <PageHeader
+        title={t('employeeDashboard')}
+        subtitle="Your day at a glance"
+        breadcrumbs={[{ label: t('employeeDashboard') || 'My Dashboard' }]}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">

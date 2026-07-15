@@ -8,6 +8,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function LocationsPage() {
   const { t } = useTranslation('common');
@@ -47,24 +48,29 @@ export default function LocationsPage() {
   };
 
   return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        <div className="flex justify-end">
-          <PermissionGuard permission="locations.create">
-            <Link
-              href="/hrms/locations/create"
-              className="inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <i className="bx bx-plus mr-2"></i>
-              {t('addLocation')}
-            </Link>
-          </PermissionGuard>
-        </div>
+        <PageHeader
+          title={t('locations') || 'Locations'}
+          subtitle="Where your teams work"
+          breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('locations') || 'Locations' }]}
+          actions={
+            <PermissionGuard permission="locations.create">
+              <Link
+                href="/hrms/locations/create"
+                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
+              >
+                <i className="bx bx-plus mr-2"></i>
+                {t('addLocation')}
+              </Link>
+            </PermissionGuard>
+          }
+        />
 
         <Card>
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
             </div>
           ) : error ? (
             <div className="text-center py-8 text-red-600">{error}</div>
@@ -75,7 +81,7 @@ export default function LocationsPage() {
               <PermissionGuard permission="locations.create">
                 <Link
                   href="/hrms/locations/create"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition"
                 >
                   <i className="bx bx-plus mr-2"></i>
                   {t('addLocation')}
@@ -86,32 +92,32 @@ export default function LocationsPage() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('name')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('address')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('city')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('country')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('status')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('actions')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('name')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('address')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('city')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('country')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('status')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('actions')}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {locations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((location) => (
                       <tr key={location.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{location.name}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-500 dark:text-gray-400">{location.address || '—'}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <div className="text-sm text-gray-500 dark:text-gray-400">{location.city || '—'}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <div className="text-sm text-gray-500 dark:text-gray-400">{location.country || '—'}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               location.isActive
@@ -122,7 +128,7 @@ export default function LocationsPage() {
                             {location.isActive ? t('active') : t('inactive')}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                           <div className="flex items-center space-x-2">
                             <PermissionGuard permission="locations.edit">
                               <Link

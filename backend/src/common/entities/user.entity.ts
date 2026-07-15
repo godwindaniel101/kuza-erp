@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, OneToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { Restaurant } from './restaurant.entity';
+import { Business } from './business.entity';
 import { Employee } from '../../modules/hrms/entities/employee.entity';
 import { Role } from './role.entity';
 
@@ -18,6 +18,9 @@ export class User extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   businessId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  landlordUserId: string; // Link to LandlordUser for consistent identification
+
   @Column({ nullable: true, unique: true })
   googleId: string;
 
@@ -27,9 +30,9 @@ export class User extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.users, { nullable: true })
+  @ManyToOne(() => Business, (business) => business.users, { nullable: true })
   @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  business: Business;
 
   @OneToOne(() => Employee, (employee) => employee.user, { nullable: true })
   employee: Employee;

@@ -17,7 +17,6 @@ export abstract class BaseEntity {
 }
 
 export abstract class TenantEntity extends BaseEntity {
-  @Column({ type: 'uuid', nullable: true })
-  businessId: string;
+ 
 }
 

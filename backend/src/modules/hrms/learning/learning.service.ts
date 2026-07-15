@@ -17,16 +17,13 @@ export class LearningService {
   ) {}
 
   // Courses
-  async createCourse(businessId: string, createDto: CreateCourseDto) {
-    const course = this.courseRepository.create({
-      ...createDto,
-      businessId,
-    });
+  async createCourse(createDto: CreateCourseDto) {
+    const course = this.courseRepository.create(createDto);
     return this.courseRepository.save(course);
   }
 
-  async findAllCourses(businessId: string, status?: string) {
-    const where: any = { businessId };
+  async findAllCourses(status?: string) {
+    const where: any = {  };
     if (status) {
       where.status = status;
     }
@@ -38,9 +35,9 @@ export class LearningService {
     });
   }
 
-  async findOneCourse(id: string, businessId: string) {
+  async findOneCourse(id: string, ) {
     const course = await this.courseRepository.findOne({
-      where: { id, businessId },
+      where: { id,  },
       relations: ['enrollments', 'enrollments.employee'],
     });
 
@@ -51,14 +48,14 @@ export class LearningService {
     return course;
   }
 
-  async updateCourse(id: string, businessId: string, updateDto: UpdateCourseDto) {
-    await this.findOneCourse(id, businessId);
+  async updateCourse(id: string, updateDto: UpdateCourseDto) {
+    await this.findOneCourse(id);
     await this.courseRepository.update({ id }, updateDto);
-    return this.findOneCourse(id, businessId);
+    return this.findOneCourse(id);
   }
 
-  async removeCourse(id: string, businessId: string) {
-    await this.findOneCourse(id, businessId);
+  async removeCourse(id: string, ) {
+    await this.findOneCourse(id,);
     await this.courseRepository.delete({ id });
   }
 

@@ -11,7 +11,7 @@ export class CreateMenuDto {
   @IsString()
   slug?: string;
 
-  @ApiProperty({ example: 'Our main restaurant menu', required: false })
+  @ApiProperty({ example: 'Our main business menu', required: false })
   @IsOptional()
   @IsString()
   description?: string;

@@ -7,6 +7,8 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function CategoriesSettingsPage() {
   const { t } = useTranslation('common');
@@ -144,7 +146,7 @@ export default function CategoriesSettingsPage() {
   }));
 
   return (
-    <div className="p-6">
+    <div className="space-y-5">
       {toast && (
         <Toast
           message={toast.message}
@@ -152,39 +154,38 @@ export default function CategoriesSettingsPage() {
           onClose={() => setToast(null)}
         />
       )}
-      
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('categories') || 'Categories'}</h1>
-        <PermissionGuard permission="inventory.create">
-          <button
-            onClick={() => setShowCategoryModal(true)}
-            className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm"
-          >
-            <i className="bx bx-plus"></i>
-            <span>{t('add')} {t('category')}</span>
-          </button>
-        </PermissionGuard>
-      </div>
+
+      <PageHeader
+        title={t('categories') || 'Categories'}
+        subtitle="How your items are grouped"
+        count={loading ? undefined : categories.length}
+        breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('categories') || 'Categories' }]}
+        actions={
+          <PermissionGuard permission="inventory.create">
+            <Button size="sm" onClick={() => setShowCategoryModal(true)}>
+              <i className="bx bx-plus"></i>
+              <span>{t('add')} {t('category')}</span>
+            </Button>
+          </PermissionGuard>
+        }
+      />
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       ) : categories.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-8 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
             <i className="bx bx-folder text-gray-400 dark:text-gray-500 text-2xl"></i>
           </div>
-          <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noCategoriesYet') || 'No categories yet'}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('addYourFirstCategory') || 'Add your first category to get started'}</p>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('noCategoriesYet') || 'No categories yet'}</h3>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">{t('addYourFirstCategory') || 'Add your first category to get started'}</p>
           <PermissionGuard permission="inventory.create">
-            <button
-              onClick={() => setShowCategoryModal(true)}
-              className="mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm mx-auto"
-            >
+            <Button size="sm" onClick={() => setShowCategoryModal(true)}>
               <i className="bx bx-plus"></i>
               <span>{t('add')} {t('category')}</span>
-            </button>
+            </Button>
           </PermissionGuard>
         </div>
       ) : (
@@ -194,10 +195,10 @@ export default function CategoriesSettingsPage() {
             return (
               <div
                 key={category.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
               >
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{category.name}</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{category.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {subcategoryCount} {subcategoryCount === 1 ? t('subcategory') || 'subcategory' : t('subcategories') || 'subcategories'}
                   </p>
@@ -207,7 +208,7 @@ export default function CategoriesSettingsPage() {
                   <PermissionGuard permission="inventory.create">
                     <button
                       onClick={() => handleAddSubcategory(category)}
-                      className="flex-1 px-3 py-2 text-sm bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center justify-center space-x-1"
+                      className="flex-1 px-3 py-2 text-sm bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors flex items-center justify-center space-x-1"
                     >
                       <i className="bx bx-plus text-xs"></i>
                       <span>{t('add')} {t('subcategory')}</span>
@@ -247,7 +248,7 @@ export default function CategoriesSettingsPage() {
               required
               value={categoryForm.name}
               onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('categoryName') || 'Category name'}
             />
           </div>
@@ -258,14 +259,14 @@ export default function CategoriesSettingsPage() {
                 setShowCategoryModal(false);
                 setCategoryForm({ name: '' });
               }}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={saving || !categoryForm.name.trim()}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? t('creating') || 'Creating...' : t('create')}
             </button>
@@ -311,7 +312,7 @@ export default function CategoriesSettingsPage() {
               required
               value={subcategoryForm.name}
               onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name: e.target.value })}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               placeholder={t('subcategoryName') || 'Subcategory name'}
             />
           </div>
@@ -322,14 +323,14 @@ export default function CategoriesSettingsPage() {
                 setShowSubcategoryModal(false);
                 setSubcategoryForm({ categoryId: '', name: '' });
               }}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={saving || !subcategoryForm.categoryId || !subcategoryForm.name.trim()}
-              className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? t('creating') || 'Creating...' : t('create')}
             </button>
@@ -351,7 +352,7 @@ export default function CategoriesSettingsPage() {
         <div className="space-y-4">
           {loadingSubcategories ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
             </div>
           ) : categorySubcategories.length === 0 ? (
             <div className="text-center py-8">
@@ -362,32 +363,32 @@ export default function CategoriesSettingsPage() {
                     setShowViewSubcategoriesModal(false);
                     handleAddSubcategory(selectedCategory);
                   }}
-                  className="mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600"
+                  className="mt-4 h-9 px-3.5 inline-flex items-center bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors"
                 >
                   {t('add')} {t('subcategory')}
                 </button>
               </PermissionGuard>
             </div>
           ) : (
-            <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+            <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('name')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {categorySubcategories.map((subcategory) => (
-                    <tr key={subcategory.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <tr key={subcategory.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                         {subcategory.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                         <PermissionGuard permission="inventory.delete">
                           <button
                             onClick={async () => {
@@ -421,7 +422,7 @@ export default function CategoriesSettingsPage() {
                 setSelectedCategory(null);
                 setCategorySubcategories([]);
               }}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               {t('close') || 'Close'}
             </button>

@@ -15,6 +15,8 @@ interface SearchableSelectProps {
   className?: string;
   searchPlaceholder?: string;
   focusColor?: 'red' | 'blue';
+  /** Control height: 'md' (default, 48px — forms) or 'sm' (40px — filter bars). */
+  size?: 'sm' | 'md';
 }
 
 export default function SearchableSelect({
@@ -27,6 +29,7 @@ export default function SearchableSelect({
   className = '',
   searchPlaceholder = 'Search...',
   focusColor = 'red',
+  size = 'md',
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,9 +44,9 @@ export default function SearchableSelect({
     option.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const focusRingColor = focusColor === 'blue' ? 'focus-visible:ring-blue-500 ring-blue-500' : 'focus-visible:ring-red-500 ring-red-500';
-  const selectedBgColor = focusColor === 'blue' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  const checkColor = focusColor === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400';
+  const focusRingColor = 'focus-visible:ring-brand-500 ring-brand-500';
+  const selectedBgColor = 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300';
+  const checkColor = 'text-brand-600 dark:text-brand-400';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -140,16 +143,16 @@ export default function SearchableSelect({
         disabled={disabled}
         onKeyDown={handleKeyDown}
           className={`
-          w-full px-4 py-2 border rounded-lg 
-          bg-white dark:bg-gray-700 
-          text-gray-900 dark:text-gray-100 
-          border-gray-300 dark:border-gray-600 
+          w-full border rounded-md
+          ${size === 'sm' ? 'px-3 h-10 text-sm' : 'px-4 py-2 '}
+          bg-white dark:bg-gray-700
+          text-gray-900 dark:text-gray-100
+          border-gray-300 dark:border-gray-600
           focus:outline-none focus-visible:ring-1 focus-visible:border-transparent ${focusRingColor}
           disabled:opacity-50 disabled:cursor-not-allowed
           flex items-center justify-between gap-2
-          transition-colors
-          min-h-[48px]
-          ${isOpen ? `ring-2 ${focusColor === 'blue' ? 'ring-blue-500' : 'ring-red-500'} border-transparent` : ''}
+          transition-colors duration-100
+          ${isOpen ? 'ring-2 ring-brand-500 border-transparent' : ''}
         `}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -163,7 +166,7 @@ export default function SearchableSelect({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-[9999] w-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-hidden"
+          className="absolute z-[9999] w-full mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-popover max-h-64 overflow-hidden"
           role="listbox"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -179,7 +182,7 @@ export default function SearchableSelect({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={searchPlaceholder}
-                className={`w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 ${focusColor === 'blue' ? 'focus-visible:ring-blue-500' : 'focus-visible:ring-red-500'}`}
+                className={`h-9 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 text-[13px]`}
               />
             </div>
           </div>

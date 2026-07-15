@@ -31,11 +31,21 @@ function App({ Component, pageProps }: AppProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // PWA: register the service worker (production only — caching in dev makes
+  // stale-build debugging miserable). Writes are never intercepted by the SW.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Non-fatal: the app works identically without the SW.
+      });
+    }
+  }, []);
+
   return (
     <>
       <Head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <title>ERP Platform</title>
+        <title>Kuza</title>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -54,12 +64,6 @@ function App({ Component, pageProps }: AppProps) {
           }}
         />
         <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

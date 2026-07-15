@@ -1,6 +1,5 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { TenantEntity } from '../../../common/entities/base.entity';
-import { Restaurant } from '../../../common/entities/restaurant.entity';
 import { Uom } from './uom.entity';
 import { BranchInventoryItem } from './branch-inventory-item.entity';
 import { InventoryBatch } from './inventory-batch.entity';
@@ -42,15 +41,21 @@ export class InventoryItem extends TenantEntity {
   @Column({ default: true })
   isTrackable: boolean;
 
+  /**
+   * Default physical row/rack ("bin") location for this item, e.g. 'A-03-2'
+   * (Warehouse MS v1). Per-branch overrides live on BranchInventoryItem.
+   */
+  @Column({ nullable: true })
+  binLocation: string;
+
   @Column({ nullable: true })
   frontImage: string;
 
   @Column({ type: 'jsonb', nullable: true })
   additionalImages: string[];
 
-  @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  // In multi-tenant database setup, business relation is not needed
+  // Each database belongs to a specific tenant/business
 
   @ManyToOne(() => Uom, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'baseUomId' })

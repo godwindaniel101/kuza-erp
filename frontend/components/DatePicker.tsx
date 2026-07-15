@@ -96,8 +96,8 @@ export default function DatePicker({
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const focusRingColor = focusColor === 'blue' ? 'focus-visible:ring-blue-500' : 'focus-visible:ring-red-500';
-  const selectedBg = focusColor === 'blue' ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600';
+  const focusRingColor = 'focus-visible:ring-brand-500';
+  const selectedBg = 'bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600';
 
   return (
     <div ref={containerRef} className={`relative min-w-[140px] ${className}`}>
@@ -112,16 +112,16 @@ export default function DatePicker({
           disabled={disabled}
           required={required}
           readOnly
-          className={`
-            w-full min-h-[48px] px-4 py-3 pl-10 pr-10 border rounded-lg 
-            bg-white dark:bg-gray-700 
-            text-gray-900 dark:text-gray-100 
-            border-gray-300 dark:border-gray-600 
-            focus:outline-none focus-visible:ring-1 focus-visible:border-transparent ${focusRingColor}
-            disabled:opacity-50 disabled:cursor-not-allowed
-            placeholder-gray-400 dark:placeholder-gray-500
-            cursor-pointer
-          `}
+          className={`h-9 
+ w-full px-4 pl-10 pr-10 border rounded-md 
+ bg-white dark:bg-gray-700 
+ text-gray-900 dark:text-gray-100 
+ border-gray-300 dark:border-gray-600 
+ focus:outline-none focus-visible:ring-1 focus-visible:border-transparent ${focusRingColor}
+ disabled:opacity-50 disabled:cursor-not-allowed
+ placeholder-gray-400 dark:placeholder-gray-500
+ cursor-pointer
+ text-[13px]`}
         />
         <i className="absolute left-3 top-1/2 -translate-y-1/2 bx bx-calendar text-gray-400 dark:text-gray-500 pointer-events-none"></i>
         <button
@@ -134,7 +134,7 @@ export default function DatePicker({
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-4">
+        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-popover p-4">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
             <button

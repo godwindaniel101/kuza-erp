@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
-import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function PositionsPage() {
   const { t } = useTranslation('common');
@@ -46,34 +47,40 @@ export default function PositionsPage() {
   };
 
   return (
-      <div className="space-y-6">
-        <div className="flex justify-end">
-          <PermissionGuard permission="positions.create">
-            <Link
-              href="/hrms/positions/create"
-              className="inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <i className="bx bx-plus mr-2"></i>
-              {t('addPosition')}
-            </Link>
-          </PermissionGuard>
-        </div>
+      <div className="space-y-5">
+        <PageHeader
+          title={t('positions')}
+          subtitle="The roles people are hired into"
+          count={loading ? undefined : positions.length}
+          breadcrumbs={[{ label: t('humanResources') }, { label: t('positions') }]}
+          actions={
+            <PermissionGuard permission="positions.create">
+              <Button size="sm" href="/hrms/positions/create">
+                <i className="bx bx-plus"></i>
+                {t('addPosition')}
+              </Button>
+            </PermissionGuard>
+          }
+        />
 
-        <Card>
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-600">{error}</div>
+            <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
           ) : positions.length === 0 ? (
-            <div className="text-center py-12">
-              <i className="bx bx-briefcase text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">{t('noPositions')}</p>
+            <div className="px-6 py-14 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                <i className="bx bx-briefcase text-xl text-gray-400 dark:text-gray-500"></i>
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{t('noPositions')}</h3>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Add your first position to get started</p>
               <PermissionGuard permission="positions.create">
                 <Link
                   href="/hrms/positions/create"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="inline-flex items-center h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700"
                 >
                   <i className="bx bx-plus mr-2"></i>
                   {t('addPosition')}
@@ -84,27 +91,27 @@ export default function PositionsPage() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('title')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('department')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('status')}</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('actions')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('title')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('department')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('status')}</th>
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('actions')}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {positions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((position) => (
                       <tr key={position.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{position.title}</div>
+                        <td className="px-6 py-3 whitespace-nowrap">
+                          <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{position.title}</div>
                           {position.description && (
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{position.description}</div>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{position.department?.name || '—'}</div>
+                        <td className="px-6 py-3 whitespace-nowrap">
+                          <div className="text-[13px] text-gray-500 dark:text-gray-400">{position.department?.name || '—'}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               position.isActive
@@ -115,12 +122,12 @@ export default function PositionsPage() {
                             {position.isActive ? t('active') : t('inactive')}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                           <div className="flex items-center space-x-2">
                             <PermissionGuard permission="positions.edit">
                               <Link
                                 href={`/hrms/positions/${position.id}/edit`}
-                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                               >
                                 <i className="bx bx-edit"></i>
                               </Link>
@@ -140,18 +147,22 @@ export default function PositionsPage() {
                   </tbody>
                 </table>
               </div>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={Math.ceil(positions.length / itemsPerPage)}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                totalItems={positions.length}
-                startIndex={(currentPage - 1) * itemsPerPage}
-                endIndex={Math.min(currentPage * itemsPerPage, positions.length)}
-              />
+              {positions.length > itemsPerPage && (
+                <div className="px-6 pb-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(positions.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={positions.length}
+                    startIndex={(currentPage - 1) * itemsPerPage}
+                    endIndex={Math.min(currentPage * itemsPerPage, positions.length)}
+                  />
+                </div>
+              )}
             </>
           )}
-        </Card>
+        </div>
   </div>
   );
 }

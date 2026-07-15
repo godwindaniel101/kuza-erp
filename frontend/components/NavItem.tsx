@@ -1,36 +1,45 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import Icon, { IconName } from './ui/Icon';
 
 interface NavItemProps {
   href: string;
   active?: boolean;
-  icon?: string;
+  icon?: IconName;
   children: ReactNode;
   badge?: ReactNode;
   onClick?: () => void;
 }
 
+/**
+ * Sidebar navigation item. Active state = navy gradient pill with white
+ * text + icon (reference "Overview" treatment).
+ */
 export default function NavItem({ href, active = false, icon, children, badge, onClick }: NavItemProps) {
-  const classes = active
-    ? 'flex items-center px-4 py-3 text-gray-900 dark:text-gray-100 bg-red-50 dark:bg-red-900/20 rounded-lg font-medium group touch-target transition-colors'
-    : 'flex items-center px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg group transition-colors touch-target';
-
   return (
-    <Link href={href} className={classes} onClick={onClick}>
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={`group relative flex items-center gap-2.5 rounded-lg px-3 h-9 text-sm transition-colors duration-150 ${
+        active
+          ? 'bg-brand-gradient text-white font-medium shadow-sm'
+          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-gray-200'
+      }`}
+    >
       {icon && (
-        <i
-          className={`bx ${icon} text-xl ${
+        <Icon
+          name={icon}
+          size={18}
+          className={
             active
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
-          } flex-shrink-0`}
-        ></i>
+              ? 'text-white'
+              : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+          }
+        />
       )}
-      <span className="ml-3 flex-1">{children}</span>
-      {badge && <span className="ml-auto flex-shrink-0">{badge}</span>}
+      <span className="flex-1 truncate">{children}</span>
+      {badge && <span className="ml-auto shrink-0">{badge}</span>}
     </Link>
   );
 }
-
-
-

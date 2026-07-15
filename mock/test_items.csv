@@ -1,0 +1,4 @@
+name,category,subcategory,unit,minimumStock,maximumStock,salePrice,barcode,isTrackable
+Test Item 1,Electronics,Phones,pieces,10,100,50.00,TEST001,true
+Test Item 2,Food & Beverages,Snacks,packs,5,50,25.00,TEST002,false
+Test Item 3,Electronics,Computers,units,2,20,500.00,TEST003,true

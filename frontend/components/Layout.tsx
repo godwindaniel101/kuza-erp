@@ -1,9 +1,8 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
+import { useTenantStore } from '@/store/globalStore';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import Cookies from 'js-cookie';
@@ -19,48 +18,10 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
   const { isAuthenticated, isLoading, fetchUser, user } = useAuthStore();
+  const { businessType } = useTenantStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [restaurantName, setRestaurantName] = useState<string | null>(null);
   const [branchContext, setBranchContext] = useState<{ name: string; address?: string } | null>(null);
   const [inflowInvoiceNumber, setInflowInvoiceNumber] = useState<string | null>(null);
-  
-  // Detect dark mode for mobile sidebar logo
-  useEffect(() => {
-    const checkDarkMode = () => {
-      if (typeof window !== 'undefined') {
-        setIsDarkMode(document.documentElement.classList.contains('dark'));
-      }
-    };
-    checkDarkMode();
-    if (typeof window !== 'undefined') {
-      const observer = new MutationObserver(checkDarkMode);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      });
-      return () => observer.disconnect();
-    }
-  }, []);
-
-  // Fetch restaurant name for mobile sidebar
-  useEffect(() => {
-    const fetchRestaurantName = async () => {
-      try {
-        const response = await api.get<{ success: boolean; data: { name?: string } }>('/settings');
-        if (response.success && response.data?.name) {
-          setRestaurantName(response.data.name);
-        }
-      } catch (err) {
-        console.error('Failed to fetch restaurant name:', err);
-        // Silently fail - don't show error to user
-      }
-    };
-
-    if (user?.businessId) {
-      fetchRestaurantName();
-    }
-  }, [user?.businessId]);
 
   // Fetch branch context when on inflows page with branchId
   useEffect(() => {
@@ -125,7 +86,11 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   }, [user]);
 
   useEffect(() => {
-    const isAuthPage = router.pathname === '/login' || router.pathname === '/register' || router.pathname === '/auth/callback';
+    const isAuthPage =
+      router.pathname === '/login' ||
+      router.pathname === '/register' ||
+      router.pathname === '/auth/callback' ||
+      router.pathname.startsWith('/m/');
     
     if (isAuthenticated && user) {
       if (!hasFetchedUserRef.current) {
@@ -211,7 +176,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     // Only update cookie, don't redirect
     if (path.startsWith('/hrms')) {
       Cookies.set('service', 'hrms', { expires: 7 });
-    } else if (path !== '/login' && path !== '/register' && path !== '/auth/callback') {
+    } else if (path !== '/login' && path !== '/register' && path !== '/auth/callback' && !path.startsWith('/m/')) {
       // Only set RMS cookie if not on auth pages
       Cookies.set('service', 'rms', { expires: 7 });
     }
@@ -219,7 +184,11 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
 
   // Only redirect to login if we're sure user is not authenticated (has checked and no token)
   useEffect(() => {
-    const isAuthPage = router.pathname === '/login' || router.pathname === '/register' || router.pathname === '/auth/callback';
+    const isAuthPage =
+      router.pathname === '/login' ||
+      router.pathname === '/register' ||
+      router.pathname === '/auth/callback' ||
+      router.pathname.startsWith('/m/');
     if (isAuthPage) return; // Don't redirect if already on auth page
 
     // Check if we have a token - if yes, wait for auth state to resolve
@@ -246,8 +215,12 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   }, [isAuthenticated, isLoading, router, fetchUser]);
 
   // On auth pages, always show children immediately
-  const isAuthPage = router.pathname === '/login' || router.pathname === '/register' || router.pathname === '/auth/callback';
-  
+  const isAuthPage =
+    router.pathname === '/login' ||
+    router.pathname === '/register' ||
+    router.pathname === '/auth/callback' ||
+    router.pathname.startsWith('/m/');
+
   if (isAuthPage) {
     return <>{children}</>;
   }
@@ -255,8 +228,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   // Only show loading spinner on protected pages
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-canvas dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -323,7 +296,18 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     if (router.pathname === '/ims/inflows' && branchContext) {
       return branchContext.name;
     }
-    return isHRMS ? 'humanResources' : 'restaurantManagement';
+    // Module segment — must match the sidebar section names
+    const path = router.pathname;
+    if (path.startsWith('/menu-studio')) return 'Menu Studio';
+    if (path.startsWith('/rms/suppliers') || path.startsWith('/settings')) return 'Settings';
+    if (path.startsWith('/rms')) return 'Restaurant';
+    if (path.startsWith('/ims') || path.startsWith('/inventory')) return 'Inventory';
+    if (path.startsWith('/sales')) return businessType === 'restaurant' ? 'Money' : 'Sales';
+    if (path.startsWith('/accounting')) return businessType === 'restaurant' ? 'Money' : 'Accounting';
+    if (path.startsWith('/hrms/departments') || path.startsWith('/hrms/positions') || path.startsWith('/hrms/locations'))
+      return 'Settings';
+    if (path.startsWith('/hrms')) return 'Human Resources';
+    return 'Home';
   };
   const layoutHeader = inferTitle();
   const layoutSubheader = inferSubtitle();
@@ -350,15 +334,14 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
         {/* Mobile Sidebar Overlay */}
         {mobileMenuOpen && (
           <div
-            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            className="lg:hidden fixed inset-0 bg-gray-950/50 backdrop-blur-sm z-40"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ display: mobileMenuOpen ? 'block' : 'none' }}
           ></div>
         )}
 
-        {/* Mobile Sidebar */}
+        {/* Mobile Sidebar — same navigation as desktop */}
         <div
-          className={`lg:hidden fixed inset-y-0 left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 flex flex-col`}
+          className="lg:hidden fixed inset-y-0 left-0 z-50"
           style={{
             width: 'var(--sidebar-width)',
             display: mobileMenuOpen ? 'flex' : 'none',
@@ -366,63 +349,12 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
             transition: 'transform 0.3s ease-in-out',
           }}
         >
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <Link href={isHRMS ? '/hrms/dashboard' : '/'} className="flex items-center space-x-3 hover:opacity-80 transition-opacity flex-1 min-w-0">
-                {(() => {
-                  const color = isHRMS ? 'blue' : 'red';
-                  const mode = isDarkMode ? 'dark' : 'light';
-                  const logoPath = `/images/logos/kuza_logo_${mode}_${color}.svg`;
-                  return (
-                    <>
-                      <div className="relative w-10 h-10 flex-shrink-0">
-                        <Image
-                          src={logoPath}
-                          alt={isHRMS ? 'Kuza HRMS' : 'Kuza RMS'}
-                          width={40}
-                          height={40}
-                          className="object-contain"
-                          priority
-                        />
-                      </div>
-                      {restaurantName && (
-                        <div className="flex-1 min-w-0">
-                          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            {restaurantName}
-                          </h1>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{isHRMS ? 'HRMS' : 'RMS'}</p>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </Link>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <i className="bx bx-x text-2xl"></i>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Navigation - Full navigation matching desktop */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            <Link
-              href={isHRMS ? '/hrms/dashboard' : '/'}
-              className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <i className="bx bx-home text-xl"></i>
-              <span className="font-medium">{t('dashboard')}</span>
-            </Link>
-            {/* More mobile nav items would go here - matching desktop structure */}
-          </nav>
+          <AppSidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
         </div>
 
         {/* Page Content - Scrollable */}
-  <main className="dashboard-main bg-gray-50 dark:bg-gray-900">
-          <div className="p-6">{children}</div>
+        <main className="dashboard-main bg-canvas dark:bg-gray-950">
+          <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 py-5">{children}</div>
         </main>
       </div>
     </div>

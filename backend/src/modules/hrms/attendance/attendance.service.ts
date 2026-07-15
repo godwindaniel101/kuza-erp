@@ -101,15 +101,13 @@ export class AttendanceService {
   }
 
   async getAllTimeEntries(
-    businessId: string,
     employeeId?: string,
     startDate?: Date,
     endDate?: Date,
   ) {
     const queryBuilder = this.timeEntryRepository
       .createQueryBuilder('entry')
-      .leftJoinAndSelect('entry.employee', 'employee')
-      .where('employee.businessId = :businessId', { businessId });
+      .leftJoinAndSelect('entry.employee', 'employee');
 
     if (employeeId) {
       queryBuilder.andWhere('entry.employeeId = :employeeId', { employeeId });

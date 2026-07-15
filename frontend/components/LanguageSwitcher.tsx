@@ -78,7 +78,7 @@ export default function LanguageSwitcher({ value, onChange }: LanguageSwitcherPr
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-popover border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
             {languages.map((language) => {
               const isActive = currentLang === language.code;

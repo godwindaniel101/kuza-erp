@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function HRMSDashboard() {
   const { t } = useTranslation('common');
@@ -102,15 +103,20 @@ export default function HRMSDashboard() {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+        <PageHeader
+          title={t('hrDashboard') || 'HR Dashboard'}
+          subtitle="Your workforce at a glance"
+          breadcrumbs={[{ label: 'HR' }]}
+        />
         {/* Quick Actions Banner - Matching Laravel Pattern */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-sm p-6 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl p-5 text-white">
           {/* Faint background image overlay */}
           <div className="absolute inset-0 bg-[url('/images/hrms-daashboard.png')] bg-right bg-no-repeat bg-full opacity-10 pointer-events-none" aria-hidden="true"></div>
           <div className="relative z-10 flex items-center justify-between">
@@ -121,14 +127,14 @@ export default function HRMSDashboard() {
             <div className="relative z-10 flex space-x-3">
               <Link
                 href="/hrms/employees/create"
-                className="px-4 py-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
+                className="h-9 px-4 text-[13px] font-medium bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
               >
                 <i className="bx bx-plus"></i>
                 <span>{t('addEmployee') || 'Add Employee'}</span>
               </Link>
               <Link
                 href="/hrms/departments/create"
-                className="px-4 py-3 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
+                className="h-9 px-4 text-[13px] font-medium bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center space-x-2"
               >
                 <i className="bx bx-buildings"></i>
                 <span>{t('addDepartment') || 'Add Department'}</span>
@@ -139,23 +145,23 @@ export default function HRMSDashboard() {
 
         {/* Statistics Cards - First Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('totalEmployees') || 'Total Employees'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.totalEmployees}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.totalEmployees}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <i className="bx bx-group text-blue-600 dark:text-blue-400 text-2xl"></i>
+                <i className="bx bx-group text-brand-600 dark:text-brand-400 text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('activeEmployees') || 'Active Employees'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.activeEmployees}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.activeEmployees}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <i className="bx bx-check-circle text-green-600 dark:text-green-400 text-2xl"></i>
@@ -163,23 +169,23 @@ export default function HRMSDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('departments') || 'Departments'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.departmentsCount}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.departmentsCount}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                <i className="bx bx-buildings text-indigo-600 dark:text-indigo-400 text-2xl"></i>
+              <div className="w-12 h-12 rounded-lg bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
+                <i className="bx bx-buildings text-brand-600 dark:text-brand-400 text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('pendingLeaves') || 'Pending Leaves'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.pendingLeaves}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.pendingLeaves}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
                 <i className="bx bx-calendar-check text-yellow-600 dark:text-yellow-400 text-2xl"></i>
@@ -190,11 +196,11 @@ export default function HRMSDashboard() {
 
         {/* Statistics Cards - Second Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('onLeaveToday') || 'On Leave Today'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.onLeaveToday}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.onLeaveToday}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                 <i className="bx bx-calendar-x text-orange-600 dark:text-orange-400 text-2xl"></i>
@@ -202,11 +208,11 @@ export default function HRMSDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('clockedIn') || 'Clocked In'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.clockedIn}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.clockedIn}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                 <i className="bx bx-time-five text-emerald-600 dark:text-emerald-400 text-2xl"></i>
@@ -214,11 +220,11 @@ export default function HRMSDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('todayAttendance') || 'Today Attendance'}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.todayAttendance}</p>
+                <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{stats.todayAttendance}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                 <i className="bx bx-time text-purple-600 dark:text-purple-400 text-2xl"></i>
@@ -230,13 +236,13 @@ export default function HRMSDashboard() {
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Employees */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('recentEmployees') || 'Recent Employees'}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('recentEmployees') || 'Recent Employees'}</h3>
                 <Link
                   href="/hrms/employees"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                 >
                   {t('viewAll')}
                 </Link>
@@ -246,9 +252,9 @@ export default function HRMSDashboard() {
               {recentEmployees.length > 0 ? (
                 <div className="space-y-3">
                   {recentEmployees.map((employee) => (
-                    <div key={employee.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div key={employee.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                        <span className="text-brand-600 dark:text-brand-400 font-semibold">
                           {employee.firstName?.charAt(0) || employee.name?.charAt(0) || 'E'}
                         </span>
                       </div>
@@ -275,13 +281,13 @@ export default function HRMSDashboard() {
           </div>
 
           {/* Recent Leave Requests */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('recentLeaveRequests') || 'Recent Leave Requests'}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('recentLeaveRequests') || 'Recent Leave Requests'}</h3>
                 <Link
                   href="/hrms/leaves"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                 >
                   {t('viewAll')}
                 </Link>
@@ -291,7 +297,7 @@ export default function HRMSDashboard() {
               {recentLeaves.length > 0 ? (
                 <div className="space-y-3">
                   {recentLeaves.map((leave) => (
-                    <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {leave.employee?.name || leave.employee?.firstName || 'Employee'}

@@ -20,6 +20,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | object = 'Internal server error';
     let errors: any = null;
+    // Actionable extras some exceptions carry (e.g. the FeatureGateGuard 403
+    // includes appKey + enableHint) — preserved on the response body.
+    const extras: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -142,6 +145,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
           // Handle other HTTP exceptions
           message = responseObj.message || responseObj.error || 'An error occurred';
           errors = responseObj.errors || null;
+          if (responseObj.appKey !== undefined) {
+            extras.appKey = responseObj.appKey;
+          }
+          if (responseObj.enableHint !== undefined) {
+            extras.enableHint = responseObj.enableHint;
+          }
         }
         
         // Debug logging in development
@@ -158,6 +167,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       message: typeof message === 'string' ? message : 'An error occurred',
       errors: errors,
+      ...extras,
       timestamp: new Date().toISOString(),
       path: request.url,
     };

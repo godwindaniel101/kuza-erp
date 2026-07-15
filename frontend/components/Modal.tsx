@@ -8,6 +8,8 @@ interface ModalProps {
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   showCloseButton?: boolean;
   closeOnOutsideClick?: boolean;
+  /** Optional footer (action row) rendered below a hairline. */
+  footer?: ReactNode;
 }
 
 export default function Modal({
@@ -18,6 +20,7 @@ export default function Modal({
   maxWidth = 'md',
   showCloseButton = true,
   closeOnOutsideClick = true,
+  footer,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -86,7 +89,7 @@ export default function Modal({
     >
       {/* Backdrop with enhanced blur */}
       <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 ease-out ${
+        className={`absolute inset-0 bg-gray-950/50 backdrop-blur-sm transition-opacity duration-300 ease-out ${
           isAnimating ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -94,23 +97,23 @@ export default function Modal({
       {/* Modal Content */}
       <div
         ref={contentRef}
-        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full ${maxWidthClasses[maxWidth]} transform transition-all duration-300 ease-out ${
+        className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-popover w-full ${maxWidthClasses[maxWidth]} transform transition-all duration-300 ease-out ${
           isAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             {title && (
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-150 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Close modal"
               >
                 <i className="bx bx-x text-2xl"></i>
@@ -120,7 +123,14 @@ export default function Modal({
         )}
 
         {/* Content */}
-        <div className={title || showCloseButton ? 'p-6' : 'p-6'}>{children}</div>
+        <div className="p-6">{children}</div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 rounded-b-xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

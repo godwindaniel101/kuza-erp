@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function CreateEmployeePage() {
   const { t } = useTranslation('common');
@@ -70,10 +71,18 @@ export default function CreateEmployeePage() {
 
   return (
     <PermissionGuard permission="employees.create">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('create')} {t('employee')}</h1>
+      <div className="mx-auto w-full max-w-3xl space-y-5">
+        <PageHeader
+          title={<>{t('create')} {t('employee')}</>}
+          subtitle="Add a new person to your team"
+          breadcrumbs={[
+            { label: 'HR', href: '/hrms/dashboard' },
+            { label: t('employees') || 'Employees', href: '/hrms/employees' },
+            { label: t('create') || 'Create' },
+          ]}
+        />
 
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('firstName')}</label>
@@ -81,7 +90,7 @@ export default function CreateEmployeePage() {
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
             </div>
@@ -91,7 +100,7 @@ export default function CreateEmployeePage() {
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
             </div>
@@ -101,7 +110,7 @@ export default function CreateEmployeePage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
             </div>
@@ -111,7 +120,7 @@ export default function CreateEmployeePage() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div>
@@ -122,7 +131,7 @@ export default function CreateEmployeePage() {
                 type="text"
                 value={formData.employeeNumber}
                 onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div>
@@ -131,7 +140,7 @@ export default function CreateEmployeePage() {
                 type="date"
                 value={formData.hireDate}
                 onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div>
@@ -139,7 +148,7 @@ export default function CreateEmployeePage() {
               <select
                 value={formData.departmentId}
                 onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               >
                 <option value="">{t('selectDepartment')}</option>
                 {departments.map((dept) => (
@@ -154,7 +163,7 @@ export default function CreateEmployeePage() {
               <select
                 value={formData.positionId}
                 onChange={(e) => setFormData({ ...formData, positionId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               >
                 <option value="">{t('selectPosition')}</option>
                 {positions.map((pos) => (
@@ -169,7 +178,7 @@ export default function CreateEmployeePage() {
               <select
                 value={formData.locationId}
                 onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               >
                 <option value="">{t('selectLocation')}</option>
                 {locations.map((loc) => (
@@ -183,7 +192,7 @@ export default function CreateEmployeePage() {
 
           {/* Bank Account Information Section */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {t('bankAccountInformation') || 'Bank Account Information'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -195,7 +204,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankName}
                   onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
               <div>
@@ -206,7 +215,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankAccountNumber}
                   onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
               <div>
@@ -217,7 +226,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankRoutingNumber}
                   onChange={(e) => setFormData({ ...formData, bankRoutingNumber: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
               <div>
@@ -227,7 +236,7 @@ export default function CreateEmployeePage() {
                 <select
                   value={formData.bankAccountType}
                   onChange={(e) => setFormData({ ...formData, bankAccountType: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 >
                   <option value="">{t('selectAccountType') || 'Select Account Type'}</option>
                   <option value="checking">{t('checking') || 'Checking'}</option>
@@ -242,7 +251,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankAccountHolderName}
                   onChange={(e) => setFormData({ ...formData, bankAccountHolderName: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
               <div>
@@ -252,7 +261,7 @@ export default function CreateEmployeePage() {
                 <select
                   value={formData.paymentMethod}
                   onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 >
                   <option value="">{t('selectPaymentMethod') || 'Select Payment Method'}</option>
                   <option value="bank_transfer">{t('bankTransfer') || 'Bank Transfer'}</option>
@@ -268,7 +277,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankSwiftCode}
                   onChange={(e) => setFormData({ ...formData, bankSwiftCode: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   placeholder="e.g. CHASUS33"
                 />
               </div>
@@ -280,7 +289,7 @@ export default function CreateEmployeePage() {
                   type="text"
                   value={formData.bankIban}
                   onChange={(e) => setFormData({ ...formData, bankIban: e.target.value })}
-                  className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   placeholder="e.g. GB82WEST12345698765432"
                 />
               </div>
@@ -291,7 +300,7 @@ export default function CreateEmployeePage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50"
             >
               {loading ? t('saving') : t('save')}
             </button>

@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { TenantEntity } from '../../../common/entities/base.entity';
-import { Restaurant } from '../../../common/entities/restaurant.entity';
+import { Business } from '../../../common/entities/business.entity';
 import { Branch } from '../../../common/entities/branch.entity';
 import { MenuCategory } from './menu-category.entity';
 
@@ -27,9 +27,9 @@ export class Menu extends TenantEntity {
   @Column({ type: 'uuid', nullable: true })
   branchId: string;
 
-  @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Business, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  business: Business;
 
   @ManyToOne(() => Branch, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'branchId' })

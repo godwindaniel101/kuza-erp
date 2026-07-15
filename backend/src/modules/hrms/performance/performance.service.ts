@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PerformanceReview } from '../entities/performance-review.entity';
-import { PerformanceGoal } from '../entities/performance-goal.entity';
-import { PerformanceRating } from '../entities/performance-rating.entity';
-import { CreatePerformanceReviewDto } from './dto/create-performance-review.dto';
-import { UpdatePerformanceReviewDto } from './dto/update-performance-review.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { PerformanceReview } from "../entities/performance-review.entity";
+import { PerformanceGoal } from "../entities/performance-goal.entity";
+import { PerformanceRating } from "../entities/performance-rating.entity";
+import { CreatePerformanceReviewDto } from "./dto/create-performance-review.dto";
+import { UpdatePerformanceReviewDto } from "./dto/update-performance-review.dto";
 
 @Injectable()
 export class PerformanceService {
@@ -18,12 +18,12 @@ export class PerformanceService {
     private ratingRepository: Repository<PerformanceRating>,
   ) {}
 
-  async create(businessId: string, createDto: CreatePerformanceReviewDto) {
+  async create(createDto: CreatePerformanceReviewDto) {
     let overallRating = 0;
 
     const review = this.reviewRepository.create({
       ...createDto,
-      businessId,
+
       reviewDate: new Date(createDto.reviewDate),
       periodStart: new Date(createDto.periodStart),
       periodEnd: new Date(createDto.periodEnd),
@@ -52,55 +52,55 @@ export class PerformanceService {
       );
       const savedRatings = await this.ratingRepository.save(ratings);
       overallRating =
-        savedRatings.reduce((sum, r) => sum + Number(r.rating), 0) / savedRatings.length;
+        savedRatings.reduce((sum, r) => sum + Number(r.rating), 0) /
+        savedRatings.length;
     }
 
     savedReview.overallRating = overallRating;
     return this.reviewRepository.save(savedReview);
   }
 
-  async findAll(businessId: string, employeeId?: string) {
-    const where: any = { businessId };
+  async findAll(employeeId?: string) {
+    const where: any = {};
     if (employeeId) {
       where.employeeId = employeeId;
     }
 
     return this.reviewRepository.find({
       where,
-      relations: ['employee', 'goals', 'ratings'],
-      order: { reviewDate: 'DESC' },
+      relations: ["employee", "goals", "ratings"],
+      order: { reviewDate: "DESC" },
     });
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const review = await this.reviewRepository.findOne({
-      where: { id, businessId },
-      relations: ['employee', 'goals', 'ratings'],
+      where: { id },
+      relations: ["employee", "goals", "ratings"],
     });
 
     if (!review) {
-      throw new NotFoundException('Performance review not found');
+      throw new NotFoundException("Performance review not found");
     }
 
     return review;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdatePerformanceReviewDto) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdatePerformanceReviewDto) {
+    await this.findOne(id);
     await this.reviewRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async complete(id: string, businessId: string) {
-    const review = await this.findOne(id, businessId);
-    review.status = 'completed';
+  async complete(id: string) {
+    const review = await this.findOne(id);
+    review.status = "completed";
     review.completedAt = new Date();
     return this.reviewRepository.save(review);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.reviewRepository.delete({ id });
   }
 }
-

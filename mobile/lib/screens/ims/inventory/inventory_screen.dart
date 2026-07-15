@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/currency_utils.dart';
+import '../../../utils/i18n.dart';
+import 'inventory_item_detail_screen.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -113,12 +116,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inventory'),
+        title: Text(I18n.t('common.inventoryItems')),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _items.isEmpty
-              ? const Center(child: Text('No inventory items found'))
+              ? Center(child: Text(I18n.t('common.noInventoryItems')))
               : ListView.builder(
                   itemCount: _items.length,
                   itemBuilder: (context, index) {
@@ -157,39 +160,60 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                               ],
                             ),
                             const SizedBox(width: 8),
-                            PopupMenuButton<String>(
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  // TODO: Navigate to edit screen when created
+                            DropdownButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              underline: const SizedBox(),
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'view',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.visibility, size: 20, color: Colors.green[600]),
+                                      const SizedBox(width: 8),
+                                      Text(I18n.t('common.view')),
+                                    ],
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit, size: 20, color: Colors.blue[600]),
+                                      const SizedBox(width: 8),
+                                      Text(I18n.t('common.edit')),
+                                    ],
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, size: 20, color: Colors.red[600]),
+                                      const SizedBox(width: 8),
+                                      Text(I18n.t('common.delete')),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == 'view') {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => InventoryItemDetailScreen(
+                                        itemId: item['id'],
+                                        itemName: item['name'] ?? 'Item',
+                                      ),
+                                    ),
+                                  );
+                                } else if (value == 'edit') {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Edit functionality coming soon')),
+                                    SnackBar(content: Text(I18n.t('common.edit') + ' functionality coming soon')),
                                   );
                                 } else if (value == 'delete') {
                                   _deleteItem(item['id'], item['name'] ?? 'Item');
                                 }
                               },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit, size: 20, color: Colors.blue),
-                                      SizedBox(width: 8),
-                                      Text('Edit'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete, size: 20, color: Colors.red),
-                                      SizedBox(width: 8),
-                                      Text('Delete'),
-                                    ],
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),

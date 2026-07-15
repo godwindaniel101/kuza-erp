@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function MyAttendancePage() {
   const { t } = useTranslation('common');
@@ -63,7 +64,7 @@ export default function MyAttendancePage() {
     return (
       <div className="p-6">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </div>
     );
@@ -71,25 +72,29 @@ export default function MyAttendancePage() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('myAttendance')}</h1>
-        <div className="flex space-x-3">
-          <button
-            onClick={clockIn}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition"
-          >
-            <i className="bx bx-log-in mr-2"></i>
-            {t('clockIn')}
-          </button>
-          <button
-            onClick={clockOut}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
-          >
-            <i className="bx bx-log-out mr-2"></i>
-            {t('clockOut')}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={t('myAttendance')}
+        subtitle="Your clock-ins and hours worked"
+        breadcrumbs={[{ label: 'Me' }, { label: t('myAttendance') }]}
+        actions={
+          <>
+            <button
+              onClick={clockIn}
+              className="h-8 px-3 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 transition-colors flex items-center"
+            >
+              <i className="bx bx-log-in mr-2"></i>
+              {t('clockIn')}
+            </button>
+            <button
+              onClick={clockOut}
+              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors flex items-center"
+            >
+              <i className="bx bx-log-out mr-2"></i>
+              {t('clockOut')}
+            </button>
+          </>
+        }
+      />
 
       <div className="mb-4 border-b">
         <nav className="flex space-x-4">
@@ -97,7 +102,7 @@ export default function MyAttendancePage() {
             onClick={() => setActiveTab('entries')}
             className={`py-2 px-4 border-b-2 font-medium text-sm ${
               activeTab === 'entries'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-brand-500 text-brand-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -107,7 +112,7 @@ export default function MyAttendancePage() {
             onClick={() => setActiveTab('timesheets')}
             className={`py-2 px-4 border-b-2 font-medium text-sm ${
               activeTab === 'timesheets'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-brand-500 text-brand-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -118,8 +123,8 @@ export default function MyAttendancePage() {
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         {activeTab === 'entries' ? (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('date')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -133,7 +138,7 @@ export default function MyAttendancePage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {entries.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
@@ -143,16 +148,16 @@ export default function MyAttendancePage() {
               ) : (
                 entries.map((entry) => (
                   <tr key={entry.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-900 dark:text-gray-100">
                       {new Date(entry.date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {entry.clockIn ? new Date(entry.clockIn).toLocaleTimeString() : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {entry.clockOut ? new Date(entry.clockOut).toLocaleTimeString() : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {entry.hours || '-'}
                     </td>
                   </tr>
@@ -161,8 +166,8 @@ export default function MyAttendancePage() {
             </tbody>
           </table>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   {t('period')}
@@ -175,7 +180,7 @@ export default function MyAttendancePage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {timesheets.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
@@ -185,13 +190,13 @@ export default function MyAttendancePage() {
               ) : (
                 timesheets.map((sheet) => (
                   <tr key={sheet.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                       {sheet.period || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {sheet.totalHours || 0} {t('hours')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           sheet.status === 'approved'

@@ -9,25 +9,30 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { User } from '../../common/entities/user.entity';
-import { Restaurant } from '../../common/entities/restaurant.entity';
+import { Business } from '../../common/entities/business.entity';
 import { Role } from '../../common/entities/role.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { BranchesModule } from '../settings/branches/branches.module';
 import { UomsModule } from '../ims/uoms/uoms.module';
 import { UomConversionsModule } from '../ims/uom-conversions/uom-conversions.module';
+import { LandlordModule } from '../../common/landlord/landlord.module';
+import { TenantModule } from '../../common/tenant/tenant.module';
+import { getJwtSecret } from '../../config/security.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Restaurant, Role]),
+    TypeOrmModule.forFeature([User, Business, Role]),
     PassportModule,
     NotificationsModule,
     BranchesModule,
     UomsModule,
     UomConversionsModule,
+    LandlordModule,
+    TenantModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'your-secret-key',
+        secret: getJwtSecret(configService),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
         },

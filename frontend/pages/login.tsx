@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/authStore';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import Head from 'next/head';
-import Image from 'next/image';
 
 export default function Login() {
   const { t } = useTranslation('common');
@@ -17,25 +16,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      if (typeof window !== 'undefined') {
-        setIsDarkMode(document.documentElement.classList.contains('dark'));
-      }
-    };
-    checkDarkMode();
-    if (typeof window !== 'undefined') {
-      const observer = new MutationObserver(checkDarkMode);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      });
-      return () => observer.disconnect();
-    }
-  }, []);
 
   useEffect(() => {
     // Only redirect if authenticated AND we're actually on the login page
@@ -89,27 +69,23 @@ export default function Login() {
       <Head>
         <title>Login - ERP Platform</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
-              <Image
-                src={isDarkMode ? '/images/logos/kuza_logo_word_dark_red.svg' : '/images/logos/kuza_logo_word_light_red.svg'}
-                alt="Kuza"
-                width={64}
-                height={64}
-                className="object-contain"
-                priority
-              />
+            <div className="inline-flex items-center gap-2.5 mb-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-lg font-bold text-white shadow-card">
+                K
+              </span>
+              <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Welcome back</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Good to see you again</p>
           </div>
 
           {/* Login Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sign in</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Sign in to your ERP account</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Pick up where your business left off.</p>
 
             {error && (
               <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg shadow-sm animate-fade-in">
@@ -148,7 +124,7 @@ export default function Login() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                    className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -167,7 +143,7 @@ export default function Login() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                    className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                     placeholder="Enter your password"
                   />
                 </div>
@@ -179,7 +155,7 @@ export default function Login() {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-red-600 focus-visible:ring-red-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-brand-600 focus-visible:ring-brand-500 border-gray-300 rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
                     Remember me
@@ -187,7 +163,7 @@ export default function Login() {
                 </div>
 
                 <div className="text-sm">
-                  <Link href="/forgot-password" className="font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300">
+                  <Link href="/forgot-password" className="font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors duration-150">
                     Forgot password?
                   </Link>
                 </div>
@@ -197,7 +173,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-10 bg-brand-gradient hover:bg-brand-gradient-hover text-white px-6 rounded-lg text-sm font-semibold transition-all duration-150 active:scale-[0.98] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                 >
                   {loading ? (
                     <>
@@ -239,14 +215,14 @@ export default function Login() {
                   <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
+                  <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="mt-4 w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                className="mt-4 w-full h-10 inline-flex items-center justify-center px-4 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150 active:scale-[0.98]"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -273,7 +249,7 @@ export default function Login() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Don&apos;t have an account?
-                <Link href="/register" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium ml-1">
+                <Link href="/register" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium ml-1 transition-colors duration-150">
                   Sign up
                 </Link>
               </p>

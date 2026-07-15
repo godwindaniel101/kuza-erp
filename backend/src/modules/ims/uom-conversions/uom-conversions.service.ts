@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UomConversion } from '../entities/uom-conversion.entity';
-import { Uom } from '../entities/uom.entity';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { UomConversion } from "../entities/uom-conversion.entity";
+import { Uom } from "../entities/uom.entity";
 
 @Injectable()
 export class UomConversionsService {
@@ -13,39 +17,40 @@ export class UomConversionsService {
     private uomRepository: Repository<Uom>,
   ) {}
 
-  async findAll(businessId: string) {
+  async findAll() {
     return await this.conversionRepository.find({
-      where: { businessId },
-      relations: ['fromUom', 'toUom'],
-      order: { createdAt: 'DESC' },
+      relations: ["fromUom", "toUom"],
+      order: { createdAt: "DESC" },
     });
   }
 
-  async create(businessId: string, body: { fromUomId: string; toUomId: string; factor: number }) {
+  async create(body: { fromUomId: string; toUomId: string; factor: number }) {
     if (body.fromUomId === body.toUomId) {
-      throw new ConflictException('Cannot create conversion between the same units');
+      throw new ConflictException(
+        "Cannot create conversion between the same units",
+      );
     }
 
-    // Verify both UOMs exist and belong to this restaurant
+    // Verify both UOMs exist and belong to this business
     const fromUom = await this.uomRepository.findOne({
-      where: { id: body.fromUomId, businessId },
+      where: { id: body.fromUomId },
     });
     const toUom = await this.uomRepository.findOne({
-      where: { id: body.toUomId, businessId },
+      where: { id: body.toUomId },
     });
 
     if (!fromUom || !toUom) {
-      throw new NotFoundException('One or both UOMs not found');
+      throw new NotFoundException("One or both UOMs not found");
     }
 
     const factor = Number(body.factor);
     if (factor <= 0) {
-      throw new ConflictException('Conversion factor must be greater than 0');
+      throw new ConflictException("Conversion factor must be greater than 0");
     }
 
     // Check if conversion already exists
     const existing = await this.conversionRepository.findOne({
-      where: { businessId, fromUomId: body.fromUomId, toUomId: body.toUomId },
+      where: { fromUomId: body.fromUomId, toUomId: body.toUomId },
     });
 
     if (existing) {
@@ -57,7 +62,6 @@ export class UomConversionsService {
 
     // Create conversion in both directions
     const conversion = this.conversionRepository.create({
-      businessId,
       fromUomId: body.fromUomId,
       toUomId: body.toUomId,
       factor,
@@ -68,7 +72,6 @@ export class UomConversionsService {
 
     // Create reverse conversion
     const reverseConversion = this.conversionRepository.create({
-      businessId,
       fromUomId: body.toUomId,
       toUomId: body.fromUomId,
       factor: 1 / factor,
@@ -79,22 +82,21 @@ export class UomConversionsService {
 
     return await this.conversionRepository.findOne({
       where: { id: saved.id },
-      relations: ['fromUom', 'toUom'],
+      relations: ["fromUom", "toUom"],
     });
   }
 
-  async remove(id: string, businessId: string) {
+  async remove(id: string) {
     const conversion = await this.conversionRepository.findOne({
-      where: { id, businessId },
+      where: { id },
     });
 
     if (!conversion) {
-      throw new NotFoundException('Conversion not found');
+      throw new NotFoundException("Conversion not found");
     }
 
     // Also remove reverse conversion
     await this.conversionRepository.delete({
-      businessId,
       fromUomId: conversion.toUomId,
       toUomId: conversion.fromUomId,
     });
@@ -106,12 +108,15 @@ export class UomConversionsService {
    * Get multiplier to convert from one UOM to another
    * Returns multiplier where: qty_to = qty_from * multiplier
    */
-  async getMultiplier(businessId: string, fromUomId: string, toUomId: string): Promise<number | null> {
+  async getMultiplier(
+    fromUomId: string,
+    toUomId: string,
+  ): Promise<number | null> {
     if (fromUomId === toUomId) return 1.0;
 
     // Try direct conversion
     const direct = await this.conversionRepository.findOne({
-      where: { businessId, fromUomId, toUomId },
+      where: { fromUomId, toUomId },
     });
 
     if (direct) {
@@ -120,7 +125,7 @@ export class UomConversionsService {
 
     // Try reverse conversion
     const reverse = await this.conversionRepository.findOne({
-      where: { businessId, fromUomId: toUomId, toUomId: fromUomId },
+      where: { fromUomId: toUomId, toUomId: fromUomId },
     });
 
     if (reverse) {
@@ -136,14 +141,20 @@ export class UomConversionsService {
    * Convert quantity from one UOM to another
    * @returns converted quantity in target UOM
    */
-  async convert(businessId: string, fromUomId: string, toUomId: string, quantity: number): Promise<number> {
+  async convert(
+    fromUomId: string,
+    toUomId: string,
+    quantity: number,
+  ): Promise<number> {
     if (fromUomId === toUomId) return quantity;
-    
-    const multiplier = await this.getMultiplier(businessId, fromUomId, toUomId);
+
+    const multiplier = await this.getMultiplier(fromUomId, toUomId);
     if (multiplier === null) {
-      throw new NotFoundException(`No conversion found from UOM ${fromUomId} to ${toUomId}`);
+      throw new NotFoundException(
+        `No conversion found from UOM ${fromUomId} to ${toUomId}`,
+      );
     }
-    
+
     return quantity * multiplier;
   }
 
@@ -151,21 +162,19 @@ export class UomConversionsService {
    * Get all conversions (direct and indirect) for a specific UOM using BFS
    * Returns all conversions where the UOM appears as either from or to
    */
-  async getConversionsForUom(uomId: string, businessId: string) {
+  async getConversionsForUom(uomId: string) {
     // Get all conversions
-    const allConversions = await this.findAll(businessId);
-    
+    const allConversions = await this.findAll();
+
     // Get all UOMs for building paths
-    const allUoms = await this.uomRepository.find({
-      where: { businessId },
-    });
+    const allUoms = await this.uomRepository.find();
     const uomsMap = new Map<string, any>();
-    allUoms.forEach(uom => uomsMap.set(uom.id, uom));
+    allUoms.forEach((uom) => uomsMap.set(uom.id, uom));
 
     // Get direct conversions first (from or to this UOM)
     const directConversions = allConversions
-      .filter(conv => conv.fromUomId === uomId || conv.toUomId === uomId)
-      .map(conv => {
+      .filter((conv) => conv.fromUomId === uomId || conv.toUomId === uomId)
+      .map((conv) => {
         const factor = Number(conv.factor);
         // Normalize: always show from the requested UOM
         if (conv.fromUomId === uomId) {
@@ -188,32 +197,34 @@ export class UomConversionsService {
 
     // Build conversion graph (bidirectional) with factors for BFS
     const graph: Record<string, Array<{ id: string; factor: number }>> = {};
-    
+
     // Initialize graph with all UOM IDs
-    allUoms.forEach(uom => {
+    allUoms.forEach((uom) => {
       graph[uom.id] = [];
     });
 
     // Build edges from conversions (bidirectional with factors)
-    allConversions.forEach(conv => {
+    allConversions.forEach((conv) => {
       const factor = Number(conv.factor);
       // Forward edge: from -> to with factor
-      if (!graph[conv.fromUomId].find(e => e.id === conv.toUomId)) {
+      if (!graph[conv.fromUomId].find((e) => e.id === conv.toUomId)) {
         graph[conv.fromUomId].push({ id: conv.toUomId, factor });
       }
       // Reverse edge: to -> from with 1/factor
-      if (!graph[conv.toUomId].find(e => e.id === conv.fromUomId)) {
+      if (!graph[conv.toUomId].find((e) => e.id === conv.fromUomId)) {
         graph[conv.toUomId].push({ id: conv.fromUomId, factor: 1 / factor });
       }
     });
 
     // BFS to find all reachable UOMs from the requested UOM
     const visited = new Set<string>();
-    const queue: Array<{ id: string; totalFactor: number }> = [{ id: uomId, totalFactor: 1 }];
-    const indirectConversions: Array<{ 
-      fromUom: any; 
-      toUom: any; 
-      factor: number; 
+    const queue: Array<{ id: string; totalFactor: number }> = [
+      { id: uomId, totalFactor: 1 },
+    ];
+    const indirectConversions: Array<{
+      fromUom: any;
+      toUom: any;
+      factor: number;
       isDirect: boolean;
     }> = [];
 
@@ -223,21 +234,21 @@ export class UomConversionsService {
       const current = queue.shift()!;
 
       const neighbors = graph[current.id] || [];
-      
+
       for (const neighbor of neighbors) {
         if (!visited.has(neighbor.id)) {
           visited.add(neighbor.id);
           const newTotalFactor = current.totalFactor * neighbor.factor;
-          
+
           const fromUom = uomsMap.get(uomId);
           const toUom = uomsMap.get(neighbor.id);
-          
+
           if (fromUom && toUom && neighbor.id !== uomId) {
             // Check if this is a direct conversion (already included)
-            const isDirectConversion = directConversions.some(dc => 
-              (dc.fromUom?.id === uomId && dc.toUom?.id === neighbor.id)
+            const isDirectConversion = directConversions.some(
+              (dc) => dc.fromUom?.id === uomId && dc.toUom?.id === neighbor.id,
             );
-            
+
             if (!isDirectConversion) {
               indirectConversions.push({
                 fromUom,
@@ -247,7 +258,7 @@ export class UomConversionsService {
               });
             }
           }
-          
+
           queue.push({ id: neighbor.id, totalFactor: newTotalFactor });
         }
       }
@@ -255,7 +266,7 @@ export class UomConversionsService {
 
     // Combine direct and indirect conversions, remove duplicates
     const allConversionsMap = new Map<string, any>();
-    [...directConversions, ...indirectConversions].forEach(conv => {
+    [...directConversions, ...indirectConversions].forEach((conv) => {
       const key = `${conv.fromUom?.id}-${conv.toUom?.id}`;
       // Prefer direct conversions over indirect
       if (!allConversionsMap.has(key) || conv.isDirect) {

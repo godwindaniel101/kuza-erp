@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 const currencies = ['NGN', 'USD', 'EUR', 'GBP', 'GHS', 'KES', 'ZAR', 'INR', 'AED', 'CAD', 'AUD', 'JPY', 'CNY', 'BRL', 'MXN'];
 const languages = ['en', 'fr', 'es', 'de', 'ha'];
+const allocationMethods = ['FIFO', 'LIFO', 'FEFO'];
 
 export class UpdateSettingsDto {
   @ApiProperty({ required: false })
@@ -39,5 +40,10 @@ export class UpdateSettingsDto {
   @IsIn(languages)
   @IsOptional()
   language?: string;
+
+  @ApiProperty({ required: false, enum: allocationMethods })
+  @IsIn(allocationMethods)
+  @IsOptional()
+  allocationMethod?: string;
 }
 

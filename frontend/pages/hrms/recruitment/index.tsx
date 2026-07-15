@@ -6,6 +6,7 @@ import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function RecruitmentPage() {
   const { t } = useTranslation('common');
@@ -35,12 +36,16 @@ export default function RecruitmentPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('recruitment')}</h1>
+    <div className="space-y-5">
+      <PageHeader
+        title={t('recruitment')}
+        subtitle="Open roles and the applicants in play"
+        breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('recruitment') }]}
+      />
       {loading ? (
         <Card>
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         </Card>
       ) : error ? (
@@ -48,14 +53,14 @@ export default function RecruitmentPage() {
           <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <Card>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('jobPostings')}</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('jobPostings')}</h2>
               <PermissionGuard permission="recruitment.create">
                 <Link
                   href="/hrms/recruitment/postings/create"
-                  className="inline-flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
+                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors inline-flex items-center"
                 >
                   <i className="bx bx-plus mr-1"></i>
                   {t('create')} {t('jobPosting')}
@@ -64,7 +69,7 @@ export default function RecruitmentPage() {
             </div>
             {postings.length === 0 ? (
               <div className="text-center py-8">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
                   <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
                     <i className="bx bx-briefcase text-gray-400 dark:text-gray-500 text-xl"></i>
                   </div>
@@ -76,7 +81,7 @@ export default function RecruitmentPage() {
               <div className="space-y-4">
                 {postings.map((posting) => (
                   <div key={posting.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{posting.title}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{posting.title}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{posting.description}</p>
                   </div>
                 ))}
@@ -84,10 +89,10 @@ export default function RecruitmentPage() {
             )}
           </Card>
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('applications')}</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('applications')}</h2>
             {applications.length === 0 ? (
               <div className="text-center py-8">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
                   <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
                     <i className="bx bx-file text-gray-400 dark:text-gray-500 text-xl"></i>
                   </div>
@@ -98,33 +103,33 @@ export default function RecruitmentPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('name')}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('email')}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('position')}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('status')}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {applications.map((app) => (
                       <tr key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                           {app.firstName} {app.lastName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{app.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">{app.email}</td>
+                        <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                           {app.jobPosting?.title || '—'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               app.status === 'approved'

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import Button from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function TemplateDesignerPage() {
   const { t } = useTranslation('common');
@@ -49,7 +51,7 @@ export default function TemplateDesignerPage() {
           'classic': {
             id: 'classic',
             name: 'Classic',
-            description: 'Traditional restaurant menu style',
+            description: 'Traditional business menu style',
             theme_settings: {
               primaryColor: '#92400e',
               fontFamily: 'Times New Roman',
@@ -109,47 +111,40 @@ export default function TemplateDesignerPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-        </div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href={`/rms/menus/templates?menu_id=${menu_id}`} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <i className="bx bx-arrow-back text-xl"></i>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('templateDesigner') || 'Template Designer'}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {template ? template.name : t('loadingTemplate') || 'Loading template...'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title={t('templateDesigner') || 'Template Designer'}
+          subtitle={template ? template.name : t('loadingTemplate') || 'Loading template...'}
+          breadcrumbs={[
+            { label: t('menus') || 'Menus', href: '/rms/menus' },
+            { label: t('selectTemplate') || 'Templates', href: `/rms/menus/templates?menu_id=${menu_id}` },
+            { label: t('templateDesigner') || 'Template Designer' },
+          ]}
+        />
 
         {template && menu ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{template.name}</h2>
-              <p className="text-gray-600 dark:text-gray-400">{template.description}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5">
+            <div className="mb-5">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{template.name}</h2>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400">{template.description}</p>
             </div>
 
             {/* Template Preview */}
-            <div className="mb-6 p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{t('templatePreview') || 'Template Preview'}</h3>
-              <div className="aspect-[3/4] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-2" style={{ borderColor: template.theme_settings?.primaryColor || '#dc2626' }}>
+            <div className="mb-5 p-5 bg-gray-50 dark:bg-gray-950/40 rounded-lg ring-1 ring-gray-200 dark:ring-gray-800">
+              <h3 className="text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-4">{t('templatePreview') || 'Template Preview'}</h3>
+              <div className="aspect-[3/4] bg-white dark:bg-gray-900 rounded-xl p-6 border-2" style={{ borderColor: template.theme_settings?.primaryColor || '#dc2626' }}>
                 <div className="text-center mb-4" style={{ color: template.theme_settings?.primaryColor || '#dc2626' }}>
                   <h4 className="text-2xl font-bold">{menu.name}</h4>
                   {menu.description && (
@@ -178,35 +173,28 @@ export default function TemplateDesignerPage() {
 
             {/* Apply Template Button */}
             <div className="flex justify-end space-x-3">
-              <Link
-                href={`/rms/menus/templates?menu_id=${menu_id}`}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
+              <Button variant="secondary" href={`/rms/menus/templates?menu_id=${menu_id}`}>
                 {t('back') || 'Back'}
-              </Link>
-              <button
-                onClick={handleApplyTemplate}
-                disabled={applying}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
+              </Button>
+              <Button onClick={handleApplyTemplate} disabled={applying}>
                 {applying ? (
                   <>
-                    <i className="bx bx-loader-alt bx-spin text-lg"></i>
+                    <i className="bx bx-loader-alt bx-spin text-base"></i>
                     <span>{t('applying') || 'Applying...'}</span>
                   </>
                 ) : (
                   <>
-                    <i className="bx bx-check text-lg"></i>
+                    <i className="bx bx-check text-base"></i>
                     <span>{t('applyTemplate') || 'Apply Template'}</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">{t('templateNotFound') || 'Template not found'}</p>
-            <Link href={`/rms/menus/templates?menu_id=${menu_id}`} className="mt-4 inline-block text-red-600 hover:text-red-700 dark:text-red-400">
+          <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-8 text-center">
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">{t('templateNotFound') || 'Template not found'}</p>
+            <Link href={`/rms/menus/templates?menu_id=${menu_id}`} className="mt-4 inline-block text-[13px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
               {t('backToTemplates') || 'Back to Templates'}
             </Link>
           </div>

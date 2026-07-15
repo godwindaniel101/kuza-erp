@@ -14,11 +14,13 @@ import { LeavesService } from './leaves.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { FeatureGateGuard, RequireApp } from '../../billing/guards/feature-gate.guard';
 import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 
 @ApiTags('HRMS - Leaves')
 @Controller('hrms/leaves')
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp('people')
 @ApiBearerAuth()
 export class LeavesController {
   constructor(private readonly leavesService: LeavesService) {}

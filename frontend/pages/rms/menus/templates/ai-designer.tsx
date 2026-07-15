@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import Button from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -117,44 +119,41 @@ export default function AiDesignerPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-        </div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="p-6 max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
+      <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <Link href={`/rms/menus/templates?menu_id=${menu_id}`} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <i className="bx bx-arrow-back text-xl"></i>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('aiDesigner') || 'AI Designer'}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {menu ? `${t('designing') || 'Designing'}: ${menu.name}` : t('designWithAi') || 'Design your menu template through conversation'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleApplyAndPreview}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 transition-colors"
-          >
-            {t('preview') || 'Preview'}
-          </button>
-        </div>
+        <PageHeader
+          className="flex-shrink-0"
+          title={t('aiDesigner') || 'AI Designer'}
+          subtitle={
+            menu
+              ? `${t('designing') || 'Designing'}: ${menu.name}`
+              : t('designWithAi') || 'Design your menu template through conversation'
+          }
+          breadcrumbs={[
+            { label: t('menus') || 'Menus', href: '/rms/menus' },
+            { label: t('selectTemplate') || 'Templates', href: `/rms/menus/templates?menu_id=${menu_id}` },
+            { label: t('aiDesigner') || 'AI Designer' },
+          ]}
+          actions={
+            <Button size="sm" onClick={handleApplyAndPreview}>
+              {t('preview') || 'Preview'}
+            </Button>
+          }
+        />
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 mb-4">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5 mb-4">
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
@@ -162,10 +161,10 @@ export default function AiDesignerPage() {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
+                  className={`max-w-[80%] rounded-lg p-3 text-[13px] ${
                     message.role === 'user'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
@@ -174,10 +173,10 @@ export default function AiDesignerPage() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                   <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('thinking') || 'Thinking...'}</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400"></div>
+                    <span className="text-[13px] text-gray-600 dark:text-gray-400">{t('thinking') || 'Thinking...'}</span>
                   </div>
                 </div>
               </div>
@@ -188,24 +187,20 @@ export default function AiDesignerPage() {
 
         {/* Input Form */}
         <form onSubmit={handleSendMessage} className="flex-shrink-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-3">
             <div className="flex space-x-3">
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder={t('describeYourMenuDesign') || 'Describe how you want your menu to look...'}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:border-transparent"
+                className="h-9 flex-1 px-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 disabled={sending}
               />
-              <button
-                type="submit"
-                disabled={!inputMessage.trim() || sending}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                <i className="bx bx-send text-lg"></i>
+              <Button type="submit" disabled={!inputMessage.trim() || sending}>
+                <i className="bx bx-send text-base"></i>
                 <span>{t('send') || 'Send'}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </form>

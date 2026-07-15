@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import Card from '@/components/Card';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 import Link from 'next/link';
 
 export default function LeavesPage() {
@@ -32,30 +33,34 @@ export default function LeavesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('leaves')}</h1>
-        <PermissionGuard permission="leaves.create">
-          <Link
-            href="/hrms/leaves/create"
-            className="inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
-          >
-            <i className="bx bx-plus mr-2"></i>
-            {t('create')} {t('leaveRequest')}
-          </Link>
-        </PermissionGuard>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title={t('leaves')}
+        subtitle="Time-off requests and approvals"
+        breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('leaves') }]}
+        actions={
+          <PermissionGuard permission="leaves.create">
+            <Link
+              href="/hrms/leaves/create"
+              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 inline-flex items-center"
+            >
+              <i className="bx bx-plus mr-2"></i>
+              {t('create')} {t('leaveRequest')}
+            </Link>
+          </PermissionGuard>
+        }
+      />
 
       <Card>
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : error ? (
           <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
         ) : leaves.length === 0 ? (
           <div className="text-center py-12">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-8">
               <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
                 <i className="bx bx-calendar text-gray-400 dark:text-gray-500 text-2xl"></i>
               </div>
@@ -64,7 +69,7 @@ export default function LeavesPage() {
               <PermissionGuard permission="leaves.create">
                 <Link
                   href="/hrms/leaves/create"
-                  className="inline-flex items-center mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
+                  className="inline-flex items-center mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
                 >
                   <i className="bx bx-plus mr-2"></i>
                   {t('create')} {t('leaveRequest')}
@@ -75,50 +80,50 @@ export default function LeavesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('employee')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('leaveType')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('startDate')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('endDate')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('days')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('status')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                     {t('actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {leaves.map((leave) => (
                   <tr key={leave.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                       {leave.employee?.firstName} {leave.employee?.lastName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {leave.leaveType?.name || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {new Date(leave.startDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {new Date(leave.endDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {leave.days || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           leave.status === 'approved'
@@ -131,7 +136,7 @@ export default function LeavesPage() {
                         {leave.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                       {leave.status === 'pending' && (
                         <div className="flex items-center space-x-2">
                           <PermissionGuard permission="leaves.approve">

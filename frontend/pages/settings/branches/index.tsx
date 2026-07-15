@@ -7,6 +7,9 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Pagination from '@/components/Pagination';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import { handleBulkUploadResponse, logBulkUploadErrors, type BulkUploadResponse } from '@/utils/bulkUploadHandler';
 
 export default function BranchesPage() {
   const { t } = useTranslation('common');
@@ -30,6 +33,12 @@ export default function BranchesPage() {
   });
   const [saving, setSaving] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Bulk upload states
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadBranches();
@@ -155,8 +164,108 @@ export default function BranchesPage() {
     }
   };
 
+  // Bulk upload functions
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: string }>('/settings/branches/template/download');
+      if (response.success) {
+        // Create and download CSV file
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'branches_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setToast({ message: t('templateDownloadedSuccessfully') || 'Template downloaded successfully', type: 'success' });
+      }
+    } catch (err: any) {
+      console.error('Failed to download template:', err);
+      setToast({ message: err.response?.data?.message || t('failedToDownloadTemplate') || 'Failed to download template', type: 'error' });
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const csvFile = droppedFiles.find(file => file.type === 'text/csv' || file.name.endsWith('.csv'));
+    
+    if (csvFile) {
+      setFile(csvFile);
+    } else {
+      setToast({ message: t('pleaseUploadOnlyCsvFiles') || 'Please upload only CSV files', type: 'error' });
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
+        setFile(selectedFile);
+      } else {
+        setToast({ message: t('pleaseUploadOnlyCsvFiles') || 'Please upload only CSV files', type: 'error' });
+      }
+    }
+  };
+
+  const handleBulkUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const csvText = await file.text();
+      
+      const response = await api.post<BulkUploadResponse>('/settings/branches/bulk-upload', {
+        csv: csvText,
+      });
+
+      // Use the global bulk upload handler
+      const result = handleBulkUploadResponse(response, t, 'branches');
+      
+      // Log detailed errors to console for debugging
+      logBulkUploadErrors(response, 'branches');
+      
+      // Show the result toast
+      setToast({
+        message: result.message,
+        type: result.type === 'info' ? 'success' : result.type // Map 'info' to 'success' for Toast component
+      });
+      
+      // Close modal and reset file if successful or if explicitly requested
+      if (result.shouldCloseModal) {
+        setShowBulkUpload(false);
+        setFile(null);
+        await loadBranches(); // Reload branches to show new data
+      }
+      
+    } catch (err: any) {
+      console.error('Failed to upload branches:', err);
+      const errorMessage = err.response?.data?.message || err.message || t('failedToUploadBranches') || 'Failed to upload branches';
+      setToast({ message: errorMessage, type: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <div className="p-6">
+    <div className="space-y-5">
       {toast && (
         <Toast
           message={toast.message}
@@ -165,41 +274,41 @@ export default function BranchesPage() {
         />
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('branches')}</h1>
-          <p className="text-gray-600 dark:text-gray-400">{t('manageBranches')}</p>
-        </div>
-        <PermissionGuard permission="branches.create">
-          <button
-            onClick={handleOpenCreateModal}
-            className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm"
-          >
-            <i className="bx bx-plus"></i>
-            <span>{t('add')} {t('branch')}</span>
-          </button>
-        </PermissionGuard>
-      </div>
+      <PageHeader
+        title={t('branches')}
+        subtitle={t('manageBranches')}
+        count={loading ? undefined : branches.length}
+        breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('branches') }]}
+        actions={
+          <PermissionGuard permission="branches.create">
+            <Button variant="secondary" size="sm" onClick={() => setShowBulkUpload(true)}>
+              <i className="bx bx-upload"></i>
+              <span>{t('bulkUpload')}</span>
+            </Button>
+            <Button size="sm" onClick={handleOpenCreateModal}>
+              <i className="bx bx-plus"></i>
+              <span>{t('add')} {t('branch')}</span>
+            </Button>
+          </PermissionGuard>
+        }
+      />
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       ) : branches.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-8 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
             <i className="bx bx-store text-gray-400 dark:text-gray-500 text-2xl"></i>
           </div>
-          <h3 className="text-gray-900 dark:text-gray-100 font-medium text-lg mb-2">{t('noBranchesYet') || 'No branches yet'}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('addYourFirstBranch') || 'Add your first branch to get started'}</p>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('noBranchesYet') || 'No branches yet'}</h3>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">{t('addYourFirstBranch') || 'Add your first branch to get started'}</p>
           <PermissionGuard permission="branches.create">
-            <button
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors"
-            >
-              <i className="bx bx-plus mr-2"></i>
+            <Button size="sm" onClick={handleOpenCreateModal}>
+              <i className="bx bx-plus"></i>
               <span>{t('add')} {t('branch')}</span>
-            </button>
+            </Button>
           </PermissionGuard>
         </div>
       ) : (
@@ -208,12 +317,12 @@ export default function BranchesPage() {
             {branches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((branch) => (
               <div
                 key={branch.id}
-                className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {branch.name}
                       {branch.isDefault && (
                         <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({t('default')})</span>
@@ -250,7 +359,7 @@ export default function BranchesPage() {
                         ></div>
                         
                         {/* Dropdown menu */}
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1">
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-popover border border-gray-200 dark:border-gray-700 z-20 py-1">
                           <PermissionGuard permission="branches.edit">
                             <button
                               onClick={() => {
@@ -319,7 +428,7 @@ export default function BranchesPage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('totalSales') || 'Total Sales'}</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       ₦{Number(branch.stats?.totalSales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
@@ -359,7 +468,7 @@ export default function BranchesPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('name') || 'Name'}
               />
             </div>
@@ -372,7 +481,7 @@ export default function BranchesPage() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('phone') || 'Phone'}
               />
             </div>
@@ -385,7 +494,7 @@ export default function BranchesPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('email') || 'Email'}
               />
             </div>
@@ -400,7 +509,7 @@ export default function BranchesPage() {
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               rows={3}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               placeholder={t('address') || 'Address'}
             />
           </div>
@@ -411,7 +520,7 @@ export default function BranchesPage() {
                 type="checkbox"
                 checked={formData.isDefault}
                 onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-red-500"
+                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
               />
               <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('default')}</span>
             </label>
@@ -420,7 +529,7 @@ export default function BranchesPage() {
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-red-500"
+                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
               />
               <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</span>
             </label>
@@ -430,7 +539,7 @@ export default function BranchesPage() {
             <button
               type="button"
               onClick={handleCloseModals}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={saving}
             >
               {t('cancel')}
@@ -438,7 +547,7 @@ export default function BranchesPage() {
             <button
               type="submit"
               disabled={saving || !formData.name.trim()}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-red-700 dark:hover:bg-red-600"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {saving ? (
                 <span className="flex items-center gap-2">
@@ -472,7 +581,7 @@ export default function BranchesPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('name') || 'Name'}
               />
             </div>
@@ -485,7 +594,7 @@ export default function BranchesPage() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('phone') || 'Phone'}
               />
             </div>
@@ -498,7 +607,7 @@ export default function BranchesPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 placeholder={t('email') || 'Email'}
               />
             </div>
@@ -513,7 +622,7 @@ export default function BranchesPage() {
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               rows={3}
-              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+              className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               placeholder={t('address') || 'Address'}
             />
           </div>
@@ -524,7 +633,7 @@ export default function BranchesPage() {
                 type="checkbox"
                 checked={formData.isDefault}
                 onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-red-500"
+                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
               />
               <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('default')}</span>
             </label>
@@ -533,7 +642,7 @@ export default function BranchesPage() {
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-red-500"
+                className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus-visible:ring-brand-500"
               />
               <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</span>
             </label>
@@ -543,7 +652,7 @@ export default function BranchesPage() {
             <button
               type="button"
               onClick={handleCloseModals}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               disabled={saving}
             >
               {t('cancel')}
@@ -551,7 +660,7 @@ export default function BranchesPage() {
             <button
               type="submit"
               disabled={saving || !formData.name.trim()}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-red-700 dark:hover:bg-red-600"
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {saving ? (
                 <span className="flex items-center gap-2">
@@ -560,6 +669,159 @@ export default function BranchesPage() {
                 </span>
               ) : (
                 t('update') || t('save')
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Bulk Upload Modal */}
+      <Modal
+        isOpen={showBulkUpload}
+        onClose={() => {
+          setShowBulkUpload(false);
+          setFile(null);
+        }}
+        title={t('bulkUpload')}
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleBulkUpload} className="space-y-4">
+          {/* Upload Area (1/3) and Instructions (2/3) Side by Side */}
+          <div className="grid grid-cols-3 gap-6">
+            {/* Upload Area - 1/3 */}
+            <div className="col-span-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">{t('uploadCsvFile') || 'Upload CSV File'}</h3>
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  dragActive
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                } ${file ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                {file ? (
+                  <div className="space-y-2">
+                    <i className="bx bx-check-circle text-2xl text-green-600 dark:text-green-400"></i>
+                    <div className="text-xs">
+                      <p className="font-medium text-green-800 dark:text-green-200">{file.name}</p>
+                      <p className="text-green-600 dark:text-green-400">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFile(null)}
+                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                    >
+                      {t('removeFile') || 'Remove file'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <i className="bx bx-cloud-upload text-2xl text-gray-400 dark:text-gray-500"></i>
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                        {t('dragAndDropCsvFile') || 'Drag and drop your CSV file here'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t('or') || 'or'}</p>
+                      <label
+                        htmlFor="file-upload"
+                        className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 cursor-pointer transition-colors"
+                      >
+                        <i className="bx bx-upload mr-1"></i>
+                        {t('browseFiles') || 'Browse Files'}
+                      </label>
+                    </div>
+                  </div>
+                )}
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileInput}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            {/* Instructions - 2/3 */}
+            <div className="col-span-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                {t('instructionsAndCsvFormat') || 'Instructions & CSV Format'}
+              </h3>
+              
+              <div className="space-y-4">
+
+                {/* Template Download */}
+                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">{t('getStarted') || 'Get Started'}</h4>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        {t('downloadTemplateDescription') || 'Download our CSV template with sample data to get started quickly.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplate}
+                      className="ml-3 inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 dark:text-blue-200 bg-blue-200 dark:bg-blue-800 hover:bg-blue-300 dark:hover:bg-brand-700 transition-colors"
+                    >
+                      <i className="bx bx-download mr-1"></i>
+                      {t('downloadTemplate') || 'Download Template'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Upload Notes */}
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <i className="bx bx-info-circle text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                      <h4 className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2">{t('importantNotes') || 'Important Notes'}</h4>
+                      <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+                        <div>• <strong>{t('branchName') || 'Branch Name'}</strong> {t('isRequired') || 'is required'} - {t('allOtherFieldsOptional') || 'all other fields are optional'}</div>
+                        <div>• {t('duplicateBranchNamesSkipped') || 'Duplicate branch names will be skipped'}</div>
+                        <div>• {t('invalidEmailSkipped') || 'Invalid email addresses will cause row to be skipped'}</div>
+                        <div>• {t('emptyRowsIgnored') || 'Empty rows are automatically ignored'}</div>
+                        <div>• {t('csvOnlyMaxSize') || 'CSV files only, Maximum file size: 10MB'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowBulkUpload(false);
+                setFile(null);
+              }}
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              {t('cancel') || 'Cancel'}
+            </button>
+            
+            <button
+              type="submit"
+              disabled={!file || uploading}
+              className="h-9 px-3.5 inline-flex items-center text-[13px] font-medium bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {uploading ? (
+                <span className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  {t('uploading') || 'Uploading...'}
+                </span>
+              ) : (
+                file ? 
+                  `${t('upload') || 'Upload'} (${file.name})` : 
+                  `${t('upload') || 'Upload'} ${t('file') || 'File'}`
               )}
             </button>
           </div>

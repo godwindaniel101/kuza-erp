@@ -11,12 +11,12 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { BranchesController } from './branches/branches.controller';
 import { BranchesService } from './branches/branches.service';
 import { BranchesModule } from './branches/branches.module';
-import { Restaurant } from '../../common/entities/restaurant.entity';
+import { Business } from '../../common/entities/business.entity';
 import { Permission } from '../../common/entities/permission.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Restaurant, Permission]),
+    TypeOrmModule.forFeature([Business, Permission]),
     RolesModule,
     InvitationsModule,
     BranchesModule,

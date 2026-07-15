@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function EmployeeProfilePage() {
   const { t } = useTranslation('common');
@@ -31,9 +32,9 @@ export default function EmployeeProfilePage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="mx-auto w-full max-w-3xl space-y-5">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </div>
     );
@@ -42,39 +43,43 @@ export default function EmployeeProfilePage() {
   const employee = profile?.employee;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('myProfile')}</h1>
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <PageHeader
+        title={t('myProfile')}
+        subtitle="Your personal and employment details"
+        breadcrumbs={[{ label: 'Me' }, { label: t('myProfile') }]}
+      />
 
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h2 className="text-lg font-semibold mb-4">{t('personalInformation')}</h2>
             <dl className="space-y-3">
               <div>
                 <dt className="text-sm font-medium text-gray-500">{t('name')}</dt>
-                <dd className="mt-1 text-sm text-gray-900">{profile?.name || '-'}</dd>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{profile?.name || '-'}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">{t('email')}</dt>
-                <dd className="mt-1 text-sm text-gray-900">{profile?.email || '-'}</dd>
+                <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{profile?.email || '-'}</dd>
               </div>
               {employee && (
                 <>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t('employeeNumber')}</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{employee.employeeNumber || '-'}</dd>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.employeeNumber || '-'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t('department')}</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{employee.department?.name || '-'}</dd>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.department?.name || '-'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t('position')}</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{employee.position?.title || '-'}</dd>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.position?.title || '-'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t('location')}</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{employee.location?.name || '-'}</dd>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.location?.name || '-'}</dd>
                   </div>
                 </>
               )}
@@ -87,11 +92,11 @@ export default function EmployeeProfilePage() {
               <dl className="space-y-3">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">{t('phone')}</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{employee.phone || '-'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.phone || '-'}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">{t('address')}</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{employee.address || '-'}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{employee.address || '-'}</dd>
                 </div>
               </dl>
             )}

@@ -14,7 +14,7 @@ export class InventoryInflowItem extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   inventoryItemId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   uomId: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -40,6 +40,14 @@ export class InventoryInflowItem extends BaseEntity {
 
   @Column({ type: 'uuid', nullable: true })
   branchId: string;
+
+  // Fields to store original names when relations are not found
+  // These allow manual correction later through the UI
+  @Column({ nullable: true })
+  originalItemName: string;
+
+  @Column({ nullable: true })
+  originalUomName: string;
 
   @ManyToOne(() => InventoryInflow, (inflow) => inflow.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'inflowId' })

@@ -6,6 +6,7 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
 
@@ -80,16 +81,18 @@ export default function CreateDepartmentPage() {
 
   return (
     <PermissionGuard permission="departments.create">
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className="mx-auto w-full max-w-3xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        <div className="mb-6">
-          <Link href="/hrms/departments" className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
-            <i className="bx bx-arrow-back mr-2"></i>
-            {t('back')}
-          </Link>
-        </div>
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">{t('createDepartment') || 'Create Department'}</h1>
+        <PageHeader
+          title={t('createDepartment') || 'Create Department'}
+          subtitle="Add a new department to your structure"
+          breadcrumbs={[
+            { label: 'HR', href: '/hrms/dashboard' },
+            { label: t('departments') || 'Departments', href: '/hrms/departments' },
+            { label: t('create') || 'Create' },
+          ]}
+        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -100,7 +103,7 @@ export default function CreateDepartmentPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             <div>
@@ -109,7 +112,7 @@ export default function CreateDepartmentPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
             </div>
             <div>
@@ -133,13 +136,13 @@ export default function CreateDepartmentPage() {
               <label className="ml-2 text-sm text-gray-700 dark:text-gray-300">{t('active')}</label>
             </div>
             <div className="flex justify-end space-x-3 pt-4">
-              <Link href="/hrms/departments" className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <Link href="/hrms/departments" className="h-9 px-4 inline-flex items-center border border-gray-300 dark:border-gray-700 rounded-lg text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 {t('cancel')}
               </Link>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
               >
                 {submitting ? t('creating') : t('create')}
               </button>

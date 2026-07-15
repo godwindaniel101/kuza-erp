@@ -6,8 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
-  Request,
   Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
@@ -19,11 +17,13 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 import { AiDesignDto } from './dto/ai-design.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { FeatureGateGuard, RequireApp } from '../../billing/guards/feature-gate.guard';
 import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 
 @ApiTags('RMS - Menus')
 @Controller('rms/menus')
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp('menu')
 @ApiBearerAuth()
 export class MenusController {
   constructor(private readonly menusService: MenusService) {}
@@ -31,8 +31,8 @@ export class MenusController {
   @Post()
   @RequirePermissions('menus.create')
   @ApiOperation({ summary: 'Create a new menu' })
-  async create(@Request() req, @Body() createMenuDto: CreateMenuDto, @I18n() i18n: I18nContext) {
-    const result = await this.menusService.create(req.user.businessId, createMenuDto);
+  async create( @Body() createMenuDto: CreateMenuDto, @I18n() i18n: I18nContext) {
+    const result = await this.menusService.create( createMenuDto);
     return {
       success: true,
       data: result.menu,
@@ -47,8 +47,8 @@ export class MenusController {
   @Get()
   @RequirePermissions('menus.view')
   @ApiOperation({ summary: 'Get all menus' })
-  async findAll(@Request() req, @Query('lang') lang?: string) {
-    const menus = await this.menusService.findAll(req.user.businessId);
+  async findAll( @Query('lang') lang?: string) {
+    const menus = await this.menusService.findAll();
     return {
       success: true,
       data: menus,
@@ -59,7 +59,7 @@ export class MenusController {
   @RequirePermissions('menus.edit')
   @ApiOperation({ summary: 'Design menu template with AI' })
   async designWithAi(
-    @Request() req,
+    
     @Body() body: AiDesignDto,
     @I18n() i18n: I18nContext,
   ) {
@@ -75,7 +75,7 @@ export class MenusController {
 
       // Apply theme to menu if menu_id provided
       if (body.menu_id) {
-        await this.menusService.update(body.menu_id, req.user.businessId, {
+        await this.menusService.update(body.menu_id,  {
           themeSettings: mockThemeSettings,
         });
       }
@@ -98,8 +98,8 @@ export class MenusController {
   @Get(':id')
   @RequirePermissions('menus.view')
   @ApiOperation({ summary: 'Get menu by ID' })
-  async findOne(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
-    const menu = await this.menusService.findOne(id, req.user.businessId);
+  async findOne( @Param('id', ParseUUIDPipe) id: string) {
+    const menu = await this.menusService.findOne(id, );
     return {
       success: true,
       data: menu,
@@ -110,12 +110,12 @@ export class MenusController {
   @RequirePermissions('menus.edit')
   @ApiOperation({ summary: 'Update menu' })
   async update(
-    @Request() req,
+    
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateMenuDto: UpdateMenuDto,
     @I18n() i18n: I18nContext,
   ) {
-    const menu = await this.menusService.update(id, req.user.businessId, updateMenuDto);
+    const menu = await this.menusService.update(id,  updateMenuDto);
     return {
       success: true,
       data: menu,
@@ -126,8 +126,8 @@ export class MenusController {
   @Delete(':id')
   @RequirePermissions('menus.delete')
   @ApiOperation({ summary: 'Delete menu' })
-  async remove(@Request() req, @Param('id', ParseUUIDPipe) id: string, @I18n() i18n: I18nContext) {
-    await this.menusService.remove(id, req.user.businessId);
+  async remove( @Param('id', ParseUUIDPipe) id: string, @I18n() i18n: I18nContext) {
+    await this.menusService.remove(id, );
     return {
       success: true,
       message: i18n.t('common.deleted'),

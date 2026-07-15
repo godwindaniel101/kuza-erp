@@ -6,17 +6,13 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   Request,
   Query,
   ParseUUIDPipe,
-  UseInterceptors,
-  UploadedFile,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { I18n, I18nContext } from "nestjs-i18n";
-import { InflowsService, BulkUploadResult } from "./inflows.service";
+import { InflowsService } from "./inflows.service";
 import { CreateInventoryInflowDto } from "./dto/create-inventory-inflow.dto";
 import { UpdateInventoryInflowDto } from "./dto/update-inventory-inflow.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
@@ -24,11 +20,13 @@ import {
   RequirePermissions,
   PermissionsGuard,
 } from "../../../common/guards/permissions.guard";
+import { FeatureGateGuard, RequireApp } from "../../billing/guards/feature-gate.guard";
 import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 
 @ApiTags("IMS - Inventory Inflows")
 @Controller("ims/inflows")
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp("goods-in")
 @ApiBearerAuth()
 export class InflowsController {
   constructor(private readonly inflowsService: InflowsService) {}
@@ -39,12 +37,9 @@ export class InflowsController {
   async create(
     @Request() req,
     @Body() createDto: CreateInventoryInflowDto,
-    @I18n() i18n: I18nContext
+    @I18n() i18n: I18nContext,
   ) {
-    const inflow = await this.inflowsService.create(
-      req.user.businessId,
-      createDto
-    );
+    const inflow = await this.inflowsService.create(createDto, req.user?.sub);
     return {
       success: true,
       data: inflow,
@@ -67,18 +62,24 @@ export class InflowsController {
   @RequirePermissions("inflows.view")
   @ApiOperation({ summary: "Get all inventory inflows" })
   async findAll(
-    @Request() req,
     @Query("branchId") branchId?: string,
-    @Query("batchId") batchId?: string
+    @Query("batchId") batchId?: string,
   ) {
-    const inflows = await this.inflowsService.findAll(
-      req.user.businessId,
-      branchId,
-      batchId
-    );
+    const inflows = await this.inflowsService.findAll(branchId, batchId);
     return {
       success: true,
       data: inflows,
+    };
+  }
+
+  @Get("batch/:batchId")
+  @RequirePermissions("inflows.view")
+  @ApiOperation({ summary: "Get a purchase/batch summary by batch ID" })
+  async getBatchSummary(@Param("batchId") batchId: string) {
+    const summary = await this.inflowsService.getBatchSummary(batchId);
+    return {
+      success: true,
+      data: summary,
     };
   }
 
@@ -86,22 +87,18 @@ export class InflowsController {
   @RequirePermissions("inflows.view")
   @ApiOperation({ summary: "Get inventory inflow by ID" })
   async findOne(
-    @Request() req,
     @Param("id", ParseUUIDPipe) id: string,
-    @Query("withSales") withSales?: string
+    @Query("withSales") withSales?: string,
   ) {
     if (withSales === "true") {
-      const inflow = await this.inflowsService.findOneWithSalesData(
-        id,
-        req.user.businessId
-      );
+      const inflow = await this.inflowsService.findOneWithSalesData(id);
       return {
         success: true,
         data: inflow,
       };
     }
 
-    const inflow = await this.inflowsService.findOne(id, req.user.businessId);
+    const inflow = await this.inflowsService.findOne(id);
     return {
       success: true,
       data: inflow,
@@ -112,15 +109,14 @@ export class InflowsController {
   @RequirePermissions("inflows.edit")
   @ApiOperation({ summary: "Update inventory inflow" })
   async update(
-    @Request() req,
     @Param("id", ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateInventoryInflowDto,
-    @I18n() i18n: I18nContext
+    @I18n() i18n: I18nContext,
   ) {
     const inflow = await this.inflowsService.update(
       id,
-      req.user.businessId,
-      updateDto
+
+      updateDto,
     );
     return {
       success: true,
@@ -135,12 +131,12 @@ export class InflowsController {
   async approve(
     @Request() req,
     @Param("id", ParseUUIDPipe) id: string,
-    @I18n() i18n: I18nContext
+    @I18n() i18n: I18nContext,
   ) {
     const inflow = await this.inflowsService.approve(
       id,
-      req.user.businessId,
-      req.user.sub
+
+      req.user.sub,
     );
     return {
       success: true,
@@ -153,11 +149,10 @@ export class InflowsController {
   @RequirePermissions("inflows.delete")
   @ApiOperation({ summary: "Delete inventory inflow" })
   async remove(
-    @Request() req,
     @Param("id", ParseUUIDPipe) id: string,
-    @I18n() i18n: I18nContext
+    @I18n() i18n: I18nContext,
   ) {
-    await this.inflowsService.remove(id, req.user.businessId);
+    await this.inflowsService.remove(id);
     return {
       success: true,
       message: i18n.t("common.deleted"),
@@ -168,24 +163,34 @@ export class InflowsController {
   @RequirePermissions("inflows.create")
   @ApiOperation({ summary: "Bulk upload inventory items from CSV" })
   async bulkUpload(
-    @Request() req,
     @Body() body: { csv: string },
-    @I18n() i18n: I18nContext
+    @I18n() i18n: I18nContext,
   ) {
-    console.log(`[CONTROLLER] Inflow bulk upload started for business: ${req.user.businessId}`);
-    console.log(`[CONTROLLER] CSV length: ${body.csv?.length || 0}`);
-    
-    const results = await this.inflowsService.bulkUpload(
-      req.user.businessId,
-      body.csv
-    );
-    
-    console.log(`[CONTROLLER] Inflow bulk upload results:`, results);
-    
+    const results = await this.inflowsService.bulkUpload(body.csv);
+
+    console.log(`[InflowController] Bulk upload completed:`, {
+      successful: results.success,
+      failed: results.failedUploads?.length || 0,
+      skipped: results.duplicateSkipped
+    });
+
+    // Return enhanced response with detailed error information
     return {
-      success: true,
-      data: results,
-      message: i18n.t("common.uploaded"),
+      success: results.success > 0,
+      data: {
+        summary: results.summary,
+        errors: results.errors || [],
+        failedUploads: results.failedUploads || [],
+        // Backward compatibility: map failedUploads to detailedErrors format for existing frontend
+        detailedErrors: (results.failedUploads || []).map(failed => ({
+          line: failed.lineNumber,
+          data: Object.values(failed.rowData).join(','),
+          errors: failed.errors
+        }))
+      },
+      message: results.success > 0 
+        ? i18n.t("common.uploaded") 
+        : i18n.t("common.uploadFailed", { args: { count: results.failedUploads?.length || 0 } })
     };
   }
 }

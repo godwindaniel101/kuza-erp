@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function BranchItemsPage() {
   const { t } = useTranslation('common');
@@ -113,15 +114,15 @@ export default function BranchItemsPage() {
       return <i className="bx bx-sort text-gray-400"></i>;
     }
     return sortDirection === 'asc' ? (
-      <i className="bx bx-sort-up text-red-600"></i>
+      <i className="bx bx-sort-up text-brand-600 dark:text-brand-400"></i>
     ) : (
-      <i className="bx bx-sort-down text-red-600"></i>
+      <i className="bx bx-sort-down text-brand-600 dark:text-brand-400"></i>
     );
   };
 
   return (
     <PermissionGuard permission="inventory.view">
-      <div className="p-6">
+      <div className="space-y-5">
         {toast && (
           <Toast
             message={toast.message}
@@ -129,16 +130,18 @@ export default function BranchItemsPage() {
             onClose={() => setToast(null)}
           />
         )}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('branchItems') || 'Branch Items'}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('viewItemsAcrossBranches') || 'View items across all branches'}</p>
-        </div>
+        <PageHeader
+          title={t('branchItems') || 'Branch Items'}
+          count={loading ? undefined : filteredItems.length}
+          subtitle={t('viewItemsAcrossBranches') || 'View items across all branches'}
+          breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: t('branchItems') || 'Branch Items' }]}
+        />
 
         {/* Search and Filters */}
         {!loading && inventoryItems.length > 0 && (
-          <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-1/3">
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="w-full md:w-1/3">
                 <input
                   type="text"
                   value={searchQuery}
@@ -147,7 +150,7 @@ export default function BranchItemsPage() {
                     setCurrentPage(1); // Reset to first page when searching
                   }}
                   placeholder={t('search') || 'Search items...'}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
             </div>
@@ -156,23 +159,23 @@ export default function BranchItemsPage() {
 
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 dark:border-red-400 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-10 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-              <i className="bx bx-package text-2xl text-gray-400 dark:text-gray-500"></i>
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl px-6 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+              <i className="bx bx-package text-xl text-gray-400 dark:text-gray-500"></i>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
               {searchQuery ? (t('noItemsFound') || 'No items found') : (t('noInventoryItems') || 'No inventory items')}
             </h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">
               {searchQuery ? (t('tryDifferentSearch') || 'Try a different search query') : (t('addInventoryItemsFirst') || 'Add inventory items first')}
             </p>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-4 text-red-600 dark:text-red-400 hover:underline"
+                className="mt-4 text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:underline"
               >
                 {t('clearSearch') || 'Clear search'}
               </button>
@@ -180,13 +183,13 @@ export default function BranchItemsPage() {
           </div>
         ) : (
           <>
-            <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
                       <th
-                        className="sticky left-0 z-10 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="sticky left-0 z-10 px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center space-x-1">
@@ -195,7 +198,7 @@ export default function BranchItemsPage() {
                         </div>
                       </th>
                       <th
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('category')}
                       >
                         <div className="flex items-center space-x-1">
@@ -204,13 +207,13 @@ export default function BranchItemsPage() {
                         </div>
                       </th>
                       {branches.map((branch) => (
-                        <th key={branch.id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase min-w-[120px]">
+                        <th key={branch.id} className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase min-w-[120px]">
                           {branch.name}
                           {branch.isDefault && <span className="ml-1 text-xs text-gray-400">({t('default') || 'Default'})</span>}
                         </th>
                       ))}
                       <th
-                        className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('totalStock')}
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -218,12 +221,12 @@ export default function BranchItemsPage() {
                           <SortIcon field="totalStock" />
                         </div>
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('unit') || 'Unit'}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                     {paginatedItems.map((item) => {
                   const hasLowStock = branches.some((branch) => {
                     const branchStock = item.branchStocks?.[branch.id];
@@ -233,7 +236,7 @@ export default function BranchItemsPage() {
                   
                   return (
                     <tr key={item.id} className={hasLowStock ? 'bg-red-50/50 dark:bg-red-900/10' : ''}>
-                      <td className="sticky left-0 z-10 px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+                      <td className="sticky left-0 z-10 px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
                         <div>
                           <div className="font-medium">{item.name}</div>
                           {item.subcategory && (
@@ -244,7 +247,7 @@ export default function BranchItemsPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         {item.category || '-'}
                       </td>
                       {branches.map((branch) => {
@@ -253,7 +256,7 @@ export default function BranchItemsPage() {
                         const isLowStock = branchStock?.minimumStock && stock <= Number(branchStock.minimumStock);
                         
                         return (
-                          <td key={branch.id} className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                          <td key={branch.id} className="px-6 py-3 whitespace-nowrap text-center text-[13px]">
                             <div className="flex flex-col items-center">
                               <span className={`font-medium ${isLowStock ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
                                 {stock.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -267,10 +270,10 @@ export default function BranchItemsPage() {
                           </td>
                         );
                       })}
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900">
+                      <td className="px-6 py-3 whitespace-nowrap text-center text-[13px] font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900">
                         {Number(item.totalStock || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-center text-[13px] text-gray-500 dark:text-gray-300">
                         {item.unit && item.unit !== 'Unknown' ? item.unit : '-'}
                       </td>
                     </tr>
@@ -283,7 +286,7 @@ export default function BranchItemsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+              <div className="mt-4 flex items-center justify-between bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 px-4 py-3">
                 <div className="text-sm text-gray-700 dark:text-gray-300">
                   {t('showing') || 'Showing'} {startIndex + 1} {t('to') || 'to'} {Math.min(startIndex + itemsPerPage, sortedItems.length)} {t('of') || 'of'} {sortedItems.length} {t('items') || 'items'}
                 </div>

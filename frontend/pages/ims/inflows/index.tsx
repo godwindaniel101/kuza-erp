@@ -7,18 +7,20 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
-import Pagination from '@/components/Pagination';
+import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 
 export default function InflowsPage() {
   const { t } = useTranslation('common');
+  const { businessType } = useTenantStore();
   const router = useRouter();
   const { branchId, batchId } = router.query;
   const [inflows, setInflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -108,112 +110,6 @@ export default function InflowsPage() {
     }
   };
 
-  const downloadTemplate = async () => {
-    try {
-      const response = await api.get<{ success: boolean; data: { csv: string } }>('/ims/inflows/template');
-      if (response.success && response.data?.csv) {
-        const csvContent = response.data.csv;
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'inflow_template.csv';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        setToast({ message: t('templateDownloaded') || 'Template downloaded successfully', type: 'success' });
-      } else {
-        throw new Error('Invalid response from server');
-      }
-    } catch (err: any) {
-      console.error('Failed to download template:', err);
-      const errorMessage = err.response?.data?.message || err.message || t('downloadFailed') || 'Failed to download template';
-      setToast({ message: errorMessage, type: 'error' });
-    }
-  };
-
-  // Handle drag events
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  // Handle drop
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      const selectedFile = files[0];
-      if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
-        setFile(selectedFile);
-      } else {
-        setToast({ message: 'Please upload only CSV files', type: 'error' });
-      }
-    }
-  };
-
-  // Handle file input
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
-        setFile(selectedFile);
-      } else {
-        setToast({ message: 'Please upload only CSV files', type: 'error' });
-      }
-    }
-  };
-
-  const handleBulkUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      // Read CSV file as text (same as inventory)
-      const csvText = await file.text();
-      
-      const response = await api.post<{ success: boolean; data: { success: number; errors: string[]; failedUploads?: any[] } }>('/ims/inflows/bulk-upload', {
-        csv: csvText,
-      });
-
-      if (response.success) {
-        const { success, errors, failedUploads } = response.data;
-        let message = `${success} inflow(s) imported successfully.`;
-        if (errors && errors.length > 0) {
-          message += ` ${errors.length} error(s) occurred.`;
-          // Show errors in a more detailed toast
-          const errorList = errors.slice(0, 5).join('; '); // Show first 5 errors
-          const moreErrors = errors.length > 5 ? ` and ${errors.length - 5} more...` : '';
-          setToast({ 
-            message: `${message} Errors: ${errorList}${moreErrors}`, 
-            type: errors.length > 0 && success === 0 ? 'error' : 'info' 
-          });
-        } else {
-          setToast({ message, type: 'success' });
-        }
-        setShowBulkUpload(false);
-        setFile(null);
-        await loadInflows();
-      }
-    } catch (err: any) {
-      console.error('Failed to upload:', err);
-      const errorMessage = err.response?.data?.message || err.message || t('uploadFailed') || 'Failed to upload inflows';
-      setToast({ message: errorMessage, type: 'error' });
-    } finally {
-      setUploading(false);
-    }
-  };
-
   // Filter inflows based on search query
   const filteredInflows = inflows.filter((inflow) => {
     if (!searchQuery) return true;
@@ -233,79 +129,60 @@ export default function InflowsPage() {
   const paginatedInflows = filteredInflows.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {t('inventoryInflow')}
-              {currentBranch && (
-                <span className="ml-3 text-lg font-normal text-gray-500 dark:text-gray-400">
-                  - {currentBranch.name}
-                </span>
-              )}
-            </h1>
+    <div className="space-y-5">
+      <PageHeader
+        title={currentBranch ? `${term(businessType, 'goodsIn')} — ${currentBranch.name}` : term(businessType, 'goodsIn')}
+        count={loading ? undefined : filteredInflows.length}
+        subtitle={
+          currentBranch
+            ? `${t('filteredByBranch')}${currentBranch.address ? ` • ${currentBranch.address}` : ''}`
+            : branchId
+            ? t('loadingBranch')
+            : term(businessType, 'goodsInDescription')
+        }
+        breadcrumbs={[
+          { label: term(businessType, 'inventorySection') },
+          { label: term(businessType, 'goodsIn') },
+        ]}
+        actions={
+          <>
             {currentBranch && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t('filteredByBranch') || 'Filtered by branch'}
-                {currentBranch.address && ` • ${currentBranch.address}`}
-              </p>
-            )}
-            {branchId && !currentBranch && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t('loadingBranch') || 'Loading branch...'}
-              </p>
-            )}
-            {!currentBranch && !branchId && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('viewAllInflows') || 'View all inventory inflows'}</p>
-            )}
-          </div>
-          <div className="flex space-x-2">
-            {currentBranch && (
-              <button
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={async () => {
                   await router.push('/ims/inflows');
                   setCurrentBranch(null);
                   setLoading(true);
                   await loadInflows();
                 }}
-                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
               >
-                <i className="bx bx-x mr-2"></i>
-                {t('clearFilter') || 'Clear Filter'}
-              </button>
+                <i className="bx bx-x"></i>
+                {t('clearFilter')}
+              </Button>
             )}
-            <button
-              onClick={downloadTemplate}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <i className="bx bx-download mr-2"></i>
-              {t('downloadTemplate')}
-            </button>
-              <PermissionGuard permission="inflows.create">
-              <button
-                onClick={() => setShowBulkUpload(true)}
-                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <i className="bx bx-upload mr-2"></i>
+            <PermissionGuard permission="inflows.create">
+              <Button size="sm" variant="secondary" onClick={() => setShowBulkUpload(true)}>
+                <i className="bx bx-upload"></i>
                 {t('bulkUpload')}
-              </button>
-              <Link
-                href={branchId && typeof branchId === 'string' ? `/ims/inflows/create?branchId=${branchId}` : "/ims/inflows/create"}
-                className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm inline-block"
+              </Button>
+              <Button
+                size="sm"
+                href={branchId && typeof branchId === 'string' ? `/ims/inflows/create?branchId=${branchId}` : '/ims/inflows/create'}
               >
-                {t('record')} {t('inflow')}
-              </Link>
+                <i className="bx bx-plus"></i>
+                {term(businessType, 'recordGoodsIn')}
+              </Button>
             </PermissionGuard>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Search and Filters */}
       {!loading && inflows.length > 0 && (
-        <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-1/3">
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-3">
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <div className="w-full md:w-1/3">
               <input
                 type="text"
                 value={searchQuery}
@@ -313,8 +190,8 @@ export default function InflowsPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1); // Reset to first page when searching
                 }}
-                placeholder={t('searchInflows') || 'Search by invoice number, reference, supplier...'}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                placeholder={t('searchInflows')}
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             {searchQuery && (
@@ -323,295 +200,160 @@ export default function InflowsPage() {
                   setSearchQuery('');
                   setCurrentPage(1);
                 }}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                className="h-9 px-3 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
-                {t('clearSearch') || 'Clear Search'}
+                {t('clearSearch')}
               </button>
             )}
           </div>
         </div>
       )}
 
-      {showBulkUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-3xl w-full m-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('bulkUpload')}</h2>
-              <button
-                onClick={() => setShowBulkUpload(false)}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <i className="bx bx-x text-2xl"></i>
-              </button>
-            </div>
-
-            <form onSubmit={handleBulkUpload} className="space-y-4">
-              {/* Upload Area (1/3) and Instructions (2/3) Side by Side */}
-              <div className="grid grid-cols-3 gap-6">
-                {/* Upload Area - 1/3 */}
-                <div className="col-span-1">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Upload CSV File</h3>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                      dragActive
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                    } ${file ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileInput}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    
-                    {file ? (
-                      <div className="space-y-2">
-                        <i className="bx bx-check-circle text-2xl text-green-500"></i>
-                        <div>
-                          <p className="text-xs font-medium text-green-700 dark:text-green-300">{file.name}</p>
-                          <p className="text-xs text-green-600 dark:text-green-400">
-                            {(file.size / 1024).toFixed(2)} KB
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setFile(null)}
-                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                        >
-                          Remove file
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <i className="bx bx-cloud-upload text-2xl text-gray-400 dark:text-gray-500"></i>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
-                            Drag and drop your CSV file here
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">or</p>
-                          <label
-                            htmlFor="file-upload"
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 cursor-pointer transition-colors"
-                          >
-                            <i className="bx bx-upload mr-1"></i>
-                            Browse Files
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Instructions - 2/3 */}
-                <div className="col-span-2">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">File Requirements</h3>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 h-full">
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">Required Columns</h4>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-blue-700 dark:text-blue-300">
-                          <div>• Branch Name</div>
-                          <div>• Supplier Name</div>
-                          <div>• Inventory Item Name</div>
-                          <div>• UOM</div>
-                          <div>• Quantity</div>
-                          <div>• Cost Per Unit</div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">Optional Columns</h4>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-blue-700 dark:text-blue-300">
-                          <div>• Received At</div>
-                          <div>• Batch Number</div>
-                          <div>• Expiry Date</div>
-                          <div>• Invoice Number</div>
-                          <div>• Notes</div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">File Limits</h4>
-                        <div className="text-xs text-blue-700 dark:text-blue-300">
-                          <div>• CSV files only</div>
-                          <div>• Maximum file size: 10MB</div>
-                          <div>• Each row represents a new inflow transaction</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBulkUpload(false);
-                    setFile(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  type="submit"
-                  disabled={!file || uploading}
-                  className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center text-sm font-medium"
-                >
-                  {uploading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bx bx-upload mr-2"></i>
-                      Upload
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BulkUploadWizard
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        templateUrl="/ims/inflows/template"
+        uploadUrl="/ims/inflows/bulk-upload"
+        entityName={t('inflows') || 'inflows'}
+        requiredColumns={[
+          'Branch Name',
+          'Supplier Name',
+          'Inventory Item Name',
+          'UOM',
+          'Quantity',
+          'Cost Per Unit',
+          'Received At',
+          'Batch Number',
+          'Expiry Date',
+          'Invoice Number',
+          'Notes',
+        ]}
+        onComplete={async () => {
+          await loadInflows();
+        }}
+      />
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       ) : filteredInflows.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-10 text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-            <i className="bx bx-transfer-alt text-2xl text-blue-600 dark:text-blue-400"></i>
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl px-6 py-14 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+            <i className="bx bx-transfer-alt text-xl text-gray-400 dark:text-gray-500"></i>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-            {searchQuery ? (t('noInflowsFound') || 'No inflows found') : (t('noInflowsYet') || 'No inflows yet')}
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+            {searchQuery ? t('noInflowsFound') : t('noInflowsYet')}
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {searchQuery 
-              ? (t('tryDifferentSearch') || 'Try a different search term') 
-              : (t('recordFirstInflow') || 'Record your first inflow to get started')}
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
+            {searchQuery
+              ? t('tryDifferentSearch')
+              : t('recordFirstInflow')}
           </p>
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              {t('clearSearch') || 'Clear Search'}
-            </button>
-          )}
           <div className="flex items-center justify-center gap-3">
+            {searchQuery && (
+              <Button size="sm" variant="secondary" onClick={() => setSearchQuery('')}>
+                {t('clearSearch')}
+              </Button>
+            )}
             <PermissionGuard permission="inflows.create">
-              <button className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm">
+              <Button
+                size="sm"
+                href={branchId && typeof branchId === 'string' ? `/ims/inflows/create?branchId=${branchId}` : '/ims/inflows/create'}
+              >
                 {t('record')} {t('inflow')}
-              </button>
+              </Button>
             </PermissionGuard>
-            <button
-              onClick={() => setShowBulkUpload(true)}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <i className="bx bx-upload mr-2"></i>
+            <Button size="sm" variant="secondary" onClick={() => setShowBulkUpload(true)}>
+              <i className="bx bx-upload"></i>
               {t('bulkUpload')}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <>
-          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('invoiceNumber')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      {t('batch') || 'Batch'}
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      {t('batch')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('branch')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('date')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      {t('time') || 'Time'}
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      {t('time')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      {t('itemsCount') || 'Items'}
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      {t('itemsCount')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      {t('failedUploads') || 'Failed Uploads'}
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      {t('failedUploads')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('totalAmount')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('status')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {paginatedInflows.map((inflow) => (
-                    <tr key={inflow.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => router.push(`/ims/inflows/${inflow.id}`)}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                    <tr key={inflow.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => router.push(`/ims/inflows/${inflow.id}`)}>
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:underline">
                         {(inflow.invoiceNumber || inflow.inflowNumber || inflow.reference || inflow.id || '').substring(0, 8)}...
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.batchId ? (
-                          <Link 
-                            href={`/ims/inflows?batchId=${inflow.batchId}`}
+                          <Link
+                            href={`/ims/inflows/batch/${inflow.batchId}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-brand-600 dark:text-brand-400 hover:underline"
                           >
-                            {inflow.batchId}
+                            {String(inflow.batchId).substring(0, 8)}…
                           </Link>
                         ) : (inflow.batch?.batchNumber || inflow.batchNumber) ? (
-                          <Link 
-                            href={`/ims/inflows?batchId=${inflow.batch?.id || inflow.batchId}`}
+                          <Link
+                            href={`/ims/inflows/batch/${inflow.batch?.id || inflow.batchId}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-brand-600 dark:text-brand-400 hover:underline"
                           >
                             {inflow.batch?.batchNumber || inflow.batchNumber}
                           </Link>
-                        ) : (inflow.type === 'bulk' ? 'Manual' : '-')}
+                        ) : (inflow.type === 'bulk' ? t('manual') : '-')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.branch?.name || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.receivedDate ? new Date(inflow.receivedDate).toLocaleDateString() : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.createdAt ? new Date(inflow.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {inflow.items?.length || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                          <span className={`px-2 py-1 rounded-full text-xs ${inflow.failedUploadsCount > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
                             {inflow.failedUploadsCount || 0}
                          </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                         {formatCurrency(Number(inflow.totalAmount || 0), inflow.currency)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
                             inflow.status === 'approved'
@@ -624,7 +366,7 @@ export default function InflowsPage() {
                           {inflow.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium" onClick={(e) => e.stopPropagation()}>
                         {inflow.status === 'pending' && (
                           <PermissionGuard permission="inflows.approve">
                             <button
@@ -647,7 +389,7 @@ export default function InflowsPage() {
           </div>
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <div className="mt-4 flex items-center justify-between bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 px-4 py-3">
               <div className="text-sm text-gray-700 dark:text-gray-300">
                 {t('showing') || 'Showing'} {startIndex + 1} {t('to') || 'to'} {Math.min(startIndex + itemsPerPage, filteredInflows.length)} {t('of') || 'of'} {filteredInflows.length} {t('items') || 'items'}
               </div>

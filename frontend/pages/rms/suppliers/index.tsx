@@ -6,6 +6,8 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
+import PageHeader from '@/components/ui/PageHeader';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function SuppliersPage() {
   const { t } = useTranslation('common');
@@ -78,47 +80,47 @@ export default function SuppliersPage() {
 
   return (
     <PermissionGuard permission="suppliers.view">
-      <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
+      <div className="space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('suppliers')}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {t('manageSuppliers') || 'Manage your suppliers and vendors'}
-            </p>
-          </div>
-          <PermissionGuard permission="suppliers.create">
-            <button 
-              onClick={() => setShowCreate(true)} 
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center gap-2"
-            >
-              <i className="bx bx-plus"></i>
-              {t('add')} {t('supplier')}
-            </button>
-          </PermissionGuard>
-        </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-          </div>
-        ) : suppliers.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-12 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-              <i className="bx bx-user-voice text-red-600 dark:text-red-400 text-3xl"></i>
-            </div>
-            <h3 className="text-gray-900 dark:text-gray-100 font-medium text-lg mb-2">{t('noSuppliersYet') || 'No suppliers yet'}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('addSuppliersToStart') || 'Add suppliers to start recording inflows'}</p>
+        <PageHeader
+          title={t('suppliers') || 'Suppliers'}
+          count={loading ? undefined : suppliers.length}
+          subtitle="Everyone you buy from, in one list"
+          breadcrumbs={[{ label: 'Restaurant' }, { label: t('suppliers') || 'Suppliers' }]}
+          actions={
             <PermissionGuard permission="suppliers.create">
-              <button 
-                onClick={() => setShowCreate(true)} 
-                className="inline-flex items-center px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors"
+              <button
+                onClick={() => setShowCreate(true)}
+                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
               >
-                <i className="bx bx-plus mr-2"></i>
+                <i className="bx bx-plus mr-2" aria-hidden="true"></i>
                 {t('add')} {t('supplier')}
               </button>
             </PermissionGuard>
+          }
+        />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
           </div>
+        ) : suppliers.length === 0 ? (
+          <EmptyState
+            icon="bx-user-voice"
+            title={t('noSuppliersYet') || 'No suppliers yet'}
+            description={t('addSuppliersToStart') || 'Add suppliers to start recording inflows'}
+            actions={
+              <PermissionGuard permission="suppliers.create">
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+                >
+                  <i className="bx bx-plus mr-2" aria-hidden="true"></i>
+                  {t('add')} {t('supplier')}
+                </button>
+              </PermissionGuard>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {suppliers.map((supplier) => {
@@ -126,12 +128,12 @@ export default function SuppliersPage() {
               return (
                 <div 
                   key={supplier.id} 
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-4 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-                        <span className="text-red-700 dark:text-red-200 font-semibold text-lg">{letter || '?'}</span>
+                      <div className="h-12 w-12 rounded-full bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-brand-700 dark:text-brand-300 font-semibold text-lg">{letter || '?'}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{supplier.name}</p>
@@ -148,7 +150,7 @@ export default function SuppliersPage() {
                     </div>
                     <div className="flex flex-col gap-1 ml-2">
                       <PermissionGuard permission="suppliers.edit">
-                        <button className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title={t('edit')}>
+                        <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors" title={t('edit')}>
                           <i className="bx bx-edit text-lg"></i>
                         </button>
                       </PermissionGuard>
@@ -185,7 +187,7 @@ export default function SuppliersPage() {
                   value={newSupplier.name}
                   onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
                   placeholder={t('supplierName') || 'Supplier name'}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                   required
                   autoFocus
                 />
@@ -200,7 +202,7 @@ export default function SuppliersPage() {
                   value={newSupplier.contactPerson}
                   onChange={(e) => setNewSupplier({ ...newSupplier, contactPerson: e.target.value })}
                   placeholder={t('contactPersonName') || 'Contact person name'}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
 
@@ -213,7 +215,7 @@ export default function SuppliersPage() {
                   value={newSupplier.email}
                   onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
                   placeholder={t('emailAddress') || 'email@example.com'}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
 
@@ -226,7 +228,7 @@ export default function SuppliersPage() {
                   value={newSupplier.phone}
                   onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
                   placeholder={t('phoneNumber') || '+1234567890'}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
 
@@ -239,7 +241,7 @@ export default function SuppliersPage() {
                   onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
                   placeholder={t('address') || 'Street address'}
                   rows={2}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                 />
               </div>
             </div>
@@ -250,7 +252,7 @@ export default function SuppliersPage() {
                   setShowCreate(false);
                   setNewSupplier({ name: '', email: '', phone: '', contactPerson: '', address: '' });
                 }}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
                 disabled={creating}
               >
                 {t('cancel')}
@@ -258,7 +260,7 @@ export default function SuppliersPage() {
               <button
                 type="submit"
                 disabled={creating || !newSupplier.name.trim()}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-red-700 dark:hover:bg-red-600"
+                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
               >
                 {creating ? (
                   <span className="flex items-center gap-2">

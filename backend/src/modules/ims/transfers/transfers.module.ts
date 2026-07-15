@@ -8,11 +8,13 @@ import { InventoryItem } from '../entities/inventory-item.entity';
 import { BranchInventoryItem } from '../entities/branch-inventory-item.entity';
 import { Uom } from '../entities/uom.entity';
 import { UomConversionsModule } from '../uom-conversions/uom-conversions.module';
+import { StockMovementsModule } from '../stock-movements/stock-movements.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InventoryTransfer, InventoryTransferItem, InventoryItem, BranchInventoryItem, Uom]),
     forwardRef(() => UomConversionsModule),
+    StockMovementsModule,
   ],
   controllers: [TransfersController],
   providers: [TransfersService],

@@ -9,6 +9,8 @@ export default function HrmsSettingsPage() {
   return (
     <SettingsForm
       title={t('organizationSettings') || 'Organization Settings'}
+      subtitle="Defaults for how HR runs across your organisation"
+      breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('settings') || 'Settings' }]}
       organizationLabel="organizationName"
       currencyDescription={t('currencyDescriptionPayroll') || 'This currency will be used for payroll and financial reports'}
       languageDescription={t('languageDescriptionInterface') || 'This language will be used for the interface'}

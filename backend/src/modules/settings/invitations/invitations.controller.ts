@@ -18,18 +18,18 @@ import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 
 @ApiTags('Settings - Invitations')
 @Controller('invitations')
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
-@ApiBearerAuth()
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
 
   @Post()
+  @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
   @RequirePermissions('invitations.create')
   @ApiOperation({ summary: 'Create invitation' })
   async create(@Request() req, @Body() createDto: CreateInvitationDto, @I18n() i18n: I18nContext) {
     const invitation = await this.invitationsService.create(
-      req.user.businessId,
-      req.user.sub,
+      req.user.id, // invitedById (landlord user ID)
+      req.user.tenantId, // tenantId
       createDto,
     );
     return {
@@ -40,10 +40,12 @@ export class InvitationsController {
   }
 
   @Get()
+  @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
   @RequirePermissions('invitations.view')
   @ApiOperation({ summary: 'Get all invitations' })
   async findAll(@Request() req) {
-    const invitations = await this.invitationsService.findAll(req.user.businessId);
+    const invitations = await this.invitationsService.findAll();
     return {
       success: true,
       data: invitations,
@@ -51,10 +53,12 @@ export class InvitationsController {
   }
 
   @Get(':id')
+  @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
   @RequirePermissions('invitations.view')
   @ApiOperation({ summary: 'Get invitation by ID' })
   async findOne(@Request() req, @Param('id') id: string) {
-    const invitation = await this.invitationsService.findOne(id, req.user.businessId);
+    const invitation = await this.invitationsService.findOne(id);
     return {
       success: true,
       data: invitation,
@@ -62,10 +66,12 @@ export class InvitationsController {
   }
 
   @Post(':id/resend')
+  @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
   @RequirePermissions('invitations.create')
   @ApiOperation({ summary: 'Resend invitation' })
   async resend(@Request() req, @Param('id') id: string, @I18n() i18n: I18nContext) {
-    const invitation = await this.invitationsService.resend(id, req.user.businessId);
+    const invitation = await this.invitationsService.resend(id);
     return {
       success: true,
       data: invitation,
@@ -74,13 +80,31 @@ export class InvitationsController {
   }
 
   @Delete(':id')
+  @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
   @RequirePermissions('invitations.delete')
   @ApiOperation({ summary: 'Cancel invitation' })
   async remove(@Request() req, @Param('id') id: string, @I18n() i18n: I18nContext) {
-    await this.invitationsService.remove(id, req.user.businessId);
+    await this.invitationsService.remove(id);
     return {
       success: true,
       message: i18n.t('common.deleted'),
+    };
+  }
+
+  // Public endpoint for accepting invitations (no auth required)
+  @Post('accept/:token')
+  @ApiOperation({ summary: 'Accept invitation by token' })
+  async acceptInvitation(
+    @Param('token') token: string, 
+    @Body() body: { password: string },
+    @I18n() i18n: I18nContext
+  ) {
+    const result = await this.invitationsService.accept(token, body.password);
+    return {
+      success: true,
+      data: result,
+      message: i18n.t('invitations.accepted'),
     };
   }
 }

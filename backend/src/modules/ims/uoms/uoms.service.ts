@@ -15,24 +15,22 @@ export class UomsService {
     private uomConversionsService: UomConversionsService,
   ) {}
 
-  async create(businessId: string, createDto: CreateUomDto) {
+  async create(createDto: CreateUomDto) {
     const uom = this.uomRepository.create({
       ...createDto,
-      businessId,
     });
     return this.uomRepository.save(uom);
   }
 
-  async findAll(businessId: string) {
+  async findAll() {
     return this.uomRepository.find({
-      where: { businessId },
       order: { name: 'ASC' },
     });
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const uom = await this.uomRepository.findOne({
-      where: { id, businessId },
+      where: { id },
     });
 
     if (!uom) {
@@ -42,14 +40,14 @@ export class UomsService {
     return uom;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdateUomDto) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdateUomDto) {
+    await this.findOne(id);
     await this.uomRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.uomRepository.delete({ id });
   }
 
@@ -57,15 +55,16 @@ export class UomsService {
    * Get all UOMs that are convertible from/to the given UOM using BFS
    * This finds all UOMs reachable via conversion paths
    */
-  async getConvertibleUoms(baseUomId: string, businessId: string) {
+  async getConvertibleUoms(baseUomId: string) {
     // Verify base UOM exists
-    const baseUom = await this.findOne(baseUomId, businessId);
+    const baseUom = await this.findOne(baseUomId);
 
-    // Get all UOMs for this restaurant
-    const allUoms = await this.findAll(businessId);
+    // Get all UOMs for this tenant
+    const allUoms = await this.findAll();
 
-    // Get all conversions
-    const conversions = await this.uomConversionsService.findAll(businessId);
+    // Get all conversions - temporarily keeping businessId parameter until UOM conversions service is updated
+    // This will be removed once UOM conversions service is also updated for multi-tenant
+    const conversions = await this.uomConversionsService.findAll();
 
     // Build conversion graph (bidirectional)
     const graph: Record<string, string[]> = {};

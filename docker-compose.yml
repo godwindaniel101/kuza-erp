@@ -39,8 +39,8 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/auth/google/callback}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:5001/api/auth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}
@@ -56,6 +56,7 @@ services:
       - ./backend/src:/app/src
       - ./backend/src/i18n:/app/src/i18n
       - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
+      - backend_uploads:/app/uploads
       - /app/node_modules
     networks:
       - erp_network
@@ -72,7 +73,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
       NEXT_TELEMETRY_DISABLED: 1
     ports:
-      - "${FRONTEND_PORT:-4000}:3000"
+      - "${FRONTEND_PORT:-5001}:3000"
     depends_on:
       - backend
     networks:
@@ -86,6 +87,7 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:
 
 networks:
   erp_network:

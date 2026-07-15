@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function OrderViewPage() {
   const { t } = useTranslation('common');
@@ -72,9 +73,9 @@ export default function OrderViewPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="mx-auto w-full max-w-5xl space-y-5">
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 dark:border-red-400 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 dark:border-brand-400 mx-auto"></div>
           <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</p>
         </div>
       </div>
@@ -84,10 +85,10 @@ export default function OrderViewPage() {
   if (!order) {
     return (
       <PermissionGuard permission="orders.view">
-        <div className="p-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
+        <div className="mx-auto w-full max-w-5xl space-y-5">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">{t('orderNotFound') || 'Order not found'}</p>
-            <Link href="/rms/orders" className="mt-4 inline-block text-red-600 hover:text-red-700 dark:text-red-400">
+            <Link href="/rms/orders" className="mt-4 inline-block text-brand-600 hover:text-brand-700 dark:text-brand-400">
               {t('backToOrders') || 'Back to Orders'}
             </Link>
           </div>
@@ -104,31 +105,25 @@ export default function OrderViewPage() {
 
   return (
     <PermissionGuard permission="orders.view">
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="mx-auto w-full max-w-5xl space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/rms/orders" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <i className="bx bx-arrow-back text-xl"></i>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('salesDetails') || 'Sales Details'}</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('orderNumber') || 'Order'}: {order.orderNumber}
-              </p>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title={t('salesDetails') || 'Sales Details'}
+          subtitle="Full breakdown of this order — items, payments and profit"
+          breadcrumbs={[
+            { label: t('orders') || 'Orders', href: '/rms/orders' },
+            { label: order.orderNumber },
+          ]}
+        />
 
         {/* First Row: Order Information and Payment History */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           {/* Order Information - 2/3 Width */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('orderInformation') || 'Order Information'}</h2>
+          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('orderInformation') || 'Order Information'}</h2>
             
             <div className="flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -237,8 +232,8 @@ export default function OrderViewPage() {
           </div>
 
           {/* Payment History - 1/3 Width */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('paymentHistory') || 'Payment History'}</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('paymentHistory') || 'Payment History'}</h2>
             
             {/* Payment Summary - At the top */}
             <div className="space-y-3 mb-4">
@@ -296,37 +291,37 @@ export default function OrderViewPage() {
 
         {/* Second Row: Order Items - Full Width */}
         <div className="mt-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orderItems') || 'Order Items'}</h2>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('orderItems') || 'Order Items'}</h2>
               </div>
               
               {order.items && order.items.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <table className="w-full divide-y divide-gray-100 dark:divide-gray-800">
                     <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('item')}
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-left text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('quantity')}
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('salesPrice') || 'Sales Price'}
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('totalCost') || 'Total Cost'}
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('soldFor') || 'Sold For'}
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th className="px-6 py-2.5 text-right text-2xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           {t('profit')}
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                       {order.items.map((item: any, index: number) => {
                         const itemProfit = Number(item.totalPrice || 0) - Number(item.costTotal || 0);
                         const isExpanded = expandedRows.has(index);
@@ -336,7 +331,7 @@ export default function OrderViewPage() {
                           <>
                             <tr
                               key={item.id || index}
-                              className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                              className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
                               style={{ cursor: hasBreakdown ? 'pointer' : 'default' }}
                               onClick={() => hasBreakdown && toggleRow(index)}
                             >
@@ -352,19 +347,19 @@ export default function OrderViewPage() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-900 dark:text-gray-100">
                                 {Number(item.quantity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.uom?.name || item.uom?.abbreviation || ''}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-900 dark:text-gray-100">
                                 {formatCurrency(item.unitPrice || 0)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">
+                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-600 dark:text-gray-400">
                                 {formatCurrency(item.costTotal || 0)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
+                              <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right font-medium text-gray-900 dark:text-gray-100">
                                 {formatCurrency(item.totalPrice || 0)}
                               </td>
-                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${itemProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              <td className={`px-6 py-3 whitespace-nowrap text-[13px] text-right font-semibold ${itemProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {itemProfit >= 0 ? '+' : ''}{formatCurrency(itemProfit)}
                               </td>
                             </tr>

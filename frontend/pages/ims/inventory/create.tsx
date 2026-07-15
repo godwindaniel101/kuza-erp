@@ -3,16 +3,22 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import PermissionGuard from '@/components/PermissionGuard';
 import InventoryItemForm from '@/components/InventoryItemForm';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function CreateInventoryItemPage() {
   const { t } = useTranslation('common');
 
   return (
     <PermissionGuard permission="inventory.create">
-      <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          {t('add')} {t('item')}
-        </h1>
+      <div className="mx-auto w-full max-w-3xl space-y-5">
+        <PageHeader
+          title={<>{t('add')} {t('item')}</>}
+          subtitle="Add a new item to your catalog"
+          breadcrumbs={[
+            { label: t('inventory') || 'Inventory', href: '/ims/inventory' },
+            { label: t('add') || 'Add' },
+          ]}
+        />
         <InventoryItemForm />
       </div>
     </PermissionGuard>

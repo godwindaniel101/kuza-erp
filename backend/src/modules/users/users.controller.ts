@@ -16,7 +16,7 @@ export class UsersController {
   @RequirePermissions('users.view')
   @ApiOperation({ summary: 'Get all users' })
   async findAll(@Request() req) {
-    const users = await this.usersService.findAllByRestaurant(req.user.businessId);
+    const users = await this.usersService.findAllByBusiness(req.user.businessId);
     return {
       success: true,
       data: users,
@@ -25,8 +25,27 @@ export class UsersController {
 
   @Post()
   @RequirePermissions('users.create')
-  @ApiOperation({ summary: 'Create user' })
-  async create(@Request() req, @Body() body: { name: string; email: string; password: string }) {
+  @ApiOperation({ summary: 'Create user via invitation (recommended)' })
+  async create(@Request() req, @Body() body: { 
+    name?: string; 
+    email: string; 
+    roleId?: string;
+  }) {
+    const result = await this.usersService.createWithInvitation(
+      req.user.id, // invitedById 
+      req.user.tenantId, // tenantId
+      body
+    );
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Post('direct')
+  @RequirePermissions('users.create')
+  @ApiOperation({ summary: 'Create user directly (legacy - not recommended)' })
+  async createDirect(@Request() req, @Body() body: { name: string; email: string; password: string }) {
     const user = await this.usersService.create(req.user.businessId, body);
     return {
       success: true,
@@ -37,8 +56,8 @@ export class UsersController {
   @Get(':id')
   @RequirePermissions('users.view')
   @ApiOperation({ summary: 'Get user by ID' })
-  async findOne(@Param('id') id: string) {
-    const user = await this.usersService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req) {
+    const user = await this.usersService.findOne(id, req.user.businessId);
     return {
       success: true,
       data: user,

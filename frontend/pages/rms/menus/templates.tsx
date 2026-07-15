@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import Button from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Template {
   id: string;
@@ -53,7 +55,7 @@ export default function MenuTemplatesPage() {
         {
           id: 'classic',
           name: 'Classic',
-          description: 'Traditional restaurant menu style',
+          description: 'Traditional business menu style',
           preview: '/images/templates/classic-preview.png',
         },
         {
@@ -91,78 +93,74 @@ export default function MenuTemplatesPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-        </div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/rms/menus" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <i className="bx bx-arrow-back text-xl"></i>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('selectTemplate') || 'Select Template'}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {menu ? `${t('designing') || 'Designing'}: ${menu.name}` : t('chooseTemplateForMenu') || 'Choose a beautiful template for your menu'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title={t('selectTemplate') || 'Select Template'}
+          subtitle={
+            menu
+              ? `${t('designing') || 'Designing'}: ${menu.name}`
+              : t('chooseTemplateForMenu') || 'Choose a beautiful template for your menu'
+          }
+          breadcrumbs={[
+            { label: t('menus') || 'Menus', href: '/rms/menus' },
+            { label: t('selectTemplate') || 'Select Template' },
+          ]}
+        />
 
         {/* AI Designer Option */}
-        <div className="mb-8">
+        <div>
           <button
             onClick={handleAiDesigner}
-            className="w-full p-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg shadow-lg transition-all flex items-center justify-between group"
+            className="w-full p-5 bg-brand-gradient hover:bg-brand-gradient-hover text-white rounded-xl transition-colors duration-150 flex items-center justify-between group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
           >
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <i className="bx bx-brain text-2xl"></i>
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <i className="bx bx-brain text-xl"></i>
               </div>
               <div className="text-left">
-                <h3 className="text-xl font-bold">{t('aiDesigner') || 'AI Designer'}</h3>
-                <p className="text-purple-100 text-sm">{t('designWithAi') || 'Design your menu template through conversation with AI'}</p>
+                <h3 className="text-sm font-semibold">{t('aiDesigner') || 'AI Designer'}</h3>
+                <p className="text-white/75 text-[13px]">{t('designWithAi') || 'Design your menu template through conversation with AI'}</p>
               </div>
             </div>
-            <i className="bx bx-chevron-right text-2xl group-hover:translate-x-1 transition-transform"></i>
+            <i className="bx bx-chevron-right text-xl group-hover:translate-x-1 transition-transform"></i>
           </button>
         </div>
 
         {/* Templates Grid */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('orChooseTemplate') || 'Or Choose a Template'}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('orChooseTemplate') || 'Or Choose a Template'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {templates.map((template) => (
               <div
                 key={template.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group"
+                className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 hover:ring-brand-300 dark:hover:ring-brand-700 transition-colors duration-150 cursor-pointer overflow-hidden group"
                 onClick={() => handleSelectTemplate(template.id)}
               >
                 {/* Preview Image */}
-                <div className="h-48 bg-gradient-to-br from-red-100 to-red-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                  <i className="bx bx-food-menu text-6xl text-red-500 dark:text-red-400 opacity-50"></i>
+                <div className="h-48 bg-gray-50 dark:bg-gray-800/60 flex items-center justify-center">
+                  <i className="bx bx-food-menu text-6xl text-gray-300 dark:text-gray-600"></i>
                 </div>
-                
+
                 {/* Template Info */}
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{template.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{template.description}</p>
-                  <button className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center justify-center space-x-2">
+                <div className="p-5">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{template.name}</h3>
+                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-4">{template.description}</p>
+                  <Button size="sm" className="w-full">
                     <span>{t('select') || 'Select'}</span>
                     <i className="bx bx-chevron-right"></i>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

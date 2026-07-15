@@ -1,18 +1,62 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Employee } from '../entities/employee.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { InvitationsService } from '../../settings/invitations/invitations.service';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     @InjectRepository(Employee)
     private employeeRepository: Repository<Employee>,
+    private invitationsService: InvitationsService,
   ) {}
 
-  async create(businessId: string, createEmployeeDto: CreateEmployeeDto) {
+  async create(createEmployeeDto: CreateEmployeeDto, invitedById: string, tenantId: string) {
+    // If employee has email, send invitation first
+    if (createEmployeeDto.email) {
+      try {
+        // Send invitation for employee type
+        await this.invitationsService.create(invitedById, tenantId, {
+          email: createEmployeeDto.email,
+          type: 'employee',
+          roleId: null, // Employees might not need specific roles initially
+        });
+        
+        // Create employee record (they can complete profile after accepting invitation)
+        const employee = await this.createEmployeeRecord(createEmployeeDto);
+        
+        return {
+          employee,
+          invitationSent: true,
+          message: 'Employee created and invitation sent. They can set up their account using the invitation email.',
+        };
+      } catch (error) {
+        // If invitation fails (e.g., user already exists), create employee without invitation
+        if (error.message?.includes('already exists')) {
+          const employee = await this.createEmployeeRecord(createEmployeeDto);
+          return {
+            employee,
+            invitationSent: false,
+            message: 'Employee created. User account already exists.',
+          };
+        }
+        throw error;
+      }
+    } else {
+      // No email provided, just create employee record
+      const employee = await this.createEmployeeRecord(createEmployeeDto);
+      return {
+        employee,
+        invitationSent: false,
+        message: 'Employee created without email. No invitation sent.',
+      };
+    }
+  }
+
+  private async createEmployeeRecord(createEmployeeDto: CreateEmployeeDto) {
     // Generate employee number
     const year = new Date().getFullYear();
     const count = await this.employeeRepository.count({
@@ -25,23 +69,23 @@ export class EmployeesService {
     const employee = this.employeeRepository.create({
       ...createEmployeeDto,
       employeeNumber,
-      businessId,
       hireDate: new Date(createEmployeeDto.hireDate),
     });
 
     return this.employeeRepository.save(employee);
   }
 
-  async findAll(businessId: string) {
+  async findAll() {
     return this.employeeRepository.find({
-      where: { businessId },
       relations: ['department', 'position', 'location', 'manager'],
     });
   }
 
   async findOne(id: string) {
+    const where: any = { id };
+
     const employee = await this.employeeRepository.findOne({
-      where: { id },
+      where,
       relations: ['department', 'position', 'location', 'manager', 'directReports'],
     });
 

@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 import Toast from '@/components/Toast';
 import Card from '@/components/Card';
 
@@ -113,26 +114,34 @@ export default function CreateRolePage() {
 
   return (
     <PermissionGuard permission="roles.create">
-      <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
+      <div className="mx-auto w-full max-w-5xl space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="mb-4 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <i className="bx bx-arrow-back"></i>
-            {t('back') || 'Back'}
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('create')} {t('role')}</h1>
-        </div>
+        <PageHeader
+          title={<>{t('create')} {t('role')}</>}
+          subtitle="Define what this role can see and do"
+          breadcrumbs={[
+            { label: t('settings') || 'Settings', href: '/settings' },
+            { label: t('roles') || 'Roles', href: '/settings/roles' },
+            { label: t('create') || 'Create' },
+          ]}
+          actions={
+            <button
+              onClick={() => router.back()}
+              className="h-8 px-3 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <i className="bx bx-arrow-back"></i>
+              {t('back') || 'Back'}
+            </button>
+          }
+        />
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Basic Information */}
             <div className="lg:col-span-1">
               <Card>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('basicInformation') || 'Basic Information'}</h2>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('basicInformation') || 'Basic Information'}</h2>
                 
                 <div className="space-y-4">
                   <div>
@@ -143,7 +152,7 @@ export default function CreateRolePage() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                      className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                       placeholder="e.g., manager"
                       required
                     />
@@ -157,7 +166,7 @@ export default function CreateRolePage() {
                       type="text"
                       value={formData.displayName}
                       onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                      className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                       placeholder="e.g., Manager"
                       required
                     />
@@ -171,7 +180,7 @@ export default function CreateRolePage() {
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={4}
-                      className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-transparent resize-none"
+                      className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
                       placeholder={t('roleDescription') || 'Enter role description...'}
                     />
                   </div>
@@ -183,7 +192,7 @@ export default function CreateRolePage() {
             <div className="lg:col-span-2">
               <Card>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('permissions')}</h2>
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('permissions')}</h2>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {selectedPermissions.length} {t('selected') || 'selected'}
                   </span>
@@ -191,14 +200,14 @@ export default function CreateRolePage() {
 
                 {loadingPermissions ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
                   </div>
                 ) : permissions.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-500 dark:text-gray-400">{t('noPermissionsFound') || 'No permissions found'}</p>
                   </div>
                 ) : (
-                  <div className="space-y-6 max-h-[600px] overflow-y-auto">
+                  <div className="space-y-5 max-h-[600px] overflow-y-auto">
                     {Object.entries(groupedPermissions).map(([group, groupPerms]) => {
                       const allSelected = groupPerms.every((p) => selectedPermissions.includes(p.id));
                       const someSelected = groupPerms.some((p) => selectedPermissions.includes(p.id));
@@ -224,7 +233,7 @@ export default function CreateRolePage() {
                                   toggleGroup(group);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="h-4 w-4 text-blue-600 focus-visible:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+                                className="h-4 w-4 text-blue-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
                               />
                               <h3 className="font-semibold text-gray-900 dark:text-gray-100">{group}</h3>
                             </div>
@@ -247,7 +256,7 @@ export default function CreateRolePage() {
                                     togglePermission(permission.id);
                                   }}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="mt-1 h-4 w-4 text-blue-600 focus-visible:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+                                  className="mt-1 h-4 w-4 text-blue-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
                                 />
                                 <div className="flex-1">
                                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -286,7 +295,7 @@ export default function CreateRolePage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-blue-700 dark:hover:bg-blue-600"
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-brand-600 dark:hover:bg-brand-600"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

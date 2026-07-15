@@ -27,15 +27,20 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    // Admin role has all permissions
-    // Also check if user has no roles (temporary: allow access for users without roles during migration)
-    if (!user.roles || user.roles.length === 0) {
-      // For now, allow access if user has no roles (they're likely the owner)
-      // TODO: Remove this after proper role assignment is implemented
-      return true;
+    // Normalize role names — request.user.roles may be an array of role
+    // objects ({ name, permissions }) or already-flattened role-name strings.
+    const roleNames = this.getRoleNames(user);
+
+    // SECURITY: a user with no roles has no permissions. Deny access to any
+    // permission-protected endpoint. (Owners are assigned the 'admin' role at
+    // registration; see AuthService.register.) Previously this returned true,
+    // which granted role-less accounts full access.
+    if (roleNames.length === 0) {
+      return false;
     }
-    
-    if (user.roles?.some((role: any) => role.name === 'admin')) {
+
+    // Admin role short-circuits all permission checks.
+    if (roleNames.includes('admin')) {
       return true;
     }
 
@@ -44,22 +49,41 @@ export class PermissionsGuard implements CanActivate {
     return requiredPermissions.some((permission) => userPermissions.includes(permission));
   }
 
-  private getUserPermissions(user: any): string[] {
-    const permissions: string[] = [];
+  private getRoleNames(user: any): string[] {
+    if (!Array.isArray(user?.roles)) {
+      return [];
+    }
+    return user.roles
+      .map((role: any) => (typeof role === 'string' ? role : role?.name))
+      .filter((name: any): name is string => Boolean(name));
+  }
 
-    if (user.roles) {
+  /**
+   * Collect permission names from either a flattened `permissions: string[]`
+   * (as produced by AuthService.mapUser) or nested role.permissions objects.
+   */
+  private getUserPermissions(user: any): string[] {
+    const permissions = new Set<string>();
+
+    if (Array.isArray(user?.permissions)) {
+      user.permissions.forEach((p: any) => {
+        const name = typeof p === 'string' ? p : p?.name;
+        if (name) permissions.add(name);
+      });
+    }
+
+    if (Array.isArray(user?.roles)) {
       user.roles.forEach((role: any) => {
-        if (role.permissions) {
-          role.permissions.forEach((permission: any) => {
-            if (!permissions.includes(permission.name)) {
-              permissions.push(permission.name);
-            }
+        if (role && Array.isArray(role.permissions)) {
+          role.permissions.forEach((p: any) => {
+            const name = typeof p === 'string' ? p : p?.name;
+            if (name) permissions.add(name);
           });
         }
       });
     }
 
-    return permissions;
+    return Array.from(permissions);
   }
 }
 

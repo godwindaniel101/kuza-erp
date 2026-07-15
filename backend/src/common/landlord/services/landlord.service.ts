@@ -47,11 +47,31 @@ export class LandlordService {
   }
 
   /**
+   * Get all tenants
+   */
+  async getAllTenants(): Promise<Tenant[]> {
+    return await this.tenantRepository.find({
+      where: { isActive: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
    * Find user by email in landlord database
    */
   async findUserByEmail(email: string): Promise<LandlordUser | null> {
     return await this.landlordUserRepository.findOne({
       where: { email },
+      relations: ['tenant'],
+    });
+  }
+
+  /**
+   * Find user by ID in landlord database
+   */
+  async findUserById(id: string): Promise<LandlordUser | null> {
+    return await this.landlordUserRepository.findOne({
+      where: { id },
       relations: ['tenant'],
     });
   }
@@ -133,6 +153,49 @@ export class LandlordService {
     });
 
     return await this.landlordUserRepository.save(user);
+  }
+
+  /**
+   * Create landlord user for invited user (no password initially)
+   */
+  async createLandlordUserFromInvitation(
+    name: string,
+    email: string,
+    password: string,
+    tenantId: string,
+  ): Promise<LandlordUser> {
+    // Check if user already exists by email
+    const existingUser = await this.findUserByEmail(email);
+    if (existingUser) {
+      // If user exists but belongs to different tenant, we could potentially
+      // allow multi-tenant access, but for now we'll throw an error
+      if (existingUser.tenantId !== tenantId) {
+        throw new ConflictException('User already exists in another tenant');
+      }
+      // User exists in same tenant, just return the existing user
+      return existingUser;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = this.landlordUserRepository.create({
+      name,
+      email,
+      password: hashedPassword,
+      tenantId,
+    });
+
+    return await this.landlordUserRepository.save(user);
+  }
+
+  /**
+   * Update landlord user password (for first-time login from invitation)
+   */
+  async updateLandlordUserPassword(userId: string, newPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.landlordUserRepository.update(userId, { password: hashedPassword });
   }
 
   /**

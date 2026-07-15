@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import InventoryItemForm from '@/components/InventoryItemForm';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function EditInventoryItemPage() {
   const { t } = useTranslation('common');
@@ -38,7 +39,7 @@ export default function EditInventoryItemPage() {
     return (
       <div className="p-6">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </div>
     );
@@ -49,7 +50,7 @@ export default function EditInventoryItemPage() {
       <div className="p-6">
         <div className="text-center py-8">
           <p className="text-red-600 dark:text-red-400">{t('itemNotFound') || 'Item not found'}</p>
-          <Link href="/ims/inventory" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 inline-block">
+          <Link href="/ims/inventory" className="text-brand-600 dark:text-brand-400 hover:underline mt-4 inline-block">
             {t('backToInventory') || 'Back to Inventory'}
           </Link>
         </div>
@@ -59,15 +60,15 @@ export default function EditInventoryItemPage() {
 
   return (
     <PermissionGuard permission="inventory.edit">
-      <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
-        <div className="mb-6">
-          <Link href="/ims/inventory" className="text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block">
-            ← {t('backToInventory') || 'Back to Inventory'}
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-            {t('edit')} {t('item')}: {item.name}
-          </h1>
-        </div>
+      <div className="mx-auto w-full max-w-3xl space-y-5">
+        <PageHeader
+          title={<>{t('edit')} {t('item')}: {item.name}</>}
+          subtitle="Update this item's details and pricing"
+          breadcrumbs={[
+            { label: t('inventory') || 'Inventory', href: '/ims/inventory' },
+            { label: item.name },
+          ]}
+        />
         <InventoryItemForm itemId={id as string} initialData={item} />
       </div>
     </PermissionGuard>

@@ -44,7 +44,7 @@ class AuthService {
       name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
       firstName: user.firstName,
       lastName: user.lastName,
-      businessId: user.businessId || user.restaurant?.id || '',
+      businessId: user.businessId || user.business?.id || '',
       roles,
       permissions,
     } as User;
@@ -103,7 +103,12 @@ class AuthService {
     email: string;
     password: string;
     passwordConfirmation: string;
-    restaurantName: string;
+    businessName: string;
+    /** Vertical picked at registration (apps model). */
+    businessType?: string;
+    country?: string;
+    /** App registry keys seeded from the vertical preset, user-edited. */
+    enabledApps?: string[];
   }) {
     try {
       const response = await api.post<{ success: boolean; data: { user: User; token: string } }>(
@@ -182,7 +187,7 @@ export const authService = new AuthService();
     name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
     firstName: user.firstName,
     lastName: user.lastName,
-    businessId: user.businessId || user.restaurant?.id || '',
+    businessId: user.businessId || user.business?.id || '',
     roles,
     permissions,
   } as User;

@@ -14,7 +14,10 @@ interface AuthStore {
     email: string;
     password: string;
     passwordConfirmation: string;
-    restaurantName: string;
+    businessName: string;
+    businessType?: string;
+    country?: string;
+    enabledApps?: string[];
   }) => Promise<void>;
   logout: () => void;
   fetchUser: () => Promise<void>;

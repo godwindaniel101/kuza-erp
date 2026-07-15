@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function UomsPage() {
   const { t } = useTranslation('common');
@@ -59,23 +60,27 @@ export default function UomsPage() {
           onClose={() => setToast(null)}
         />
       )}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('uoms')}</h1>
-        <PermissionGuard permission="uoms.create">
-          <button onClick={() => setShowCreate(true)} className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm">
-            {t('create')} {t('uom')}
-          </button>
-        </PermissionGuard>
-      </div>
+      <PageHeader
+        title={t('uoms')}
+        subtitle="The units your stock is counted in"
+        breadcrumbs={[{ label: t('inventory') || 'Inventory', href: '/ims/inventory' }, { label: t('uoms') }]}
+        actions={
+          <PermissionGuard permission="uoms.create">
+            <button onClick={() => setShowCreate(true)} className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center">
+              {t('create')} {t('uom')}
+            </button>
+          </PermissionGuard>
+        }
+      />
 
       {/* UOMs Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 mb-6">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('units')}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('units')}</h2>
         </div>
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
           </div>
         ) : uoms.length === 0 ? (
           <div className="p-8 text-center">
@@ -85,7 +90,7 @@ export default function UomsPage() {
             <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noUomsYet') || 'No units yet'}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('create')} {t('uoms').toLowerCase()}.</p>
             <PermissionGuard permission="uoms.create">
-              <button onClick={() => setShowCreate(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm">
+              <button onClick={() => setShowCreate(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2">
                 {t('create')} {t('uom')}
               </button>
             </PermissionGuard>
@@ -93,42 +98,42 @@ export default function UomsPage() {
         ) : (
           <>
             <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('name')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('abbreviation')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('default')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {uoms.slice((uomCurrentPage - 1) * itemsPerPage, uomCurrentPage * itemsPerPage).map((uom) => (
                     <tr key={uom.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                         {uom.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         {uom.abbreviation}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         {uom.isDefault && (
                           <span className="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {t('default')}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                         <PermissionGuard permission="uoms.edit">
-                          <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">{t('edit')}</button>
+                          <button className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 mr-3">{t('edit')}</button>
                         </PermissionGuard>
                         <PermissionGuard permission="uoms.delete">
                           <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">{t('delete')}</button>
@@ -155,11 +160,11 @@ export default function UomsPage() {
       </div>
 
       {/* Conversions Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('conversions') || 'Conversions'}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('conversions') || 'Conversions'}</h2>
           <PermissionGuard permission="uoms.create">
-            <button onClick={() => setShowCreateConversion(true)} className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+            <button onClick={() => setShowCreateConversion(true)} className="px-3 py-1 text-sm bg-brand-600 text-white rounded hover:bg-brand-700">
               {t('add')} {t('conversion') || 'Conversion'}
             </button>
           </PermissionGuard>
@@ -172,7 +177,7 @@ export default function UomsPage() {
             <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noConversionsYet') || 'No conversions yet'}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('addConversionsToConvertBetweenUnits') || 'Add conversions to convert between units'}</p>
             <PermissionGuard permission="uoms.create">
-              <button onClick={() => setShowCreateConversion(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm">
+              <button onClick={() => setShowCreateConversion(true)} className="inline-flex items-center mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2">
                 {t('add')} {t('conversion') || 'Conversion'}
               </button>
             </PermissionGuard>
@@ -180,44 +185,44 @@ export default function UomsPage() {
         ) : (
           <>
             <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('fromUnit') || 'From Unit'}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('toUnit') || 'To Unit'}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('conversionFactor') || 'Factor'}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('formula') || 'Formula'}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {conversions.slice((conversionCurrentPage - 1) * itemsPerPage, conversionCurrentPage * itemsPerPage).map((conversion) => (
                     <tr key={conversion.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                         {conversion.fromUom?.name} ({conversion.fromUom?.abbreviation})
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         {conversion.toUom?.name} ({conversion.toUom?.abbreviation})
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         {conversion.factor}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-300">
                         1 {conversion.fromUom?.abbreviation} = {conversion.factor} {conversion.toUom?.abbreviation}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                         <PermissionGuard permission="uoms.edit">
-                          <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">{t('edit')}</button>
+                          <button className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 mr-3">{t('edit')}</button>
                         </PermissionGuard>
                         <PermissionGuard permission="uoms.delete">
                           <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">{t('delete')}</button>
@@ -247,15 +252,15 @@ export default function UomsPage() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('create')} {t('uom')}</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('create')} {t('uom')}</h3>
             <div className="space-y-3">
               <input
                 type="text"
                 value={newUom.name}
                 onChange={(e) => setNewUom({ ...newUom, name: e.target.value })}
                 placeholder={t('name')}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
               <input
@@ -263,7 +268,7 @@ export default function UomsPage() {
                 value={newUom.abbreviation}
                 onChange={(e) => setNewUom({ ...newUom, abbreviation: e.target.value })}
                 placeholder={t('abbreviation')}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
               <label className="inline-flex items-center gap-2">
@@ -277,9 +282,9 @@ export default function UomsPage() {
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button className="px-4 py-3 border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md" onClick={() => setShowCreate(false)}>{t('cancel')}</button>
+              <button className="h-9 px-4 inline-flex items-center border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md text-[13px]" onClick={() => setShowCreate(false)}>{t('cancel')}</button>
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
+                className="px-4 py-2 bg-brand-600 text-white rounded-md disabled:opacity-50"
                 disabled={!newUom.name || !newUom.abbreviation}
                 onClick={async () => {
                   try {
@@ -305,13 +310,13 @@ export default function UomsPage() {
 
       {showCreateConversion && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('add')} {t('conversion') || 'Conversion'}</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('add')} {t('conversion') || 'Conversion'}</h3>
             <div className="space-y-3">
               <select
                 value={newConversion.fromUomId}
                 onChange={(e) => setNewConversion({ ...newConversion, fromUomId: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               >
                 <option value="">{t('selectFromUnit') || 'Select from unit'}</option>
@@ -322,7 +327,7 @@ export default function UomsPage() {
               <select
                 value={newConversion.toUomId}
                 onChange={(e) => setNewConversion({ ...newConversion, toUomId: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               >
                 <option value="">{t('selectToUnit') || 'Select to unit'}</option>
@@ -336,7 +341,7 @@ export default function UomsPage() {
                 value={newConversion.factor}
                 onChange={(e) => setNewConversion({ ...newConversion, factor: e.target.value })}
                 placeholder={t('conversionFactor') || 'Conversion factor'}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
               {newConversion.fromUomId && newConversion.toUomId && newConversion.factor && (
@@ -348,7 +353,7 @@ export default function UomsPage() {
             <div className="flex justify-end gap-2 mt-4">
               <button className="px-4 py-2 border border-gray-300 dark:border-gray-700 dark:text-gray-200 rounded-md" onClick={() => setShowCreateConversion(false)}>{t('cancel')}</button>
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
+                className="px-4 py-2 bg-brand-600 text-white rounded-md disabled:opacity-50"
                 disabled={!newConversion.fromUomId || !newConversion.toUomId || !newConversion.factor}
                 onClick={async () => {
                   try {

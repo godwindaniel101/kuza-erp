@@ -6,11 +6,18 @@ import { api } from '@/lib/api';
 import Link from 'next/link';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
+import PageHeader from '@/components/ui/PageHeader';
+import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
+import EmptyState from '@/components/ui/EmptyState';
+import StatusBadge from '@/components/ui/StatusBadge';
+
+const PAGE_SIZE = 20;
 
 export default function OrdersPage() {
   const { t } = useTranslation('common');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -101,153 +108,180 @@ export default function OrdersPage() {
     }
   };
 
-  return (
-    <div className="p-6">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('orders')}</h1>
+  // ---- Derived row helpers (same math as before, per row) ----
+  const rowTotalCost = (order: any) =>
+    order.items?.reduce((sum: number, item: any) => {
+      let itemCost = Number(item.costTotal || 0);
+      if (itemCost === 0) {
+        const unitCost = Number(item.unitCost || item.cost || item.costPrice || 0);
+        const quantity = Number(item.quantity || 0);
+        itemCost = unitCost * quantity;
+      }
+      return sum + itemCost;
+    }, 0) || 0;
+
+  const rowTotalSale = (order: any) => Number(order.subtotal || order.totalAmount || 0);
+
+  const rowItemsSold = (order: any) =>
+    order.items?.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0) ||
+    Number(order.itemsSold || 0) ||
+    0;
+
+  const rowTotalPaid = (order: any) =>
+    (order.payments || []).reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: 'orderNumber',
+      label: t('orderNumber'),
+      render: (order) => (
         <Link
-          href="/rms/orders/create"
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+          href={`/rms/orders/${order.id}`}
+          className="font-medium text-brand-600 dark:text-brand-400 hover:underline"
+          onClick={(e) => e.stopPropagation()}
         >
-          {t('create')} {t('order')}
+          {order.orderNumber}
         </Link>
-      </div>
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
-            <i className="bx bx-receipt text-gray-400 dark:text-gray-500 text-2xl"></i>
-          </div>
-          <h3 className="text-gray-900 dark:text-gray-100 font-medium">{t('noOrdersYet') || 'No orders yet'}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('createYourFirstOrder') || 'Create your first order to get started'}</p>
+      ),
+    },
+    {
+      key: 'itemsSold',
+      label: t('itemsSold') || 'Items Sold',
+      render: (order) => <span className="text-gray-500 dark:text-gray-400">{rowItemsSold(order)}</span>,
+    },
+    {
+      key: 'totalPaid',
+      label: t('totalPaid') || 'Total Paid',
+      align: 'right',
+      render: (order) => <span className="text-gray-500 dark:text-gray-400">{formatCurrency(rowTotalPaid(order))}</span>,
+    },
+    {
+      key: 'createdAt',
+      label: t('createdDate') || 'Date/Time',
+      render: (order) => {
+        const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+        return (
+          <span className="text-gray-500 dark:text-gray-400">
+            {createdAt
+              ? `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : '-'}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'totalCost',
+      label: t('totalCost') || 'Total Cost',
+      align: 'right',
+      render: (order) => <span className="text-gray-500 dark:text-gray-400">{formatCurrency(rowTotalCost(order))}</span>,
+    },
+    {
+      key: 'totalSale',
+      label: t('totalSale') || 'Total Sale',
+      align: 'right',
+      render: (order) => (
+        <span className="text-gray-900 dark:text-gray-100">{formatCurrency(rowTotalSale(order))}</span>
+      ),
+    },
+    {
+      key: 'profit',
+      label: t('profit'),
+      align: 'right',
+      render: (order) => {
+        const profit = rowTotalSale(order) - rowTotalCost(order);
+        return (
+          <span
+            className={`font-semibold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+          >
+            {profit >= 0 ? '+' : ''}
+            {formatCurrency(profit)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      label: t('status'),
+      render: (order) => (
+        <StatusBadge
+          variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'pending' : 'info'}
+          label={order.status}
+        />
+      ),
+    },
+    {
+      key: 'actions',
+      label: t('actions'),
+      render: (order) => {
+        const isFullyPaid = rowTotalPaid(order) >= Number(order.totalAmount || 0);
+        if (isFullyPaid) return <span className="text-gray-400 dark:text-gray-500">—</span>;
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMarkAsPaid(order);
+            }}
+            className="font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+          >
+            {t('markAsPaid') || 'Mark as Paid'}
+          </button>
+        );
+      },
+    },
+  ];
+
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const pageOrders = orders.slice(startIndex, startIndex + PAGE_SIZE);
+
+  return (
+    <div className="space-y-5">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <PageHeader
+        title={t('orders') || 'Orders'}
+        count={loading ? undefined : orders.length}
+        subtitle="Every sale rung up, paid and settled"
+        breadcrumbs={[{ label: 'Restaurant' }, { label: t('orders') || 'Orders' }]}
+        actions={
           <Link
             href="/rms/orders/create"
-            className="mt-4 inline-block px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+            className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
           >
+            <i className="bx bx-plus mr-2" aria-hidden="true"></i>
             {t('create')} {t('order')}
           </Link>
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('orderNumber')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('itemsSold') || 'Items Sold'}
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('totalPaid') || 'Total Paid'}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('createdDate') || 'Date/Time'}
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('totalCost') || 'Total Cost'}
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('totalSale') || 'Total Sale'}
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('profit')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('status')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    {t('actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {orders.map((order) => {
-                // Calculate total cost from order items - try multiple cost fields
-                const totalCost = order.items?.reduce((sum: number, item: any) => {
-                  // Try different cost field combinations
-                  let itemCost = Number(item.costTotal || 0);
-                  
-                  // If costTotal is 0, try to calculate from unitCost * quantity
-                  if (itemCost === 0) {
-                    const unitCost = Number(item.unitCost || item.cost || item.costPrice || 0);
-                    const quantity = Number(item.quantity || 0);
-                    itemCost = unitCost * quantity;
-                  }
-                  
-                  return sum + itemCost;
-                }, 0) || 0;
-                
-                const totalSale = Number(order.subtotal || order.totalAmount || 0);
-                const profit = totalSale - totalCost;
-                const itemsSold = order.items?.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0) || Number(order.itemsSold || 0) || 0;
-                const existingPayments = order.payments || [];
-                const totalPaid = existingPayments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
-                const isFullyPaid = totalPaid >= Number(order.totalAmount || 0);
-                const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+        }
+      />
 
-                return (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      <Link href={`/rms/orders/${order.id}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        {order.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {itemsSold}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
-                      {formatCurrency(totalPaid)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {createdAt ? `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
-                      {formatCurrency(totalCost)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
-                      {formatCurrency(totalSale)}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          order.status === 'completed'
-                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                            : order.status === 'pending'
-                            ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {!isFullyPaid && (
-                        <button
-                          onClick={() => handleMarkAsPaid(order)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        >
-                          {t('markAsPaid') || 'Mark as Paid'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <DataTable<any>
+        columns={columns}
+        data={pageOrders}
+        loading={loading}
+        pagination={{
+          page,
+          totalPages,
+          startIndex,
+          endIndex: Math.min(startIndex + pageOrders.length, orders.length),
+          totalItems: orders.length,
+          onPageChange: setPage,
+        }}
+        emptyState={
+          <EmptyState
+            icon="bx-receipt"
+            title={t('noOrdersYet') || 'No orders yet'}
+            description={t('createYourFirstOrder') || 'Create your first order to get started'}
+            actions={
+              <Link
+                href="/rms/orders/create"
+                className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
+              >
+                {t('create')} {t('order')}
+              </Link>
+            }
+          />
+        }
+      />
 
       {/* Mark as Paid Modal */}
       <Modal
@@ -261,7 +295,7 @@ export default function OrdersPage() {
       >
         {selectedOrder && (
           <form onSubmit={handlePaymentSubmit} className="space-y-4">
-            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-4">
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">{t('orderTotal') || 'Order Total'}:</span>
                 <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(selectedOrder.totalAmount || 0))}</span>
@@ -283,7 +317,7 @@ export default function OrdersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('paymentMode') || 'Payment Mode'} <span className="text-red-500">*</span>
               </label>
               <select
@@ -299,7 +333,7 @@ export default function OrdersPage() {
                     amount: mode === 'full' ? remainingBalance : paymentForm.amount,
                   });
                 }}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               >
                 <option value="full">{t('fullPayment') || 'Full Payment'}</option>
@@ -308,13 +342,13 @@ export default function OrdersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('paymentMethod') || 'Payment Method'} <span className="text-red-500">*</span>
               </label>
               <select
                 value={paymentForm.method}
                 onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               >
                 <option value="cash">{t('cash') || 'Cash'}</option>
@@ -325,7 +359,7 @@ export default function OrdersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('amount') || 'Amount'} <span className="text-red-500">*</span>
               </label>
               <input
@@ -334,38 +368,38 @@ export default function OrdersPage() {
                 min="0.01"
                 value={paymentForm.amount}
                 onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) || 0 })}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('notes')} ({t('optional') || 'Optional'})
               </label>
               <textarea
                 value={paymentForm.notes}
                 onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                 rows={3}
-                className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="w-full px-3 py-2 text-[13px] border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent"
               />
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex justify-end gap-3 pt-4">
               <button
                 type="button"
                 onClick={() => {
                   setShowPaymentModal(false);
                   setSelectedOrder(null);
                 }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="h-9 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center"
               >
                 {t('cancel') || 'Cancel'}
               </button>
               <button
                 type="submit"
                 disabled={processingPayment}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-9 px-4 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {processingPayment ? (t('processing') || 'Processing...') : (t('processPayment') || 'Process Payment')}
               </button>

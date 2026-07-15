@@ -8,6 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -18,6 +19,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Public()
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -50,6 +52,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'User successfully logged in' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
@@ -77,8 +80,7 @@ export class AuthController {
     const token = this.authService.generateToken(
       user.id,
       user.email,
-      user.businessId,
-      user.employee?.id,
+      user.tenantId,
     );
 
     // Redirect to frontend with token
@@ -93,7 +95,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User data retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Request() req) {
-    const user = await this.authService.validateUser(req.user.sub);
+    const user = await this.authService.validateUser(req.user.sub, true);
     return {
       success: true,
       data: user,

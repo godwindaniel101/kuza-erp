@@ -1,12 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
+import type { BusinessType } from '@/store/globalStore';
+import {
+  APP_REGISTRY,
+  AppKey,
+  enabledDependents,
+  getApp,
+  missingDependencies,
+  presetFor,
+  withDependencies,
+} from '@/lib/apps';
+import Icon, { IconName } from '@/components/ui/Icon';
 import Link from 'next/link';
 import Head from 'next/head';
-import Image from 'next/image';
+
+const BUSINESS_TYPES: { type: BusinessType; label: string; description: string; icon: IconName }[] = [
+  { type: 'hospitality', label: 'Hospitality', description: 'Restaurants, hotels, lounges & bars', icon: 'menu-book' },
+  { type: 'accounts', label: 'Digital Accounts', description: 'Books, invoicing & getting paid', icon: 'calculator' },
+  { type: 'retail', label: 'Retail MS', description: 'Products, checkout & purchases', icon: 'building-storefront' },
+  { type: 'hr', label: 'Human Resource MS', description: 'Employees, leave & attendance', icon: 'users' },
+  { type: 'warehouse', label: 'Warehouse MS', description: 'Stock, receiving & locations', icon: 'cube' },
+];
+
+const joinNames = (keys: AppKey[]) => keys.map((k) => getApp(k)?.name ?? k).join(', ');
 
 export default function Register() {
   const { t } = useTranslation('common');
@@ -18,32 +38,20 @@ export default function Register() {
     email: '',
     password: '',
     passwordConfirmation: '',
-    restaurantName: '',
-    services: [] as string[],
+    businessName: '',
+    businessType: '' as BusinessType | '',
+    apps: [] as string[],
     country: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stepErrors, setStepErrors] = useState<{ [key: number]: string }>({});
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      if (typeof window !== 'undefined') {
-        setIsDarkMode(document.documentElement.classList.contains('dark'));
-      }
-    };
-    checkDarkMode();
-    if (typeof window !== 'undefined') {
-      const observer = new MutationObserver(checkDarkMode);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class'],
-      });
-      return () => observer.disconnect();
-    }
-  }, []);
+  const [showMoreApps, setShowMoreApps] = useState(false);
+  /** Small note under the apps grid when dependencies auto-check/uncheck. */
+  const [depNote, setDepNote] = useState('');
+  // Manual edits survive business-type switches (where sane — deps re-close).
+  const manualAdds = useRef(new Set<string>());
+  const manualRemoves = useRef(new Set<string>());
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -61,32 +69,78 @@ export default function Register() {
     { code: 'FR', name: 'France', flag: '🇫🇷' },
   ];
 
-  const handleServiceToggle = (service: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      services: prev.services.includes(service)
-        ? prev.services.filter((s) => s !== service)
-        : [...prev.services, service],
-    }));
+  const handleBusinessTypeSelect = (type: BusinessType) => {
+    // Preset seeds the checks; the user's manual edits are preserved where
+    // sane (removed apps stay removed unless another kept app requires them).
+    const base = [
+      ...presetFor(type).filter((k) => !manualRemoves.current.has(k)),
+      ...Array.from(manualAdds.current),
+    ];
+    setFormData((prev) => ({ ...prev, businessType: type, apps: withDependencies(base) }));
+    setDepNote('');
     setStepErrors((prev) => ({ ...prev, 1: '' }));
+  };
+
+  const handleAppToggle = (key: AppKey) => {
+    const checked = formData.apps.includes(key);
+    let nextApps: string[];
+    let note = '';
+
+    if (checked) {
+      // Unchecking also unchecks apps that depend on it.
+      const dependents = enabledDependents(key, formData.apps);
+      nextApps = formData.apps.filter((k) => k !== key && !dependents.includes(k as AppKey));
+      manualRemoves.current.add(key);
+      manualAdds.current.delete(key);
+      dependents.forEach((d) => {
+        manualRemoves.current.add(d);
+        manualAdds.current.delete(d);
+      });
+      if (dependents.length > 0) {
+        note = `Also turned off ${joinNames(dependents)} — ${dependents.length > 1 ? 'they need' : 'it needs'} ${
+          getApp(key)?.name ?? key
+        }.`;
+      }
+    } else {
+      // Checking auto-checks its dependencies.
+      const added = missingDependencies(key, formData.apps);
+      nextApps = withDependencies([...formData.apps, key]);
+      manualAdds.current.add(key);
+      manualRemoves.current.delete(key);
+      added.forEach((d) => manualRemoves.current.delete(d));
+      if (added.length > 0) {
+        note = `Also enabled ${joinNames(added)} — required by ${getApp(key)?.name ?? key}.`;
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, apps: nextApps }));
+    setDepNote(note);
+    setStepErrors((prev) => ({ ...prev, 2: '' }));
   };
 
   const handleCountrySelect = (country: string) => {
     setFormData((prev) => ({ ...prev, country }));
-    setStepErrors((prev) => ({ ...prev, 2: '' }));
+    setStepErrors((prev) => ({ ...prev, 3: '' }));
   };
 
   const validateStep = (step: number): boolean => {
     if (step === 1) {
-      if (formData.services.length === 0) {
-        setStepErrors((prev) => ({ ...prev, 1: 'Please select at least one service' }));
+      if (!formData.businessType) {
+        setStepErrors((prev) => ({ ...prev, 1: 'Please select your business type' }));
         return false;
       }
       return true;
     }
     if (step === 2) {
+      if (formData.apps.length === 0) {
+        setStepErrors((prev) => ({ ...prev, 2: 'Please keep at least one app enabled' }));
+        return false;
+      }
+      return true;
+    }
+    if (step === 3) {
       if (!formData.country) {
-        setStepErrors((prev) => ({ ...prev, 2: 'Please select a country' }));
+        setStepErrors((prev) => ({ ...prev, 3: 'Please select a country' }));
         return false;
       }
       return true;
@@ -96,7 +150,7 @@ export default function Register() {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, 3));
+      setCurrentStep((prev) => Math.min(prev + 1, 4));
     }
   };
 
@@ -115,7 +169,10 @@ export default function Register() {
         email: formData.email,
         password: formData.password,
         passwordConfirmation: formData.passwordConfirmation,
-        restaurantName: formData.restaurantName,
+        businessName: formData.businessName,
+        businessType: formData.businessType || 'general',
+        enabledApps: formData.apps,
+        country: formData.country,
       });
       router.push('/');
     } catch (err: any) {
@@ -136,81 +193,61 @@ export default function Register() {
       <Head>
         <title>Register - ERP Platform</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
-              <Image
-                src={isDarkMode ? '/images/logos/kuza_logo_word_dark_red.svg' : '/images/logos/kuza_logo_word_light_red.svg'}
-                alt="Kuza"
-                width={64}
-                height={64}
-                className="object-contain"
-                priority
-              />
+            <div className="inline-flex items-center gap-2.5 mb-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-lg font-bold text-white shadow-card">
+                K
+              </span>
+              <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Create your account</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Let&apos;s get your business set up</p>
           </div>
 
           {/* Register Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Get started</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Create your ERP account</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">A few quick steps and you&apos;re in.</p>
 
             {/* Progress Steps */}
             <div className="mb-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                      currentStep >= 1 ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    <span className="text-sm font-semibold">1</span>
+                {[
+                  { n: 1, label: 'Business' },
+                  { n: 2, label: 'Apps' },
+                  { n: 3, label: 'Country' },
+                  { n: 4, label: 'Details' },
+                ].map((step, i) => (
+                  <div key={step.n} className="flex items-center min-w-0 flex-1 last:flex-none">
+                    {i > 0 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-3 ${
+                          currentStep >= step.n ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      ></div>
+                    )}
+                    <div className="flex items-center shrink-0">
+                      <div
+                        className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                          currentStep >= step.n
+                            ? 'bg-brand-gradient text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{step.n}</span>
+                      </div>
+                      <span
+                        className={`ml-2 text-xs font-medium ${
+                          currentStep >= step.n ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
                   </div>
-                  <span
-                    className={`ml-2 text-xs font-medium ${
-                      currentStep >= 1 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    Services
-                  </span>
-                </div>
-                <div className={`flex-1 h-0.5 mx-3 ${currentStep >= 2 ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                <div className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                      currentStep >= 2 ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    <span className="text-sm font-semibold">2</span>
-                  </div>
-                  <span
-                    className={`ml-2 text-xs font-medium ${
-                      currentStep >= 2 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    Country
-                  </span>
-                </div>
-                <div className={`flex-1 h-0.5 mx-3 ${currentStep >= 3 ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                <div className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                      currentStep >= 3 ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    <span className="text-sm font-semibold">3</span>
-                  </div>
-                  <span
-                    className={`ml-2 text-xs font-medium ${
-                      currentStep >= 3 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    Details
-                  </span>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -238,81 +275,156 @@ export default function Register() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Step 1: Services Selection */}
+              {/* Step 1: Business type */}
               {currentStep === 1 && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Select Services <span className="text-red-500">*</span>
+                      What kind of business? <span className="text-red-500">*</span>
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <label
-                        className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          formData.services.includes('restaurant')
-                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20 dark:border-red-600'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.services.includes('restaurant')}
-                          onChange={() => handleServiceToggle('restaurant')}
-                          className="mt-1 w-4 h-4 text-red-600 border-gray-300 dark:border-gray-600 rounded focus-visible:ring-red-500"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-red-600 dark:text-red-400 text-xl font-bold">K</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">Restaurant</span>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Menu, inventory, orders, and sales</p>
-                        </div>
-                      </label>
-
-                      <label
-                        className={`flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          formData.services.includes('hrms')
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.services.includes('hrms')}
-                          onChange={() => handleServiceToggle('hrms')}
-                          className="mt-1 w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus-visible:ring-blue-500"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <i className="bx bx-group text-blue-600 dark:text-blue-400 text-xl"></i>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">HRMS</span>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">HR, payroll, attendance, and more</p>
-                        </div>
-                      </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+                      {BUSINESS_TYPES.map((bt) => {
+                        const selected = formData.businessType === bt.type;
+                        return (
+                          <button
+                            key={bt.type}
+                            type="button"
+                            onClick={() => handleBusinessTypeSelect(bt.type)}
+                            aria-pressed={selected}
+                            className={`flex flex-col items-start gap-2 rounded-2xl p-4 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                              selected
+                                ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-500/10'
+                                : 'ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-brand-300 dark:hover:ring-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-500/5'
+                            }`}
+                          >
+                            <span
+                              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                                selected
+                                  ? 'bg-brand-gradient text-white'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                              }`}
+                            >
+                              <Icon name={bt.icon} size={18} />
+                            </span>
+                            <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                              {bt.label}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{bt.description}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    {stepErrors[1] && (
-                      <p className="mt-3 text-sm text-red-600 dark:text-red-400 flex items-center">
-                        <i className="bx bx-error-circle mr-1"></i>
-                        <span>{stepErrors[1]}</span>
-                      </p>
-                    )}
                   </div>
+
+                  {stepErrors[1] && (
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
+                      <i className="bx bx-error-circle mr-1"></i>
+                      <span>{stepErrors[1]}</span>
+                    </p>
+                  )}
 
                   <div className="flex justify-end mt-6">
                     <button
                       type="button"
                       onClick={nextStep}
-                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                      className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
-                      <span>Continue to Country Selection</span>
+                      <span>Continue to Apps</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Country Selection */}
+              {/* Step 2: Your apps (its own stage) */}
               {currentStep === 2 && (
+                <div className="space-y-5">
+                  <div>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      We picked a starting set for your{' '}
+                      {BUSINESS_TYPES.find((b) => b.type === formData.businessType)?.label.toLowerCase() || 'business'} —
+                      edit it freely. You can change apps any time in Settings.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {APP_REGISTRY.filter((app) => presetFor(formData.businessType || 'general').includes(app.key)).map(
+                      (app) => (
+                        <AppCheckCard
+                          key={app.key}
+                          icon={app.icon}
+                          name={app.name}
+                          description={app.description}
+                          checked={formData.apps.includes(app.key)}
+                          onToggle={() => handleAppToggle(app.key)}
+                        />
+                      ),
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreApps((v) => !v)}
+                    aria-expanded={showMoreApps}
+                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
+                  >
+                    <Icon name="chevron-down" size={14} className={showMoreApps ? 'rotate-180' : ''} />
+                    More apps
+                  </button>
+                  {showMoreApps && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {APP_REGISTRY.filter(
+                        (app) => !presetFor(formData.businessType || 'general').includes(app.key),
+                      ).map((app) => (
+                        <AppCheckCard
+                          key={app.key}
+                          icon={app.icon}
+                          name={app.name}
+                          description={app.description}
+                          checked={formData.apps.includes(app.key)}
+                          onToggle={() => handleAppToggle(app.key)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {depNote && (
+                    <p className="flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
+                      <Icon name="sparkles" size={13} />
+                      <span>{depNote}</span>
+                    </p>
+                  )}
+
+                  {stepErrors[2] && (
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
+                      <i className="bx bx-error-circle mr-1"></i>
+                      <span>{stepErrors[2]}</span>
+                    </p>
+                  )}
+
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={previousStep}
+                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                    >
+                      <i className="bx bx-left-arrow-alt mr-1"></i>
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                    >
+                      <span>Continue to Country</span>
+                      <i className="bx bx-right-arrow-alt ml-2"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Country Selection */}
+              {currentStep === 3 && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -324,8 +436,8 @@ export default function Register() {
                           key={country.code}
                           className={`flex items-center space-x-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${
                             formData.country === country.code
-                              ? 'border-red-500 bg-red-50 dark:bg-red-900/20 dark:border-red-600'
-                              : 'border-gray-200 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                              ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10 dark:border-brand-500'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-500/5'
                           }`}
                         >
                           <input
@@ -334,26 +446,29 @@ export default function Register() {
                             value={country.code}
                             checked={formData.country === country.code}
                             onChange={() => handleCountrySelect(country.code)}
-                            className="text-red-600 border-gray-300 dark:border-gray-600 focus-visible:ring-red-500"
+                            className="text-red-600 border-gray-300 dark:border-gray-600 focus-visible:ring-brand-500"
                           />
                           <span className="text-xl">{country.flag}</span>
                           <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">{country.name}</span>
                         </label>
                       ))}
                     </div>
-                    {stepErrors[2] && (
+                    {stepErrors[3] && (
                       <p className="mt-3 text-sm text-red-600 dark:text-red-400 flex items-center">
                         <i className="bx bx-error-circle mr-1"></i>
-                        <span>{stepErrors[2]}</span>
+                        <span>{stepErrors[3]}</span>
                       </p>
                     )}
+                    <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                      Your country sets your currency — plans and prices are shown in it.
+                    </p>
                   </div>
 
                   <div className="flex justify-end gap-3 mt-6">
                     <button
                       type="button"
                       onClick={previousStep}
-                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
                       <i className="bx bx-left-arrow-alt mr-1"></i>
                       <span>Back</span>
@@ -361,7 +476,7 @@ export default function Register() {
                     <button
                       type="button"
                       onClick={nextStep}
-                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                      className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
                       <span>Continue</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
@@ -370,22 +485,22 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Step 3: User Details */}
-              {currentStep === 3 && (
+              {/* Step 4: User Details */}
+              {currentStep === 4 && (
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="restaurantName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Business Name <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <i className="bx bx-buildings absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
                       <input
                         type="text"
-                        id="restaurantName"
+                        id="businessName"
                         required
-                        value={formData.restaurantName}
-                        onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                        value={formData.businessName}
+                        onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                        className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                       />
                     </div>
                   </div>
@@ -403,7 +518,7 @@ export default function Register() {
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                         />
                       </div>
                     </div>
@@ -420,7 +535,7 @@ export default function Register() {
                           required
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                         />
                       </div>
                     </div>
@@ -439,7 +554,7 @@ export default function Register() {
                           required
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                         />
                       </div>
                     </div>
@@ -456,7 +571,7 @@ export default function Register() {
                           required
                           value={formData.passwordConfirmation}
                           onChange={(e) => setFormData({ ...formData, passwordConfirmation: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                          className="h-10 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                         />
                       </div>
                     </div>
@@ -466,7 +581,7 @@ export default function Register() {
                     <button
                       type="button"
                       onClick={previousStep}
-                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
+                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
                       <i className="bx bx-left-arrow-alt mr-1"></i>
                       <span>Back</span>
@@ -474,7 +589,7 @@ export default function Register() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? (
                         <>
@@ -520,14 +635,14 @@ export default function Register() {
                     <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
+                    <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleGoogleSignUp}
-                  className="mt-4 w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+                  className="mt-4 w-full h-10 inline-flex items-center justify-center px-4 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150 active:scale-[0.98]"
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -555,7 +670,7 @@ export default function Register() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Already have an account?
-                <Link href="/login" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium ml-1">
+                <Link href="/login" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium ml-1 transition-colors duration-150">
                   Sign in
                 </Link>
               </p>
@@ -564,6 +679,56 @@ export default function Register() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Checkable app card — icon tile, name, one-liner (registration step 1). */
+function AppCheckCard({
+  icon,
+  name,
+  description,
+  checked,
+  onToggle,
+}: {
+  icon: IconName;
+  name: string;
+  description: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors duration-150 ${
+        checked
+          ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-500/10'
+          : 'ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-brand-300 dark:hover:ring-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-500/5'
+      }`}
+    >
+      <input type="checkbox" checked={checked} onChange={onToggle} className="sr-only" />
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+          checked
+            ? 'bg-brand-gradient text-white'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+        }`}
+      >
+        <Icon name={icon} size={18} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{name}</span>
+        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{description}</span>
+      </span>
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+          checked
+            ? 'bg-brand-gradient text-white'
+            : 'ring-1 ring-inset ring-gray-300 dark:ring-gray-600'
+        }`}
+        aria-hidden="true"
+      >
+        {checked && <Icon name="check" size={12} />}
+      </span>
+    </label>
   );
 }
 

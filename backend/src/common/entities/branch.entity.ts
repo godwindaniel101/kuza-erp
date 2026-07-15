@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { TenantEntity } from './base.entity';
-import { Restaurant } from './restaurant.entity';
+import { Business } from './business.entity';
 
 @Entity('branches')
 export class Branch extends TenantEntity {
@@ -22,8 +22,11 @@ export class Branch extends TenantEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.branches, { onDelete: 'CASCADE' })
+  @Column({ type: 'uuid', nullable: true })
+  businessId: string;
+
+  @ManyToOne(() => Business, (business) => business.branches, { nullable: true })
   @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  business: Business;
 }
 

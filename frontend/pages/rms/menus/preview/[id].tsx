@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import Button from '@/components/ui/Button';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function MenuPreviewPage() {
   const { t } = useTranslation('common');
@@ -64,49 +66,41 @@ export default function MenuPreviewPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-        </div>
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
       </div>
     );
   }
 
   if (!menu) {
     return (
-      <div className="p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">{t('menuNotFound') || 'Menu not found'}</p>
-          <Link href="/rms/menus" className="mt-4 inline-block text-red-600 hover:text-red-700 dark:text-red-400">
-            {t('backToMenus') || 'Back to Menus'}
-          </Link>
-        </div>
+      <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-8 text-center">
+        <p className="text-[13px] text-gray-500 dark:text-gray-400">{t('menuNotFound') || 'Menu not found'}</p>
+        <Link href="/rms/menus" className="mt-4 inline-block text-[13px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+          {t('backToMenus') || 'Back to Menus'}
+        </Link>
       </div>
     );
   }
 
   return (
     <PermissionGuard permission="menus.view">
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
 
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/rms/menus" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              <i className="bx bx-arrow-back text-xl"></i>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('menuPreview') || 'Menu Preview'}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('customerView') || 'This is how customers will see your menu'}</p>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title={t('menuPreview') || 'Menu Preview'}
+          subtitle={t('customerView') || 'This is how customers will see your menu'}
+          breadcrumbs={[
+            { label: t('menus') || 'Menus', href: '/rms/menus' },
+            { label: t('menuPreview') || 'Menu Preview' },
+          ]}
+        />
 
         {/* Menu Preview Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 overflow-hidden">
           {/* Menu Header */}
           <div className="bg-gradient-to-r from-red-600 to-red-700 p-8 text-white">
             <h2 className="text-3xl font-bold mb-2">{menu.name}</h2>
@@ -155,19 +149,13 @@ export default function MenuPreviewPage() {
         </div>
 
         {/* Actions */}
-        <div className="mt-6 flex justify-end space-x-3">
-          <Link
-            href="/rms/menus"
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
+        <div className="flex justify-end space-x-3">
+          <Button variant="secondary" href="/rms/menus">
             {t('back') || 'Back'}
-          </Link>
-          <Link
-            href={`/rms/menus/edit/${id}`}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
-          >
+          </Button>
+          <Button href={`/rms/menus/edit/${id}`}>
             {t('edit') || 'Edit Menu'}
-          </Link>
+          </Button>
         </div>
       </div>
     </PermissionGuard>

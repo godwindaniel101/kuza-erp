@@ -46,6 +46,15 @@ export class CreateInventoryItemDto {
   @IsString()
   barcode?: string;
 
+  @ApiProperty({
+    required: false,
+    example: 'A-03-2',
+    description: 'Default physical row/rack ("bin") location for the item.',
+  })
+  @IsOptional()
+  @IsString()
+  binLocation?: string;
+
   @ApiProperty({ default: true })
   @IsBoolean()
   isTrackable: boolean;

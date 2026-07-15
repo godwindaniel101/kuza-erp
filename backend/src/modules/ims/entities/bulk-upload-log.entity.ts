@@ -14,9 +14,6 @@ export class BulkUploadLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'business_id', type: 'uuid' })
-  businessId: string;
-
   @Column({ name: 'upload_type', type: 'varchar', length: 50 })
   uploadType: string; // 'inflow', 'inventory', etc.
 

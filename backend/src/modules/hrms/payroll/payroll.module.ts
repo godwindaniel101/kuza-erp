@@ -8,6 +8,7 @@ import { PayrollItem } from '../entities/payroll-item.entity';
 import { TaxConfiguration } from '../entities/tax-configuration.entity';
 import { EmployeeTaxInfo } from '../entities/employee-tax-info.entity';
 import { Employee } from '../entities/employee.entity';
+import { AccountingModule } from '../../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Employee } from '../entities/employee.entity';
       EmployeeTaxInfo,
       Employee,
     ]),
+    AccountingModule,
   ],
   controllers: [PayrollController],
   providers: [PayrollService, TaxCalculationService],

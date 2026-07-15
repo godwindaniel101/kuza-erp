@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
-import Card from '@/components/Card';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export default function TransfersPage() {
   const { t } = useTranslation('common');
@@ -81,8 +82,8 @@ export default function TransfersPage() {
   if (loading) {
     return (
       <PermissionGuard permission="inventory.view">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       </PermissionGuard>
     );
@@ -90,93 +91,92 @@ export default function TransfersPage() {
 
   return (
     <PermissionGuard permission="inventory.view">
-      <div className="p-6 bg-white dark:bg-gray-900 min-h-screen">
+      <div className="space-y-5">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('inventoryTransfers') || 'Inventory Transfers'}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {t('manageBranchTransfers') || 'Manage inventory transfers between branches'}
-            </p>
-          </div>
-          <Link
-            href="/ims/transfers/create"
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center gap-2"
-          >
-            <i className="bx bx-plus"></i>
-            {t('createTransfer') || 'Create Transfer'}
-          </Link>
-        </div>
+
+        <PageHeader
+          title={t('inventoryTransfers') || 'Inventory Transfers'}
+          count={transfers.length}
+          subtitle={t('manageBranchTransfers') || 'Manage inventory transfers between branches'}
+          breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: t('transfers') || 'Transfers' }]}
+          actions={
+            <Button size="sm" href="/ims/transfers/create">
+              <i className="bx bx-plus"></i>
+              {t('createTransfer') || 'Create Transfer'}
+            </Button>
+          }
+        />
 
         {transfers.length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <i className="bx bx-transfer text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">{t('noTransfersYet') || 'No transfers yet'}</p>
-              <Link
-                href="/ims/transfers/create"
-                className="inline-flex items-center px-6 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition"
-              >
-                <i className="bx bx-plus mr-2"></i>
-                {t('createTransfer') || 'Create Transfer'}
-              </Link>
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl px-6 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+              <i className="bx bx-transfer text-xl text-gray-400 dark:text-gray-500"></i>
             </div>
-          </Card>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('noTransfersYet') || 'No transfers yet'}</h3>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
+              {t('manageBranchTransfers') || 'Manage inventory transfers between branches'}
+            </p>
+            <div className="flex items-center justify-center">
+              <Button size="sm" href="/ims/transfers/create">
+                <i className="bx bx-plus"></i>
+                {t('createTransfer') || 'Create Transfer'}
+              </Button>
+            </div>
+          </div>
         ) : (
-          <Card>
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('transferNumber') || 'Transfer #'}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('fromBranch') || 'From'}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('toBranch') || 'To'}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('date')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('items')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-left text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('status')}
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-2.5 text-center text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                       {t('actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                   {transfers.map((transfer) => (
-                    <tr key={transfer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-4 py-3">
+                    <tr key={transfer.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-6 py-3 text-[13px]">
                         <Link
                           href={`/ims/transfers/${transfer.id}`}
-                          className="text-red-600 dark:text-red-400 hover:underline font-medium"
+                          className="text-brand-600 dark:text-brand-400 hover:underline font-medium"
                         >
                           {transfer.transferNumber}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-3 text-[13px] text-gray-900 dark:text-gray-100">
                         {transfer.fromBranch?.name || '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-3 text-[13px] text-gray-900 dark:text-gray-100">
                         {transfer.toBranch?.name || '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-3 text-[13px] text-gray-700 dark:text-gray-300">
                         {transfer.transferDate ? new Date(transfer.transferDate).toLocaleDateString() : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-3 text-[13px] text-gray-700 dark:text-gray-300">
                         {transfer.items?.length || 0} {t('items') || 'items'}
                       </td>
-                      <td className="px-4 py-3">{getStatusBadge(transfer.status)}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-6 py-3 text-[13px]">{getStatusBadge(transfer.status)}</td>
+                      <td className="px-6 py-3 text-[13px] text-center">
                         <div className="flex items-center justify-center gap-2">
                           {transfer.status === 'pending' && (
                             <>
@@ -221,7 +221,7 @@ export default function TransfersPage() {
                 </tbody>
               </table>
             </div>
-          </Card>
+          </div>
         )}
       </div>
     </PermissionGuard>

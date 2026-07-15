@@ -6,9 +6,13 @@ import Cookies from 'js-cookie';
 import Toast from '@/components/Toast';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import SearchableSelect from '@/components/SearchableSelect';
+import PageHeader, { type Breadcrumb } from '@/components/ui/PageHeader';
 
 interface SettingsFormProps {
   title?: string;
+  /** One-line description rendered under the title. */
+  subtitle?: string;
+  breadcrumbs?: Breadcrumb[];
   organizationLabel?: string;
   currencyDescription?: string;
   languageDescription?: string;
@@ -19,7 +23,9 @@ interface SettingsFormProps {
 
 export default function SettingsForm({
   title,
-  organizationLabel = 'restaurantName',
+  subtitle,
+  breadcrumbs,
+  organizationLabel = 'businessName',
   currencyDescription,
   languageDescription,
   showAddress = true,
@@ -28,7 +34,7 @@ export default function SettingsForm({
 }: SettingsFormProps) {
   const { t } = useTranslation('common');
   const router = useRouter();
-  const [restaurant, setRestaurant] = useState<any>(null);
+  const [business, setRestaurant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -94,30 +100,32 @@ export default function SettingsForm({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 dark:border-red-400 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 dark:border-brand-400 mx-auto"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-          {title || t('restaurantSettings') || 'Restaurant Settings'}
-        </h2>
+      <PageHeader
+        title={title || t('restaurantSettings') || 'Business Settings'}
+        subtitle={subtitle || 'Your business name, currency and language defaults'}
+        breadcrumbs={breadcrumbs || [{ label: 'Settings', href: '/settings' }, { label: 'General' }]}
+      />
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={showAddress || showPhone || showEmail ? 'md:col-span-1' : 'md:col-span-2'}>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t(organizationLabel) || t('restaurantName') || 'Restaurant Name'} <span className="text-red-500">*</span>
+                {t(organizationLabel) || t('businessName') || 'Business Name'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
               />
             </div>
             {showAddress && (
@@ -127,7 +135,7 @@ export default function SettingsForm({
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
             )}
@@ -176,7 +184,7 @@ export default function SettingsForm({
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
             )}
@@ -187,7 +195,7 @@ export default function SettingsForm({
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:border-transparent"
+                  className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px]"
                 />
               </div>
             )}
@@ -196,7 +204,7 @@ export default function SettingsForm({
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 flex items-center space-x-2 shadow-sm"
+              className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center space-x-2"
             >
               <i className="bx bx-save"></i>
               <span>{saving ? t('saving') : t('saveSettings')}</span>

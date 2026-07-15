@@ -4,22 +4,23 @@ import { useTranslation } from 'next-i18next';
 import PermissionGuard from '@/components/PermissionGuard';
 import Card from '@/components/Card';
 import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function TaxConfigurationPage() {
   const { t } = useTranslation('common');
 
   return (
     <PermissionGuard permission="payroll.view">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <Link href="/hrms/payroll" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-2 inline-block">
-              <i className="bx bx-arrow-back mr-2"></i>
-              {t('back')}
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('taxConfiguration') || 'Tax Configuration'}</h1>
-          </div>
-        </div>
+      <div className="space-y-5">
+        <PageHeader
+          title={t('taxConfiguration') || 'Tax Configuration'}
+          subtitle="PAYE bands and statutory deductions used by payroll"
+          breadcrumbs={[
+            { label: 'HR', href: '/hrms/dashboard' },
+            { label: t('payroll') || 'Payroll', href: '/hrms/payroll' },
+            { label: t('taxConfiguration') || 'Tax Configuration' },
+          ]}
+        />
 
         <Card>
           <div className="p-6">
@@ -35,9 +36,9 @@ export default function TaxConfigurationPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   {t('taxTypes') || 'Tax Types'}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,7 +70,7 @@ export default function TaxConfigurationPage() {
               </div>
 
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   {t('howItWorks') || 'How It Works'}
                 </h2>
                 <div className="space-y-3">

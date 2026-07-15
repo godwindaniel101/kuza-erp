@@ -31,7 +31,7 @@ export default function AuthCallback() {
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 mb-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
           </div>
           <p className="text-gray-600">Authenticating...</p>

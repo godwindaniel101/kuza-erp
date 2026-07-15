@@ -4,7 +4,7 @@ import { LandlordUser } from './landlord-user.entity';
 
 /**
  * Tenant entity stored in the landlord database
- * Each tenant represents a separate business/restaurant
+ * Each tenant represents a separate business/business
  */
 @Entity('tenants')
 export class Tenant extends BaseEntity {

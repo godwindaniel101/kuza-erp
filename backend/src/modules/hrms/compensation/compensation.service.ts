@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SalaryStructure } from '../entities/salary-structure.entity';
-import { EmployeeSalary } from '../entities/employee-salary.entity';
-import { CreateSalaryStructureDto } from './dto/create-salary-structure.dto';
-import { UpdateSalaryStructureDto } from './dto/update-salary-structure.dto';
-import { CreateEmployeeSalaryDto } from './dto/create-employee-salary.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { SalaryStructure } from "../entities/salary-structure.entity";
+import { EmployeeSalary } from "../entities/employee-salary.entity";
+import { CreateSalaryStructureDto } from "./dto/create-salary-structure.dto";
+import { UpdateSalaryStructureDto } from "./dto/update-salary-structure.dto";
+import { CreateEmployeeSalaryDto } from "./dto/create-employee-salary.dto";
 
 @Injectable()
 export class CompensationService {
@@ -17,10 +17,9 @@ export class CompensationService {
   ) {}
 
   // Salary Structures
-  async createStructure(businessId: string, createDto: CreateSalaryStructureDto) {
+  async createStructure(createDto: CreateSalaryStructureDto) {
     const structure = this.salaryStructureRepository.create({
       ...createDto,
-      businessId,
     });
 
     // Calculate gross salary
@@ -37,40 +36,40 @@ export class CompensationService {
     return this.salaryStructureRepository.save(structure);
   }
 
-  async findAllStructures(businessId: string, isActive?: boolean) {
-    const where: any = { businessId };
+  async findAllStructures(isActive?: boolean) {
+    const where: any = {};
     if (isActive !== undefined) {
       where.isActive = isActive;
     }
 
     return this.salaryStructureRepository.find({
       where,
-      relations: ['employeeSalaries', 'employeeSalaries.employee'],
-      order: { createdAt: 'DESC' },
+      relations: ["employeeSalaries", "employeeSalaries.employee"],
+      order: { createdAt: "DESC" },
     });
   }
 
-  async findOneStructure(id: string, businessId: string) {
+  async findOneStructure(id: string) {
     const structure = await this.salaryStructureRepository.findOne({
-      where: { id, businessId },
-      relations: ['employeeSalaries', 'employeeSalaries.employee'],
+      where: { id },
+      relations: ["employeeSalaries", "employeeSalaries.employee"],
     });
 
     if (!structure) {
-      throw new NotFoundException('Salary structure not found');
+      throw new NotFoundException("Salary structure not found");
     }
 
     return structure;
   }
 
-  async updateStructure(id: string, businessId: string, updateDto: UpdateSalaryStructureDto) {
-    await this.findOneStructure(id, businessId);
+  async updateStructure(id: string, updateDto: UpdateSalaryStructureDto) {
+    await this.findOneStructure(id);
     await this.salaryStructureRepository.update({ id }, updateDto);
-    return this.findOneStructure(id, businessId);
+    return this.findOneStructure(id);
   }
 
-  async removeStructure(id: string, businessId: string) {
-    await this.findOneStructure(id, businessId);
+  async removeStructure(id: string) {
+    await this.findOneStructure(id);
     await this.salaryStructureRepository.delete({ id });
   }
 
@@ -88,7 +87,8 @@ export class CompensationService {
     const salary = this.employeeSalaryRepository.create({
       ...createDto,
       grossSalary: Number(createDto.baseSalary) + allowancesTotal,
-      netSalary: Number(createDto.baseSalary) + allowancesTotal - deductionsTotal,
+      netSalary:
+        Number(createDto.baseSalary) + allowancesTotal - deductionsTotal,
       effectiveDate: new Date(createDto.effectiveDate),
       endDate: createDto.endDate ? new Date(createDto.endDate) : undefined,
     });
@@ -104,19 +104,19 @@ export class CompensationService {
 
     return this.employeeSalaryRepository.find({
       where,
-      relations: ['employee', 'structure'],
-      order: { effectiveDate: 'DESC' },
+      relations: ["employee", "structure"],
+      order: { effectiveDate: "DESC" },
     });
   }
 
   async findOneEmployeeSalary(id: string) {
     const salary = await this.employeeSalaryRepository.findOne({
       where: { id },
-      relations: ['employee', 'structure'],
+      relations: ["employee", "structure"],
     });
 
     if (!salary) {
-      throw new NotFoundException('Employee salary not found');
+      throw new NotFoundException("Employee salary not found");
     }
 
     return salary;
@@ -129,4 +129,3 @@ export class CompensationService {
     return this.employeeSalaryRepository.save(salary);
   }
 }
-

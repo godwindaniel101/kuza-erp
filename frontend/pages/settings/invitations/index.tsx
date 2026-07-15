@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function InvitationsPage() {
   const { t } = useTranslation('common');
@@ -66,19 +67,23 @@ export default function InvitationsPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('invitations')}</h1>
-        <PermissionGuard permission="invitations.create">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
-          >
-            <i className="bx bx-plus mr-2"></i>
-            {t('sendInvitation')}
-          </button>
-        </PermissionGuard>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title={t('invitations')}
+        subtitle="Pending invites to your workspace"
+        breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('invitations') }]}
+        actions={
+          <PermissionGuard permission="invitations.create">
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 transition-colors inline-flex items-center"
+            >
+              <i className="bx bx-plus mr-2"></i>
+              {t('sendInvitation')}
+            </button>
+          </PermissionGuard>
+        }
+      />
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -89,14 +94,14 @@ export default function InvitationsPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="h-9 w-full px-3 border border-gray-300 rounded-md text-[13px]"
                 required
               />
             </div>
             <div className="flex space-x-3">
               <button
                 type="submit"
-                className="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-700 dark:hover:bg-red-600 flex items-center space-x-2 shadow-sm"
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 flex items-center space-x-2"
               >
                 {t('send')}
               </button>
@@ -114,12 +119,12 @@ export default function InvitationsPage() {
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('email')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('role')}</th>
@@ -128,7 +133,7 @@ export default function InvitationsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('actions')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {invitations.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
@@ -138,11 +143,11 @@ export default function InvitationsPage() {
               ) : (
                 invitations.map((inv) => (
                   <tr key={inv.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-gray-100">
                       {inv.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inv.role?.name || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">{inv.role?.name || '-'}</td>
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           inv.status === 'accepted'
@@ -155,15 +160,15 @@ export default function InvitationsPage() {
                         {inv.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500">
                       {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium">
                       {inv.status === 'pending' && (
                         <>
                           <button
                             onClick={() => resendInvitation(inv.id)}
-                            className="text-blue-600 hover:text-blue-900 mr-4"
+                            className="text-brand-600 hover:text-brand-700 mr-4"
                           >
                             {t('resend')}
                           </button>

@@ -1,36 +1,33 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In } from "typeorm";
+import { Transactional } from "typeorm-transactional";
+import { v4 as uuidv4 } from "uuid";
 import { InventoryInflow } from "../entities/inventory-inflow.entity";
 import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
 import { InventoryItem } from "../entities/inventory-item.entity";
 import { InventoryBatch } from "../entities/inventory-batch.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
 import { BulkUploadLog } from "../entities/bulk-upload-log.entity";
-import { Restaurant } from "../../../common/entities/restaurant.entity";
+import { Business } from "../../../common/entities/business.entity";
 import { Branch } from "../../../common/entities/branch.entity";
 import { Supplier } from "../../rms/entities/supplier.entity";
 import { CreateInventoryInflowDto } from "./dto/create-inventory-inflow.dto";
 import { UpdateInventoryInflowDto } from "./dto/update-inventory-inflow.dto";
 import { UomConversionsService } from "../uom-conversions/uom-conversions.service";
+import { StockMovementsService } from "../stock-movements/stock-movements.service";
+import { StockMovementType } from "../entities/stock-movement.entity";
+import { PostingService } from "../../accounting/posting.service";
+import {
+  BulkUploadResult,
+  FailedUpload,
+} from "../interfaces/bulk-upload.interface";
 
-// Interface for bulk upload results with detailed tracking
-export interface BulkUploadResult {
-  success: number;
-  errors: string[];
-  failedUploads: FailedInflowUpload[];
-  duplicateSkipped: number;
-}
+// Re-export for backwards compatibility
+export type FailedInflowUpload = FailedUpload;
+export { BulkUploadResult };
 import { Uom } from "../entities/uom.entity";
 import { OrderItemInflowItem } from "../../rms/entities/order-item-inflow-item.entity";
-
-// Interface for tracking failed upload rows
-export interface FailedInflowUpload {
-  lineNumber: number;
-  rowData: Record<string, string>;
-  errors: string[];
-  status: "failed" | "skipped";
-}
 
 // Interface for parsed CSV row data
 interface ParsedInflowRow {
@@ -74,8 +71,8 @@ export class InflowsService {
     private branchInventoryRepository: Repository<BranchInventoryItem>,
     @InjectRepository(BulkUploadLog)
     private bulkUploadLogRepository: Repository<BulkUploadLog>,
-    @InjectRepository(Restaurant)
-    private restaurantRepository: Repository<Restaurant>,
+    @InjectRepository(Business)
+    private businessRepository: Repository<Business>,
     @InjectRepository(Branch)
     private branchRepository: Repository<Branch>,
     @InjectRepository(Supplier)
@@ -84,21 +81,35 @@ export class InflowsService {
     private uomRepository: Repository<Uom>,
     @InjectRepository(OrderItemInflowItem)
     private orderItemInflowItemRepository: Repository<OrderItemInflowItem>,
-    private uomConversionsService: UomConversionsService
+    private uomConversionsService: UomConversionsService,
+    private stockMovementsService: StockMovementsService,
+    private postingService: PostingService,
   ) {}
 
-  async create(businessId: string, createDto: CreateInventoryInflowDto) {
+  /**
+   * Runs the whole inflow (header + items + stock + batches + ledger
+   * movements) in one transaction (audit C-INV-2). Item and branch stock rows
+   * are read with pessimistic write locks so concurrent inflows/orders cannot
+   * interleave stock updates (audit C-INV-4).
+   */
+  @Transactional()
+  async create(createDto: CreateInventoryInflowDto, performedById?: string) {
     let totalAmount = 0;
 
-    // Get restaurant currency
-    const restaurant = await this.restaurantRepository.findOne({
-      where: { id: businessId },
+    // Get business currency - in multi-tenant setup, you might need to adjust this
+    // For now, using a default currency or getting it from the first available business
+    const business = await this.businessRepository.findOne({
+      where: {}, // Gets any business in this tenant's database
     });
-    const currency = restaurant?.currency || "NGN";
+    const currency = business?.currency || "NGN";
 
+    // Exclude `items` from the spread: the Inflow.items relation has
+    // cascade:true, so spreading the DTO items here would cascade-insert
+    // phantom inflow-item rows (with baseQuantity=0) in addition to the
+    // explicit, fully-computed rows created below.
+    const { items: _dtoItems, ...inflowData } = createDto;
     const inflow = this.inflowRepository.create({
-      ...createDto,
-      businessId,
+      ...inflowData,
       currency,
       receivedDate: new Date(createDto.receivedDate),
       invoiceNumber: createDto.invoiceNumber || `INV-${Date.now()}`,
@@ -112,12 +123,18 @@ export class InflowsService {
 
     // Create inflow items and update stock
     if (createDto.items && createDto.items.length > 0) {
-      const items = await Promise.all(
-        createDto.items.map(async (item) => {
+      // Process items SEQUENTIALLY (not Promise.all): when the same inventory
+      // item appears more than once in a branch's inflow (e.g. two batches),
+      // concurrent processing would both "find-or-create" the branch-inventory
+      // row at the same time, insert a duplicate, and violate the
+      // (branch_id, inventory_item_id) unique constraint — which aborts the
+      // entire request transaction so nothing is created. Sequential processing
+      // lets the second occurrence find and update the row the first created.
+      for (const item of createDto.items) {
           // Validate that required fields are present
           if (!item.inventoryItemId || !item.uomId) {
             throw new Error(
-              "Missing required fields: inventoryItemId and uomId are required"
+              "Missing required fields: inventoryItemId and uomId are required",
             );
           }
 
@@ -144,7 +161,7 @@ export class InflowsService {
             calculatedTotalCost === undefined
           ) {
             throw new Error(
-              `Failed to calculate totalCost for item ${item.inventoryItemId}: quantity=${quantity}, unitCost=${unitCost}`
+              `Failed to calculate totalCost for item ${item.inventoryItemId}: quantity=${quantity}, unitCost=${unitCost}`,
             );
           }
 
@@ -158,49 +175,67 @@ export class InflowsService {
             totalCostValue === undefined
           ) {
             throw new Error(
-              `Invalid totalCost value for item ${item.inventoryItemId}: calculated=${calculatedTotalCost}, rounded=${totalCostValue}`
+              `Invalid totalCost value for item ${item.inventoryItemId}: calculated=${calculatedTotalCost}, rounded=${totalCostValue}`,
             );
           }
 
           totalAmount += totalCostValue;
 
-          // Load inventory item first to get baseUomId
-          const inventoryItem = await this.inventoryItemRepository.findOne({
-            where: { id: item.inventoryItemId },
-            relations: ["baseUom"],
-          });
-
-          if (!inventoryItem) {
-            throw new Error(`Inventory item ${item.inventoryItemId} not found`);
-          }
-
-          // Calculate base quantity: convert input quantity to base UOM
+          // Load inventory item if ID is provided, otherwise handle as null reference
+          let inventoryItem = null;
           let baseQuantity = Number(quantity) || 0;
-          console.log(
-            `[InflowCreate] Item ${inventoryItem.name}: inputQuantity=${quantity}, inputUomId=${item.uomId}, baseUomId=${inventoryItem.baseUomId}`
-          );
 
-          if (item.uomId !== inventoryItem.baseUomId) {
-            try {
-              const converted = await this.uomConversionsService.convert(
-                businessId,
-                item.uomId,
-                inventoryItem.baseUomId,
-                quantity
-              );
-              baseQuantity = Number(converted) || Number(quantity) || 0;
-              console.log(
-                `[InflowCreate] UOM conversion: ${quantity} (${item.uomId}) -> ${baseQuantity} (${inventoryItem.baseUomId})`
-              );
-            } catch (error) {
-              console.error(`[InflowCreate] UOM conversion error:`, error);
+          if (item.inventoryItemId) {
+            // Pessimistic lock: serialize concurrent stock updates on this
+            // item (locked read must not join relations; only scalar columns
+            // are used below anyway).
+            inventoryItem = await this.inventoryItemRepository
+              .createQueryBuilder("item")
+              .setLock("pessimistic_write")
+              .where("item.id = :id", { id: item.inventoryItemId })
+              .getOne();
+
+            if (!inventoryItem) {
               throw new Error(
-                `Cannot convert ${quantity} from UOM ${item.uomId} to base UOM ${inventoryItem.baseUomId} for item ${inventoryItem.name}. Please ensure UOM conversion exists.`
+                `Inventory item ${item.inventoryItemId} not found`,
               );
             }
+
+            // Calculate base quantity: convert input quantity to base UOM
+            console.log(
+              `[InflowCreate] Item ${inventoryItem.name}: inputQuantity=${quantity}, inputUomId=${item.uomId}, baseUomId=${inventoryItem.baseUomId}`,
+            );
+
+            if (item.uomId && item.uomId !== inventoryItem.baseUomId) {
+              try {
+                const converted = await this.uomConversionsService.convert(
+                  item.uomId,
+                  inventoryItem.baseUomId,
+                  quantity,
+                );
+                baseQuantity = Number(converted) || Number(quantity) || 0;
+                console.log(
+                  `[InflowCreate] UOM conversion: ${quantity} (${item.uomId}) -> ${baseQuantity} (${inventoryItem.baseUomId})`,
+                );
+              } catch (error) {
+                console.error(`[InflowCreate] UOM conversion error:`, error);
+                throw new Error(
+                  `Cannot convert ${quantity} from UOM ${item.uomId} to base UOM ${inventoryItem.baseUomId} for item ${inventoryItem.name}. Please ensure UOM conversion exists.`,
+                );
+              }
+            } else {
+              console.log(
+                `[InflowCreate] Same UOM or no input UOM, baseQuantity = ${baseQuantity}`,
+              );
+            }
+
+            // Update stock using base quantity
+            inventoryItem.currentStock =
+              Number(inventoryItem.currentStock) + Number(baseQuantity);
+            await this.inventoryItemRepository.save(inventoryItem);
           } else {
             console.log(
-              `[InflowCreate] Same UOM, baseQuantity = ${baseQuantity}`
+              `[InflowCreate] No inventory item reference, baseQuantity = ${baseQuantity} (original quantity)`,
             );
           }
 
@@ -211,19 +246,18 @@ export class InflowsService {
             baseQuantity === undefined
           ) {
             console.log(
-              `[InflowCreate] WARNING: Invalid baseQuantity, falling back to input quantity`
+              `[InflowCreate] WARNING: Invalid baseQuantity, falling back to input quantity`,
             );
             baseQuantity = Number(quantity) || 0;
           }
 
           console.log(
-            `[InflowCreate] Final baseQuantity for ${inventoryItem.name}: ${baseQuantity}`
+            `[InflowCreate] Final baseQuantity for ${inventoryItem?.name || "unknown item"}: ${baseQuantity}`,
           );
 
-          // Update stock using base quantity
-          inventoryItem.currentStock =
-            Number(inventoryItem.currentStock) + Number(baseQuantity);
-          await this.inventoryItemRepository.save(inventoryItem);
+          // NOTE: item-level stock was already incremented once above (inside the
+          // `if (item.inventoryItemId)` block). Do NOT increment again here — doing
+          // so previously double-counted every inflow at the item level.
 
           // Use item-level branchId if provided, otherwise use inflow-level branchId (required, so always has a value)
           const itemBranchId = item.branchId || createDto.branchId;
@@ -231,13 +265,16 @@ export class InflowsService {
             throw new Error("Branch ID is required for inflow items");
           }
 
-          // Update branch inventory for the item's branch
-          let branchInventory = await this.branchInventoryRepository.findOne({
-            where: {
-              branchId: itemBranchId,
-              inventoryItemId: item.inventoryItemId,
-            },
-          });
+          // Update branch inventory for the item's branch (locked read so
+          // concurrent writers cannot interleave the read-modify-write).
+          let branchInventory = await this.branchInventoryRepository
+            .createQueryBuilder("branchItem")
+            .setLock("pessimistic_write")
+            .where(
+              "branchItem.branchId = :branchId AND branchItem.inventoryItemId = :itemId",
+              { branchId: itemBranchId, itemId: item.inventoryItemId },
+            )
+            .getOne();
 
           if (!branchInventory) {
             branchInventory = this.branchInventoryRepository.create({
@@ -253,6 +290,11 @@ export class InflowsService {
           // Use the same baseQuantity calculated above for branch inventory
           branchInventory.currentStock =
             Number(branchInventory.currentStock) + Number(baseQuantity);
+          // Warehouse MS v1: record where this line was put away (guarded —
+          // only overwrites when the caller supplied a bin location).
+          if (item.binLocation) {
+            branchInventory.binLocation = item.binLocation;
+          }
           await this.branchInventoryRepository.save(branchInventory);
 
           // Create batch if trackable
@@ -260,9 +302,14 @@ export class InflowsService {
           const batchSupplierId =
             item.supplierId || createDto.supplierId || null;
 
-          if (inventoryItem.isTrackable) {
+          // Only create batch for trackable items that have valid inventory item reference
+          let savedBatch: InventoryBatch | null = null;
+          if (
+            inventoryItem &&
+            inventoryItem.isTrackable &&
+            item.inventoryItemId
+          ) {
             const batch = this.batchRepository.create({
-              businessId,
               inventoryItemId: item.inventoryItemId,
               supplierId: batchSupplierId,
               inputUomId: item.uomId,
@@ -277,7 +324,26 @@ export class InflowsService {
                 `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               notes: item.notes,
             });
-            await this.batchRepository.save(batch);
+            savedBatch = await this.batchRepository.save(batch);
+          }
+
+          // Immutable ledger entry (roadmap I1): one INFLOW movement per
+          // stock-increasing line, in the same transaction as the stock
+          // update above. Skipped when no inventory item is referenced
+          // because no stock was changed in that case.
+          if (inventoryItem && item.inventoryItemId) {
+            await this.stockMovementsService.record({
+              itemId: item.inventoryItemId,
+              branchId: itemBranchId,
+              batchId: savedBatch?.id ?? null,
+              movementType: StockMovementType.INFLOW,
+              quantity: Number(baseQuantity),
+              unitCost: Number(unitCost),
+              sourceType: "inflow",
+              sourceId: savedInflow.id,
+              performedById: performedById ?? null,
+              balanceAfter: Number(inventoryItem.currentStock),
+            });
           }
 
           // Create inflow item entity with both the foreign key ID and the relationship object
@@ -286,7 +352,7 @@ export class InflowsService {
           const finalBaseQuantity = Number(baseQuantity);
           if (isNaN(finalBaseQuantity)) {
             throw new Error(
-              `Invalid baseQuantity calculated: ${baseQuantity} for item ${item.inventoryItemId}`
+              `Invalid baseQuantity calculated: ${baseQuantity} for item ${item.inventoryItemId}`,
             );
           }
 
@@ -312,37 +378,36 @@ export class InflowsService {
             expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
             supplierId: finalSupplierId, // Supplier per item (can override inflow-level supplier), fallback to inflow-level
             branchId: finalBranchId, // Always set - use item-level branchId if provided, otherwise use inflow-level branchId
+            // Store original names for manual correction when relations are null
+            originalItemName: item.originalItemName || null,
+            originalUomName: item.originalUomName || null,
           });
 
-          console.log(`[InflowCreate] Creating inflow item:`, {
-            inflowId: savedInflow.id,
-            branchId: itemBranchId,
-            supplierId: batchSupplierId,
-            inventoryItemId: item.inventoryItemId,
-            baseQuantity: finalBaseQuantity,
-          });
-
-          const savedItem = await this.inflowItemRepository.save(inflowItem);
-
-          console.log(`[InflowCreate] Saved inflow item:`, {
-            id: savedItem.id,
-            inflowId: savedItem.inflowId,
-            branchId: savedItem.branchId,
-            supplierId: savedItem.supplierId,
-          });
-          return savedItem;
-        })
-      );
+          await this.inflowItemRepository.save(inflowItem);
+        }
     }
 
     savedInflow.totalAmount = totalAmount;
     const finalInflow = await this.inflowRepository.save(savedInflow);
+
+    // Double-entry posting for the goods receipt (audit A5): Dr Inventory /
+    // Cr Accounts Payable, same transaction as the stock increase.
+    // Idempotent per inflow id.
+    if (totalAmount > 0) {
+      await this.postingService.postGoodsReceipt({
+        inflowId: finalInflow.id,
+        amount: totalAmount,
+        isCash: false,
+        memo: `Goods receipt${finalInflow.invoiceNumber ? ` (invoice ${finalInflow.invoiceNumber})` : ""}`,
+      });
+    }
+
     // Reload to ensure all data including items are properly loaded with relations
-    return this.findOne(finalInflow.id, businessId);
+    return this.findOne(finalInflow.id);
   }
 
-  async findAll(businessId: string, branchId?: string, batchId?: string) {
-    const where: any = { businessId };
+  async findAll(branchId?: string, batchId?: string) {
+    const where: any = {};
     if (branchId) {
       where.branchId = branchId;
     }
@@ -352,107 +417,88 @@ export class InflowsService {
 
     const inflows = await this.inflowRepository.find({
       where,
-      relations: [
-        "branch",
-        "supplier", 
-        "items",
-        "items.supplier",
-        "items.branch",
-        "items.inventoryItem",
-        "items.inventoryItem.baseUom",
-        "items.uom",
-      ],
+      relations: ["branch", "supplier"],
       order: { createdAt: "DESC" },
     });
 
-    console.log(`[DEBUG] Found ${inflows.length} inflows for business ${businessId}`);
-    if (inflows.length > 0) {
-      const sample = inflows[0];
-      console.log(`[DEBUG] First inflow sample:`, {
-        id: sample?.id,
-        batchId: sample?.batchId,
-        branchId: sample?.branchId,
-        branchName: sample?.branch?.name,
-        branchLoaded: !!sample?.branch,
-        totalAmount: sample?.totalAmount,
-        type: sample?.type,
-        hasItems: sample?.items?.length > 0,
-        itemsCount: sample?.items?.length,
-        firstItemCost: sample?.items?.[0]?.totalCost
-      });
-      
-      // If branch is null but branchId exists, there's a relation loading issue
-      if (sample?.branchId && !sample?.branch) {
-        console.log(`[DEBUG] Branch relation failed to load for branchId: ${sample.branchId}`);
-        // Try to load branch manually
-        const branch = await this.branchRepository.findOne({
-          where: { id: sample.branchId, businessId }
-        });
-        console.log(`[DEBUG] Manual branch lookup result:`, branch ? branch.name : 'not found');
-      }
+    console.log(`[Inflows] Found ${inflows.length} inflows`);
+
+    // Load line items via a direct query and group them by inflow. The
+    // inflow.items OneToMany relation does not hydrate here (the joined table
+    // resolves to the wrong schema), which left item counts showing 0.
+    const inflowIds = inflows.map((i) => i.id);
+    const allItems = inflowIds.length
+      ? await this.inflowItemRepository.find({
+          where: { inflowId: In(inflowIds) },
+          relations: ["inventoryItem", "inventoryItem.baseUom", "uom"],
+        })
+      : [];
+    const itemsByInflow = new Map<string, InventoryInflowItem[]>();
+    for (const it of allItems) {
+      const arr = itemsByInflow.get(it.inflowId) || [];
+      arr.push(it);
+      itemsByInflow.set(it.inflowId, arr);
     }
 
     // Calculate failedUploadsCount and fix missing data for each inflow
     const inflowsWithCounts = await Promise.all(
       inflows.map(async (inflow) => {
         let failedUploadsCount = 0;
-        
-        console.log(`[DEBUG] Processing inflow ${inflow.id} - batchId: ${inflow.batchId}, branch: ${inflow.branch?.name}, type: ${inflow.type}`);
-        
+
+        // Attach the directly-loaded line items.
+        inflow.items = itemsByInflow.get(inflow.id) || [];
+
         // Load branch manually if relation failed
         if (inflow.branchId && !inflow.branch) {
-          console.log(`[DEBUG] Loading branch manually for inflow ${inflow.id}`);
           const branch = await this.branchRepository.findOne({
-            where: { id: inflow.branchId, businessId }
+            where: { id: inflow.branchId },
           });
           if (branch) {
             inflow.branch = branch;
-            console.log(`[DEBUG] Manually loaded branch: ${branch.name}`);
           }
         }
-        
+
         // Load supplier manually if relation failed
         if (inflow.supplierId && !inflow.supplier) {
-          console.log(`[DEBUG] Loading supplier manually for inflow ${inflow.id}`);
           const supplier = await this.supplierRepository.findOne({
-            where: { id: inflow.supplierId, businessId }
+            where: { id: inflow.supplierId },
           });
           if (supplier) {
             inflow.supplier = supplier;
-            console.log(`[DEBUG] Manually loaded supplier: ${supplier.name}`);
           }
         }
-        
+
         if (inflow.batchId) {
           // Count failed uploads specifically for this inflow ID
           failedUploadsCount = await this.bulkUploadLogRepository.count({
-            where: { 
-              businessId,
-              uploadType: 'inflow',
+            where: {
+              uploadType: "inflow",
               inflowId: inflow.id,
-              uploadSessionId: inflow.batchId
-            }
+              uploadSessionId: inflow.batchId,
+            },
           });
-          
-          console.log(`[DEBUG] Found ${failedUploadsCount} direct failures for inflow ${inflow.id}`);
-          
+
           // If no records found with inflowId, check for validation failures by branch name
           if (failedUploadsCount === 0 && inflow.branch?.name) {
-            const qb = this.bulkUploadLogRepository.createQueryBuilder('log');
+            const qb = this.bulkUploadLogRepository.createQueryBuilder("log");
             failedUploadsCount = await qb
-              .where('log.businessId = :businessId', { businessId })
-              .andWhere('log.uploadType = :uploadType', { uploadType: 'inflow' })
-              .andWhere('log.uploadSessionId = :uploadSessionId', { uploadSessionId: inflow.batchId })
-              .andWhere('log.inflowId IS NULL')
-              .andWhere("JSON_EXTRACT(log.rowData, '$.branchName') = :branchName", { branchName: inflow.branch.name })
+              .where("log.uploadType = :uploadType", {
+                uploadType: "inflow",
+              })
+              .andWhere("log.uploadSessionId = :uploadSessionId", {
+                uploadSessionId: inflow.batchId,
+              })
+              .andWhere("log.inflowId IS NULL")
+              .andWhere(
+                // Postgres JSON access (was MySQL JSON_EXTRACT, which does not
+                // exist in Postgres and 500'd the inflows list endpoint).
+                "log.rowData ->> 'branchName' = :branchName",
+                { branchName: inflow.branch.name },
+              )
               .getCount();
-              
-            console.log(`[DEBUG] Found ${failedUploadsCount} validation failures for branch ${inflow.branch.name}`);
           }
         }
-        
-        console.log(`[DEBUG] Final failedUploadsCount for inflow ${inflow.id}: ${failedUploadsCount}`);
-        
+
         // Recalculate totalAmount from items if it's 0 or null
         let totalAmount = Number(inflow.totalAmount) || 0;
         if (totalAmount === 0 && inflow.items && inflow.items.length > 0) {
@@ -460,53 +506,152 @@ export class InflowsService {
             const itemTotal = Number(item.totalCost) || 0;
             return sum + itemTotal;
           }, 0);
-          console.log(`[DEBUG] Recalculated totalAmount for inflow ${inflow.id}: ${totalAmount} (was ${inflow.totalAmount})`);
-          
+
           // Update the database with the correct totalAmount
           if (totalAmount > 0) {
             await this.inflowRepository.update(inflow.id, { totalAmount });
-            console.log(`[DEBUG] Updated database totalAmount for inflow ${inflow.id}: ${totalAmount}`);
           }
         }
-        
+
         return {
           ...inflow,
           totalAmount,
-          failedUploadsCount
+          failedUploadsCount,
         };
-      })
+      }),
     );
 
     return inflowsWithCounts;
   }
 
-  async findOne(id: string, businessId: string) {
+  /**
+   * Summary of an entire purchase / bulk-upload session (one batchId can span
+   * several branch inflows). Aggregates every line item across all inflows in
+   * the batch plus per-branch and grand totals.
+   */
+  async getBatchSummary(batchId: string) {
+    const inflows = await this.inflowRepository.find({
+      where: { batchId },
+      relations: ["branch", "supplier"],
+      order: { createdAt: "ASC" },
+    });
+
+    if (!inflows.length) {
+      throw new NotFoundException("Batch not found");
+    }
+
+    const inflowIds = inflows.map((i) => i.id);
+    const allItems = await this.inflowItemRepository.find({
+      where: { inflowId: In(inflowIds) },
+      relations: ["inventoryItem", "inventoryItem.baseUom", "uom", "supplier"],
+      order: { createdAt: "ASC" },
+    });
+
+    const inflowById = new Map(inflows.map((inf) => [inf.id, inf]));
+    const branchAgg = new Map<
+      string,
+      { branchId: string; branchName: string; itemCount: number; totalAmount: number }
+    >();
+    const supplierNames = new Set<string>();
+    let totalAmount = 0;
+
+    const lineItems = allItems.map((it) => {
+      const inf = inflowById.get(it.inflowId);
+      const branchName = inf?.branch?.name || "—";
+      const lineTotal = Number(it.totalCost) || 0;
+      totalAmount += lineTotal;
+
+      if (inf?.branchId) {
+        const agg =
+          branchAgg.get(inf.branchId) || {
+            branchId: inf.branchId,
+            branchName,
+            itemCount: 0,
+            totalAmount: 0,
+          };
+        agg.itemCount += 1;
+        agg.totalAmount += lineTotal;
+        branchAgg.set(inf.branchId, agg);
+      }
+      if (it.supplier?.name) supplierNames.add(it.supplier.name);
+      else if (inf?.supplier?.name) supplierNames.add(inf.supplier.name);
+
+      return {
+        branchName,
+        itemName: it.inventoryItem?.name || it.originalItemName || "—",
+        uomName: it.uom?.name || it.originalUomName || "—",
+        quantity: Number(it.quantity) || 0,
+        baseQuantity: Number(it.baseQuantity) || 0,
+        unitCost: Number(it.unitCost) || 0,
+        totalCost: lineTotal,
+        batchNumber: it.batchNumber || null,
+        expiryDate: it.expiryDate || null,
+        supplierName: it.supplier?.name || inf?.supplier?.name || null,
+      };
+    });
+
+    const statuses = Array.from(new Set(inflows.map((i) => i.status)));
+    const status =
+      statuses.length === 1 ? statuses[0] : statuses.includes("pending") ? "partial" : statuses[0];
+
+    return {
+      batchId,
+      receivedDate: inflows[0].receivedDate,
+      createdAt: inflows[0].createdAt,
+      currency: inflows[0].currency || "NGN",
+      status,
+      inflowCount: inflows.length,
+      branchCount: branchAgg.size,
+      totalItems: lineItems.length,
+      totalAmount,
+      suppliers: Array.from(supplierNames),
+      branches: Array.from(branchAgg.values()),
+      inflows: inflows.map((i) => ({
+        id: i.id,
+        branchName: i.branch?.name || "—",
+        invoiceNumber: i.invoiceNumber,
+        status: i.status,
+        totalAmount: Number(i.totalAmount) || 0,
+      })),
+      items: lineItems,
+    };
+  }
+
+  async findOne(id: string) {
     const inflow = await this.inflowRepository
       .createQueryBuilder("inflow")
       .leftJoinAndSelect("inflow.branch", "branch")
       .leftJoinAndSelect("inflow.supplier", "supplier")
-      .leftJoinAndSelect("inflow.items", "items")
-      .leftJoinAndSelect("items.supplier", "itemSupplier")
-      .leftJoinAndSelect("items.branch", "itemBranch")
-      .leftJoinAndSelect("items.inventoryItem", "inventoryItem")
-      .leftJoinAndSelect("inventoryItem.baseUom", "baseUom")
-      .leftJoinAndSelect("inventoryItem.category", "category")
-      .leftJoinAndSelect("inventoryItem.subcategory", "subcategory")
-      .leftJoinAndSelect("items.uom", "uom")
       .where("inflow.id = :id", { id })
-      .andWhere("inflow.businessId = :businessId", { businessId })
       .getOne();
 
     if (!inflow) {
       throw new NotFoundException("Inventory inflow not found");
     }
 
+    // Load line items via a direct query rather than the inflow.items
+    // OneToMany relation: the relation join returns an empty collection here
+    // (joined table resolves to the wrong schema), which left the items tab
+    // blank and item counts at 0.
+    inflow.items = await this.inflowItemRepository.find({
+      where: { inflowId: id },
+      relations: [
+        "supplier",
+        "branch",
+        "inventoryItem",
+        "inventoryItem.baseUom",
+        "inventoryItem.category",
+        "inventoryItem.subcategory",
+        "uom",
+      ],
+    });
+
     // Manually load inflow-level supplier and branch if not loaded
     const inflowSupplierId = (inflow as any).supplierId;
     const inflowBranchId = (inflow as any).branchId;
     if (inflowSupplierId && !(inflow as any).supplier) {
       const supplier = await this.supplierRepository.findOne({
-        where: { id: inflowSupplierId, businessId },
+        where: { id: inflowSupplierId },
       });
       if (supplier) {
         (inflow as any).supplier = supplier;
@@ -514,7 +659,7 @@ export class InflowsService {
     }
     if (inflowBranchId && !(inflow as any).branch) {
       const branch = await this.branchRepository.findOne({
-        where: { id: inflowBranchId, businessId },
+        where: { id: inflowBranchId },
       });
       if (branch) {
         (inflow as any).branch = branch;
@@ -576,7 +721,6 @@ export class InflowsService {
         supplierIdsArray.length > 0
           ? this.supplierRepository.find({
               where: {
-                businessId,
                 id:
                   supplierIdsArray.length === 1
                     ? supplierIdsArray[0]
@@ -587,7 +731,6 @@ export class InflowsService {
         branchIdsArray.length > 0
           ? this.branchRepository.find({
               where: {
-                businessId,
                 id:
                   branchIdsArray.length === 1
                     ? branchIdsArray[0]
@@ -598,7 +741,6 @@ export class InflowsService {
         inventoryItemIdsArray.length > 0
           ? this.inventoryItemRepository.find({
               where: {
-                businessId,
                 id:
                   inventoryItemIdsArray.length === 1
                     ? inventoryItemIdsArray[0]
@@ -610,7 +752,6 @@ export class InflowsService {
         uomIdsArray.length > 0
           ? this.uomRepository.find({
               where: {
-                businessId,
                 id: uomIdsArray.length === 1 ? uomIdsArray[0] : In(uomIdsArray),
               },
             })
@@ -619,16 +760,16 @@ export class InflowsService {
 
       // Create maps for quick lookup
       const suppliersMap = new Map<string, Supplier>(
-        suppliers.map((s) => [s.id, s] as [string, Supplier])
+        suppliers.map((s) => [s.id, s] as [string, Supplier]),
       );
       const branchesMap = new Map<string, Branch>(
-        branches.map((b) => [b.id, b] as [string, Branch])
+        branches.map((b) => [b.id, b] as [string, Branch]),
       );
       const inventoryItemsMap = new Map<string, InventoryItem>(
-        inventoryItems.map((i) => [i.id, i] as [string, InventoryItem])
+        inventoryItems.map((i) => [i.id, i] as [string, InventoryItem]),
       );
       const uomsMap = new Map<string, Uom>(
-        uoms.map((u) => [u.id, u] as [string, Uom])
+        uoms.map((u) => [u.id, u] as [string, Uom]),
       );
 
       // Map items with manually loaded relations
@@ -692,8 +833,8 @@ export class InflowsService {
     };
   }
 
-  async findOneWithSalesData(id: string, businessId: string) {
-    const inflow = await this.findOne(id, businessId);
+  async findOneWithSalesData(id: string) {
+    const inflow = await this.findOne(id);
 
     if (!inflow || !inflow.items) {
       return inflow;
@@ -713,22 +854,22 @@ export class InflowsService {
             FROM order_item_inflow_items oii
             INNER JOIN order_items oi ON oii.order_item_id = oi.id
             INNER JOIN orders o ON oi.order_id = o.id
-            WHERE oii.inflow_item_id = $1 
-              AND o.business_id = $2
+            WHERE oii.inflow_item_id = $1
               AND o.status != 'cancelled'
           `;
 
           console.log(
-            `[InflowSalesData] Querying sales for inflow item: ${item.id}, businessId: ${businessId}`
+            `[InflowSalesData] Querying sales for inflow item: ${item.id}`,
           );
+
           const salesData = await this.orderItemInflowItemRepository.query(
             salesQuery,
-            [item.id, businessId]
+            [item.id],
           );
 
           console.log(
             `[InflowSalesData] Raw query result for item ${item.id}:`,
-            JSON.stringify(salesData)
+            JSON.stringify(salesData),
           );
 
           const sales =
@@ -743,7 +884,7 @@ export class InflowsService {
 
           console.log(
             `[InflowSalesData] Sales data for item ${item.id}:`,
-            sales
+            sales,
           );
 
           const totalSold = Number(sales.totalsold || 0);
@@ -753,7 +894,7 @@ export class InflowsService {
           const remainingQuantity = Math.max(0, baseQuantity - totalSold);
 
           console.log(
-            `[InflowSalesData] Final values for item ${item.id}: baseQuantity=${baseQuantity}, quantity=${item.quantity}, totalSold=${totalSold}, remainingQuantity=${remainingQuantity}`
+            `[InflowSalesData] Final values for item ${item.id}: baseQuantity=${baseQuantity}, quantity=${item.quantity}, totalSold=${totalSold}, remainingQuantity=${remainingQuantity}`,
           );
 
           return {
@@ -777,7 +918,7 @@ export class InflowsService {
           console.error(
             "Error getting sales data for inflow item:",
             item.id,
-            error
+            error,
           );
           return {
             ...item,
@@ -797,7 +938,7 @@ export class InflowsService {
             },
           };
         }
-      })
+      }),
     );
 
     return {
@@ -806,38 +947,35 @@ export class InflowsService {
     };
   }
 
-  async update(
-    id: string,
-    businessId: string,
-    updateDto: UpdateInventoryInflowDto
-  ) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdateInventoryInflowDto) {
+    await this.findOne(id);
     await this.inflowRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async approve(id: string, businessId: string, approvedBy: string) {
-    const inflow = await this.findOne(id, businessId);
+  @Transactional()
+  async approve(id: string, approvedBy: string) {
+    const inflow = await this.findOne(id);
     inflow.status = "approved";
     inflow.approvedBy = approvedBy;
     inflow.approvedAt = new Date();
     return this.inflowRepository.save(inflow);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.inflowRepository.delete({ id });
   }
 
   async generateTemplate(): Promise<string> {
     // User-friendly template with names instead of IDs
-    // Format: Branch Name | Supplier Name | Received At (optional, YYYY-MM-DD) | Inventory Item Name | UOM | Quantity | Cost Per Unit | Batch Number (optional) | Expiry Date (optional, YYYY-MM-DD) | Invoice Number (optional) | Notes (optional)
+    // Format: Branch Name | Supplier Name | Received At (optional, YYYY-MM-DD) | Inventory Item Name | UOM/Unit | Quantity | Cost Per Unit | Batch Number (optional) | Expiry Date (optional, YYYY-MM-DD) | Invoice Number (optional) | Notes (optional)
     const headers = [
       "Branch Name",
       "Supplier Name",
       "Received At (optional, YYYY-MM-DD)",
       "Inventory Item Name",
-      "UOM",
+      "UOM", // Accept both "UOM" and "Unit" for consistency with inventory upload
       "Quantity",
       "Cost Per Unit",
       "Batch Number (optional)",
@@ -849,43 +987,75 @@ export class InflowsService {
     return headers.join("\t") + "\n";
   }
 
-  async bulkUpload(businessId: string, csv: string): Promise<BulkUploadResult> {
+  async bulkUpload(csv: string): Promise<BulkUploadResult> {
     const errors: string[] = [];
     const failedUploads: FailedInflowUpload[] = [];
     let duplicateSkipped = 0;
-    
-    // Generate a 6-character uppercase batch ID (e.g., A1B2C3)
-    const generateBatchId = (): string => {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = '';
-      for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return result;
-    };
-    
-    const batchId = generateBatchId();
-    const uploadSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    console.log(`Bulk upload started with batch ID: ${batchId}`);
-    
-    const lines = csv.trim().split("\n");
 
-    console.log(`Bulk upload started: ${lines.length} lines`);
+    // Generate a proper UUID for batch ID (required by entity)
+    const batchId = uuidv4();
+    const uploadSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    console.log(
+      `[BulkUpload] Starting inflow bulk upload with batch ID: ${batchId.substring(0, 8)}...`,
+    );
+
+    const lines = csv.trim().split(/\r?\n/);
+
     if (lines.length < 2) {
       return {
         success: 0,
         errors: ["CSV file is empty"],
         failedUploads: [],
         duplicateSkipped: 0,
+        summary: {
+          total: 0,
+          processed: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0,
+        },
       };
     }
+    console.log(`[BulkUpload] Processing ${lines.length - 1} data rows`);
 
     // Parse header
     const header = lines[0];
-    const headers = header
-      .split(/[\t|,]/)
-      .map((h) => (h || "").trim().toLowerCase());
+    // Detect the delimiter from the header. The template is TAB-delimited, but
+    // exports/edits commonly produce a comma-delimited CSV; support both (plus pipe).
+    const delimiter = header.includes("\t") ? "\t" : header.includes("|") ? "|" : ",";
+
+    // Quote-aware line splitter: a field wrapped in double quotes may itself
+    // contain the delimiter (e.g. the header hint "Received At (optional,
+    // YYYY-MM-DD)" in a comma-delimited file, or a supplier/notes value with a
+    // comma). A doubled quote ("") inside a quoted field is a literal quote.
+    // Splitting naively on the delimiter mis-aligned columns and made Cost Per
+    // Unit read the wrong (non-numeric) column.
+    const splitLine = (line: string): string[] => {
+      const out: string[] = [];
+      let cur = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === delimiter && !inQuotes) {
+          out.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out.map((v) => v.trim());
+    };
+
+    const headers = splitLine(header).map((h) => h.toLowerCase());
 
     // Normalize function
     const normalize = (value: string) =>
@@ -893,26 +1063,42 @@ export class InflowsService {
 
     const normalizedHeaders = headers.map(normalize);
 
-    // Required headers
+    // Required headers - now accepting both "UOM" and "Unit" for consistency with inventory upload
     const requiredHeaders = [
       "branch name",
       "inventory item name",
-      "uom",
       "quantity",
       "cost per unit",
     ].map(normalize);
 
+    // UOM/Unit header - accept either one
+    const hasUomHeader = normalizedHeaders.includes(normalize("uom"));
+    const hasUnitHeader = normalizedHeaders.includes(normalize("unit"));
+
+    if (!hasUomHeader && !hasUnitHeader) {
+      requiredHeaders.push(normalize("uom")); // Add to missing headers list for error message
+    }
+
     // Find missing headers
     const missingHeaders = requiredHeaders.filter(
-      (req) => !normalizedHeaders.includes(req)
+      (req) => !normalizedHeaders.includes(req),
     );
 
     if (missingHeaders.length > 0) {
       return {
         success: 0,
-        errors: [`Missing required headers: ${missingHeaders.join(", ")}`],
+        errors: [
+          `Missing required headers: ${missingHeaders.join(", ")}. Note: Either 'UOM' or 'Unit' is required.`,
+        ],
         failedUploads: [],
         duplicateSkipped: 0,
+        summary: {
+          total: 0,
+          processed: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0,
+        },
       };
     }
 
@@ -922,7 +1108,7 @@ export class InflowsService {
     for (let i = 1; i < lines.length; i++) {
       const lineNumber = i + 1;
       const line = lines[i];
-      const values = line.split(/[\t|,]/).map((v) => (v || "").trim());
+      const values = splitLine(line);
 
       // Skip empty lines
       if (values.every((v) => !v)) continue;
@@ -977,6 +1163,7 @@ export class InflowsService {
             errors: rowErrors,
             status: "failed",
           });
+
           continue;
         }
 
@@ -1026,15 +1213,18 @@ export class InflowsService {
         errors: errors.length > 0 ? errors : ["No valid rows found in CSV"],
         failedUploads,
         duplicateSkipped,
+        summary: {
+          total: lines.length - 1,
+          processed: 0,
+          successful: 0,
+          failed: failedUploads.length,
+          skipped: 0,
+        },
       };
     }
 
-    console.log('DEBUG - Parsed rows before validation:', parsedRows.length);
-    console.log('DEBUG - Sample parsed row:', parsedRows[0]);
-    console.log('DEBUG - Business ID:', businessId);
-
     // Lookup and validate entities in bulk
-    await this.validateAndLookupEntities(businessId, parsedRows, failedUploads);
+    await this.validateAndLookupEntities(parsedRows, failedUploads, lines);
 
     // Filter out rows that failed validation
     const validRows = parsedRows.filter((_, index) => {
@@ -1048,111 +1238,226 @@ export class InflowsService {
         errors: ["No valid rows after entity validation"],
         failedUploads,
         duplicateSkipped,
+        summary: {
+          total: lines.length - 1,
+          processed: parsedRows.length,
+          successful: 0,
+          failed: failedUploads.length,
+          skipped: lines.length - 1 - parsedRows.length - failedUploads.length,
+        },
       };
     }
 
     // Process UOM conversions and detect duplicates
     const processedRows = await this.processUomConversionsAndDuplicates(
-      businessId,
       validRows,
       failedUploads,
-      uploadSessionId
+      uploadSessionId,
+      lines,
     );
 
     // Count duplicates that were skipped
     duplicateSkipped = failedUploads.filter(
-      (f) => f.status === "skipped"
+      (f) => f.status === "skipped",
     ).length;
+
+    // Debug: Check the status of processed rows before filtering
+    console.log(
+      `[BulkUpload] Before final filtering: ${processedRows.length} processed rows`,
+    );
+    processedRows.forEach((row, index) => {
+      console.log(
+        `[BulkUpload] Row ${index + 1}: ${row.inventoryItemName} - baseQuantity: ${row.baseQuantity} (type: ${typeof row.baseQuantity})`,
+      );
+    });
 
     // Filter final valid rows
     const finalValidRows = processedRows.filter(
-      (row) => row.baseQuantity !== undefined
+      (row) => row.baseQuantity !== undefined && row.baseQuantity !== null,
+    );
+
+    console.log(
+      `[BulkUpload] After final filtering: ${finalValidRows.length} valid rows`,
     );
 
     if (finalValidRows.length === 0) {
+      console.error(
+        `[BulkUpload] ERROR: No valid rows after filtering! Original processed rows: ${processedRows.length}`,
+      );
+      console.error(
+        `[BulkUpload] Failed uploads count: ${failedUploads.length}`,
+      );
+      console.error(
+        `[BulkUpload] Failed uploads details:`,
+        failedUploads.map((f) => ({
+          line: f.lineNumber,
+          errors: f.errors,
+          status: f.status,
+        })),
+      );
       return {
         success: 0,
         errors: ["No valid rows after UOM conversion and duplicate detection"],
         failedUploads,
         duplicateSkipped,
+        summary: {
+          total: lines.length - 1,
+          processed: processedRows.length,
+          successful: 0,
+          failed: failedUploads.length,
+          skipped:
+            lines.length - 1 - processedRows.length - failedUploads.length,
+        },
       };
     }
 
     // Create inflows by branch
     const successCount = await this.createInflowsByBranch(
-      businessId,
       finalValidRows,
       uploadSessionId,
       batchId,
-      failedUploads
+      failedUploads,
     );
+
+    const totalRows = lines.length - 1; // Exclude header
+    const totalProcessedRows = totalRows;
+    const skippedRows =
+      totalProcessedRows - finalValidRows.length - failedUploads.length;
 
     return {
       success: successCount,
       errors,
       failedUploads,
       duplicateSkipped,
+      summary: {
+        total: totalRows,
+        processed: totalProcessedRows,
+        successful: successCount,
+        failed: failedUploads.length,
+        skipped: skippedRows,
+      },
     };
   }
 
   // Helper method to validate and lookup entities in bulk
   private async validateAndLookupEntities(
-    businessId: string,
     parsedRows: ParsedInflowRow[],
-    failedUploads: FailedInflowUpload[]
+    failedUploads: FailedInflowUpload[],
+    originalLines: string[],
   ): Promise<void> {
-    // Get unique entity names for bulk lookups
+    const normalizeString = (str: string): string => {
+      return str.toLowerCase().trim();
+    };
+
     const uniqueBranchNames = [...new Set(parsedRows.map((r) => r.branchName))];
     const uniqueItemNames = [
       ...new Set(parsedRows.map((r) => r.inventoryItemName)),
     ];
+
     const uniqueUomNames = [...new Set(parsedRows.map((r) => r.uomName))];
     const uniqueSupplierNames = [
       ...new Set(
-        parsedRows.map((r) => r.supplierName).filter(Boolean) as string[]
+        parsedRows.map((r) => r.supplierName).filter(Boolean) as string[],
       ),
     ];
 
-    // Bulk entity lookups
-    const [branches, inventoryItems, uoms, suppliers] = await Promise.all([
-      this.branchRepository.find({
-        where: { businessId, name: In(uniqueBranchNames) },
-      }),
-      this.inventoryItemRepository.find({
-        where: { businessId, name: In(uniqueItemNames) },
-        relations: ["baseUom"],
-      }),
-      this.uomRepository.find({
-        where: { businessId, name: In(uniqueUomNames) },
-      }),
-      uniqueSupplierNames.length > 0
-        ? this.supplierRepository.find({
-            where: { businessId, name: In(uniqueSupplierNames) },
-          })
-        : [],
-    ]);
+    // The lookup queries compare `LOWER(name) IN (:names)`, so the parameters
+    // must be lowercased — NOT normalizeString'd (which strips spaces/punctuation
+    // and would never match multi-word names like "Guinness Stout"). The
+    // normalizeString-based maps below still provide fuzzy matching on the
+    // returned rows.
+    const lower = (n: string) => (n || "").trim().toLowerCase();
+    const _uniqueBranchNames = uniqueBranchNames.map(lower);
+    const _uniqueItemNames = uniqueItemNames.map(lower);
+    const _uniqueUomNames = uniqueUomNames.map(lower);
+    const _uniqueSupplierNames = uniqueSupplierNames.map(lower);
 
-    console.log('DEBUG - Entity lookup results:');
-    console.log(`- Branches found: ${branches.length}/${uniqueBranchNames.length}`, branches.map(b => b.name));
-    console.log(`- Items found: ${inventoryItems.length}/${uniqueItemNames.length}`, inventoryItems.map(i => i.name));
-    console.log(`- UOMs found: ${uoms.length}/${uniqueUomNames.length}`, uoms.map(u => u.name));
-    console.log(`- Suppliers found: ${suppliers.length}/${uniqueSupplierNames.length}`, suppliers.map(s => s.name));
-    console.log('- Expected branch names:', uniqueBranchNames);
-    console.log('- Expected item names:', uniqueItemNames);
-    console.log('- Expected UOM names:', uniqueUomNames);
+    // NOTE: an empty array passed to `IN (:...names)` makes TypeORM emit
+    // `IN ()`, which is a Postgres syntax error. Guard each lookup so an empty
+    // column (e.g. no suppliers in the CSV) doesn't crash the whole upload.
+    const [allBranches, allInventoryItems, allUoms, allSuppliers] =
+      await Promise.all([
+        _uniqueBranchNames.length
+          ? this.branchRepository
+              .createQueryBuilder("branch")
+              .where("LOWER(branch.name) IN (:...names)", {
+                names: _uniqueBranchNames,
+              })
+              .getMany()
+          : Promise.resolve([]),
 
-    // Create lookup maps with proper typing
+        _uniqueItemNames.length
+          ? this.inventoryItemRepository
+              .createQueryBuilder("item")
+              .leftJoinAndSelect("item.baseUom", "baseUom")
+              .where("LOWER(item.name) IN (:...names)", {
+                names: _uniqueItemNames,
+              })
+              .getMany()
+          : Promise.resolve([]),
+
+        _uniqueUomNames.length
+          ? this.uomRepository
+              .createQueryBuilder("uom")
+              .where("LOWER(uom.name) IN (:...names)", { names: _uniqueUomNames })
+              .getMany()
+          : Promise.resolve([]),
+
+        _uniqueSupplierNames.length
+          ? this.supplierRepository
+              .createQueryBuilder("supplier")
+              .where("LOWER(supplier.name) IN (:...names)", {
+                names: _uniqueSupplierNames,
+              })
+              .getMany()
+          : Promise.resolve([]),
+      ]);
+
+    // Debug: Check for any missing entities with normalized names
+    const missingBranches = uniqueBranchNames.filter(
+      (name) =>
+        !allBranches.find(
+          (b) => normalizeString(b.name) === normalizeString(name),
+        ),
+    );
+    const missingItems = uniqueItemNames.filter(
+      (name) =>
+        !allInventoryItems.find(
+          (i) => normalizeString(i.name) === normalizeString(name),
+        ),
+    );
+    const missingUoms = uniqueUomNames.filter(
+      (name) =>
+        !allUoms.find((u) => normalizeString(u.name) === normalizeString(name)),
+    );
+
+    if (
+      missingBranches.length > 0 ||
+      missingItems.length > 0 ||
+      missingUoms.length > 0
+    ) {
+      console.log(`[BulkUpload] Entity validation summary:`, {
+        missingBranches: missingBranches.length,
+        missingItems: missingItems.length,
+        missingUoms: missingUoms.length,
+        foundBranches: allBranches.length,
+        foundItems: allInventoryItems.length,
+        foundUoms: allUoms.length,
+      });
+    }
+
+    // Create lookup maps with proper typing - normalize names for better matching
     const branchMap = new Map<string, Branch>();
-    branches.forEach((b) => branchMap.set(b.name.toLowerCase(), b));
+    allBranches.forEach((b) => branchMap.set(normalizeString(b.name), b));
 
     const itemMap = new Map<string, InventoryItem>();
-    inventoryItems.forEach((i) => itemMap.set(i.name.toLowerCase(), i));
+    allInventoryItems.forEach((i) => itemMap.set(normalizeString(i.name), i));
 
     const uomMap = new Map<string, Uom>();
-    uoms.forEach((u) => uomMap.set(u.name.toLowerCase(), u));
+    allUoms.forEach((u) => uomMap.set(normalizeString(u.name), u));
 
     const supplierMap = new Map<string, Supplier>();
-    suppliers.forEach((s) => supplierMap.set(s.name.toLowerCase(), s));
+    allSuppliers.forEach((s) => supplierMap.set(normalizeString(s.name), s));
 
     // Validate and enrich each row
     for (let i = 0; i < parsedRows.length; i++) {
@@ -1161,51 +1466,59 @@ export class InflowsService {
       const rowErrors: string[] = [];
 
       // Validate and set branch
-      const branch = branchMap.get(row.branchName.toLowerCase());
+      const branch = branchMap.get(normalizeString(row.branchName));
       if (!branch) {
         rowErrors.push(`Branch '${row.branchName}' not found`);
       } else {
         row.branchId = branch.id;
       }
 
-      // Validate and set inventory item
-      const inventoryItem = itemMap.get(row.inventoryItemName.toLowerCase());
-      if (!inventoryItem) {
-        rowErrors.push(`Inventory item '${row.inventoryItemName}' not found`);
-      } else {
+      // Handle inventory item - allow creation with null if not found (soft validation)
+      const inventoryItem = itemMap.get(normalizeString(row.inventoryItemName));
+      if (inventoryItem) {
         row.inventoryItemId = inventoryItem.id;
         row.inventoryItem = inventoryItem;
+      } else {
+        // Store the item name for manual correction later, don't treat as hard error
+        row.inventoryItemId = null;
+        row.inventoryItem = null;
+        console.warn(
+          `[BulkUpload] Inventory item '${row.inventoryItemName}' not found, will be created with null reference`,
+        );
       }
 
-      // Validate and set UOM
-      const uom = uomMap.get(row.uomName.toLowerCase());
-      if (!uom) {
-        rowErrors.push(`UOM '${row.uomName}' not found`);
-      } else {
+      // Handle UOM - allow creation with null if not found (soft validation)
+      const uom = uomMap.get(normalizeString(row.uomName));
+      if (uom) {
         row.uomId = uom.id;
         row.uom = uom;
+      } else {
+        // Store the UOM name for manual correction later, don't treat as hard error
+        row.uomId = null;
+        row.uom = null;
+        console.warn(
+          `[BulkUpload] UOM '${row.uomName}' not found, will be created with null reference`,
+        );
       }
 
-      // Validate and set supplier (auto-create if doesn't exist)
       if (row.supplierName) {
-        let supplier = supplierMap.get(row.supplierName.toLowerCase());
+        let supplier = supplierMap.get(normalizeString(row.supplierName));
         if (!supplier) {
           // Auto-create supplier if it doesn't exist
           try {
             const newSupplier = this.supplierRepository.create({
-              businessId,
               name: row.supplierName,
-              contactPerson: '',
-              phone: '',
-              email: '',
-              address: '',
+              contactPerson: "",
+              phone: "",
+              email: "",
+              address: "",
             });
             supplier = await this.supplierRepository.save(newSupplier);
-            supplierMap.set(row.supplierName.toLowerCase(), supplier);
-            console.log(`Auto-created supplier: ${row.supplierName}`);
+            supplierMap.set(normalizeString(row.supplierName), supplier);
           } catch (error: any) {
-            console.error(`Failed to auto-create supplier ${row.supplierName}:`, error);
-            rowErrors.push(`Failed to create supplier '${row.supplierName}': ${error.message}`);
+            rowErrors.push(
+              `Failed to create supplier '${row.supplierName}': ${error.message}`,
+            );
           }
         }
         if (supplier) {
@@ -1213,7 +1526,6 @@ export class InflowsService {
         }
       }
 
-      // If validation failed, add to failed uploads
       if (rowErrors.length > 0) {
         failedUploads.push({
           lineNumber,
@@ -1237,66 +1549,84 @@ export class InflowsService {
     }
   }
 
-  // Helper method to process UOM conversions and detect duplicates
+  // CORRECT FIX: Better duplicate detection that allows multiple batches
+  // This replaces the processUomConversionsAndDuplicates method in your inflows.service.ts
+
   private async processUomConversionsAndDuplicates(
-    businessId: string,
     validRows: ParsedInflowRow[],
     failedUploads: FailedInflowUpload[],
-    uploadSessionId: string
+    uploadSessionId: string,
+    originalLines: string[],
   ): Promise<ParsedInflowRow[]> {
     const processedRows: ParsedInflowRow[] = [];
-    const seenItems = new Set<string>(); // Track duplicates within upload
+
+    // Use Map to track exact duplicates (same branch, item, batch, date, supplier, quantity)
+    // This allows multiple different batches of the same item
+    const seenExactEntries = new Map<string, number>();
 
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i];
-      const lineNumber = i + 2; // Account for header and previous failed rows
+      const lineNumber = i + 2; // Account for header
       const rowErrors: string[] = [];
 
       try {
-        // Check for duplicates within the same upload
-        const itemKey = `${row.branchId}-${row.inventoryItemId}-${row.batchNumber || "no-batch"}`;
-        if (seenItems.has(itemKey)) {
+        // Only flag as duplicate if EVERYTHING matches (exact duplicate row)
+        // This key is VERY specific - only blocks truly identical entries
+        const exactDuplicateKey = `${row.branchId}|${row.inventoryItemId}|${row.supplierId || "none"}|${row.batchNumber || "none"}|${row.receivedAt || "none"}|${row.quantity}|${row.costPerUnit}`;
+
+        if (seenExactEntries.has(exactDuplicateKey)) {
+          const previousLine = seenExactEntries.get(exactDuplicateKey);
+
           failedUploads.push({
             lineNumber,
             rowData: {
               "branch name": row.branchName,
               "inventory item name": row.inventoryItemName,
-              uom: row.uomName,
+              "supplier name": row.supplierName || "",
+              "batch number": row.batchNumber || "",
               quantity: row.quantity.toString(),
               "cost per unit": row.costPerUnit.toString(),
             },
             errors: [
-              `Duplicate inflow item within upload: ${row.inventoryItemName} for branch ${row.branchName}`,
+              `Exact duplicate row found (first seen at line ${previousLine}). This row has identical values for all fields.`,
             ],
             status: "skipped",
           });
           continue;
         }
-        seenItems.add(itemKey);
+
+        seenExactEntries.set(exactDuplicateKey, lineNumber);
 
         // Convert UOM to base UOM if necessary
         if (!row.inventoryItem || !row.uom) {
           rowErrors.push("Missing inventory item or UOM data");
-        } else if (row.uomId === row.inventoryItem.baseUomId) {
-          // UOM matches base UOM, no conversion needed
-          row.baseQuantity = row.quantity;
         } else {
-          // Convert to base UOM using the UOM conversion service
-          try {
-            const baseQuantity = await this.uomConversionsService.convert(
-              businessId,
-              row.uomId!, // From UOM (specified in CSV)
-              row.inventoryItem.baseUomId, // To UOM (base UOM)
-              row.quantity
-            );
-            row.baseQuantity = baseQuantity;
-          } catch (conversionError: any) {
-            rowErrors.push(
-              `UOM conversion failed: ${conversionError.message}. Item '${row.inventoryItemName}' does not support UOM '${row.uomName}'`
-            );
+          if (row.uomId === row.inventoryItem.baseUomId) {
+            // UOM matches base UOM, no conversion needed
+            row.baseQuantity = row.quantity;
+          } else {
+            // Convert to base UOM using the UOM conversion service
+            try {
+              const baseQuantity = await this.uomConversionsService.convert(
+                row.uomId!, // From UOM (specified in CSV)
+                row.inventoryItem.baseUomId, // To UOM (base UOM)
+                row.quantity,
+              );
+              row.baseQuantity = baseQuantity;
+              console.log(
+                `[BulkUpload] UOM conversion: ${row.quantity} ${row.uomName} → ${baseQuantity} (base) for '${row.inventoryItemName}'`,
+              );
+            } catch (conversionError: any) {
+              // If UOM conversion fails, fall back to using original quantity as base quantity
+              console.warn(
+                `[BulkUpload] UOM conversion failed for '${row.inventoryItemName}', using original quantity: ${conversionError.message}`,
+              );
+              row.baseQuantity = row.quantity;
+            }
           }
         }
 
+        // If there are validation errors, add to failed uploads
         if (rowErrors.length > 0) {
           failedUploads.push({
             lineNumber,
@@ -1311,6 +1641,7 @@ export class InflowsService {
             status: "failed",
           });
         } else {
+          // Row is valid, add to processed rows
           processedRows.push(row);
         }
       } catch (error: any) {
@@ -1323,24 +1654,29 @@ export class InflowsService {
             quantity: row.quantity.toString(),
             "cost per unit": row.costPerUnit.toString(),
           },
-          errors: [`Processing error: ${error.message}`],
+          errors: [`Unexpected processing error: ${error.message}`],
           status: "failed",
         });
       }
     }
 
+    console.log(
+      `[BulkUpload] Processing complete: ${processedRows.length} valid rows, ${failedUploads.length} failed/skipped`,
+    );
+
     return processedRows;
   }
 
-  // Helper method to create inflows by branch
+  // CORRECT FIX: Create one inflow per branch with ALL items from CSV
+  // This replaces the createInflowsByBranch method in your inflows.service.ts
+
   private async createInflowsByBranch(
-    businessId: string,
     validRows: ParsedInflowRow[],
     uploadSessionId: string,
     batchId: string,
-    failedUploads: FailedInflowUpload[]
+    failedUploads: FailedInflowUpload[],
   ): Promise<number> {
-    // Group rows by branch
+    // Group rows by branch - ONE INFLOW PER BRANCH
     const rowsByBranch = new Map<string, ParsedInflowRow[]>();
 
     for (const row of validRows) {
@@ -1353,7 +1689,7 @@ export class InflowsService {
 
     let successCount = 0;
 
-    // Create separate inflow for each branch
+    // Create one inflow for each branch with ALL items
     for (const [branchId, branchRows] of rowsByBranch.entries()) {
       try {
         const firstRow = branchRows[0];
@@ -1378,92 +1714,102 @@ export class InflowsService {
           }
         }
 
-        // Combine notes from all rows for this branch
-        const noteParts: string[] = [];
-        branchRows.forEach((row) => {
-          if (row.notes && typeof row.notes === "string" && row.notes.trim()) {
-            const itemName = row.inventoryItemName || "Item";
-            const supplierName = row.supplierName || "No Supplier";
-            noteParts.push(
-              `${itemName} - ${supplierName} - ${row.notes.trim()}`
-            );
-          }
+        // Build items array - INCLUDE ALL ITEMS FOR THIS BRANCH with original names for null references
+        const items = branchRows.map((row) => {
+          return {
+            inventoryItemId: row.inventoryItemId || null, // Allow null for missing items
+            uomId: row.uomId || null, // Allow null for missing UOMs
+            quantity: row.quantity, // Original quantity in specified UOM
+            unitCost: row.costPerUnit,
+            batchNumber:
+              row.batchNumber ||
+              `BATCH-${timestamp}-${Math.random().toString(36).substr(2, 6)}`,
+            expiryDate: row.expiryDate,
+            notes: row.notes,
+            supplierId: row.supplierId || undefined,
+            // Store original names for manual correction when relations are null
+            originalItemName: row.inventoryItemId
+              ? null
+              : row.inventoryItemName,
+            originalUomName: row.uomId ? null : row.uomName,
+          };
         });
-        const combinedNotes =
-          noteParts.length > 0 ? noteParts.join(" | ") : undefined;
 
-        // Build items array using UOM from CSV and converted base quantities
-        const items = branchRows.map((row) => ({
-          inventoryItemId: row.inventoryItemId!,
-          uomId: row.uomId!, // Use the UOM specified in CSV
-          quantity: row.quantity, // Original quantity in specified UOM
-          unitCost: row.costPerUnit,
-          batchNumber: row.batchNumber,
-          expiryDate: row.expiryDate,
-          notes: row.notes,
-          supplierId: row.supplierId || undefined,
-        }));
+        console.log(
+          `[BulkUpload] Creating inflow for branch '${branchName}' with ${items.length} items`,
+        );
 
-        // Create inflow for this specific branch
+        // Create inflow for this branch with ALL items
         const createDto: CreateInventoryInflowDto = {
           branchId: branchId,
           supplierId: commonSupplierId,
           receivedDate: commonReceivedAt,
           invoiceNumber: commonInvoiceNumber,
-          notes: combinedNotes,
+          notes: `Bulk upload for ${branchName} - ${items.length} items`,
           items: items,
         };
 
-        // Create the inflow - this will properly update branch inventory for the correct branch
-        const savedInflow = await this.create(businessId, createDto);
-        
-        // Update the saved inflow with the batch ID (6-character batch ID)
+        // Create the inflow - this will create all items
+        const savedInflow = await this.create(createDto);
+
+        // Update the saved inflow with the batch ID (UUID)
         savedInflow.batchId = batchId;
-        savedInflow.type = 'bulk';
+        savedInflow.type = "bulk";
         await this.inflowRepository.save(savedInflow);
-        
-        successCount++;
 
-        // Log failed uploads to database
-        if (failedUploads.length > 0) {
-          const logEntries = failedUploads.map((failed) =>
-            this.bulkUploadLogRepository.create({
-              businessId,
-              uploadType: "inflow",
-              inflowId: savedInflow.id,
-              lineNumber: failed.lineNumber,
-              rowData: failed.rowData,
-              errorMessages: failed.errors,
-              status: failed.status,
-              uploadSessionId,
-            })
-          );
+        console.log(
+          `[BulkUpload] Inflow created successfully for branch '${branchName}' with ${savedInflow.items?.length || 0} items`,
+        );
 
-          // Save in batches to avoid overwhelming the database
-          const batchSize = 50;
-          for (let i = 0; i < logEntries.length; i += batchSize) {
-            const batch = logEntries.slice(i, i + batchSize);
-            await this.bulkUploadLogRepository.save(batch);
-          }
-        }
+        // Count the line items imported, not the number of branch inflows, so the
+        // "Imported" total reflects the rows the user actually uploaded.
+        successCount += savedInflow.items?.length || branchRows.length;
       } catch (error: any) {
+        const errorBranchName = branchRows[0].branchName;
+        console.error(
+          `[BulkUpload] Failed to create inflow for branch '${errorBranchName}':`,
+          error.message || "Unknown error",
+        );
+
         // Log the error for this branch
-        const branchName = branchRows[0].branchName;
         const errorLogEntry = this.bulkUploadLogRepository.create({
-          businessId,
           uploadType: "inflow",
           lineNumber: 0, // Branch-level error
           rowData: {
-            branchName,
+            branchName: errorBranchName,
+            itemCount: branchRows.length,
             error: "Failed to create inflow for entire branch",
           },
           errorMessages: [
-            `Failed to create inflow for branch ${branchName}: ${error.message || "Unknown error"}`,
+            `Failed to create inflow for branch ${errorBranchName}: ${error.message || "Unknown error"}`,
+            `Stack: ${error.stack || "No stack trace"}`,
           ],
           status: "failed",
           uploadSessionId,
         });
         await this.bulkUploadLogRepository.save(errorLogEntry);
+      }
+    }
+
+    // Log validation failures separately (items that failed before reaching here)
+    if (failedUploads.length > 0) {
+      const logEntries = failedUploads.map((failed) =>
+        this.bulkUploadLogRepository.create({
+          uploadType: "inflow",
+          inflowId: null,
+          lineNumber: failed.lineNumber,
+          rowData: failed.rowData,
+          errorMessages: failed.errors,
+          status: failed.status,
+          uploadSessionId,
+        }),
+      );
+
+      // Save in batches to avoid overwhelming the database
+      const batchSize = 50;
+      for (let i = 0; i < logEntries.length; i += batchSize) {
+        const batch = logEntries.slice(i, i + batchSize);
+        await this.bulkUploadLogRepository.save(batch);
       }
     }
 
