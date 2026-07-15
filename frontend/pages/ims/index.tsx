@@ -5,9 +5,10 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
+import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { formatMoney, useCurrency } from '@/lib/format';
+import { formatMoney, formatDate, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
@@ -16,8 +17,18 @@ interface InventoryItem {
   reorderPoint?: number | string;
   reorderLevel?: number | string;
   minStock?: number | string;
+  unit?: string;
   unitCost?: number | string;
   costPrice?: number | string;
+}
+
+interface StockMovement {
+  id: string;
+  itemId: string;
+  itemName?: string;
+  movementType: string;
+  quantity: number;
+  createdAt: string;
 }
 
 const num = (v: unknown): number => {
@@ -25,40 +36,57 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const QUICK_ACTIONS: { href: string; label: string; desc: string; icon: string; tone: string }[] = [
-  { href: '/ims/inflows', label: 'Receive Stock', desc: 'Record goods coming in', icon: 'bx-log-in', tone: 'bg-emerald-500' },
-  { href: '/ims/inventory', label: 'Stock Items', desc: 'Your catalog and quantities', icon: 'bx-box', tone: 'bg-brand-600' },
-  { href: '/ims/transfers', label: 'Transfers', desc: 'Move stock between branches', icon: 'bx-transfer', tone: 'bg-sky-500' },
-  { href: '/ims/adjustments', label: 'Adjustments', desc: 'Corrections & write-offs', icon: 'bx-slider-alt', tone: 'bg-amber-500' },
-];
+const MOVE_TONE: Record<string, string> = {
+  IN: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
+  INFLOW: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10',
+  OUT: 'text-red-600 bg-red-50 dark:bg-red-500/10',
+  SALE: 'text-red-600 bg-red-50 dark:bg-red-500/10',
+  TRANSFER: 'text-sky-600 bg-sky-50 dark:bg-sky-500/10',
+  ADJUSTMENT: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10',
+};
 
 export default function InventoryDashboardPage() {
   const currency = useCurrency();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
 
   useEffect(() => {
     (async () => {
-      try {
-        const res = await api.get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory');
-        if (res.success && Array.isArray(res.data)) setItems(res.data);
-      } catch {
-        // graceful: dashboard still renders with zeroes + quick actions
-      } finally {
-        setLoading(false);
-      }
+      const [inv, mv] = await Promise.allSettled([
+        api.get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory'),
+        api.get<{ success: boolean; data: { items: StockMovement[] } }>('/ims/stock-movements?page=1&limit=8'),
+      ]);
+      if (inv.status === 'fulfilled' && inv.value.success && Array.isArray(inv.value.data)) setItems(inv.value.data);
+      if (mv.status === 'fulfilled' && mv.value.success && Array.isArray(mv.value.data?.items)) setMovements(mv.value.data.items);
+      setLoading(false);
     })();
   }, []);
 
-  const totalItems = items.length;
   const reorderOf = (i: InventoryItem) => num(i.reorderPoint ?? i.reorderLevel ?? i.minStock);
-  const lowStock = items.filter((i) => num(i.currentStock) > 0 && num(i.currentStock) <= reorderOf(i)).length;
+  const totalItems = items.length;
+  const lowStockItems = items
+    .filter((i) => num(i.currentStock) <= reorderOf(i))
+    .sort((a, b) => num(a.currentStock) - num(b.currentStock));
   const outOfStock = items.filter((i) => num(i.currentStock) <= 0).length;
-  const stockValue = items.reduce((sum, i) => sum + num(i.currentStock) * num(i.unitCost ?? i.costPrice), 0);
+  const stockValue = items.reduce((s, i) => s + num(i.currentStock) * num(i.unitCost ?? i.costPrice), 0);
 
   return (
     <div>
-      <PageHeader title="Inventory" subtitle="Stock levels, receiving and valuation at a glance" />
+      <PageHeader
+        title="Inventory"
+        subtitle="Stock health, receiving and valuation at a glance"
+        actions={
+          <div className="flex gap-2">
+            <Button href="/ims/inflows" variant="secondary" size="md">
+              <i className="bx bx-log-in" /> Receive Stock
+            </Button>
+            <Button href="/ims/inventory" size="md">
+              <i className="bx bx-plus" /> Add Item
+            </Button>
+          </div>
+        }
+      />
 
       {loading ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -69,49 +97,94 @@ export default function InventoryDashboardPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="Stock Items" value={totalItems} icon="bx-box" tone="info" />
-          <StatCard label="Low Stock" value={lowStock} icon="bx-error" tone="warning" caption="at or below reorder point" />
+          <StatCard label="Low Stock" value={lowStockItems.length} icon="bx-error" tone="warning" caption="at or below reorder point" />
           <StatCard label="Out of Stock" value={outOfStock} icon="bx-x-circle" tone="error" />
           <StatCard label="Stock Value" value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" />
         </div>
       )}
 
-      <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Quick actions</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {QUICK_ACTIONS.map((a) => (
-          <Link key={a.href} href={a.href}>
-            <Card className="h-full cursor-pointer transition-shadow duration-150 hover:shadow-md">
-              <div className="flex items-start gap-3 p-1">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${a.tone}`}>
-                  <i className={`bx ${a.icon} text-xl`} />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{a.label}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{a.desc}</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {!loading && lowStock + outOfStock > 0 && (
-        <Card className="mt-6">
-          <div className="flex items-center justify-between p-1">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {lowStock + outOfStock} item{lowStock + outOfStock === 1 ? '' : 's'} need attention
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Review low and out-of-stock items and receive more.</p>
-            </div>
-            <Link
-              href="/ims/inventory"
-              className="rounded-lg bg-brand-gradient px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
-            >
-              View items
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Low-stock worklist — actionable */}
+        <Card padding={false}>
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Needs restocking</h3>
+            <Link href="/ims/inventory" className="text-[13px] font-medium text-brand-600 hover:underline">
+              View all
             </Link>
           </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {loading ? (
+              <div className="p-5 text-sm text-gray-400">Loading…</div>
+            ) : lowStockItems.length === 0 ? (
+              <div className="flex flex-col items-center gap-1 p-8 text-center">
+                <i className="bx bx-check-circle text-3xl text-emerald-500" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Everything's well stocked</p>
+                <p className="text-xs text-gray-500">No items at or below their reorder point.</p>
+              </div>
+            ) : (
+              lowStockItems.slice(0, 6).map((i) => {
+                const stock = num(i.currentStock);
+                return (
+                  <div key={i.id} className="flex items-center justify-between px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{i.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {stock} {i.unit || 'units'} left · reorder at {reorderOf(i)}
+                      </p>
+                    </div>
+                    <span
+                      className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
+                      }`}
+                    >
+                      {stock <= 0 ? 'Out' : 'Low'}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </Card>
-      )}
+
+        {/* Recent stock movements — activity feed */}
+        <Card padding={false}>
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent movements</h3>
+            <Link href="/ims/stock-movements" className="text-[13px] font-medium text-brand-600 hover:underline">
+              Stock ledger
+            </Link>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {loading ? (
+              <div className="p-5 text-sm text-gray-400">Loading…</div>
+            ) : movements.length === 0 ? (
+              <div className="flex flex-col items-center gap-1 p-8 text-center">
+                <i className="bx bx-transfer-alt text-3xl text-gray-300" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No movements yet</p>
+                <p className="text-xs text-gray-500">Receive stock or make a sale to see activity here.</p>
+              </div>
+            ) : (
+              movements.map((m) => {
+                const t = (m.movementType || '').toUpperCase();
+                return (
+                  <div key={m.id} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`shrink-0 rounded-lg px-2 py-0.5 text-xs font-medium ${MOVE_TONE[t] || 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
+                        {t || 'MOVE'}
+                      </span>
+                      <p className="truncate text-sm text-gray-700 dark:text-gray-300">{m.itemName || m.itemId}</p>
+                    </div>
+                    <div className="ml-3 shrink-0 text-right">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{num(m.quantity)}</p>
+                      <p className="text-xs text-gray-400">{formatDate(m.createdAt)}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -135,15 +135,16 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
         {
           label: 'Sell',
           items: [
-            { href: '/pos', label: term(businessType, 'pos') || 'New Sale', icon: 'building-storefront', permission: 'orders.create', exact: true },
-            { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+            // One entry: the sales hub (list + a New Sale button that opens /pos).
+            // 'Sales' for retail, 'Orders' for restaurant (dine-in tickets).
+            { href: '/rms/orders', label: term(businessType, 'sellNav') || 'Sales', icon: 'receipt', permission: 'orders.view', also: ['/pos'], exclude: ['/rms/orders/create'] },
             { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
           ],
         },
         {
           label: 'Menu',
           items: [
-            { href: '/rms/menus', label: businessType === 'restaurant' || businessType === 'hospitality' ? 'Dishes' : 'Products', icon: 'menu-book', permission: 'menus.view' },
+            { href: '/rms/menus', label: 'Menus', icon: 'menu-book', permission: 'menus.view' },
             { href: '/menu-studio', label: 'Menu Studio', icon: 'sparkles' },
           ],
         },

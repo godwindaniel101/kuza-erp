@@ -21,6 +21,7 @@ export type TermKey =
   | 'recordGoodsIn' // primary CTA for receiving
   | 'goodsInDescription' // one-line description under the receiving title
   | 'pos' // the till surface (sidebar label + POS page title)
+  | 'sellNav' // the single sell/records nav item: 'Sales' (retail) vs 'Orders' (restaurant)
   | 'posSection' // sidebar SECTION label for the pos/orders group
   | 'inventorySection' // sidebar SECTION label for the items group
   | 'customers'
@@ -37,6 +38,7 @@ const NEUTRAL: Record<TermKey, string> = {
   recordGoodsIn: 'Record goods in',
   goodsInDescription: 'What came in, from whom, and at what cost',
   pos: 'Shop',
+  sellNav: 'Sales',
   posSection: 'Point of Sale',
   inventorySection: 'Inventory',
   customers: 'Customers',
@@ -58,6 +60,7 @@ const HOSPITALITY_TERMS: Partial<Record<TermKey, string>> = {
   recordGoodsIn: 'Receive stock',
   goodsInDescription: 'Stock received, from whom, and at what cost',
   pos: 'New Sale',
+  sellNav: 'Orders',
   posSection: 'Restaurant',
   emptyItems: 'No stock items yet. Add your first ingredient or supply to get started.',
 };
