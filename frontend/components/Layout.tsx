@@ -8,7 +8,9 @@ import AppSidebar from './AppSidebar';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { isPathAllowed } from '@/lib/appAccess';
+import { isPathAllowed, requiredAppKeys } from '@/lib/appAccess';
+import { getApp } from '@/lib/apps';
+import Toast from './Toast';
 
 interface LayoutProps {
   children: ReactNode;
@@ -24,6 +26,9 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branchContext, setBranchContext] = useState<{ name: string; address?: string } | null>(null);
   const [inflowInvoiceNumber, setInflowInvoiceNumber] = useState<string | null>(null);
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [accessRequested, setAccessRequested] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Fetch branch context when on inflows page with branchId
   useEffect(() => {
@@ -314,6 +319,35 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const layoutHeader = inferTitle();
   const layoutSubheader = inferSubtitle();
 
+  // App key the current (blocked) route needs — request the first required key.
+  const requestKey = requiredAppKeys(router.pathname)?.[0] ?? null;
+  const requestAppName = requestKey ? getApp(requestKey)?.name ?? requestKey : null;
+
+  const handleRequestAccess = async () => {
+    if (!requestKey || requestingAccess) return;
+    setRequestingAccess(true);
+    try {
+      await api.post('/billing/access-requests', { appKey: requestKey });
+      setAccessRequested(true);
+      setToast({ message: 'Request sent to your admin', type: 'success' });
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      // 409 (already requested) / 400 (already have it) — treat as a soft success.
+      if (status === 409 || status === 400) {
+        setAccessRequested(true);
+        setToast({
+          message: serverMsg || 'You already have a request for this app',
+          type: 'info',
+        });
+      } else {
+        setToast({ message: serverMsg || 'Could not send your request', type: 'error' });
+      }
+    } finally {
+      setRequestingAccess(false);
+    }
+  };
+
   return (
     <div className="flex h-dvh md:h-screen overflow-hidden app-container">
       {/* Desktop Sidebar */}
@@ -368,12 +402,26 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   This module isn&apos;t part of your current plan or hasn&apos;t been turned on for your business.
                 </p>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  {requestKey && (
+                    <button
+                      type="button"
+                      onClick={handleRequestAccess}
+                      disabled={requestingAccess || accessRequested}
+                      className="rounded-lg bg-brand-gradient px-4 h-9 inline-flex items-center text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {accessRequested
+                        ? 'Request sent'
+                        : requestingAccess
+                          ? 'Requesting…'
+                          : `Request access${requestAppName ? ` to ${requestAppName}` : ''}`}
+                    </button>
+                  )}
                   <Link
                     href="/settings/apps"
-                    className="rounded-lg bg-brand-gradient px-4 h-9 inline-flex items-center text-[13px] font-semibold text-white hover:opacity-90"
+                    className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 h-9 inline-flex items-center text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    Browse &amp; request apps
+                    Browse apps
                   </Link>
                   <Link
                     href="/"
@@ -387,6 +435,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
           </div>
         </main>
       </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }

@@ -4,13 +4,17 @@ import {
   Post,
   Patch,
   Body,
+  Param,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
 import { ChangePlanDto } from './dto/change-plan.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
+import { CreateAccessRequestDto } from './dto/create-access-request.dto';
+import { AccessRequestStatus } from './entities/app-access-request.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   RequirePermissions,
@@ -78,6 +82,66 @@ export class BillingController {
       req.tenant.schemaName,
       dto.key,
       dto.enabled,
+    );
+    return { success: true, data };
+  }
+
+  // -------------------------------------------------------------------
+  // App access requests
+  // -------------------------------------------------------------------
+
+  @Post('access-requests')
+  @ApiOperation({ summary: 'Request access to an app not enabled for this business' })
+  async createAccessRequest(
+    @Request() req: any,
+    @Body() dto: CreateAccessRequestDto,
+  ) {
+    const data = await this.billingService.createAccessRequest(
+      req.user.tenantId,
+      req.tenant.schemaName,
+      dto.appKey,
+      req.user,
+      dto.note,
+    );
+    return { success: true, data };
+  }
+
+  @Get('access-requests')
+  @RequirePermissions('settings.view')
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED'] })
+  @ApiOperation({ summary: 'List app access requests for this business (admin)' })
+  async listAccessRequests(
+    @Request() req: any,
+    @Query('status') status?: AccessRequestStatus,
+  ) {
+    const data = await this.billingService.listAccessRequests(
+      req.user.tenantId,
+      status,
+    );
+    return { success: true, data };
+  }
+
+  @Post('access-requests/:id/approve')
+  @RequirePermissions('settings.edit')
+  @ApiOperation({ summary: 'Approve an app access request and enable the app (admin)' })
+  async approveAccessRequest(@Request() req: any, @Param('id') id: string) {
+    const data = await this.billingService.approveAccessRequest(
+      req.user.tenantId,
+      req.tenant.schemaName,
+      id,
+      req.user,
+    );
+    return { success: true, data };
+  }
+
+  @Post('access-requests/:id/reject')
+  @RequirePermissions('settings.edit')
+  @ApiOperation({ summary: 'Reject an app access request (admin)' })
+  async rejectAccessRequest(@Request() req: any, @Param('id') id: string) {
+    const data = await this.billingService.rejectAccessRequest(
+      req.user.tenantId,
+      id,
+      req.user,
     );
     return { success: true, data };
   }

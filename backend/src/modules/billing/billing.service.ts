@@ -20,6 +20,10 @@ import { Plan, PlanCode, PlanLimits } from './entities/plan.entity';
 import {
   TenantSubscription,
 } from './entities/tenant-subscription.entity';
+import {
+  AppAccessRequest,
+  AccessRequestStatus,
+} from './entities/app-access-request.entity';
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
@@ -102,6 +106,8 @@ export class BillingService {
     private planRepository: Repository<Plan>,
     @InjectRepository(TenantSubscription, 'landlord')
     private subscriptionRepository: Repository<TenantSubscription>,
+    @InjectRepository(AppAccessRequest, 'landlord')
+    private accessRequestRepository: Repository<AppAccessRequest>,
     // Tenant-connection repositories: scoped to the caller's schema by the
     // global TenantTransactionInterceptor (search_path), like other services.
     @InjectRepository(User)
@@ -491,5 +497,156 @@ export class BillingService {
       effective: enabledApps.filter((k) => allowed.has(k)),
       alsoEnabled,
     };
+  }
+
+  // ---------------------------------------------------------------------
+  // App access requests — LANDLORD-scoped (no tenant-schema migration).
+  // A tenant user requests an app that is not effective; a tenant admin
+  // approves (which enables it via setAppEnabled, respecting the plan) or
+  // rejects it.
+  // ---------------------------------------------------------------------
+
+  /**
+   * A tenant user requests access to an app.
+   * - 400 if the appKey is unknown.
+   * - 409 if the app is already effective for the tenant.
+   * - Idempotent: if a PENDING request for the same app already exists, the
+   *   existing request is returned instead of creating a duplicate.
+   */
+  async createAccessRequest(
+    tenantId: string,
+    schemaName: string,
+    appKey: string,
+    user: { sub?: string; email?: string } | undefined,
+    note?: string | null,
+  ): Promise<AppAccessRequest> {
+    const app = getApp(appKey);
+    if (!app) {
+      throw new BadRequestException(`Unknown app '${appKey}'`);
+    }
+
+    const effective = await this.getEffectiveApps(tenantId, schemaName);
+    if (effective.includes(app.key)) {
+      throw new ConflictException(`${app.name} is already enabled for this business.`);
+    }
+
+    const existing = await this.accessRequestRepository.findOne({
+      where: { tenantId, appKey: app.key, status: 'PENDING' },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    return this.accessRequestRepository.save(
+      this.accessRequestRepository.create({
+        tenantId,
+        appKey: app.key,
+        requestedByUserId: user?.sub ?? null,
+        requestedByEmail: user?.email ?? null,
+        note: note ?? null,
+        status: 'PENDING',
+      }),
+    );
+  }
+
+  /** List a tenant's access requests, newest first, optionally by status. */
+  async listAccessRequests(
+    tenantId: string,
+    status?: AccessRequestStatus,
+  ): Promise<AppAccessRequest[]> {
+    return this.accessRequestRepository.find({
+      where: status ? { tenantId, status } : { tenantId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  private async getPendingAccessRequest(
+    tenantId: string,
+    id: string,
+  ): Promise<AppAccessRequest> {
+    const request = await this.accessRequestRepository.findOne({
+      where: { id, tenantId },
+    });
+    if (!request) {
+      throw new NotFoundException('Access request not found');
+    }
+    if (request.status !== 'PENDING') {
+      throw new ConflictException(
+        `Access request has already been ${request.status.toLowerCase()}.`,
+      );
+    }
+    return request;
+  }
+
+  /**
+   * Approve an access request and enable the app for the tenant.
+   *
+   * Plan handling (documented choice): if the requested app (or one of its
+   * dependencies) is not allowed by the tenant's current plan, we do NOT
+   * enable it and we leave the request PENDING, returning needsUpgrade:true
+   * with a clear message. Leaving it PENDING (rather than marking it APPROVED)
+   * means the admin can approve it again immediately after upgrading, without
+   * the tenant re-requesting — the request stays actionable and its status
+   * never lies about what actually happened.
+   */
+  async approveAccessRequest(
+    tenantId: string,
+    schemaName: string,
+    id: string,
+    adminUser: { sub?: string } | undefined,
+  ): Promise<{
+    request: AppAccessRequest;
+    needsUpgrade: boolean;
+    enabled?: {
+      enabledApps: string[];
+      effective: string[];
+      alsoEnabled: AppKey[];
+    };
+    message?: string;
+  }> {
+    const request = await this.getPendingAccessRequest(tenantId, id);
+
+    // Pre-check the plan so we can return a clean needsUpgrade response instead
+    // of letting setAppEnabled throw a ForbiddenException.
+    const subscription = await this.getOrCreateSubscription(tenantId);
+    const allowed = new Set(this.appsAllowedByPlan(subscription));
+    const closure = expandDependencies([request.appKey]);
+    const planLocked = closure.filter((k) => !allowed.has(k));
+    if (planLocked.length > 0) {
+      const names = planLocked.map((k) => getApp(k)?.name ?? k).join(', ');
+      const app = getApp(request.appKey);
+      return {
+        request,
+        needsUpgrade: true,
+        message: `${names} ${planLocked.length === 1 ? 'is' : 'are'} not included in your current plan. Upgrade to enable ${app?.name ?? request.appKey}, then approve this request.`,
+      };
+    }
+
+    const enabled = await this.setAppEnabled(
+      tenantId,
+      schemaName,
+      request.appKey,
+      true,
+    );
+
+    request.status = 'APPROVED';
+    request.resolvedAt = new Date();
+    request.resolvedBy = adminUser?.sub ?? null;
+    const saved = await this.accessRequestRepository.save(request);
+
+    return { request: saved, needsUpgrade: false, enabled };
+  }
+
+  /** Reject an access request. Does not touch the tenant's enabled apps. */
+  async rejectAccessRequest(
+    tenantId: string,
+    id: string,
+    adminUser: { sub?: string } | undefined,
+  ): Promise<AppAccessRequest> {
+    const request = await this.getPendingAccessRequest(tenantId, id);
+    request.status = 'REJECTED';
+    request.resolvedAt = new Date();
+    request.resolvedBy = adminUser?.sub ?? null;
+    return this.accessRequestRepository.save(request);
   }
 }

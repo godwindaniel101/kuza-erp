@@ -5,6 +5,7 @@ import { BillingService } from './billing.service';
 import { FeatureGateGuard } from './guards/feature-gate.guard';
 import { Plan } from './entities/plan.entity';
 import { TenantSubscription } from './entities/tenant-subscription.entity';
+import { AppAccessRequest } from './entities/app-access-request.entity';
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
@@ -24,7 +25,7 @@ import { InventoryItem } from '../ims/entities/inventory-item.entity';
 @Global()
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Plan, TenantSubscription], 'landlord'),
+    TypeOrmModule.forFeature([Plan, TenantSubscription, AppAccessRequest], 'landlord'),
     TypeOrmModule.forFeature([User, Branch, InventoryItem]),
   ],
   controllers: [BillingController],
