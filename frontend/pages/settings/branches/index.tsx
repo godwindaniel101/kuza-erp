@@ -403,9 +403,9 @@ export default function BranchesPage() {
                               <i className="bx bx-error-circle text-lg" aria-hidden="true"></i>
                             </button>
                             <button
-                              onClick={() => { window.location.href = `/rms/reports?branchId=${branch.id}`; }}
+                              onClick={() => { window.location.href = `/ims/stock-movements?branchId=${branch.id}`; }}
                               className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                              title={t('analytics') || 'Analytics'}
+                              title={t('stockLedger') || 'Stock ledger'}
                             >
                               <i className="bx bx-line-chart text-lg" aria-hidden="true"></i>
                             </button>
