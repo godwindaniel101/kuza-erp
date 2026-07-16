@@ -30,7 +30,9 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const isHRMS = router.pathname.startsWith('/hrms');
   const { businessType, effectiveApps, availableGroups, setActiveWorkspace } = useTenantStore();
-  const showNewOrder = !isHRMS && (businessType === 'restaurant' || businessType === null);
+  // "New Order" is a Restaurant action — only show it inside the Restaurant app,
+  // never on Inventory/Sales/Accounting pages (would flip the sidebar to Restaurant).
+  const showNewOrder = router.pathname.startsWith('/rms') && (businessType === 'restaurant' || businessType === null);
 
   // Launcher entries: the tenant's effective apps (legacy backend -> businessType preset).
   const launcherApps = (effectiveApps ?? presetFor(businessType))

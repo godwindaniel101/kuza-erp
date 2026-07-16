@@ -301,12 +301,6 @@ export default function PosPage() {
               <h1 className="text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100">
                 Point of Sale
               </h1>
-              <Link
-                href="/rms/orders"
-                className="text-xs text-gray-500 hover:text-brand-600 hover:underline dark:text-gray-400 dark:hover:text-brand-400"
-              >
-                View orders list
-              </Link>
             </div>
           </div>
 

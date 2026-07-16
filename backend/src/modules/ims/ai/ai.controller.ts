@@ -14,10 +14,12 @@ import {
   PermissionsGuard,
 } from "../../../common/guards/permissions.guard";
 import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
+import { FeatureGateGuard, RequireApp } from "../../billing/guards/feature-gate.guard";
 
 @ApiTags("IMS - AI Analytics")
 @Controller("ims/ai")
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp("items")
 @ApiBearerAuth()
 export class AiController {
   constructor(private readonly aiService: AiService) {}

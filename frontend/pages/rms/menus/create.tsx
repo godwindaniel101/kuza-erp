@@ -407,10 +407,15 @@ export default function CreateMenuPage() {
                       </div>
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('noInventoryItems')}</h4>
                       <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-4">{t('addInventoryItemsFirst')}</p>
-                      <Button href="/ims/inventory/create">
+                      <a
+                        href="/ims/inventory/create"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg bg-brand-gradient text-white text-[13px] font-medium hover:opacity-90"
+                      >
                         <i className="bx bx-plus"></i>
                         {t('addInventoryItem')}
-                      </Button>
+                      </a>
                     </div>
                   ) : (
                     <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">

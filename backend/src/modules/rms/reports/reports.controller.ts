@@ -6,12 +6,14 @@ import {
   PermissionsGuard,
 } from "../../../common/guards/permissions.guard";
 import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
+import { FeatureGateGuard, RequireApp } from "../../billing/guards/feature-gate.guard";
 import { ReportsService } from "./reports.service";
 import { I18nContext, I18n } from "nestjs-i18n";
 
 @ApiTags("RMS - Reports & Analytics")
 @Controller("rms/reports")
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp("pos")
 @ApiBearerAuth()
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

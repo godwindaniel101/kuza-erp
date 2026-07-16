@@ -6,7 +6,9 @@ import { useTenantStore } from '@/store/globalStore';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import Cookies from 'js-cookie';
+import Link from 'next/link';
 import { api } from '@/lib/api';
+import { isPathAllowed } from '@/lib/appAccess';
 
 interface LayoutProps {
   children: ReactNode;
@@ -18,7 +20,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
   const { isAuthenticated, isLoading, fetchUser, user } = useAuthStore();
-  const { businessType } = useTenantStore();
+  const { businessType, effectiveApps } = useTenantStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branchContext, setBranchContext] = useState<{ name: string; address?: string } | null>(null);
   const [inflowInvoiceNumber, setInflowInvoiceNumber] = useState<string | null>(null);
@@ -354,7 +356,35 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
 
         {/* Page Content - Scrollable */}
         <main className="dashboard-main bg-canvas dark:bg-gray-950">
-          <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 py-5">{children}</div>
+          <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 py-5">
+            {isPathAllowed(router.pathname, effectiveApps) ? (
+              children
+            ) : (
+              <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-12 text-center mt-8">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                  <i className="bx bx-lock-alt text-2xl text-gray-400" aria-hidden="true"></i>
+                </span>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">This app isn&apos;t enabled</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  This module isn&apos;t part of your current plan or hasn&apos;t been turned on for your business.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Link
+                    href="/settings/apps"
+                    className="rounded-lg bg-brand-gradient px-4 h-9 inline-flex items-center text-[13px] font-semibold text-white hover:opacity-90"
+                  >
+                    Browse &amp; request apps
+                  </Link>
+                  <Link
+                    href="/"
+                    className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 h-9 inline-flex items-center text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    Go to dashboard
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>
