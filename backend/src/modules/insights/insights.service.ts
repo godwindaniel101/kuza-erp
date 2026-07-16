@@ -21,6 +21,28 @@ export interface InsightHeadline {
   headline: string;
 }
 
+export interface InsightCard {
+  id: string;
+  type:
+    | 'profit'
+    | 'sales'
+    | 'top_mover'
+    | 'overdue_ar'
+    | 'low_stock'
+    | 'anomaly'
+    | 'cash';
+  title: string;
+  /** Formatted headline figure, e.g. "₦1,250,000" or "+34%". */
+  metric: string;
+  /** Plain-language sentence. Numbers are computed in code; Claude only rephrases. */
+  text: string;
+  severity: 'info' | 'positive' | 'warning' | 'critical';
+}
+
+/** Model ids — kept in one place so they are easy to audit/update. */
+const COPILOT_MODEL = 'claude-sonnet-5';
+const DIGEST_MODEL = 'claude-haiku-4-5-20251001';
+
 const CURRENCY_SYMBOLS: Record<string, string> = {
   NGN: '₦',
   USD: '$',
@@ -34,6 +56,16 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 @Injectable()
 export class InsightsService {
   private readonly logger = new Logger(InsightsService.name);
+
+  /**
+   * Per-tenant, per-day cache of the computed summary, keyed by
+   * `${businessId}:${YYYY-MM-DD}`. In-memory only; a singleton service is
+   * safe here because the key is scoped to the tenant's business id.
+   */
+  private readonly summaryCache = new Map<
+    string,
+    { cards: InsightCard[]; generatedAt: string; aiPhrased: boolean }
+  >();
 
   constructor(
     // Any tenant-scoped repository works as a raw-SQL entry point: its
@@ -84,6 +116,8 @@ export class InsightsService {
       lowStock,
       salesTrend,
       overdue,
+      topItems,
+      employeeCount,
     ] = await Promise.all([
       this.safe(() => this.cashPosition(currency), {
         amount: 0,
@@ -108,6 +142,8 @@ export class InsightsService {
         count: 0,
         headline: 'No overdue invoices',
       }),
+      this.safe(() => this.topItems(currency), []),
+      this.safe(() => this.employeeCount(), 0),
     ]);
 
     return {
@@ -120,7 +156,53 @@ export class InsightsService {
       lowStock,
       salesTrend,
       overdueTotal: overdue,
+      topItems,
+      employeeCount,
     };
+  }
+
+  /**
+   * Dashboard AI-insights cards — plain-language, tone-tagged, derived
+   * deterministically from the computed digest (figures come from code; no
+   * fabrication). Read-only advisory. Shape matches the frontend AiInsights.
+   */
+  async getSummary(): Promise<{
+    insights: Array<{ title: string; body: string; tone: 'positive' | 'warning' | 'info'; metric?: string }>;
+  }> {
+    const d = await this.getDigest();
+    const insights: Array<{ title: string; body: string; tone: 'positive' | 'warning' | 'info'; metric?: string }> = [];
+    if (d.profitThisMonth) {
+      insights.push({
+        title: 'Profit this month',
+        body: d.profitThisMonth.headline,
+        tone: (d.profitThisMonth.profit ?? 0) >= 0 ? 'positive' : 'warning',
+      });
+    }
+    if (d.salesTrend) {
+      insights.push({
+        title: 'Sales trend',
+        body: d.salesTrend.headline,
+        tone: (d.salesTrend.changePct ?? 0) >= 0 ? 'positive' : 'info',
+      });
+    }
+    if (d.cashPosition) {
+      insights.push({ title: 'Cash position', body: d.cashPosition.headline, tone: 'info' });
+    }
+    if (d.overdueTotal && (d.overdueTotal.amount ?? 0) > 0) {
+      insights.push({
+        title: 'Money owed to you',
+        body: (Array.isArray(d.topDebtors) && d.topDebtors[0]?.headline) || d.overdueTotal.headline,
+        tone: 'warning',
+      });
+    }
+    if (Array.isArray(d.lowStock) && d.lowStock.length > 0) {
+      insights.push({
+        title: 'Low stock',
+        body: d.lowStock[0]?.headline || `${d.lowStock.length} item(s) running low`,
+        tone: 'warning',
+      });
+    }
+    return { insights };
   }
 
   private async safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -322,6 +404,64 @@ export class InsightsService {
         ? `${this.formatMoney(amount, currency)} is overdue across ${count} invoice${count === 1 ? '' : 's'} — time to chase payments`
         : 'No overdue invoices — well done';
     return { amount, count, headline };
+  }
+
+  /** (g) Best-selling items this month by invoiced revenue (top 5). */
+  private async topItems(currency: string) {
+    const { start, end } = this.monthRange(0);
+    const rows = await this.sql<{
+      name: string;
+      revenue: string;
+      qty: string;
+    }>(
+      `SELECT l.description AS name,
+              COALESCE(SUM(l.line_total), 0) AS revenue,
+              COALESCE(SUM(l.quantity), 0) AS qty
+         FROM invoice_lines l
+         JOIN invoices i ON i.id = l.invoice_id
+        WHERE i.status NOT IN ('DRAFT', 'VOID')
+          AND i.issue_date >= $1 AND i.issue_date < $2
+        GROUP BY l.description
+       HAVING COALESCE(SUM(l.line_total), 0) > 0
+        ORDER BY revenue DESC
+        LIMIT 5`,
+      [start, end],
+    );
+    return rows.map((row) => {
+      const revenue = Number(row.revenue || 0);
+      const qty = Number(row.qty || 0);
+      return {
+        name: row.name,
+        revenue,
+        quantity: qty,
+        headline: `${row.name}: ${this.formatMoney(revenue, currency)} from ${qty} sold this month`,
+      };
+    });
+  }
+
+  /** (h) Count of active employees (0 if the HRMS tables are not present). */
+  private async employeeCount(): Promise<number> {
+    const rows = await this.sql<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM employees WHERE employment_status = 'active'`,
+    );
+    return Number(rows[0]?.count || 0);
+  }
+
+  /** Total posted expenses for a date range (used for anomaly detection). */
+  private async expenseFor(range: {
+    start: string;
+    end: string;
+  }): Promise<number> {
+    const rows = await this.sql<{ expense: string }>(
+      `SELECT COALESCE(SUM(CASE WHEN a.type = 'EXPENSE' THEN l.debit - l.credit ELSE 0 END), 0) AS expense
+         FROM accounting_journal_lines l
+         JOIN accounting_journal_entries e ON e.id = l.journal_entry_id
+         JOIN accounting_accounts a ON a.id = l.account_id
+        WHERE e.status = 'POSTED'
+          AND e.date >= $1 AND e.date < $2`,
+      [range.start, range.end],
+    );
+    return Number(rows[0]?.expense || 0);
   }
 
   /**

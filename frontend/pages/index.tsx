@@ -15,6 +15,7 @@ import { term } from '@/lib/terminology';
 import { RevenueAreaChart, WeeklyBarChart, AreaPoint } from '@/components/ui/charts';
 import PageHeader from '@/components/ui/PageHeader';
 import { formatMoney, useCurrency } from '@/lib/format';
+import AiInsights from '@/components/AiInsights';
 
 interface AnalyticsData {
   bestBranch: {
@@ -382,6 +383,9 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+
+        {/* AI insights — plain-language, tone-coloured cards (hidden when AI is off) */}
+        <AiInsights />
 
         {/* Primary revenue chart + stacked mini charts (reference layout) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

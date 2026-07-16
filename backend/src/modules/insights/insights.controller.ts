@@ -38,4 +38,22 @@ export class InsightsController {
     const data = await this.insightsService.ask(dto.question);
     return { success: true, data };
   }
+
+  // Alias consumed by the frontend Kuza AI copilot panel (POST /insights/copilot).
+  @Post('copilot')
+  @RequirePermissions('accounting.view')
+  @ApiOperation({ summary: 'Kuza Copilot (alias of /ask)' })
+  async copilot(@Body() dto: AskCopilotDto) {
+    const data = await this.insightsService.ask(dto.question);
+    return { success: true, data };
+  }
+
+  // Dashboard AI-insights cards (GET /insights/summary).
+  @Get('summary')
+  @RequirePermissions('accounting.view')
+  @ApiOperation({ summary: 'Plain-language AI insight cards for the dashboard' })
+  async getSummary() {
+    const data = await this.insightsService.getSummary();
+    return { success: true, data };
+  }
 }

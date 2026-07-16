@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { isPathAllowed, requiredAppKeys } from '@/lib/appAccess';
 import { getApp } from '@/lib/apps';
 import Toast from './Toast';
+import KuzaCopilot from './KuzaCopilot';
 
 interface LayoutProps {
   children: ReactNode;
@@ -437,6 +438,9 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Kuza AI copilot — floating launcher + slide-over, authed pages only */}
+      <KuzaCopilot />
     </div>
   );
 }
