@@ -12,12 +12,13 @@ import EmptyState from '@/components/ui/EmptyState';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
-import { downloadCsv } from '@/lib/format';
+import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
 
 const PAGE_SIZE = 20;
 
 export default function OrdersPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -49,9 +50,7 @@ export default function OrdersPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₦${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number) => formatMoney(amount, currency);
 
   const handleMarkAsPaid = (order: any) => {
     // Calculate total paid from existing payments

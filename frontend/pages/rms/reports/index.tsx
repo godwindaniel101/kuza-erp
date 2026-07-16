@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatMoney, useCurrency } from '@/lib/format';
 
 interface AnalyticsData {
   bestBranch: {
@@ -62,6 +63,7 @@ const tdBase = 'py-3 px-4 text-sm';
 
 export default function ReportsPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('today');
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -95,9 +97,7 @@ export default function ReportsPage() {
     return parseFloat(num.toFixed(decimals)).toString().replace(/\.?0+$/, '');
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₦${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number) => formatMoney(amount, currency);
 
   const periodLabel =
     period === 'today' ? t('today') : period === 'week' ? t('thisWeek') : t('thisMonth');

@@ -8,9 +8,11 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatMoney, useCurrency } from '@/lib/format';
 
 export default function OrderViewPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const router = useRouter();
   const { id } = router.query;
   const [loading, setLoading] = useState(true);
@@ -58,9 +60,7 @@ export default function OrderViewPage() {
     setExpandedRows(newExpanded);
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₦${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number) => formatMoney(amount, currency);
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '-';

@@ -9,9 +9,11 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Button from '@/components/ui/Button';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatMoney, useCurrency } from '@/lib/format';
 
 export default function TemplateDesignerPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const router = useRouter();
   const { menu_id, template_id } = router.query;
   const [menu, setMenu] = useState<any>(null);
@@ -161,7 +163,7 @@ export default function TemplateDesignerPage() {
                         <div key={itemIdx} className="flex justify-between py-1 text-sm">
                           <span className="text-gray-900 dark:text-gray-100">{item.name}</span>
                           <span className="font-semibold" style={{ color: template.theme_settings?.primaryColor || '#dc2626' }}>
-                            ₦{Number(item.price || 0).toLocaleString()}
+                            {formatMoney(item.price || 0, currency)}
                           </span>
                         </div>
                       ))}

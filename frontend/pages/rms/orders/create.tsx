@@ -9,6 +9,7 @@ import Toast from "@/components/Toast";
 import Link from "next/link";
 import SearchableSelect from "@/components/SearchableSelect";
 import Button from "@/components/ui/Button";
+import { formatMoney, useCurrency } from "@/lib/format";
 
 interface OrderItemRow {
   id: number;
@@ -27,6 +28,7 @@ interface OrderItemRow {
 
 export default function CreateOrderPage() {
   const { t } = useTranslation("common");
+  const currency = useCurrency();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -783,14 +785,14 @@ export default function CreateOrderPage() {
                     <div>
                       <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                         {selectedItem && selectedUomId
-                          ? `₦${Number(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          ? formatMoney(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0, currency)
                           : "-"}
                       </div>
                     </div>
                     <div>
                       <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                         {selectedItem && itemQuantity > 0 && selectedUomId
-                          ? `₦${(Number(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0) * itemQuantity).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          ? formatMoney(Number(selectedItem.uomPrices?.[selectedUomId] || selectedItem.price || selectedItem.basePrice || 0) * itemQuantity, currency)
                           : "-"}
                       </div>
                     </div>
@@ -933,14 +935,14 @@ export default function CreateOrderPage() {
                             <div>
                               <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                                 {item.unitPrice
-                                  ? `₦${Number(item.unitPrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  ? formatMoney(item.unitPrice || 0, currency)
                                   : "-"}
                               </div>
                             </div>
                             <div>
                               <div className="h-9 px-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                                 {item.totalPrice
-                                  ? `₦${Number(item.totalPrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  ? formatMoney(item.totalPrice || 0, currency)
                                   : "-"}
                               </div>
                             </div>
@@ -1317,11 +1319,7 @@ export default function CreateOrderPage() {
                         {t("subtotal")}:
                       </span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
-                        ₦
-                        {calculateSubtotal().toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatMoney(calculateSubtotal(), currency)}
                       </span>
                     </div>
                     {formData.applyVat && formData.vatPercentage > 0 && (
@@ -1330,11 +1328,7 @@ export default function CreateOrderPage() {
                           {t("vat")} ({formData.vatPercentage}%):
                         </span>
                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                          ₦
-                          {calculateVat().toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatMoney(calculateVat(), currency)}
                         </span>
                       </div>
                     )}
@@ -1346,11 +1340,7 @@ export default function CreateOrderPage() {
                     {t("total")}:
                   </span>
                   <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    ₦
-                    {calculateTotal().toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatMoney(calculateTotal(), currency)}
                   </span>
                 </div>
 

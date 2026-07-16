@@ -11,6 +11,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatMoney, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
@@ -22,6 +23,7 @@ interface InventoryItem {
 
 export default function CreateMenuPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const router = useRouter();
   const [branches, setBranches] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -252,7 +254,7 @@ export default function CreateMenuPage() {
                         <div key={item.id} className="flex items-center justify-between py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-[13px]">
                           <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.name}</span>
                           <span className="text-gray-700 dark:text-gray-300 ml-2">
-                            ₦{Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatMoney(item.price, currency)}
                           </span>
                         </div>
                       ))
@@ -382,7 +384,7 @@ export default function CreateMenuPage() {
                             <div className="flex items-center justify-between">
                               <h4 className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{item.name}</h4>
                               <div className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                                ₦{Number(item.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatMoney(item.price, currency)}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2 text-xs mt-1">
