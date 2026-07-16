@@ -166,18 +166,16 @@ export default function InventoryDashboardPage() {
 
       {/* Stock value by category — where your money is tied up */}
       <div className="mt-6">
-        <Card title="Stock value by category" subtitle="Where your inventory value sits">
+        <Card title="Stock value by category">
           {loading ? (
-            <div className="h-40 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+            <div className="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <div className="pt-1">
-              <WeeklyBarChart
-                data={stockByCategory}
-                height={200}
-                formatValue={(v) => formatMoney(v, currency)}
-                emptyMessage="No valued stock yet"
-              />
-            </div>
+            <WeeklyBarChart
+              data={stockByCategory}
+              height={130}
+              formatValue={(v) => formatMoney(v, currency)}
+              emptyMessage="No valued stock yet"
+            />
           )}
         </Card>
       </div>
