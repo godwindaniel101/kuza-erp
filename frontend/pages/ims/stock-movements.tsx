@@ -126,8 +126,14 @@ export default function StockMovementsPage() {
   const loadReconciliation = useCallback(async () => {
     setReconLoading(true);
     try {
-      const res = await api.get<{ success: boolean; data: ReconciliationRow[] }>('/ims/stock-movements/reconciliation');
-      if (res.success) setReconRows(res.data || []);
+      // The endpoint returns { rows, summary } — tolerate both an array and the wrapped shape.
+      const res = await api.get<{ success: boolean; data: ReconciliationRow[] | { rows?: ReconciliationRow[] } }>(
+        '/ims/stock-movements/reconciliation',
+      );
+      if (res.success) {
+        const data = res.data as any;
+        setReconRows(Array.isArray(data) ? data : Array.isArray(data?.rows) ? data.rows : []);
+      }
       setReconLoaded(true);
     } catch (err: any) {
       console.error('Failed to load reconciliation:', err);
