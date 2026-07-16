@@ -6,13 +6,18 @@
     <title>Kuza — The ERP that does your books and collects your money</title>
     <meta
       name="description"
-      content="Kuza runs your restaurant or shop's stock, menus, orders and payments — and every sale updates your books automatically. See profit per day, per branch. No accountant required."
+      content="Kuza runs your restaurant or shop's point of sale, menus, stock, invoicing and payroll — and every sale writes your books and collects your money automatically. See profit per day, per branch. No accountant required."
     />
     <meta name="theme-color" content="#0f7a4b" />
     <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="styles.css" />
+    <!--
+      App links below point at the local dev app (localhost:5001).
+      These are ENV / PROD configurable — swap for https://app.kuza.africa
+      (or your deployed app origin) at build/deploy time.
+    -->
     <script>
-      // Set theme before paint to avoid a flash.
+      // Set theme before paint to avoid a flash of the wrong theme.
       (function () {
         try {
           var stored = localStorage.getItem('kuza-theme');
@@ -27,23 +32,28 @@
     </script>
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <!-- ============================ HEADER ============================ -->
-    <header class="site-header">
+    <header class="site-header" id="siteHeader">
       <div class="container header-inner">
         <a href="#top" class="brand" aria-label="Kuza home">
-          <svg class="mark" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="5" />
-            <path d="M12 18v-4" />
-            <path d="M12 14c0-2.6 2.1-4.6 5.2-4.6C17.2 12 15.1 14 12 14Z" />
-            <path d="M12 15c0-1.9-1.6-3.4-4.3-3.4C7.7 13.5 9.3 15 12 15Z" />
-          </svg>
-          Kuza
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <path d="M12 18v-4" />
+              <path d="M12 14c0-2.6 2.1-4.6 5.2-4.6C17.2 12 15.1 14 12 14Z" />
+              <path d="M12 15c0-1.9-1.6-3.4-4.3-3.4C7.7 13.5 9.3 15 12 15Z" />
+            </svg>
+          </span>
+          <span class="brand-word">Kuza</span>
         </a>
 
         <nav class="nav-links" aria-label="Primary">
-          <a class="nav-link" href="#kuza-menu">Kuza Menu</a>
-          <a class="nav-link" href="#modules">Modules</a>
+          <a class="nav-link" href="#products">Products</a>
+          <a class="nav-link" href="#features">How it works</a>
           <a class="nav-link" href="#pricing">Pricing</a>
+          <a class="nav-link" href="#faq">FAQ</a>
         </nav>
 
         <div class="header-actions">
@@ -56,67 +66,102 @@
               <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z" />
             </svg>
           </button>
-          <a class="btn btn-ghost" href="http://localhost:5001/login">Sign in</a>
-          <a class="btn btn-primary" href="http://localhost:5001/register">Start free</a>
+          <a class="btn btn-ghost btn-signin" href="http://localhost:5001/login">Sign in</a>
+          <a class="btn btn-primary" href="http://localhost:5001/register">
+            Start free
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+          <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+            <span></span><span></span><span></span>
+          </button>
         </div>
+      </div>
+
+      <!-- Mobile nav drawer -->
+      <div class="mobile-nav" id="mobileNav" hidden>
+        <a href="#products">Products</a>
+        <a href="#features">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a class="m-signin" href="http://localhost:5001/login">Sign in</a>
+        <a class="btn btn-primary btn-block" href="http://localhost:5001/register">Start free</a>
       </div>
     </header>
 
-    <main id="top">
+    <main id="main">
+      <span id="top"></span>
       <!-- ============================ HERO ============================ -->
       <section class="hero">
+        <div class="hero-bg" aria-hidden="true">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+          <div class="grid-fade"></div>
+        </div>
         <div class="container hero-grid">
-          <div class="hero-copy">
+          <div class="hero-copy reveal">
             <span class="eyebrow">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 21v-8" />
-                <path d="M12 13C12 8.6 15.4 5.5 20.5 5.5 20.5 9.9 17.1 13 12 13Z" />
-                <path d="M12 15.5C12 12 9.2 9.6 4.5 9.6 4.5 13.1 7.3 15.5 12 15.5Z" />
-              </svg>
-              Built for African businesses
+              <span class="eyebrow-dot"></span>
+              Grow — no accountant required
             </span>
             <h1>
-              The ERP that does your books and
-              <span class="accent"> collects your money</span> — no accountant required.
+              The ERP that does your books
+              <span class="grad-text">and collects your money.</span>
             </h1>
             <p class="hero-sub">
-              Kuza runs your restaurant or shop's stock, menus, orders and
-              payments. Every plate sold updates your inventory and your books
-              automatically — so you see profit per day, per branch, without a
-              spreadsheet.
+              One system for African businesses — point of sale, QR menus,
+              inventory, invoicing, accounting, people &amp; payroll, and
+              payments. Every sale writes a balanced journal, drops your stock
+              and reconciles the cash. See profit per day, per branch.
             </p>
             <div class="hero-cta">
               <a class="btn btn-primary btn-lg" href="http://localhost:5001/register">
                 Start free
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M5 12h14" />
-                  <path d="M13 6l6 6-6 6" />
-                </svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
               </a>
-              <a class="btn btn-ghost btn-lg" href="#kuza-menu">See Kuza Menu</a>
+              <a class="btn btn-ghost btn-lg" href="#features">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" /><path d="M10 8.5l5 3.5-5 3.5Z" />
+                </svg>
+                See how it works
+              </a>
             </div>
             <div class="hero-trust">
-              <span class="dot"></span>
-              No card required
-              <span class="dot"></span>
-              14-day Growth trial
-              <span class="dot"></span>
-              Free data export forever
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> No card required</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> 14-day Growth trial</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Free data export forever</span>
             </div>
           </div>
 
-          <!-- "Did I make money today?" dashboard card -->
-          <div class="hero-visual">
+          <!-- Abstract product-UI mockup -->
+          <div class="hero-visual reveal" data-delay="120">
             <div class="dash-card">
-              <div class="dash-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="3" y="3" width="18" height="18" rx="4" />
-                  <path d="M8 15l3-3 2 2 3-4" />
-                </svg>
-                Did I make money today?
+              <div class="dash-head">
+                <div class="dash-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="5" rx="2" /><rect x="13.5" y="11.5" width="7" height="9" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+                  </svg>
+                  Did I make money today?
+                </div>
+                <span class="live-pill"><span class="live-dot"></span>Live</span>
               </div>
-              <div class="dash-hero-num">₦248,500</div>
-              <div class="dash-hero-label">Profit today · Ikeja branch · updated live</div>
+              <div class="dash-hero-num">₦<span data-count="248500" data-format="comma">0</span></div>
+              <div class="dash-hero-label">Profit today · Ikeja branch</div>
+
+              <!-- SVG revenue chart -->
+              <div class="chart-wrap">
+                <svg class="revchart" viewBox="0 0 320 96" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="rgb(31 157 98 / 0.35)" />
+                      <stop offset="100%" stop-color="rgb(31 157 98 / 0)" />
+                    </linearGradient>
+                  </defs>
+                  <path class="area" d="M0,78 L26,70 L53,74 L80,58 L106,62 L133,44 L160,50 L186,34 L213,40 L240,24 L266,30 L293,14 L320,20 L320,96 L0,96 Z" fill="url(#fillGrad)" />
+                  <path class="line" d="M0,78 L26,70 L53,74 L80,58 L106,62 L133,44 L160,50 L186,34 L213,40 L240,24 L266,30 L293,14 L320,20" fill="none" stroke="rgb(15 122 75)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+
               <div class="dash-row">
                 <div class="dash-stat">
                   <div class="k">Cash in hand</div>
@@ -127,253 +172,327 @@
                   <div class="v warn">₦86,000</div>
                 </div>
               </div>
-              <div class="dash-ledger">
-                <div class="lrow">
-                  <span class="tag">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="9.5" cy="20" r="1.4" />
-                      <circle cx="17" cy="20" r="1.4" />
-                      <path d="M3 4h2l2.3 11.1a1.5 1.5 0 0 0 1.47 1.2h7.4a1.5 1.5 0 0 0 1.47-1.18L20 8.5H6" />
-                    </svg>
-                    Table 6 · Jollof + 2 drinks
-                  </span>
-                  <span class="amt">+₦8,900</span>
+
+              <!-- POS ticket -->
+              <div class="pos-ticket">
+                <div class="pt-row">
+                  <span class="pt-name"><span class="pt-q">2×</span> Jollof &amp; chicken</span>
+                  <span class="pt-amt">₦9,000</span>
                 </div>
-                <div class="lrow">
-                  <span class="tag">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M12 6.5C10 5 7.5 4.5 4 5v13c3.5-.5 6 0 8 1.5" />
-                      <path d="M12 6.5C14 5 16.5 4.5 20 5v13c-3.5-.5-6 0-8 1.5" />
-                      <path d="M12 6.5v13" />
-                    </svg>
-                    Journal posted automatically
-                  </span>
-                  <span class="amt">Balanced</span>
+                <div class="pt-row">
+                  <span class="pt-name"><span class="pt-q">2×</span> Chapman</span>
+                  <span class="pt-amt">₦4,000</span>
                 </div>
-                <div class="lrow">
-                  <span class="tag">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" />
-                      <path d="M4 7l8 4 8-4" />
-                      <path d="M12 11v10" />
-                    </svg>
-                    Rice stock −1.4kg
-                  </span>
-                  <span class="amt">Deducted</span>
+                <div class="pt-row pt-total">
+                  <span class="pt-name">Table 6 · paid by transfer</span>
+                  <span class="pt-amt">₦13,000</span>
                 </div>
               </div>
             </div>
-            <div class="float-badge">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+
+            <!-- floating chips -->
+            <div class="float-chip chip-a">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
               Books wrote themselves
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========================= TRUST STRIP ========================= -->
-      <div class="trust-strip">
-        <div class="container">
-          <span class="tsi">
-            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" />
-            </svg>
-            Restaurants
-          </span>
-          <span class="tsi">
-            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /><path d="M12 11v10" />
-            </svg>
-            Retail &amp; shops
-          </span>
-          <span class="tsi">Lounges &amp; bars</span>
-          <span class="tsi">Cafés</span>
-          <span class="tsi">Hotels</span>
-          <span class="tsi">🇳🇬 Lagos · 🇰🇪 Nairobi · 🇬🇭 Accra</span>
-        </div>
-      </div>
-
-      <!-- ====================== WEDGE · KUZA MENU ====================== -->
-      <section class="wedge" id="kuza-menu">
-        <div class="container wedge-grid">
-          <div class="wedge-copy">
-            <span class="eyebrow">Free forever</span>
-            <h2>Start with a free QR menu. Grow into a full ERP.</h2>
-            <p class="lead">
-              Kuza Menu turns your menu into a clean, mobile QR page your
-              customers scan at the table — no app, no printing new menus every
-              time a price changes. It's free, and it's the front door to
-              everything else Kuza does.
-            </p>
-            <ul class="wedge-list">
-              <li>
-                <svg class="check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-                A QR code and a shareable link, live in minutes
-              </li>
-              <li>
-                <svg class="check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-                Update a price once — every table sees it instantly
-              </li>
-              <li>
-                <svg class="check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-                When you're ready, the same menu powers table-side orders,
-                stock and books
-              </li>
-            </ul>
-            <a class="btn btn-primary btn-lg" href="http://localhost:5001/register">
-              Create your free menu
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 12h14" /><path d="M13 6l6 6-6 6" />
-              </svg>
-            </a>
-          </div>
-
-          <!-- Phone mockup of a public Kuza Menu -->
-          <div class="phone" aria-hidden="true">
-            <div class="phone-screen">
-              <div class="phone-hero">
-                <div class="r-name">Mama Nkechi's Kitchen</div>
-                <div class="r-meta">Ikeja, Lagos · Open now</div>
-              </div>
-              <div class="menu-cat">Mains</div>
-              <div class="menu-item">
-                <div>
-                  <div class="mi-name">Jollof Rice &amp; Chicken</div>
-                  <div class="mi-desc">Smoky party jollof, grilled chicken</div>
-                </div>
-                <div class="mi-price">₦4,500</div>
-              </div>
-              <div class="menu-item">
-                <div>
-                  <div class="mi-name">Egusi &amp; Pounded Yam</div>
-                  <div class="mi-desc">Melon soup with assorted meat</div>
-                </div>
-                <div class="mi-price">₦5,200</div>
-              </div>
-              <div class="menu-cat">Drinks</div>
-              <div class="menu-item">
-                <div>
-                  <div class="mi-name">Chapman</div>
-                  <div class="mi-desc">House special, chilled</div>
-                </div>
-                <div class="mi-price">₦2,000</div>
-              </div>
-              <div class="phone-foot">
-                Powered by <strong>Kuza</strong>
-              </div>
+            <div class="float-chip chip-b">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /><path d="M12 11v10" /></svg>
+              Stock −1.4kg rice
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ========================= MODULES ========================= -->
-      <section class="modules" id="modules">
+      <!-- ===================== SOCIAL PROOF / STATS ===================== -->
+      <section class="proof">
         <div class="container">
-          <div class="section-head">
-            <span class="eyebrow">One system, not five apps</span>
-            <h2>Everything the business runs on — connected</h2>
-            <p>
-              Stock, sales, people and money in one place. The modules talk to
-              each other, so nothing is entered twice and nothing goes missing.
-            </p>
+          <div class="stats-grid reveal">
+            <div class="stat">
+              <div class="stat-num"><span data-count="10000" data-suffix="+" data-format="short">0</span></div>
+              <div class="stat-label">businesses growing on Kuza</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">₦<span data-count="18" data-suffix="B+">0</span></div>
+              <div class="stat-label">sales processed &amp; reconciled</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num"><span data-count="40" data-suffix="+">0</span></div>
+              <div class="stat-label">markets across Africa</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num"><span data-count="99" data-suffix="%">0</span></div>
+              <div class="stat-label">of journals post automatically</div>
+            </div>
           </div>
 
-          <div class="module-grid">
-            <div class="module-card">
-              <div class="module-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /><path d="M12 11v10" />
-                </svg>
+          <p class="marquee-cap reveal">Trusted by restaurants, retail, lounges, cafés and services</p>
+          <div class="marquee" aria-hidden="true">
+            <div class="marquee-track" id="marqueeTrack">
+              <!-- generic abstract partner badges (no real logos) -->
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg> Savanna Grill</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /></svg> Baobab Stores</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5" /><path d="M9 12h6" /></svg> Zaria Lounge</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6 6 .5-4.5 4 1.5 6-6-3.2-6 3.2 1.5-6L3 8.5 9 8Z" /></svg> Kilimanjaro Café</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V9l8-5 8 5v9" /><path d="M4 18h16" /><path d="M9 18v-5h6v5" /></svg> Accra Provisions</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></svg> Nile Bistro</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M3 10h18" /></svg> Mombasa Mart</span>
+              <span class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8l7-5 7 5" /><circle cx="12" cy="14" r="3" /></svg> Serengeti Foods</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================= PRODUCT SUITE ======================= -->
+      <section class="products" id="products">
+        <div class="container">
+          <div class="section-head reveal">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> One system, not five apps</span>
+            <h2>Everything your business runs on — connected</h2>
+            <p>Seven products that share one ledger. Nothing entered twice, nothing goes missing. Start with the free menu and grow into the whole suite.</p>
+          </div>
+
+          <div class="product-grid">
+            <a class="product-card reveal" data-delay="0" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9.5" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M3 4h2l2.3 11.1a1.5 1.5 0 0 0 1.47 1.2h7.4a1.5 1.5 0 0 0 1.47-1.18L20 8.5H6" /></svg>
+              </div>
+              <h3>Point of Sale</h3>
+              <p>Ring up sales, run tables and orders, print or send receipts. Built for the counter and the shop floor.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
+
+            <a class="product-card reveal" data-delay="60" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5" /><circle cx="12" cy="7.5" r="1.6" /><path d="M8.5 12h7" /><path d="M8.5 15h7" /><path d="M8.5 18h4" /></svg>
+              </div>
+              <h3>Kuza Menu <span class="tag-free">Free</span></h3>
+              <p>Turn your menu into a QR page customers scan at the table. Update a price once — every table sees it instantly.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
+
+            <a class="product-card reveal" data-delay="120" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /><path d="M12 11v10" /></svg>
               </div>
               <h3>Inventory</h3>
-              <p>
-                One source of truth for stock across every branch. FIFO, LIFO
-                and FEFO costing, low-stock alerts, and theft you can actually
-                see.
-              </p>
-            </div>
+              <p>Stock, receiving, transfers and valuation across every branch. Low-stock alerts and the theft you can finally see.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
 
-            <div class="module-card">
-              <div class="module-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M6 4a2 2 0 0 1 2-2h10v16H8a2 2 0 0 0-2 2Z" />
-                  <path d="M6 20a2 2 0 0 1 2-2h10" />
-                  <path d="M13 2v6l2-1.4L17 8V2" />
-                </svg>
+            <a class="product-card reveal" data-delay="0" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v17l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2-2 1.2Z" /><path d="M9 8h6" /><path d="M9 11h6" /><path d="M9 14h3" /></svg>
               </div>
-              <h3>Books &amp; Accounting</h3>
-              <p>
-                Double-entry books that write themselves. Every sale, purchase
-                and payment posts a balanced journal — trial balance, P&amp;L
-                and cash, always current.
-              </p>
-            </div>
+              <h3>Sales &amp; Invoicing</h3>
+              <p>Customers, quotes and invoices that look sharp — and get paid, because a pay button rides on every one.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
 
-            <div class="module-card">
-              <div class="module-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
-                  <circle cx="8.5" cy="11" r="2" />
-                  <path d="M5.5 16a3 3 0 0 1 6 0" />
-                  <path d="M14 10.5h4" /><path d="M14 13.5h3" />
-                </svg>
+            <a class="product-card reveal" data-delay="60" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4a2 2 0 0 1 2-2h10v16H8a2 2 0 0 0-2 2Z" /><path d="M6 20a2 2 0 0 1 2-2h10" /><path d="M13 2v6l2-1.4L17 8V2" /></svg>
               </div>
-              <h3>Payroll &amp; HR</h3>
-              <p>
-                Staff, roles, attendance and leave in one place — with a shop-
-                floor surface for attendants. Clock-in, tasks, and self-service.
-              </p>
-              <span class="soon">Nigeria payroll — coming soon</span>
-            </div>
+              <h3>Accounting</h3>
+              <p>Double-entry books that write themselves. Auto-posted journals, trial balance, P&amp;L and cash — always current.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
 
-            <div class="module-card">
-              <div class="module-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="3" y="6" width="18" height="12" rx="2.5" />
-                  <path d="M3 10h18" /><path d="M6.5 14h3" />
-                </svg>
+            <a class="product-card reveal" data-delay="120" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
+              </div>
+              <h3>People &amp; Payroll</h3>
+              <p>Employees, roles, attendance and leave — with a phone-first shop-floor surface for attendants. Payroll rolling out per market.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
+
+            <a class="product-card reveal" data-delay="0" href="http://localhost:5001/register">
+              <div class="p-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" /><path d="M3 10h18" /><path d="M6.5 14h3" /></svg>
               </div>
               <h3>Payments</h3>
-              <p>
-                Collect via card and bank transfer on your invoices. Payments
-                reconcile against the right invoice automatically — the money
-                path closes itself.
-              </p>
+              <p>Collect by card and bank transfer with Paystack links. Every payment reconciles to the right invoice — and posts itself.</p>
+              <span class="p-link">Explore <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
+
+            <a class="product-card product-cta reveal" data-delay="60" href="http://localhost:5001/register">
+              <div class="p-icon p-icon-solid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              </div>
+              <h3>Bring it all together</h3>
+              <p>Start free today. Add products as you grow — they all share one ledger and one login.</p>
+              <span class="p-link">Start free <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== FEATURE DEEP-DIVES ===================== -->
+      <section class="features" id="features">
+        <div class="container">
+          <div class="section-head reveal">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> How it works</span>
+            <h2>The work happens once. Everything else follows.</h2>
+            <p>Sell a plate, send an invoice, receive stock — Kuza turns that one action into books, balances and reconciled cash.</p>
+          </div>
+
+          <!-- Row 1: Books that write themselves -->
+          <div class="feature-row reveal">
+            <div class="feature-copy">
+              <span class="feature-kicker">Accounting</span>
+              <h3>Books that write themselves</h3>
+              <p>No debits, no credits, no accountant. When a sale, purchase or payment happens, Kuza posts a balanced double-entry journal for you — instantly. Trial balance, P&amp;L and cash flow stay current without a spreadsheet.</p>
+              <ul class="feature-list">
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Every transaction auto-posts a balanced entry</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Reports update live, per branch</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Export the full ledger anytime — free, forever</li>
+              </ul>
+            </div>
+            <div class="feature-visual">
+              <div class="mock ledger-mock">
+                <div class="mock-head">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4a2 2 0 0 1 2-2h10v16H8a2 2 0 0 0-2 2Z" /><path d="M13 2v6l2-1.4L17 8V2" /></svg>
+                  Journal · auto-posted
+                  <span class="balanced-pill">Balanced</span>
+                </div>
+                <div class="ledger-line head">
+                  <span>Account</span><span class="dr">Debit</span><span class="cr">Credit</span>
+                </div>
+                <div class="ledger-line">
+                  <span>Cash / Bank</span><span class="dr">₦13,000</span><span class="cr">—</span>
+                </div>
+                <div class="ledger-line">
+                  <span>Sales revenue</span><span class="dr">—</span><span class="cr">₦13,000</span>
+                </div>
+                <div class="ledger-line">
+                  <span>Cost of goods</span><span class="dr">₦4,900</span><span class="cr">—</span>
+                </div>
+                <div class="ledger-line">
+                  <span>Inventory</span><span class="dr">—</span><span class="cr">₦4,900</span>
+                </div>
+                <div class="ledger-line total">
+                  <span>Totals</span><span class="dr">₦17,900</span><span class="cr">₦17,900</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- The wow: automatic accounting flow -->
-          <div class="flow-strip">
-            <span class="pill">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="9.5" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" />
-                <path d="M3 4h2l2.3 11.1a1.5 1.5 0 0 0 1.47 1.2h7.4a1.5 1.5 0 0 0 1.47-1.18L20 8.5H6" />
-              </svg>
-              A plate is sold
-            </span>
-            <span class="arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
-            </span>
-            <span class="pill">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" /><path d="M4 7l8 4 8-4" /><path d="M12 11v10" /></svg>
-              Stock drops
-            </span>
-            <span class="arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
-            </span>
-            <span class="pill">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7.5 4.5 4 5v13c3.5-.5 6 0 8 1.5" /><path d="M12 6.5C14 5 16.5 4.5 20 5v13c-3.5-.5-6 0-8 1.5" /><path d="M12 6.5v13" /></svg>
-              A balanced journal posts
-            </span>
-            <span class="arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
-            </span>
-            <span class="pill">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M8 15l3-3 2 2 3-4" /></svg>
-              Your profit updates
-            </span>
+          <!-- Row 2: Collect money on every invoice -->
+          <div class="feature-row reverse reveal">
+            <div class="feature-copy">
+              <span class="feature-kicker">Payments</span>
+              <h3>Collect money on every invoice</h3>
+              <p>A pay-by-transfer or card link rides on every invoice you send. Customers tap, pay, done — and the payment reconciles against the right invoice and posts to your books automatically. The money path closes itself.</p>
+              <ul class="feature-list">
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Card &amp; bank transfer via Paystack</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Auto-matched to the invoice, auto-reconciled</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> "Powered by Kuza" turns each invoice into an ad</li>
+              </ul>
+            </div>
+            <div class="feature-visual">
+              <div class="mock pay-mock">
+                <div class="pay-top">
+                  <div class="pay-label">Invoice #INV-2043</div>
+                  <div class="pay-amount">₦86,000</div>
+                  <div class="pay-to">Mama Nkechi's Kitchen · due today</div>
+                </div>
+                <div class="pay-methods">
+                  <button class="pay-method active" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" /><path d="M3 10h18" /></svg>
+                    Card
+                  </button>
+                  <button class="pay-method" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10 12 4l8 6" /><path d="M5 10v8h14v-8" /><path d="M9 18v-4h6v4" /></svg>
+                    Transfer
+                  </button>
+                </div>
+                <div class="pay-btn">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                  Pay ₦86,000 securely
+                </div>
+                <div class="pay-recon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                  Reconciled to INV-2043 &amp; posted to books
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Sell anywhere -->
+          <div class="feature-row reveal">
+            <div class="feature-copy">
+              <span class="feature-kicker">Point of Sale &amp; Kuza Menu</span>
+              <h3>Sell anywhere — counter, table or QR</h3>
+              <p>Ring up a sale at the counter, take an order at the table, or let customers scan a QR menu and order themselves. Every sale drops your stock and posts to your books the moment it happens.</p>
+              <ul class="feature-list">
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Fast POS for counter and shop floor</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Free QR menus, live in minutes</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Stock &amp; books update on every sale</li>
+              </ul>
+            </div>
+            <div class="feature-visual">
+              <div class="phone">
+                <div class="phone-notch" aria-hidden="true"></div>
+                <div class="phone-screen">
+                  <div class="phone-hero">
+                    <div class="r-name">Mama Nkechi's Kitchen</div>
+                    <div class="r-meta">Ikeja, Lagos · Open now</div>
+                  </div>
+                  <div class="menu-cat">Mains</div>
+                  <div class="menu-item">
+                    <div><div class="mi-name">Jollof Rice &amp; Chicken</div><div class="mi-desc">Smoky party jollof, grilled chicken</div></div>
+                    <div class="mi-price">₦4,500</div>
+                  </div>
+                  <div class="menu-item">
+                    <div><div class="mi-name">Egusi &amp; Pounded Yam</div><div class="mi-desc">Melon soup, assorted meat</div></div>
+                    <div class="mi-price">₦5,200</div>
+                  </div>
+                  <div class="menu-cat">Drinks</div>
+                  <div class="menu-item">
+                    <div><div class="mi-name">Chapman</div><div class="mi-desc">House special, chilled</div></div>
+                    <div class="mi-price">₦2,000</div>
+                  </div>
+                  <div class="phone-foot">Powered by <strong>Kuza</strong></div>
+                </div>
+                <div class="qr-chip" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h4v-3"/></svg>
+                  Scan to order
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== THE KUZA DIFFERENCE ===================== -->
+      <section class="difference">
+        <div class="container">
+          <div class="section-head reveal">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> The Kuza difference</span>
+            <h2>Built for how African businesses actually run</h2>
+            <p>Not a US tool with the currency swapped. Kuza is designed for the counter, the market and the naira.</p>
+          </div>
+          <div class="diff-grid">
+            <div class="diff-card reveal" data-delay="0">
+              <div class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8" /><path d="M12 13C12 8.6 15.4 5.5 20.5 5.5 20.5 9.9 17.1 13 12 13Z" /><path d="M12 15.5C12 12 9.2 9.6 4.5 9.6 4.5 13.1 7.3 15.5 12 15.5Z" /></svg></div>
+              <h3>No accountant required</h3>
+              <p>The hard part — double-entry books — happens automatically in the background. You just run your business.</p>
+            </div>
+            <div class="diff-card reveal" data-delay="60">
+              <div class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v2M12 20v2M4 12H2M22 12h-2" /><circle cx="12" cy="12" r="6" /><path d="M12 9v3l2 1" /></svg></div>
+              <h3>Local-first, always</h3>
+              <p>₦ and KSh are the primary price and the collection rail. Built for Lagos, Nairobi and Accra — not London.</p>
+            </div>
+            <div class="diff-card reveal" data-delay="120">
+              <div class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M9 12l2 2 4-4" /></svg></div>
+              <h3>One source of truth</h3>
+              <p>Stock, sales, people and money share one ledger. Nothing entered twice, nothing quietly goes missing.</p>
+            </div>
+            <div class="diff-card reveal" data-delay="180">
+              <div class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18" /><path d="M5 8l7-5 7 5" /><rect x="7" y="13" width="10" height="7" rx="2" /></svg></div>
+              <h3>Your data is yours</h3>
+              <p>Full export, free forever. No lock-in — just software good enough that you stay because you want to.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -381,13 +500,10 @@
       <!-- ========================= PRICING ========================= -->
       <section class="pricing" id="pricing">
         <div class="container">
-          <div class="section-head">
-            <span class="eyebrow">Local-first pricing</span>
+          <div class="section-head reveal">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> Local-first pricing</span>
             <h2>Priced for a Lagos lounge, not a London startup</h2>
-            <p>
-              Start free and stay free on Kuza Menu. Upgrade when the numbers
-              you're seeing are worth paying for.
-            </p>
+            <p>Start free and stay free on Kuza Menu. Upgrade when the numbers you're seeing are worth paying for.</p>
             <div class="currency-switch" role="group" aria-label="Choose currency">
               <button type="button" data-cur="NGN" class="active">₦ Naira</button>
               <button type="button" data-cur="KES">KSh Shilling</button>
@@ -397,7 +513,7 @@
 
           <div class="price-grid">
             <!-- FREE -->
-            <div class="price-card">
+            <div class="price-card reveal" data-delay="0">
               <div class="plan-name">Free</div>
               <div class="plan-tag">The wedge — never paywalled</div>
               <div class="price-amount">
@@ -405,71 +521,174 @@
                 <span class="num" data-price='{"NGN":"0","KES":"0","USD":"0"}'>0</span>
                 <span class="per">/mo</span>
               </div>
-              <div class="price-secondary">Free forever · single branch</div>
-              <ul class="price-features">
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Kuza Menu — free QR menus</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Inventory &amp; simple sales</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Full data export forever</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> "Powered by Kuza" branding</li>
-              </ul>
+              <div class="price-secondary" data-secondary>Free forever · single branch</div>
               <a class="btn btn-ghost btn-block" href="http://localhost:5001/register">Start free</a>
+              <ul class="price-features">
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Kuza Menu — free QR menus</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Inventory &amp; simple POS</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Full data export, forever</li>
+              </ul>
             </div>
 
-            <!-- GROWTH -->
-            <div class="price-card featured">
+            <!-- STARTER -->
+            <div class="price-card reveal" data-delay="60">
+              <div class="plan-name">Starter</div>
+              <div class="plan-tag">For a growing single location</div>
+              <div class="price-amount">
+                <span class="cur" data-cur-symbol>₦</span>
+                <span class="num" data-price='{"NGN":"29,000","KES":"4,900","USD":"39"}'>29,000</span>
+                <span class="per">/mo</span>
+              </div>
+              <div class="price-secondary" data-secondary>≈ KSh 4,900 · $39 · billed monthly</div>
+              <a class="btn btn-ghost btn-block" href="http://localhost:5001/register">Start free</a>
+              <ul class="price-features">
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Everything in Free</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Full POS, tables &amp; orders</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Invoicing &amp; customers</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Up to 5 staff</li>
+              </ul>
+            </div>
+
+            <!-- GROWTH (most popular) -->
+            <div class="price-card featured reveal" data-delay="120">
               <div class="plan-name">Growth</div>
-              <div class="plan-tag">Books + invoicing — the moat</div>
+              <div class="plan-tag">Books + payments — the moat</div>
               <div class="price-amount">
                 <span class="cur" data-cur-symbol>₦</span>
                 <span class="num" data-price='{"NGN":"75,000","KES":"12,900","USD":"99"}'>75,000</span>
                 <span class="per">/mo</span>
               </div>
               <div class="price-secondary" data-secondary>≈ KSh 12,900 · $99 · 14-day free trial</div>
-              <ul class="price-features">
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Everything in Free</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Automatic double-entry books</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Invoicing + payment collection</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Table-side orders &amp; P&amp;L per branch</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Remove "Powered by Kuza"</li>
-              </ul>
               <a class="btn btn-primary btn-block" href="http://localhost:5001/register">Start 14-day trial</a>
+              <ul class="price-features">
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Everything in Starter</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Automatic double-entry books</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Payment collection &amp; auto-reconcile</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> P&amp;L per branch · remove Kuza branding</li>
+              </ul>
             </div>
 
-            <!-- SCALE -->
-            <div class="price-card">
-              <div class="plan-name">Scale</div>
+            <!-- ENTERPRISE -->
+            <div class="price-card reveal" data-delay="180">
+              <div class="plan-name">Enterprise</div>
               <div class="plan-tag">Multi-branch operations</div>
               <div class="price-amount">
-                <span class="cur" data-cur-symbol>₦</span>
-                <span class="num" data-price='{"NGN":"180,000","KES":"30,000","USD":"249"}'>180,000</span>
-                <span class="per">/mo</span>
+                <span class="num-text">Let's talk</span>
               </div>
-              <div class="price-secondary" data-secondary>≈ KSh 30,000 · $249 · billed monthly</div>
+              <div class="price-secondary" data-secondary>Custom · unlimited branches</div>
+              <a class="btn btn-ghost btn-block" href="http://localhost:5001/register">Talk to sales</a>
               <ul class="price-features">
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Everything in Growth</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Unlimited branches &amp; staff</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Consolidated group reporting</li>
-                <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Priority support</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Everything in Growth</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Unlimited branches &amp; staff</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Consolidated group reporting</li>
+                <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg> Priority support &amp; onboarding</li>
               </ul>
-              <a class="btn btn-ghost btn-block" href="http://localhost:5001/register">Talk to us</a>
             </div>
           </div>
 
           <p class="price-note">
-            Prices shown in your local currency. Naira and Shilling are the
-            primary price; USD is an anchor for cross-border teams. Collect via
-            Paystack card &amp; transfer.
+            Prices shown in your local currency. Naira and Shilling are the primary price; USD is an anchor for cross-border teams. Collect via Paystack card &amp; transfer.
           </p>
+        </div>
+      </section>
+
+      <!-- ======================= TESTIMONIALS ======================== -->
+      <section class="love">
+        <div class="container">
+          <div class="section-head reveal">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> Wall of love</span>
+            <h2>Owners who stopped guessing</h2>
+            <p>What operators say once the books write themselves. (Illustrative quotes.)</p>
+          </div>
+          <div class="love-grid">
+            <figure class="love-card reveal" data-delay="0">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"I used to close on Sunday not knowing if we made money that week. Now I check profit per branch on my phone every morning."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-primary-600)">AO</span><span><strong>Amaka O.</strong><small>Restaurant owner · Lagos</small></span></figcaption>
+            </figure>
+            <figure class="love-card reveal" data-delay="60">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"The QR menu got us online in an afternoon. Then the same menu started running our tables and our stock. It just kept growing with us."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-info-600)">JK</span><span><strong>James K.</strong><small>Café &amp; bakery · Nairobi</small></span></figcaption>
+            </figure>
+            <figure class="love-card reveal" data-delay="120">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"My invoices used to sit unpaid for weeks. Now there's a pay button on each one and the money reconciles itself. No more chasing."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-accent-600)">NE</span><span><strong>Ngozi E.</strong><small>Distribution · Accra</small></span></figcaption>
+            </figure>
+            <figure class="love-card reveal" data-delay="0">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"We caught stock walking out the door in week two. The numbers finally matched reality — that alone paid for it."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-primary-700)">TB</span><span><strong>Tunde B.</strong><small>Lounge &amp; bar · Lagos</small></span></figcaption>
+            </figure>
+            <figure class="love-card reveal" data-delay="60">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"No accountant, no spreadsheets. I open Kuza and the books are already done. It feels illegal how easy it is."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-info-700)">SM</span><span><strong>Sarah M.</strong><small>Retail chain · Mombasa</small></span></figcaption>
+            </figure>
+            <figure class="love-card reveal" data-delay="120">
+              <div class="stars" aria-label="5 out of 5">★★★★★</div>
+              <blockquote>"Three branches, one screen. Consolidated reporting used to be a two-day job for my accountant. Now it's a tab."</blockquote>
+              <figcaption><span class="avatar" style="--a:var(--color-accent-700)">DA</span><span><strong>David A.</strong><small>Multi-branch QSR · Abuja</small></span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ FAQ ============================ -->
+      <section class="faq" id="faq">
+        <div class="container faq-inner">
+          <div class="section-head reveal" style="text-align:left;margin-bottom:36px;">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> FAQ</span>
+            <h2>Questions, answered</h2>
+          </div>
+          <div class="faq-list reveal">
+            <details class="faq-item">
+              <summary>Do I need to know accounting to use Kuza?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>No. Kuza posts balanced double-entry journals automatically whenever you sell, buy or get paid. You run your business; the books keep themselves. If you have an accountant, they'll love the clean, exportable ledger.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Is Kuza Menu really free?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>Yes — free forever on the Free plan, with a small "Powered by Kuza" footer. Create a QR menu and shareable link in minutes. Paid plans remove the branding and unlock table-side ordering, books and payments.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>What does the 14-day trial include?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>The Growth plan, in full — automatic books, invoicing, payment collection and per-branch P&amp;L. No card required to start. If you don't upgrade, you simply move down to the Free plan and keep your data.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>How do payments and reconciliation work?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>Every invoice can carry a pay link (card or bank transfer via Paystack). When a customer pays, Kuza matches the payment to the invoice and posts it to your books automatically — no manual reconciliation.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Can I use Kuza across multiple branches?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>Yes. Stock, sales and books are tracked per branch, and Enterprise adds consolidated group reporting across all of them. See profit per day, per branch, from one login.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Can I export my data if I leave?<span class="faq-plus" aria-hidden="true"></span></summary>
+              <div class="faq-body"><p>Always. Full data export is free forever, on every plan including Free. Your data is yours — we'd rather you stay because the product is good, not because you're locked in.</p></div>
+            </details>
+          </div>
         </div>
       </section>
 
       <!-- ========================= CTA BAND ========================= -->
       <section class="cta-band">
         <div class="container">
-          <div class="cta-inner">
-            <h2>See profit per day, per branch — tonight.</h2>
-            <p>Register free, add your menu, take one order, and watch the books write themselves.</p>
-            <a class="btn btn-primary btn-lg" href="http://localhost:5001/register">Start free</a>
+          <div class="cta-inner reveal">
+            <div class="cta-orb cta-orb-1" aria-hidden="true"></div>
+            <div class="cta-orb cta-orb-2" aria-hidden="true"></div>
+            <div class="cta-content">
+              <h2>Grow your business, the easy way.</h2>
+              <p>Register free, add your menu, take one sale — and watch the books write themselves tonight.</p>
+              <div class="cta-actions">
+                <a class="btn btn-lg btn-on-grad" href="http://localhost:5001/register">
+                  Start free
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                </a>
+                <a class="btn btn-lg btn-ghost-grad" href="http://localhost:5001/login">Sign in</a>
+              </div>
+              <div class="cta-trust">No card required · Free plan forever · Export anytime</div>
+            </div>
           </div>
         </div>
       </section>
@@ -481,48 +700,63 @@
         <div class="footer-grid">
           <div class="footer-brand">
             <a href="#top" class="brand" aria-label="Kuza home">
-              <svg class="mark" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="5" />
-                <path d="M12 18v-4" />
-                <path d="M12 14c0-2.6 2.1-4.6 5.2-4.6C17.2 12 15.1 14 12 14Z" />
-                <path d="M12 15c0-1.9-1.6-3.4-4.3-3.4C7.7 13.5 9.3 15 12 15Z" />
-              </svg>
-              Kuza
+              <span class="brand-mark" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <path d="M12 18v-4" />
+                  <path d="M12 14c0-2.6 2.1-4.6 5.2-4.6C17.2 12 15.1 14 12 14Z" />
+                  <path d="M12 15c0-1.9-1.6-3.4-4.3-3.4C7.7 13.5 9.3 15 12 15Z" />
+                </svg>
+              </span>
+              <span class="brand-word">Kuza</span>
             </a>
-            <p>
-              The ERP that does your books and collects your money — no
-              accountant required. Built for restaurants, retail and services
-              across Africa.
-            </p>
+            <p>The ERP that does your books and collects your money — no accountant required. Built for restaurants, retail and services across Africa.</p>
+            <form class="newsletter" onsubmit="return false;" aria-label="Newsletter signup">
+              <label class="sr-only" for="nlEmail">Email address</label>
+              <input id="nlEmail" type="email" placeholder="you@business.com" autocomplete="email" />
+              <button type="submit" aria-label="Subscribe">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
+              </button>
+            </form>
+            <div class="socials">
+              <a href="http://localhost:5001/register" aria-label="X (Twitter)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.2 3H21l-6.6 7.5L22 21h-6.1l-4.8-6.2L5.6 21H3l7-8L2.4 3h6.2l4.3 5.7L18.2 3Zm-2.1 16h1.7L8 4.9H6.2L16.1 19Z"/></svg></a>
+              <a href="http://localhost:5001/register" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.94 6.5A1.94 1.94 0 1 1 3.06 6.5a1.94 1.94 0 0 1 3.88 0ZM3.4 8.9h3.1V21H3.4V8.9Zm5.06 0h2.97v1.65h.04c.41-.78 1.42-1.6 2.93-1.6 3.13 0 3.71 2.06 3.71 4.74V21h-3.1v-5.36c0-1.28-.02-2.93-1.79-2.93-1.79 0-2.06 1.4-2.06 2.84V21H8.46V8.9Z"/></svg></a>
+              <a href="http://localhost:5001/register" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg></a>
+              <a href="http://localhost:5001/register" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1 1 12 20Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.1-.2 0-.4.1-.5l.4-.5c.1-.2.1-.3.2-.5 0-.2 0-.3 0-.4l-.7-1.7c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.2.3-.9.9-.9 2.1s.9 2.5 1.1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.5-.4Z"/></svg></a>
+            </div>
           </div>
 
           <div class="footer-col">
             <h4>Product</h4>
-            <a href="#kuza-menu">Kuza Menu</a>
-            <a href="#modules">Modules</a>
-            <a href="#pricing">Pricing</a>
-            <a href="http://localhost:5001/register">Start free</a>
-          </div>
-
-          <div class="footer-col">
-            <h4>Editions</h4>
-            <a href="#modules">Kuza Hospitality</a>
-            <a href="#modules">Retail &amp; shops</a>
-            <a href="#modules">Services</a>
+            <a href="#products">Point of Sale</a>
+            <a href="#products">Kuza Menu</a>
+            <a href="#products">Inventory</a>
+            <a href="#products">Invoicing</a>
+            <a href="#products">Accounting</a>
+            <a href="#products">Payments</a>
           </div>
 
           <div class="footer-col">
             <h4>Company</h4>
-            <a href="#top">About</a>
-            <a href="#pricing">Contact sales</a>
+            <a href="#features">How it works</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#faq">FAQ</a>
+            <a href="http://localhost:5001/register">Contact sales</a>
+          </div>
+
+          <div class="footer-col">
+            <h4>Get started</h4>
+            <a href="http://localhost:5001/register">Start free</a>
             <a href="http://localhost:5001/login">Sign in</a>
+            <a href="http://localhost:5001/register">Book a demo</a>
+            <a href="#products">Editions</a>
           </div>
         </div>
 
         <div class="footer-bottom">
           <span>© <span id="year">2026</span> Kuza. All rights reserved.</span>
           <span class="powered">
-            <svg class="mark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="3" y="3" width="18" height="18" rx="5" />
               <path d="M12 18v-4" />
               <path d="M12 14c0-2.6 2.1-4.6 5.2-4.6C17.2 12 15.1 14 12 14Z" />
@@ -534,67 +768,6 @@
       </div>
     </footer>
 
-    <script>
-      // Current year
-      document.getElementById('year').textContent = new Date().getFullYear();
-
-      // Theme toggle
-      var toggle = document.getElementById('themeToggle');
-      if (toggle) {
-        toggle.addEventListener('click', function () {
-          var isDark = document.documentElement.classList.toggle('dark');
-          try {
-            localStorage.setItem('kuza-theme', isDark ? 'dark' : 'light');
-          } catch (e) {}
-        });
-      }
-
-      // Currency switch — local-first pricing (₦/KSh primary, USD anchor)
-      var SYMBOLS = { NGN: '₦', KES: 'KSh', USD: '$' };
-      var ORDER = ['NGN', 'KES', 'USD'];
-      function setCurrency(cur) {
-        document.querySelectorAll('[data-price]').forEach(function (el) {
-          var map;
-          try {
-            map = JSON.parse(el.getAttribute('data-price'));
-          } catch (e) {
-            return;
-          }
-          el.textContent = map[cur];
-          var card = el.closest('.price-card');
-          if (!card) return;
-          var symEl = card.querySelector('[data-cur-symbol]');
-          if (symEl) symEl.textContent = SYMBOLS[cur];
-          var secEl = card.querySelector('[data-secondary]');
-          if (secEl) {
-            var others = ORDER.filter(function (c) {
-              return c !== cur;
-            })
-              .map(function (c) {
-                return SYMBOLS[c] + ' ' + map[c];
-              })
-              .join(' · ');
-            var trial = secEl.getAttribute('data-trial') || '';
-            secEl.textContent = '≈ ' + others + (trial ? ' · ' + trial : '');
-          }
-        });
-        document.querySelectorAll('.currency-switch button').forEach(function (b) {
-          b.classList.toggle('active', b.getAttribute('data-cur') === cur);
-        });
-      }
-      // Preserve the trailing note (trial / billing) per card before wiring.
-      document.querySelectorAll('[data-secondary]').forEach(function (el) {
-        var txt = el.textContent;
-        var parts = txt.split('·');
-        if (parts.length) {
-          el.setAttribute('data-trial', parts[parts.length - 1].trim());
-        }
-      });
-      document.querySelectorAll('.currency-switch button').forEach(function (b) {
-        b.addEventListener('click', function () {
-          setCurrency(b.getAttribute('data-cur'));
-        });
-      });
-    </script>
+    <script src="app.js" defer></script>
   </body>
 </html>
