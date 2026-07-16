@@ -50,6 +50,8 @@ interface AppDef {
   moduleKeys?: string[];
   /** effective-apps registry keys that enable this app (any-of). Absent = not app-gated. */
   appKeys?: string[];
+  /** Vertical gate: only show for these businessTypes (null businessType -> 'retail'). */
+  businessTypes?: string[];
   groups: NavGroup[];
 }
 
@@ -106,21 +108,21 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
 
   const apps: AppDef[] = [
     {
-      id: 'pos',
-      name: term(businessType, 'posSection') || 'Point of Sale',
+      // RESTAURANT (hospitality) — dine-in: orders, tables, menus. Distinct from Shop.
+      id: 'restaurant',
+      name: 'Restaurant',
       icon: 'building-storefront',
-      blurb: 'Ring up sales, manage orders, tables and menus',
+      blurb: 'Dine-in orders, tables and menus',
       home: '/',
       moduleKeys: ['rms'],
       appKeys: ['pos', 'tables', 'menu'],
+      businessTypes: ['hospitality', 'restaurant'],
       groups: [
         { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
         {
           label: 'Sell',
           items: [
-            // One entry: the sales hub (list + a New Sale button that opens /pos).
-            // 'Sales' for retail, 'Orders' for restaurant (dine-in tickets).
-            { href: '/rms/orders', label: term(businessType, 'sellNav') || 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+            { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
             { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
           ],
         },
@@ -135,11 +137,30 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
           label: 'Insights',
           items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
         },
+      ],
+    },
+    {
+      // SHOP (retail) — counter selling: checkout + sales. NO menu, NO tables.
+      id: 'shop',
+      name: 'Shop',
+      icon: 'building-storefront',
+      blurb: 'Ring up sales at the counter',
+      home: '/',
+      moduleKeys: ['rms'],
+      appKeys: ['pos'],
+      businessTypes: ['retail', 'general', 'accounts', 'services', 'warehouse'],
+      groups: [
+        { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
         {
-          label: 'Setup',
+          label: 'Sell',
           items: [
-            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
+            { href: '/pos', label: 'Checkout', icon: 'building-storefront', permission: 'orders.create', exact: true },
+            { href: '/rms/orders', label: 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
           ],
+        },
+        {
+          label: 'Insights',
+          items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
         },
       ],
     },
@@ -153,16 +174,6 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       appKeys: ['items', 'goods-in'],
       groups: [
         { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          // Inventory/retail sells via its OWN Point of Sale (/pos) — a
-          // different surface from the Restaurant order flow. 'Point of Sale'
-          // makes a sale; 'Sales' views past sales (the order history).
-          label: 'Sell',
-          items: [
-            { href: '/pos', label: 'Point of Sale', icon: 'building-storefront', permission: 'orders.create' },
-            { href: '/rms/orders', label: 'Sales History', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
-          ],
-        },
         {
           label: 'Stock',
           items: [
@@ -191,7 +202,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
     },
     {
       id: 'sales',
-      name: 'Sales',
+      name: 'Invoicing',
       icon: 'banknotes',
       blurb: 'Customers, invoices and getting paid',
       home: '/sales',
@@ -308,12 +319,17 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
   const isAppAvailable = useCallback(
     (app: AppDef) => {
       if (app.id === 'settings') return true; // system app always available
+      // Vertical gate: Restaurant for hospitality, Shop for everyone else.
+      if (app.businessTypes) {
+        const bt = businessType || 'retail'; // null/legacy -> retail default
+        if (!app.businessTypes.includes(bt)) return false;
+      }
       if (effectiveApps && app.appKeys) {
         return app.appKeys.some((k) => effectiveApps.includes(k));
       }
       return hasModule(app.moduleKeys);
     },
-    [effectiveApps, hasModule],
+    [effectiveApps, hasModule, businessType],
   );
 
   const availableApps = apps.filter(isAppAvailable);
@@ -335,26 +351,23 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
       if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
       if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
-      // Sales history (/rms/orders) belongs to the Restaurant (pos) app when the
-      // tenant has it. A retail tenant WITHOUT the Restaurant app views its
-      // sales inside the Inventory app instead.
-      if (path.startsWith('/rms/orders')) {
-        const hasRestaurant = businessApps.some((a) => a.id === 'pos');
-        if (!hasRestaurant && businessApps.some((a) => a.id === 'inventory')) {
-          return apps.find((a) => a.id === 'inventory')!;
-        }
-        return apps.find((a) => a.id === 'pos')!;
-      }
-      // /pos is the RETAIL Point of Sale — it belongs to the Inventory app.
-      // The Restaurant app sells through its own /rms/orders flow instead.
-      if (path.startsWith('/pos')) return apps.find((a) => a.id === 'inventory')!;
-      if (path === '/' || path.startsWith('/rms') || path.startsWith('/menu-studio'))
-        return apps.find((a) => a.id === 'pos')!;
+      // Each tenant has exactly ONE selling app: Restaurant (hospitality) or Shop (retail).
+      const sellingAppId =
+        businessType === 'hospitality' || businessType === 'restaurant' ? 'restaurant' : 'shop';
+      // Restaurant-only surfaces (dine-in) always belong to Restaurant.
+      if (path.startsWith('/rms/tables') || path.startsWith('/rms/menus') || path.startsWith('/menu-studio'))
+        return apps.find((a) => a.id === 'restaurant')!;
+      // Retail checkout belongs to Shop.
+      if (path.startsWith('/pos')) return apps.find((a) => a.id === 'shop')!;
+      // Shared selling surfaces (dashboard, orders/sales, analytics) resolve to the
+      // tenant's single selling app — so nothing ever flips to a different app.
+      if (path === '/' || path.startsWith('/rms'))
+        return apps.find((a) => a.id === sellingAppId)!;
       // Fallback: first available business app, else settings.
       return businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [businessApps.length],
+    [businessType, businessApps.length],
   );
 
   const activeApp = appForPath(pathname);

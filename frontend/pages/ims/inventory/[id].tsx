@@ -11,6 +11,24 @@ import Button from '@/components/ui/Button';
 
 type Tab = 'general' | 'inflow' | 'sales' | 'branch';
 
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+
+/**
+ * Resolve an item image value to a browser-loadable URL.
+ * - base64 data URIs, blob URLs and absolute http(s) URLs are used as-is
+ *   (single-item create stores a base64 data URI, so those already work).
+ * - Backend-relative paths such as "/uploads/inventory/x.jpg" (produced by the
+ *   bulk upload image pipeline) are prefixed with the API origin so the browser
+ *   fetches them from the backend instead of the frontend origin.
+ */
+function resolveImageUrl(src?: string): string {
+  if (!src) return '';
+  const trimmed = src.trim();
+  if (!trimmed) return '';
+  if (/^(data:|blob:|https?:\/\/)/i.test(trimmed)) return trimmed;
+  return `${API_ORIGIN}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
 export default function InventoryItemViewPage() {
   const { t } = useTranslation('common');
   const router = useRouter();
@@ -259,7 +277,9 @@ export default function InventoryItemViewPage() {
 }
 
 // Tab Components
-const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => (
+const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => {
+  const frontImageUrl = resolveImageUrl(item.frontImage);
+  return (
   <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
       {t('generalInformation')}
@@ -272,9 +292,9 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
           {t('itemImage')}
         </h3>
         <div className="relative w-full max-w-sm">
-          {item.frontImage ? (
+          {frontImageUrl ? (
             <img
-              src={item.frontImage}
+              src={frontImageUrl}
               alt={item.name}
               className="w-full h-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-800"
             />
@@ -398,7 +418,8 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, t }: any) => (
   <div className="w-full max-w-5xl space-y-5">

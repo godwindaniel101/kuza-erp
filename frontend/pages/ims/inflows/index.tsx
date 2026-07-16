@@ -11,6 +11,7 @@ import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import InventoryTabs from '@/components/ui/InventoryTabs';
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
 import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
@@ -183,6 +184,8 @@ export default function InflowsPage() {
           </>
         }
       />
+
+      <InventoryTabs active="inflows" counts={{ inflows: loading ? undefined : filteredInflows.length }} />
 
       {/* Search and Filters */}
       {!loading && inflows.length > 0 && (

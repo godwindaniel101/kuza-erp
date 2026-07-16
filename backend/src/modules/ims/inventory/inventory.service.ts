@@ -1043,6 +1043,18 @@ export class InventoryService {
             }
           } catch (imageError: any) {
             console.warn(`[BulkUpload] Failed to process image for item ${itemData.name}:`, imageError.message);
+            // Fallback: persist the original image URL directly so the item still
+            // shows an image even when local download/resize fails. Only accept
+            // http(s) URLs (the frontend can render an absolute URL as-is).
+            const rawLink = String(itemData.imageLink).trim();
+            if (/^https?:\/\//i.test(rawLink)) {
+              try {
+                await this.inventoryItemRepository.update(createdItem.id, { frontImage: rawLink });
+                console.log(`[BulkUpload] Persisted original image URL for item: ${itemData.name}`);
+              } catch (updateError: any) {
+                console.warn(`[BulkUpload] Failed to persist fallback image URL for item ${itemData.name}:`, updateError.message);
+              }
+            }
             // Don't fail the entire import if image processing fails
           }
         }

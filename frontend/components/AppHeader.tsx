@@ -38,7 +38,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   // Launcher entries: the coarse apps the tenant can access — the same 7 the
   // sidebar uses (Restaurant/POS, Inventory, Sales, Accounting, People, Settings),
   // not granular registry keys.
-  const launcherApps = availableCoarseApps(effectiveApps);
+  const launcherApps = availableCoarseApps(effectiveApps, businessType);
 
   /** App key -> candidate sidebar groups, in priority order (first effective wins). */
   const APP_GROUP_CANDIDATES: Record<string, string[]> = {
@@ -387,7 +387,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
                         <Icon name={app.icon} size={18} />
                       </span>
                       <span className="w-full truncate text-2xs font-medium text-gray-700 dark:text-gray-300">
-                        {appDisplayName(app, businessType)}
+                        {appDisplayName(app)}
                       </span>
                     </Link>
                   ))}

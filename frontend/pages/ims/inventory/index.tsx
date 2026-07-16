@@ -15,6 +15,7 @@ import DataTable, { type DataTableColumn, type RowAction } from '@/components/ui
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
 import StockStatusBadge from '@/components/ui/StockStatusBadge';
+import InventoryTabs from '@/components/ui/InventoryTabs';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import { useTableState } from '@/hooks/useTableState';
@@ -35,6 +36,8 @@ interface InventoryItem {
   uom?: { name?: string; abbreviation?: string };
   /** Warehouse row-rack-bin location, e.g. "A-03-2" (backend column lands in parallel). */
   binLocation?: string;
+  /** Primary item image URL (see components/InventoryItemForm.tsx). May be absent on list payloads. */
+  frontImage?: string;
   unitCost?: number | string;
   costPrice?: number | string;
   batchCount?: number;
@@ -201,7 +204,22 @@ export default function InventoryPage() {
       key: 'name',
       label: t('name'),
       sortable: true,
-      render: (item) => <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>,
+      render: (item) => (
+        <div className="flex items-center gap-2.5">
+          {item.frontImage ? (
+            <img
+              src={item.frontImage}
+              alt=""
+              className="h-9 w-9 flex-shrink-0 rounded-md object-cover ring-1 ring-gray-200 dark:ring-gray-700"
+            />
+          ) : (
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:ring-gray-700">
+              <i className="bx bx-image text-lg" aria-hidden="true"></i>
+            </div>
+          )}
+          <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
+        </div>
+      ),
     },
     category: { key: 'category', label: t('category'), sortable: true, render: (item) => item.category || '-' },
     subcategory: { key: 'subcategory', label: t('subcategory'), sortable: true, render: (item) => item.subcategory || '-' },
@@ -352,6 +370,8 @@ export default function InventoryPage() {
           </>
         }
       />
+
+      <InventoryTabs active="items" counts={{ items: loading ? undefined : items.length }} />
 
       {/* Filters */}
       {!loading && items.length > 0 && (
