@@ -131,15 +131,21 @@ function AdminTenantsInner() {
         subtitle="Every business on the platform. Open a tenant to manage its apps, plan and access requests."
         count={tenants?.length}
         actions={
-          <Button href="/admin/requests" variant="secondary" size="sm">
-            <i className="bx bx-bell text-base" aria-hidden="true" />
-            Pending requests
-            {pendingCount > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-2xs font-semibold text-amber-700 dark:text-amber-400">
-                {pendingCount}
-              </span>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button href="/admin/plans" variant="secondary" size="sm">
+              <i className="bx bx-package text-base" aria-hidden="true" />
+              Plans
+            </Button>
+            <Button href="/admin/requests" variant="secondary" size="sm">
+              <i className="bx bx-bell text-base" aria-hidden="true" />
+              Pending requests
+              {pendingCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-2xs font-semibold text-amber-700 dark:text-amber-400">
+                  {pendingCount}
+                </span>
+              )}
+            </Button>
+          </div>
         }
       />
 

@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
 import { ChangePlanDto } from './dto/change-plan.dto';
+import { CheckoutDto } from './dto/checkout.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
 import { CreateAccessRequestDto } from './dto/create-access-request.dto';
 import { AccessRequestStatus } from './entities/app-access-request.entity';
@@ -52,6 +53,21 @@ export class BillingController {
       await this.billingService.changePlan(req.user.tenantId, dto.planCode),
     );
     return { success: true, data: subscription };
+  }
+
+  @Post('subscription/checkout')
+  @RequirePermissions('settings.edit')
+  @ApiOperation({
+    summary:
+      'Start a plan-upgrade checkout. FREE plans switch instantly; paid plans return a Paystack authorizationUrl + reference.',
+  })
+  async checkout(@Request() req: any, @Body() dto: CheckoutDto) {
+    const data = await this.billingService.checkout(
+      req.user.tenantId,
+      dto.planCode,
+      req.user,
+    );
+    return { success: true, data };
   }
 
   @Get('usage')

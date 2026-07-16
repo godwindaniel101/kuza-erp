@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
+import { useTenantStore } from '@/store/globalStore';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
@@ -47,6 +49,18 @@ function planPrice(plan: Plan, decimals = 0): { text: string; amount: number } {
   const lp = plan.localPrice ?? { currency: 'USD', amount: plan.monthlyPriceUsd };
   const symbol = CURRENCY_SYMBOLS[lp.currency] ?? `${lp.currency} `;
   return { text: `${symbol}${formatNumber(lp.amount, decimals)}`, amount: lp.amount };
+}
+
+/**
+ * Pull the Paystack authorization URL (and reference) out of a checkout
+ * response, tolerating envelope vs. raw payloads and snake/camel field names.
+ */
+function extractCheckout(res: any): { authorizationUrl?: string; reference?: string } {
+  const d = res?.data ?? res ?? {};
+  return {
+    authorizationUrl: d.authorizationUrl ?? d.authorization_url ?? d.url ?? d.checkoutUrl,
+    reference: d.reference ?? d.reference_id ?? d.ref,
+  };
 }
 
 interface Subscription {
@@ -106,6 +120,8 @@ const moduleLabel = (module: string) =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function BillingPage() {
+  const router = useRouter();
+  const fetchTenantContext = useTenantStore((s) => s.fetchTenantContext);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -137,17 +153,53 @@ export default function BillingPage() {
     load();
   }, [load]);
 
+  // Handle the return from Paystack (?payment=success|cancelled). Activation is
+  // webhook-driven, so on success we refresh context and re-fetch rather than
+  // trusting the redirect alone. The query is stripped so a refresh won't re-fire.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const payment = router.query.payment;
+    if (payment !== 'success' && payment !== 'cancelled') return;
+    if (payment === 'success') {
+      setToast({ message: 'Payment received — your plan is being activated.', type: 'success' });
+      fetchTenantContext(true);
+      load();
+    } else {
+      setToast({ message: 'Payment cancelled — your plan was not changed.', type: 'info' });
+    }
+    const { payment: _p, reference: _r, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.payment]);
+
   const handleSwitch = async () => {
     if (!switchTarget) return;
     setSwitching(true);
+    const isPaid = (switchTarget.monthlyPriceUsd ?? 0) > 0;
     try {
+      if (isPaid) {
+        // Paid upgrade: start a Paystack checkout and hand off. The plan is
+        // activated by the verified webhook, not by this redirect.
+        const res = await api.post('/billing/subscription/checkout', {
+          planCode: switchTarget.code,
+        });
+        const { authorizationUrl } = extractCheckout(res);
+        if (!authorizationUrl) throw new Error('Could not start checkout. Please try again.');
+        window.location.href = authorizationUrl;
+        return; // navigating away — keep the switching state
+      }
+      // Free plan: instant change, no payment.
       await api.post('/billing/subscription/change', { planCode: switchTarget.code });
       setToast({ message: `Switched to the ${switchTarget.name} plan`, type: 'success' });
       setSwitchTarget(null);
+      await fetchTenantContext(true);
       await load();
+      setSwitching(false);
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to switch plan', type: 'error' });
-    } finally {
+      setToast({
+        message: err.response?.data?.message || err?.message || 'Failed to switch plan',
+        type: 'error',
+      });
       setSwitching(false);
     }
   };
@@ -329,7 +381,9 @@ export default function BillingPage() {
                 : ' (free)?'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
-              Plan limits apply immediately. Downgrading may restrict access to features above the new plan&apos;s limits.
+              {switchTarget.monthlyPriceUsd > 0
+                ? "You'll be redirected to Paystack to complete payment. Your plan activates once payment is confirmed."
+                : "Plan limits apply immediately. Downgrading may restrict access to features above the new plan's limits."}
             </p>
             <div className="flex justify-end space-x-3 pt-2">
               <Button
@@ -346,7 +400,13 @@ export default function BillingPage() {
                 onClick={handleSwitch}
                 disabled={switching}
               >
-                {switching ? 'Switching...' : 'Confirm Switch'}
+                {switching
+                  ? switchTarget.monthlyPriceUsd > 0
+                    ? 'Redirecting...'
+                    : 'Switching...'
+                  : switchTarget.monthlyPriceUsd > 0
+                    ? 'Continue to payment'
+                    : 'Confirm Switch'}
               </Button>
             </div>
           </div>

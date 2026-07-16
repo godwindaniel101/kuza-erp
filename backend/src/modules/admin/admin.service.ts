@@ -1,6 +1,10 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { LandlordService } from '../../common/landlord/services/landlord.service';
-import { BillingService } from '../billing/billing.service';
+import {
+  BillingService,
+  CreatePlanInput,
+  UpdatePlanInput,
+} from '../billing/billing.service';
 import { AccessRequestStatus } from '../billing/entities/app-access-request.entity';
 
 /**
@@ -193,5 +197,20 @@ export class AdminService {
   /** Read-only plan catalog. */
   async listPlans() {
     return this.billingService.getPlanCatalog();
+  }
+
+  /** Create a new plan (delegates to BillingService, which validates modules). */
+  async createPlan(input: CreatePlanInput) {
+    return this.billingService.createPlan(input);
+  }
+
+  /** Update an existing plan by code. */
+  async updatePlan(code: string, input: UpdatePlanInput) {
+    return this.billingService.updatePlan(code, input);
+  }
+
+  /** Soft-delete (deactivate) a plan by code — never breaks existing tenants. */
+  async deactivatePlan(code: string) {
+    return this.billingService.deactivatePlan(code);
   }
 }

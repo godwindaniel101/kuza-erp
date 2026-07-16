@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -19,6 +21,8 @@ import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { AdminService } from './admin.service';
 import { SetTenantAppDto } from './dto/set-tenant-app.dto';
 import { ChangeTenantPlanDto } from './dto/change-tenant-plan.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 import { AccessRequestStatus } from '../billing/entities/app-access-request.entity';
 
 /**
@@ -113,6 +117,29 @@ export class AdminController {
   @ApiOperation({ summary: 'Plan catalog (read-only)' })
   async listPlans() {
     const data = await this.adminService.listPlans();
+    return { success: true, data };
+  }
+
+  @Post('plans')
+  @ApiOperation({ summary: 'Create a new plan' })
+  async createPlan(@Body() dto: CreatePlanDto) {
+    const data = await this.adminService.createPlan(dto);
+    return { success: true, data };
+  }
+
+  @Patch('plans/:code')
+  @ApiOperation({ summary: 'Update a plan (name, price, limits.modules, active)' })
+  async updatePlan(@Param('code') code: string, @Body() dto: UpdatePlanDto) {
+    const data = await this.adminService.updatePlan(code, dto);
+    return { success: true, data };
+  }
+
+  @Delete('plans/:code')
+  @ApiOperation({
+    summary: 'Deactivate (soft-delete) a plan — never breaks existing tenants',
+  })
+  async deactivatePlan(@Param('code') code: string) {
+    const data = await this.adminService.deactivatePlan(code);
     return { success: true, data };
   }
 }

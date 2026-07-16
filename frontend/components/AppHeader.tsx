@@ -500,6 +500,15 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
                         <i className="bx bx-shield-quarter text-base text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         Platform admin
                       </Link>
+                      <Link
+                        href="/admin/plans"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <i className="bx bx-package text-base text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                        Plans
+                      </Link>
                     </>
                   )}
                   <div className="my-1 border-t border-gray-100 dark:border-gray-800" />

@@ -9,10 +9,34 @@
  */
 import { api } from './api';
 
+export interface AdminPlanLimits {
+  maxUsers: number;
+  maxBranches: number;
+  maxItems: number;
+  /** App-registry keys enabled by this plan (docs/APPS-MODEL.md). */
+  modules: string[];
+}
+
 export interface AdminPlan {
+  id?: string;
   code: string;
   name: string;
   monthlyPriceUsd?: number;
+  description?: string | null;
+  /** Local price points keyed by currency; super-admin view is USD-first. */
+  prices?: Record<string, number> | null;
+  limits?: AdminPlanLimits;
+  isActive?: boolean;
+}
+
+/** Payload for creating/updating a plan (super-admin only). */
+export interface AdminPlanInput {
+  code: string;
+  name: string;
+  monthlyPriceUsd: number;
+  description?: string;
+  limits: AdminPlanLimits;
+  isActive: boolean;
 }
 
 export interface AdminPlanRef {
@@ -159,6 +183,24 @@ export const adminApi = {
   async listPlans(): Promise<AdminPlan[]> {
     const res = await api.get<ApiEnvelope<any>>('/admin/plans');
     return asArray<AdminPlan>(unwrap(res), 'plans', 'items');
+  },
+
+  async createPlan(input: AdminPlanInput): Promise<AdminPlan | undefined> {
+    const res = await api.post<ApiEnvelope<AdminPlan>>('/admin/plans', input);
+    return unwrap<AdminPlan>(res);
+  },
+
+  async updatePlan(code: string, input: Partial<AdminPlanInput>): Promise<AdminPlan | undefined> {
+    const res = await api.patch<ApiEnvelope<AdminPlan>>(
+      `/admin/plans/${encodeURIComponent(code)}`,
+      input,
+    );
+    return unwrap<AdminPlan>(res);
+  },
+
+  /** Deactivate (soft-delete) a plan. */
+  async deletePlan(code: string): Promise<void> {
+    await api.delete(`/admin/plans/${encodeURIComponent(code)}`);
   },
 };
 

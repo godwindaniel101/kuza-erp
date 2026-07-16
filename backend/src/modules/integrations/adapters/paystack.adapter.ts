@@ -77,6 +77,68 @@ export class PaystackAdapter implements PaymentProviderPort {
     };
   }
 
+  /**
+   * Initialize a Paystack checkout transaction and return the hosted payment
+   * URL. Used by the billing money-path for a paid plan upgrade.
+   *
+   * `amountSubunit` MUST already be in the currency subunit (kobo/pesewa) —
+   * the caller converts, because it holds the plan's major-unit price. The
+   * `reference` is the caller's idempotency key: Paystack echoes it back in the
+   * signed webhook, and rejects a re-used reference, so retries are safe.
+   *
+   * Defensive parsing (partners lie): we require res.ok AND json.status AND an
+   * authorization_url before trusting the response — never a status code alone.
+   */
+  async initializeTransaction(
+    input: {
+      email: string;
+      amountSubunit: number;
+      currency: string;
+      reference: string;
+      metadata?: Record<string, any>;
+      callbackUrl?: string;
+    },
+    config: ProviderConfig,
+  ): Promise<{ authorizationUrl: string; reference: string; accessCode: string }> {
+    const secretKey = config?.secretKey;
+    if (!secretKey) {
+      throw new BadRequestException(
+        'Paystack secret key not configured — set PAYSTACK_SECRET_KEY',
+      );
+    }
+
+    const res = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: input.email,
+        amount: Math.round(input.amountSubunit),
+        currency: input.currency,
+        reference: input.reference,
+        metadata: input.metadata || {},
+        callback_url: input.callbackUrl || undefined,
+      }),
+    });
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.status || !json?.data?.authorization_url) {
+      this.logger.warn(
+        `Paystack transaction.initialize failed: ${res.status} ${json?.message}`,
+      );
+      throw new BadRequestException(
+        `Paystack rejected checkout: ${json?.message || res.status}`,
+      );
+    }
+
+    return {
+      authorizationUrl: json.data.authorization_url,
+      reference: json.data.reference || input.reference,
+      accessCode: json.data.access_code || '',
+    };
+  }
+
   async createVirtualAccount(
     input: CreateVirtualAccountInput,
     config: ProviderConfig,

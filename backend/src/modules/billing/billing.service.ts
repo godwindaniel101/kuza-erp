@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ConflictException,
@@ -7,10 +8,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
 import {
   APP_KEYS,
   APP_REGISTRY,
   AppKey,
+  LEGACY_PLAN_MODULE_TO_APPS,
   appsForPlanModules,
   dependentsOf,
   expandDependencies,
@@ -20,6 +24,7 @@ import { Plan, PlanCode, PlanLimits } from './entities/plan.entity';
 import {
   TenantSubscription,
 } from './entities/tenant-subscription.entity';
+import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import {
   AppAccessRequest,
   AccessRequestStatus,
@@ -27,8 +32,29 @@ import {
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
+import { PaystackAdapter } from '../integrations/adapters/paystack.adapter';
 
 const TRIAL_DAYS = 14;
+
+/** Super-admin plan CRUD inputs (validated by the admin DTOs at the boundary). */
+export interface CreatePlanInput {
+  code: string;
+  name: string;
+  monthlyPriceUsd: number;
+  prices?: Record<string, number>;
+  description?: string;
+  limits: PlanLimits;
+  isActive?: boolean;
+}
+
+export interface UpdatePlanInput {
+  name?: string;
+  monthlyPriceUsd?: number;
+  prices?: Record<string, number>;
+  description?: string;
+  limits?: PlanLimits;
+  isActive?: boolean;
+}
 
 const PLAN_SEED: Array<{
   code: PlanCode;
@@ -100,14 +126,19 @@ function localPriceFor(plan: Plan, currency: string): { currency: string; amount
 @Injectable()
 export class BillingService {
   private seedPromise: Promise<void> | null = null;
+  private readonly logger = new Logger(BillingService.name);
 
   constructor(
     @InjectRepository(Plan, 'landlord')
     private planRepository: Repository<Plan>,
     @InjectRepository(TenantSubscription, 'landlord')
     private subscriptionRepository: Repository<TenantSubscription>,
+    @InjectRepository(SubscriptionPayment, 'landlord')
+    private paymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(AppAccessRequest, 'landlord')
     private accessRequestRepository: Repository<AppAccessRequest>,
+    private readonly configService: ConfigService,
+    private readonly paystackAdapter: PaystackAdapter,
     // Tenant-connection repositories: scoped to the caller's schema by the
     // global TenantTransactionInterceptor (search_path), like other services.
     @InjectRepository(User)
@@ -293,6 +324,306 @@ export class BillingService {
     subscription.currentPeriodEnd = this.addMonths(now, 1);
 
     return this.subscriptionRepository.save(subscription);
+  }
+
+  // ---------------------------------------------------------------------
+  // Plan CRUD (super-admin) — LANDLORD-scoped. Guarded by SuperAdminGuard on
+  // the /admin controller; this service assumes the caller is authorized.
+  // ---------------------------------------------------------------------
+
+  /**
+   * Validate a plan's limits.modules against the shared app vocabulary: a
+   * module is valid if it is a canonical app key (APP_KEYS) OR a legacy plan
+   * module key (LEGACY_PLAN_MODULE_TO_APPS — 'ims', 'rms', 'accounting', ...).
+   * Both are accepted because appsAllowedByPlan maps either at read time, and
+   * the built-in seeds use the legacy keys.
+   */
+  private assertValidModules(modules: string[]): void {
+    const invalid = (modules || []).filter(
+      (m) =>
+        !APP_KEYS.includes(m as AppKey) && !LEGACY_PLAN_MODULE_TO_APPS[m],
+    );
+    if (invalid.length > 0) {
+      throw new BadRequestException(
+        `Unknown plan module(s): ${invalid.join(', ')}. Allowed: ${[
+          ...Object.keys(LEGACY_PLAN_MODULE_TO_APPS),
+          ...APP_KEYS,
+        ].join(', ')}`,
+      );
+    }
+  }
+
+  /** Create a new plan (super-admin). */
+  async createPlan(input: CreatePlanInput): Promise<Plan> {
+    await this.ensurePlansSeeded();
+    this.assertValidModules(input.limits?.modules || []);
+
+    const existing = await this.planRepository.findOne({
+      where: { code: input.code as PlanCode },
+    });
+    if (existing) {
+      throw new ConflictException(`Plan '${input.code}' already exists`);
+    }
+
+    const plan = this.planRepository.create({
+      code: input.code as PlanCode,
+      name: input.name,
+      monthlyPriceUsd: input.monthlyPriceUsd,
+      prices: input.prices ?? null,
+      description: input.description,
+      limits: input.limits,
+      isActive: input.isActive ?? true,
+    });
+    return this.planRepository.save(plan);
+  }
+
+  /**
+   * Update an existing plan by code (super-admin). `code` is immutable — it is
+   * the plan's stable identity referenced by tenant subscriptions. Only the
+   * provided fields change. Reactivating (isActive:true) is supported here.
+   */
+  async updatePlan(code: string, input: UpdatePlanInput): Promise<Plan> {
+    await this.ensurePlansSeeded();
+    const plan = await this.planRepository.findOne({
+      where: { code: code as PlanCode },
+    });
+    if (!plan) {
+      throw new NotFoundException(`Plan '${code}' not found`);
+    }
+
+    if (input.limits !== undefined) {
+      this.assertValidModules(input.limits.modules || []);
+      plan.limits = input.limits;
+    }
+    if (input.name !== undefined) plan.name = input.name;
+    if (input.monthlyPriceUsd !== undefined) {
+      plan.monthlyPriceUsd = input.monthlyPriceUsd;
+    }
+    if (input.prices !== undefined) plan.prices = input.prices;
+    if (input.description !== undefined) plan.description = input.description;
+    if (input.isActive !== undefined) plan.isActive = input.isActive;
+
+    return this.planRepository.save(plan);
+  }
+
+  /**
+   * Soft-delete (deactivate) a plan by code (super-admin). Never hard-deletes:
+   * a deactivated plan disappears from getPlans/getPlanCatalog (new subscribers
+   * cannot pick it) but the row survives, so tenants already subscribed to it
+   * keep working — their subscription loads the plan by id regardless of
+   * isActive.
+   */
+  async deactivatePlan(code: string): Promise<Plan> {
+    await this.ensurePlansSeeded();
+    const plan = await this.planRepository.findOne({
+      where: { code: code as PlanCode },
+    });
+    if (!plan) {
+      throw new NotFoundException(`Plan '${code}' not found`);
+    }
+    plan.isActive = false;
+    return this.planRepository.save(plan);
+  }
+
+  // ---------------------------------------------------------------------
+  // Paystack checkout (paid plan upgrade) — money-path.
+  // ---------------------------------------------------------------------
+
+  private paystackSecretKey(): string | undefined {
+    return this.configService.get<string>('PAYSTACK_SECRET_KEY');
+  }
+
+  /**
+   * Start a plan-upgrade checkout.
+   *
+   *  - FREE / zero-price plans keep the existing INSTANT path (changePlan) — no
+   *    charge, no provider round-trip.
+   *  - A paid plan initializes a Paystack transaction (test keys from env) for
+   *    the tenant's local-currency price and returns the hosted checkout URL.
+   *    A PENDING SubscriptionPayment row (unique `reference`) is written FIRST
+   *    as the idempotency ledger; the plan is NOT activated here — only the
+   *    signature-verified charge.success webhook activates it.
+   *
+   * Runs inside the tenant request transaction, so getTenantCurrency (which
+   * reads businesses.currency) resolves the caller's schema.
+   */
+  async checkout(
+    tenantId: string,
+    planCode: string,
+    user: { email?: string } | undefined,
+  ): Promise<
+    | { free: true; subscription: TenantSubscription }
+    | { free: false; authorizationUrl: string; reference: string }
+  > {
+    if (!planCode) {
+      throw new BadRequestException('planCode is required');
+    }
+    const plan = await this.getPlanByCode(planCode);
+    const currency = await this.getTenantCurrency();
+    const price = localPriceFor(plan, currency);
+
+    // Free / zero-price → existing instant path.
+    if (!price.amount || price.amount <= 0) {
+      const subscription = await this.changePlan(tenantId, planCode);
+      return { free: true, subscription };
+    }
+
+    const email = user?.email;
+    if (!email) {
+      throw new BadRequestException('A billing email is required for checkout');
+    }
+    const secretKey = this.paystackSecretKey();
+    if (!secretKey) {
+      throw new BadRequestException(
+        'Payments are not configured — set PAYSTACK_SECRET_KEY',
+      );
+    }
+
+    // Idempotency key + ledger row (written before the provider call).
+    const reference = `KZA-SUB-${randomUUID()}`;
+    const payment = await this.paymentRepository.save(
+      this.paymentRepository.create({
+        tenantId,
+        planId: plan.id,
+        planCode: plan.code,
+        provider: 'paystack',
+        reference,
+        amount: price.amount,
+        currency: price.currency,
+        status: 'PENDING',
+      }),
+    );
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4000';
+
+    let init: { authorizationUrl: string; reference: string };
+    try {
+      init = await this.paystackAdapter.initializeTransaction(
+        {
+          email,
+          amountSubunit: Math.round(price.amount * 100),
+          currency: price.currency,
+          reference,
+          metadata: {
+            tenantId,
+            planCode: plan.code,
+            kind: 'subscription_upgrade',
+          },
+          callbackUrl: `${frontendUrl}/settings/billing?ref=${reference}`,
+        },
+        { secretKey },
+      );
+    } catch (error) {
+      payment.status = 'FAILED';
+      payment.failureReason = (error as Error).message;
+      await this.paymentRepository.save(payment);
+      throw error;
+    }
+
+    payment.authorizationUrl = init.authorizationUrl;
+    await this.paymentRepository.save(payment);
+
+    // Record the pending provider ref on the subscription stub fields.
+    const subscription = await this.getOrCreateSubscription(tenantId);
+    subscription.paymentProvider = 'paystack';
+    subscription.paymentProviderRef = reference;
+    await this.subscriptionRepository.save(subscription);
+
+    return { free: false, authorizationUrl: init.authorizationUrl, reference };
+  }
+
+  /**
+   * Handle a Paystack webhook for a subscription checkout.
+   *
+   * SECURITY / money-path:
+   *  - Signature is verified by REUSING PaystackAdapter.parseWebhook (HMAC-SHA512
+   *    over the raw body with the env secret key). A bad/absent signature throws
+   *    UnauthorizedException → 401; we NEVER act on an unverified payload.
+   *  - Only 'charge.success' normalizes to a non-null event; any other event
+   *    type returns null and is ignored (never activates a plan).
+   *  - Idempotency: the reference is looked up in the SubscriptionPayment ledger.
+   *    An unknown reference is ignored (it is not one of our checkouts). A row
+   *    already SUCCESS is a duplicate delivery → acknowledged as a no-op. Only a
+   *    PENDING row whose paid amount covers the expected amount is activated,
+   *    exactly once, via the idempotent changePlan.
+   *  - Runs OUTSIDE any tenant context (public route); changePlan and all repos
+   *    used here are landlord-scoped, so this is safe.
+   */
+  async handlePaystackWebhook(
+    headers: Record<string, any>,
+    rawBody: string,
+  ): Promise<{ handled: boolean; reason: string; paymentId?: string }> {
+    const secretKey = this.paystackSecretKey();
+    if (!secretKey) {
+      this.logger.warn(
+        'Paystack subscription webhook received but PAYSTACK_SECRET_KEY is not set — ignoring',
+      );
+      return { handled: false, reason: 'not_configured' };
+    }
+
+    // Reuse the adapter's HMAC verification. Throws UnauthorizedException on a
+    // bad signature (surfaced as 401 by the global exception filter).
+    const normalized = this.paystackAdapter.parseWebhook(
+      headers,
+      rawBody,
+      { secretKey },
+      '',
+    );
+    if (!normalized) {
+      // Non-success event type — acknowledge without acting.
+      return { handled: false, reason: 'ignored_event' };
+    }
+
+    const payment = await this.paymentRepository.findOne({
+      where: { reference: normalized.reference },
+    });
+    if (!payment) {
+      // Not one of our subscription checkouts (e.g. a tenant collection).
+      return { handled: false, reason: 'unknown_reference' };
+    }
+    if (payment.status === 'SUCCESS') {
+      // Duplicate delivery — Paystack retries. Idempotent no-op.
+      return { handled: true, reason: 'duplicate', paymentId: payment.id };
+    }
+    if (payment.status === 'FAILED') {
+      return { handled: false, reason: 'already_failed', paymentId: payment.id };
+    }
+
+    // Defensive: never trust the provider's amount blindly. Require the paid
+    // amount to cover the expected price (0.5 minor-unit tolerance).
+    if (Number(normalized.amount) + 0.5 < Number(payment.amount)) {
+      payment.status = 'FAILED';
+      payment.failureReason = `Underpayment: paid ${normalized.amount} ${normalized.currency}, expected ${payment.amount} ${payment.currency}`;
+      await this.paymentRepository.save(payment);
+      this.logger.warn(
+        `Rejected subscription payment ${payment.id}: ${payment.failureReason}`,
+      );
+      return { handled: false, reason: 'amount_mismatch', paymentId: payment.id };
+    }
+
+    // Activate idempotently (changePlan re-sets the same plan/period safely).
+    await this.changePlan(payment.tenantId, payment.planCode);
+
+    payment.status = 'SUCCESS';
+    payment.providerRef = normalized.reference;
+    payment.processedAt = new Date();
+    await this.paymentRepository.save(payment);
+
+    // Confirm the provider ref on the subscription stub fields.
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { tenantId: payment.tenantId },
+    });
+    if (subscription) {
+      subscription.paymentProvider = 'paystack';
+      subscription.paymentProviderRef = normalized.reference;
+      await this.subscriptionRepository.save(subscription);
+    }
+
+    this.logger.log(
+      `Activated plan ${payment.planCode} for tenant ${payment.tenantId} (payment ${payment.id})`,
+    );
+    return { handled: true, reason: 'activated', paymentId: payment.id };
   }
 
   /**

@@ -1,14 +1,17 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BillingController } from './billing.controller';
+import { BillingWebhookController } from './billing-webhook.controller';
 import { BillingService } from './billing.service';
 import { FeatureGateGuard } from './guards/feature-gate.guard';
 import { Plan } from './entities/plan.entity';
 import { TenantSubscription } from './entities/tenant-subscription.entity';
+import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { AppAccessRequest } from './entities/app-access-request.entity';
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
+import { PaystackAdapter } from '../integrations/adapters/paystack.adapter';
 
 /**
  * SaaS billing. Plan and TenantSubscription are LANDLORD-scoped — they live
@@ -25,11 +28,17 @@ import { InventoryItem } from '../ims/entities/inventory-item.entity';
 @Global()
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Plan, TenantSubscription, AppAccessRequest], 'landlord'),
+    TypeOrmModule.forFeature(
+      [Plan, TenantSubscription, SubscriptionPayment, AppAccessRequest],
+      'landlord',
+    ),
     TypeOrmModule.forFeature([User, Branch, InventoryItem]),
   ],
-  controllers: [BillingController],
-  providers: [BillingService, FeatureGateGuard],
+  controllers: [BillingController, BillingWebhookController],
+  // PaystackAdapter is stateless (no injected deps beyond a Logger); providing
+  // it here reuses the exact same adapter code — including its HMAC-SHA512
+  // webhook verification — without importing IntegrationsModule.
+  providers: [BillingService, FeatureGateGuard, PaystackAdapter],
   exports: [BillingService, FeatureGateGuard],
 })
 export class BillingModule {}

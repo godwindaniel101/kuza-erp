@@ -8,6 +8,7 @@ import { LandlordUser } from './entities/landlord-user.entity';
 import { LandlordService } from './services/landlord.service';
 import { Plan } from '../../modules/billing/entities/plan.entity';
 import { TenantSubscription } from '../../modules/billing/entities/tenant-subscription.entity';
+import { SubscriptionPayment } from '../../modules/billing/entities/subscription-payment.entity';
 import { AppAccessRequest } from '../../modules/billing/entities/app-access-request.entity';
 import { LandlordWebhookRoute } from '../../modules/integrations/entities/landlord-webhook-route.entity';
 import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route.entity';
@@ -32,6 +33,7 @@ import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route
             ...((config.entities as any[]) || []),
             Plan,
             TenantSubscription,
+            SubscriptionPayment,
             AppAccessRequest,
             LandlordWebhookRoute,
             MenuSlugRoute,
