@@ -5,6 +5,19 @@ import { api } from '@/lib/api';
  * Shared formatting helpers for the Accounting / Sales / Billing modules.
  */
 
+/**
+ * Resolve an item image src to a loadable URL. Backend-relative uploads
+ * (e.g. "/uploads/inventory/x.jpg", produced by bulk create) are served by the
+ * API origin, not the frontend — prefix them so they load. data:/blob:/http(s)
+ * URLs (e.g. single-create base64) pass through unchanged.
+ */
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+export function resolveImageUrl(src?: string | null): string {
+  if (!src) return '';
+  if (/^(https?:|data:|blob:)/i.test(src)) return src;
+  return `${API_ORIGIN}${src.startsWith('/') ? '' : '/'}${src}`;
+}
+
 const currencySymbols: { [key: string]: string } = {
   NGN: '₦',
   USD: '$',

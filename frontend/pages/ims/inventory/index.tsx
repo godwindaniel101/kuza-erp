@@ -19,7 +19,7 @@ import InventoryTabs from '@/components/ui/InventoryTabs';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import { useTableState } from '@/hooks/useTableState';
-import { downloadCsv } from '@/lib/format';
+import { downloadCsv, resolveImageUrl } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
@@ -208,8 +208,11 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2.5">
           {item.frontImage ? (
             <img
-              src={item.frontImage}
+              src={resolveImageUrl(item.frontImage)}
               alt=""
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
               className="h-9 w-9 flex-shrink-0 rounded-md object-cover ring-1 ring-gray-200 dark:ring-gray-700"
             />
           ) : (

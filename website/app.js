@@ -18,22 +18,46 @@
     window.addEventListener("scroll", onScroll, { passive: true });
   }
 
-  /* ---------- Products dropdown (desktop) ---------- */
+  /* ---------- Products dropdown (desktop) ----------
+     Click-to-open (reliable) + hover-intent with a close delay.
+     The CSS bridges the visual gap between trigger and menu (.dropdown::before)
+     so moving the pointer into the menu never crosses a "dead zone". */
   var drop = document.querySelector(".nav-item--drop");
   if (drop) {
     var trigger = drop.querySelector(".nav-trigger");
-    var close = function () { drop.classList.remove("open"); if (trigger) trigger.setAttribute("aria-expanded", "false"); };
-    var open = function () { drop.classList.add("open"); if (trigger) trigger.setAttribute("aria-expanded", "true"); };
+    var closeTimer = null;
+    var setOpen = function (v) {
+      drop.classList.toggle("open", v);
+      if (trigger) trigger.setAttribute("aria-expanded", v ? "true" : "false");
+    };
+    var open = function () { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } setOpen(true); };
+    var close = function () { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } setOpen(false); };
+    var scheduleClose = function () {
+      if (closeTimer) clearTimeout(closeTimer);
+      closeTimer = setTimeout(function () { setOpen(false); closeTimer = null; }, 180);
+    };
     if (trigger) {
       trigger.addEventListener("click", function (e) {
+        e.preventDefault();
         e.stopPropagation();
         drop.classList.contains("open") ? close() : open();
       });
     }
+    /* Hover-intent: open immediately, close after a short grace period. */
     drop.addEventListener("mouseenter", open);
-    drop.addEventListener("mouseleave", close);
+    drop.addEventListener("mouseleave", scheduleClose);
+    /* Close when a menu item is chosen (before navigation). */
+    drop.querySelectorAll(".drop-link").forEach(function (link) {
+      link.addEventListener("click", close);
+    });
+    /* Outside-click and Escape close it; Escape returns focus to the trigger. */
     document.addEventListener("click", function (e) { if (!drop.contains(e.target)) close(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && drop.classList.contains("open")) {
+        close();
+        if (trigger) trigger.focus();
+      }
+    });
   }
 
   /* ---------- Mobile drawer ---------- */
