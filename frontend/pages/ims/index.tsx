@@ -28,9 +28,20 @@ interface StockMovement {
   id: string;
   itemId: string;
   itemName?: string;
+  branchId?: string;
+  branchName?: string;
   movementType: string;
   quantity: number;
   createdAt: string;
+}
+
+interface LowStockRow {
+  key: string;
+  itemName: string;
+  branchName: string;
+  stock: number;
+  min: number;
+  unit?: string;
 }
 
 const num = (v: unknown): number => {
@@ -50,17 +61,51 @@ const MOVE_TONE: Record<string, string> = {
 export default function InventoryDashboardPage() {
   const currency = useCurrency();
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [lowStockRows, setLowStockRows] = useState<LowStockRow[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [inv, mv] = await Promise.allSettled([
-        api.get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory'),
+      const [inv, mv, br] = await Promise.allSettled([
+        api.get<{ success: boolean; data: any[] }>('/ims/inventory?withBranchStock=true'),
         api.get<{ success: boolean; data: { items: StockMovement[] } }>('/ims/stock-movements?page=1&limit=8'),
+        api.get<{ success: boolean; data: { id: string; name: string }[] }>('/settings/branches'),
       ]);
-      if (inv.status === 'fulfilled' && inv.value.success && Array.isArray(inv.value.data)) setItems(inv.value.data);
-      if (mv.status === 'fulfilled' && mv.value.success && Array.isArray(mv.value.data?.items)) setMovements(mv.value.data.items);
+      const branchMap = new Map<string, string>();
+      if (br.status === 'fulfilled' && br.value.success && Array.isArray(br.value.data)) {
+        br.value.data.forEach((b) => branchMap.set(b.id, b.name));
+      }
+      let inventory: any[] = [];
+      if (inv.status === 'fulfilled' && inv.value.success && Array.isArray(inv.value.data)) {
+        inventory = inv.value.data;
+        setItems(inventory);
+        // Per-branch low stock: an item is "needs restocking" AT a specific branch.
+        const rows: LowStockRow[] = [];
+        inventory.forEach((it) => {
+          const bs = it.branchStocks || {};
+          Object.keys(bs).forEach((bid) => {
+            const stock = num(bs[bid]?.stock);
+            const min = num(bs[bid]?.minimumStock);
+            if (min > 0 && stock <= min) {
+              rows.push({
+                key: `${it.id}:${bid}`,
+                itemName: it.name,
+                branchName: branchMap.get(bid) || 'Branch',
+                stock,
+                min,
+                unit: it.unit,
+              });
+            }
+          });
+        });
+        setLowStockRows(rows.sort((a, b) => a.stock - b.stock));
+      }
+      if (mv.status === 'fulfilled' && mv.value.success && Array.isArray(mv.value.data?.items)) {
+        setMovements(
+          mv.value.data.items.map((m) => ({ ...m, branchName: m.branchName || (m.branchId ? branchMap.get(m.branchId) : undefined) })),
+        );
+      }
       setLoading(false);
     })();
   }, []);
@@ -149,33 +194,31 @@ export default function InventoryDashboardPage() {
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <div className="p-5 text-sm text-gray-400">Loading…</div>
-            ) : lowStockItems.length === 0 ? (
+            ) : lowStockRows.length === 0 ? (
               <div className="flex flex-col items-center gap-1 p-8 text-center">
                 <i className="bx bx-check-circle text-3xl text-emerald-500" />
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Everything's well stocked</p>
                 <p className="text-xs text-gray-500">No items at or below their reorder point.</p>
               </div>
             ) : (
-              lowStockItems.slice(0, 6).map((i) => {
-                const stock = num(i.currentStock);
-                return (
-                  <div key={i.id} className="flex items-center justify-between px-5 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{i.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {stock} {i.unit || 'units'} left · reorder at {reorderOf(i)}
-                      </p>
-                    </div>
-                    <span
-                      className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                        stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
-                      }`}
-                    >
-                      {stock <= 0 ? 'Out' : 'Low'}
-                    </span>
+              lowStockRows.slice(0, 6).map((r) => (
+                <div key={r.key} className="flex items-center justify-between px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{r.itemName}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1"><i className="bx bx-store text-gray-400" />{r.branchName}</span>
+                      {' · '}{r.stock} {r.unit || 'units'} left · reorder at {r.min}
+                    </p>
                   </div>
-                );
-              })
+                  <span
+                    className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      r.stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
+                    }`}
+                  >
+                    {r.stock <= 0 ? 'Out' : 'Low'}
+                  </span>
+                </div>
+              ))
             )}
           </div>
         </Card>
@@ -206,7 +249,12 @@ export default function InventoryDashboardPage() {
                       <span className={`shrink-0 rounded-lg px-2 py-0.5 text-xs font-medium ${MOVE_TONE[t] || 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
                         {t || 'MOVE'}
                       </span>
-                      <p className="truncate text-sm text-gray-700 dark:text-gray-300">{m.itemName || m.itemId}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-gray-700 dark:text-gray-300">{m.itemName || m.itemId}</p>
+                        {m.branchName && (
+                          <p className="truncate text-xs text-gray-400"><i className="bx bx-store" /> {m.branchName}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="ml-3 shrink-0 text-right">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{num(m.quantity)}</p>
