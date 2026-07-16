@@ -11,10 +11,13 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import StatusBadge from '@/components/ui/StatusBadge';
+import Card from '@/components/Card';
+import { formatMoney, useCurrency } from '@/lib/format';
 import { handleBulkUploadResponse, logBulkUploadErrors, type BulkUploadResponse } from '@/utils/bulkUploadHandler';
 
 export default function BranchesPage() {
   const { t } = useTranslation('common');
+  const currency = useCurrency();
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,7 +37,6 @@ export default function BranchesPage() {
     isActive: true,
   });
   const [saving, setSaving] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   // Bulk upload states
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -315,136 +317,114 @@ export default function BranchesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {branches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((branch) => (
-              <div
-                key={branch.id}
-                className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 hover:ring-brand-300 dark:hover:ring-brand-700 transition-shadow duration-150"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex flex-1 items-start gap-3 min-w-0">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
-                      <i className="bx bx-store text-lg" aria-hidden="true"></i>
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                        {branch.name}
-                        {branch.isDefault && (
-                          <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({t('default')})</span>
-                        )}
-                      </h3>
-                      <div className="mt-2">
-                        {branch.isActive ? (
-                          <StatusBadge variant="success" label={t('active')} size="sm" />
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                            <i className="bx bx-minus-circle" aria-hidden="true"></i>
-                            {t('inactive')}
+          <Card padding={false}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('branch')}</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('status')}</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('address')}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('lowStock') || 'Low Stock'}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('totalSales') || 'Total Sales'}</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {branches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((branch) => {
+                    const lowStock = Number(branch.stats?.lowStockCount || 0);
+                    return (
+                      <tr key={branch.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        {/* Branch */}
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                              <i className="bx bx-store text-lg" aria-hidden="true"></i>
+                            </span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{branch.name}</span>
+                                {branch.isDefault && (
+                                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                                    {t('default')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3 text-sm">
+                          {branch.isActive ? (
+                            <StatusBadge variant="success" label={t('active')} size="sm" />
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                              <i className="bx bx-minus-circle" aria-hidden="true"></i>
+                              {t('inactive')}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Address */}
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="block max-w-xs truncate" title={branch.address || ''}>
+                            {branch.address || '-'}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(openMenuId === branch.id ? null : branch.id);
-                      }}
-                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      title={t('actions') || 'Actions'}
-                    >
-                      <i className="bx bx-dots-vertical-rounded text-xl"></i>
-                    </button>
-                    
-                    {openMenuId === branch.id && (
-                      <>
-                        {/* Backdrop to close menu on outside click */}
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setOpenMenuId(null)}
-                        ></div>
-                        
-                        {/* Dropdown menu */}
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-popover border border-gray-200 dark:border-gray-700 z-20 py-1">
-                          <PermissionGuard permission="branches.edit">
+                        </td>
+
+                        {/* Low stock */}
+                        <td className={`px-4 py-3 text-sm text-right tabular-nums font-medium ${lowStock > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {lowStock}
+                        </td>
+
+                        {/* Total sales */}
+                        <td className="px-4 py-3 text-sm text-right tabular-nums font-medium text-gray-900 dark:text-gray-100">
+                          {formatMoney(branch.stats?.totalSales || 0, currency)}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center justify-end gap-1">
+                            <PermissionGuard permission="branches.edit">
+                              <button
+                                onClick={() => handleOpenEditModal(branch)}
+                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                title={t('edit')}
+                              >
+                                <i className="bx bx-edit text-lg" aria-hidden="true"></i>
+                              </button>
+                            </PermissionGuard>
                             <button
-                              onClick={() => {
-                                handleOpenEditModal(branch);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 transition-colors"
+                              onClick={() => { window.location.href = `/ims/inventory?branchId=${branch.id}&lowStock=true`; }}
+                              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              title={t('viewLowStocks') || 'View Low Stocks'}
                             >
-                              <i className="bx bx-edit text-blue-600 dark:text-blue-400"></i>
-                              <span>{t('edit')}</span>
+                              <i className="bx bx-error-circle text-lg" aria-hidden="true"></i>
                             </button>
-                          </PermissionGuard>
-                          <button
-                            onClick={() => {
-                              window.location.href = `/ims/inventory?branchId=${branch.id}&lowStock=true`;
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 transition-colors"
-                          >
-                            <i className="bx bx-error-circle text-red-600 dark:text-red-400"></i>
-                            <span>{t('viewLowStocks') || 'View Low Stocks'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              window.location.href = `/rms/reports?branchId=${branch.id}`;
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 transition-colors"
-                          >
-                            <i className="bx bx-line-chart text-blue-600 dark:text-blue-400"></i>
-                            <span>{t('analytics') || 'Analytics'}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              window.location.href = `/ims/inflows?branchId=${branch.id}`;
-                              setOpenMenuId(null);
-                            }}
-                            className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 transition-colors"
-                          >
-                            <i className="bx bx-history text-green-600 dark:text-green-400"></i>
-                            <span>{t('inflowHistory') || 'History'}</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address */}
-                {branch.address && (
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start">
-                      <i className="bx bx-map mr-2 mt-0.5 text-gray-400"></i>
-                      <span className="flex-1">{branch.address}</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('lowStock') || 'Low Stock'}</p>
-                    <p className="text-lg font-semibold text-red-600 dark:text-red-400">
-                      {branch.stats?.lowStockCount || 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('totalSales') || 'Total Sales'}</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      ₦{Number(branch.stats?.totalSales || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-            ))}
-          </div>
+                            <button
+                              onClick={() => { window.location.href = `/rms/reports?branchId=${branch.id}`; }}
+                              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              title={t('analytics') || 'Analytics'}
+                            >
+                              <i className="bx bx-line-chart text-lg" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              onClick={() => { window.location.href = `/ims/inflows?branchId=${branch.id}`; }}
+                              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              title={t('inflowHistory') || 'History'}
+                            >
+                              <i className="bx bx-history text-lg" aria-hidden="true"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(branches.length / itemsPerPage)}

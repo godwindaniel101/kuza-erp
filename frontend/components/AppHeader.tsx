@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuthStore } from '@/store/authStore';
 import { useTenantStore } from '@/store/globalStore';
 import { getApp, presetFor } from '@/lib/apps';
+import { availableCoarseApps, appDisplayName, hasAppKey } from '@/lib/appCatalog';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
 import Icon from './ui/Icon';
@@ -34,10 +35,10 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   // never on Inventory/Sales/Accounting pages (would flip the sidebar to Restaurant).
   const showNewOrder = router.pathname.startsWith('/rms') && (businessType === 'restaurant' || businessType === null);
 
-  // Launcher entries: the tenant's effective apps (legacy backend -> businessType preset).
-  const launcherApps = (effectiveApps ?? presetFor(businessType))
-    .map((key) => getApp(key))
-    .filter((app): app is NonNullable<typeof app> => !!app);
+  // Launcher entries: the coarse apps the tenant can access — the same 7 the
+  // sidebar uses (Restaurant/POS, Inventory, Sales, Accounting, People, Settings),
+  // not granular registry keys.
+  const launcherApps = availableCoarseApps(effectiveApps);
 
   /** App key -> candidate sidebar groups, in priority order (first effective wins). */
   const APP_GROUP_CANDIDATES: Record<string, string[]> = {
@@ -61,14 +62,16 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
     return candidates.find((c) => availableGroups.includes(c)) ?? 'all';
   };
 
-  // Quick-create ("+") menu: common record-creation shortcuts across modules.
-  const quickCreateItems: { label: string; href: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
-    { label: 'New Sale', href: '/pos', icon: 'banknotes' },
-    { label: 'New Invoice', href: '/sales/invoices/new', icon: 'document-text' },
-    { label: 'Add Item', href: '/ims/inventory', icon: 'cube' },
-    { label: 'Add Employee', href: '/hrms/employees/create', icon: 'user' },
-    { label: 'New Journal Entry', href: '/accounting/journal-entries/new', icon: 'book-open' },
-  ];
+  // Quick-create ("+") menu: creators only for apps the tenant actually has.
+  const quickCreateItems = (
+    [
+      { label: 'New Sale', href: '/pos', icon: 'banknotes', key: 'pos' },
+      { label: 'New Invoice', href: '/sales/invoices/new', icon: 'document-text', key: 'invoicing' },
+      { label: 'Add Item', href: '/ims/inventory', icon: 'cube', key: 'items' },
+      { label: 'Add Employee', href: '/hrms/employees/create', icon: 'user', key: 'people' },
+      { label: 'New Journal Entry', href: '/accounting/journal-entries/new', icon: 'book-open', key: 'books' },
+    ] as { label: string; href: string; icon: Parameters<typeof Icon>[0]['name']; key: string }[]
+  ).filter((it) => hasAppKey(it.key, effectiveApps));
 
   // Global search routes the query to the most relevant list for the active module.
   const SEARCH_TARGETS: [string, string][] = [
@@ -374,20 +377,17 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
                 <div className="grid grid-cols-3 gap-1 p-2 max-h-80 overflow-y-auto">
                   {launcherApps.map((app) => (
                     <Link
-                      key={app.key}
-                      href={app.homeRoute}
+                      key={app.id}
+                      href={app.home}
                       role="menuitem"
-                      onClick={() => {
-                        setActiveWorkspace(workspaceForApp(app.key));
-                        setLauncherOpen(false);
-                      }}
+                      onClick={() => setLauncherOpen(false)}
                       className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-2.5 text-center transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400">
                         <Icon name={app.icon} size={18} />
                       </span>
                       <span className="w-full truncate text-2xs font-medium text-gray-700 dark:text-gray-300">
-                        {app.name}
+                        {appDisplayName(app, businessType)}
                       </span>
                     </Link>
                   ))}
