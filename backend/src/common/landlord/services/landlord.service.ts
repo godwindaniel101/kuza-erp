@@ -204,4 +204,32 @@ export class LandlordService {
   async verifyPassword(user: LandlordUser, password: string): Promise<boolean> {
     return await bcrypt.compare(password, user.password);
   }
+
+  /**
+   * Promote the landlord user with the given email to platform super-admin.
+   * Landlord-scoped; used by the SUPER_ADMIN_EMAIL seeder on boot.
+   *
+   * - Idempotent: no-op if the user is already a super-admin.
+   * - Safe no-op if `email` is falsy or no matching user exists (returns a
+   *   discriminated result so the caller can log the difference). This never
+   *   creates a user and never establishes a bypass — it only flips a flag on
+   *   an existing, self-registered landlord user.
+   */
+  async ensureSuperAdminByEmail(
+    email?: string | null,
+  ): Promise<'promoted' | 'already' | 'not-found'> {
+    if (!email) {
+      return 'not-found';
+    }
+    const user = await this.landlordUserRepository.findOne({ where: { email } });
+    if (!user) {
+      return 'not-found';
+    }
+    if (user.isSuperAdmin) {
+      return 'already';
+    }
+    user.isSuperAdmin = true;
+    await this.landlordUserRepository.save(user);
+    return 'promoted';
+  }
 }

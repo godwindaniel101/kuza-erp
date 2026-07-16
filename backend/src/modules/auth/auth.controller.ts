@@ -97,8 +97,11 @@ export class AuthController {
   async getMe(@Request() req) {
     const user = await this.authService.validateUser(req.user.sub, true);
     return {
+      // Expose the platform super-admin flag (from the signed JWT claim) so the
+      // client can reveal the /admin back-office entry point. Server-side access
+      // is still enforced independently by SuperAdminGuard.
       success: true,
-      data: user,
+      data: { ...user, isSuperAdmin: req.user?.isSuperAdmin === true },
     };
   }
 }

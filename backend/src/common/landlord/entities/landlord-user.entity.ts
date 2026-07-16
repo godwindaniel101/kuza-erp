@@ -29,6 +29,16 @@ export class LandlordUser extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
+  /**
+   * Platform super-admin flag — landlord-scoped. A super-admin can act across
+   * ALL tenants via the /admin back-office (guarded server-side by
+   * SuperAdminGuard). Default false; seeded to true only for the user whose
+   * email matches process.env.SUPER_ADMIN_EMAIL (see SuperAdminSeeder). This
+   * is the source of truth for the isSuperAdmin JWT claim.
+   */
+  @Column({ default: false })
+  isSuperAdmin: boolean;
+
   @ManyToOne(() => Tenant, (tenant) => tenant.users)
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;

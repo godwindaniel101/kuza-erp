@@ -178,11 +178,14 @@ export class AuthService {
         email: landlordUser.email,
         sub: landlordUser.id,
         tenantId: tenant.id, // Use tenantId consistently
+        // Platform super-admin claim (server-side authority for /admin). A newly
+        // registered owner is never a super-admin; kept explicit for consistency.
+        isSuperAdmin: landlordUser.isSuperAdmin === true,
       };
       const token = this.jwtService.sign(payload);
 
-      // Step 8: Map user to safe format (like in login)
-      const safeUser = this.mapUser(completeUser);
+      // Step 8: Map user to safe format (like in login) + expose super-admin flag
+      const safeUser = { ...this.mapUser(completeUser), isSuperAdmin: landlordUser.isSuperAdmin === true };
 
       // Step 9: Reset schema to default for future requests
       await this.tenantConnectionService.resetSchema();
@@ -266,11 +269,15 @@ export class AuthService {
         email: landlordUser.email,
         sub: landlordUser.id,
         tenantId: tenant.id, // Use tenantId consistently
+        // Platform super-admin claim — signed into the JWT so SuperAdminGuard
+        // can authorize /admin without trusting the client. Sourced from the
+        // landlord user record (seeded from SUPER_ADMIN_EMAIL).
+        isSuperAdmin: landlordUser.isSuperAdmin === true,
       };
       const token = this.jwtService.sign(payload);
 
-      // Step 7: Map user to safe format
-      const safeUser = this.mapUser(user);
+      // Step 7: Map user to safe format + expose super-admin flag
+      const safeUser = { ...this.mapUser(user), isSuperAdmin: landlordUser.isSuperAdmin === true };
 
       // Step 8: Reset schema
       await this.tenantConnectionService.resetSchema();
@@ -573,11 +580,17 @@ export class AuthService {
   }
 
   // Public method to generate JWT tokens (for Google OAuth callback)
-  generateToken(userId: string, email: string, tenantId: string): string {
+  generateToken(
+    userId: string,
+    email: string,
+    tenantId: string,
+    isSuperAdmin = false,
+  ): string {
     const payload = {
       email,
       sub: userId,
       tenantId,
+      isSuperAdmin: isSuperAdmin === true,
     };
     return this.jwtService.sign(payload);
   }

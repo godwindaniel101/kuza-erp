@@ -35,6 +35,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         tenant: user.tenant,
         roles: (user as any).roles || [],
         permissions: (user as any).permissions || [],
+        // Platform super-admin flag comes from the signed JWT claim (source of
+        // truth for SuperAdminGuard). Never trust anything client-supplied here.
+        isSuperAdmin: payload.isSuperAdmin === true,
       };
     }
 

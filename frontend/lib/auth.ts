@@ -10,6 +10,12 @@ export interface User {
   businessId: string;
   permissions: string[];
   roles: string[];
+  /**
+   * Platform super-admin flag carried by /auth/me + login. Purely a UX signal
+   * for showing the /admin surface — real enforcement is server-side on every
+   * /admin endpoint. Read defensively (may be absent on older tokens).
+   */
+  isSuperAdmin?: boolean;
 }
 
 export interface AuthState {
@@ -47,6 +53,7 @@ class AuthService {
       businessId: user.businessId || user.business?.id || '',
       roles,
       permissions,
+      isSuperAdmin: Boolean(user.isSuperAdmin ?? user.is_super_admin ?? false),
     } as User;
   }
 
@@ -190,5 +197,6 @@ export const authService = new AuthService();
     businessId: user.businessId || user.business?.id || '',
     roles,
     permissions,
+    isSuperAdmin: Boolean(user.isSuperAdmin ?? user.is_super_admin ?? false),
   } as User;
 };

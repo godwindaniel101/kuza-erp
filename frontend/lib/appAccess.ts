@@ -43,6 +43,11 @@ const ROUTE_RULES: RouteRule[] = [
  * (dashboard, generic settings, profile, employee self-service, app launcher).
  */
 export function requiredAppKeys(pathname: string): string[] | null {
+  // Platform back-office (/admin) is super-admin-only and lives OUTSIDE the
+  // tenant app model — it is never gated by a tenant's effectiveApps. Access is
+  // enforced server-side on every /admin endpoint and client-side by the page's
+  // super-admin guard.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return null;
   const rule = ROUTE_RULES.find((r) => pathname.startsWith(r.prefix));
   return rule ? rule.keys : null;
 }

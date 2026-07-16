@@ -195,6 +195,19 @@ export class BillingService {
     return subscription;
   }
 
+  /**
+   * The raw plan catalog (super-admin back-office, read-only). Unlike getPlans,
+   * this does NOT attach a tenant-currency localPrice — the super-admin view is
+   * cross-tenant, so a single "local" price would be misleading.
+   */
+  async getPlanCatalog(): Promise<Plan[]> {
+    await this.ensurePlansSeeded();
+    return this.planRepository.find({
+      where: { isActive: true },
+      order: { monthlyPriceUsd: 'ASC' },
+    });
+  }
+
   private async getPlanByCode(code: string): Promise<Plan> {
     await this.ensurePlansSeeded();
     const plan = await this.planRepository.findOne({
@@ -424,6 +437,7 @@ export class BillingService {
     }));
 
     return {
+      businessType: business.businessType,
       apps,
       effective: APP_KEYS.filter(
         (key) => enabled.has(key) && allowed.has(key),
@@ -558,6 +572,35 @@ export class BillingService {
       where: status ? { tenantId, status } : { tenantId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  /**
+   * List access requests across ALL tenants, newest first, optionally by
+   * status. Intended only for the platform super-admin back-office — the
+   * tenant-scoped listAccessRequests above remains the path for tenant admins.
+   */
+  async listAllAccessRequests(
+    status?: AccessRequestStatus,
+  ): Promise<AppAccessRequest[]> {
+    return this.accessRequestRepository.find({
+      where: status ? { status } : {},
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Fetch a single access request by id (super-admin back-office): used to
+   * resolve the owning tenant before reusing the tenant-scoped approve/reject
+   * logic cross-tenant.
+   */
+  async getAccessRequestById(id: string): Promise<AppAccessRequest> {
+    const request = await this.accessRequestRepository.findOne({
+      where: { id },
+    });
+    if (!request) {
+      throw new NotFoundException('Access request not found');
+    }
+    return request;
   }
 
   private async getPendingAccessRequest(
