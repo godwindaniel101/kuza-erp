@@ -122,7 +122,8 @@ export default function CreateTransferPage() {
         ]}
       />
 
-      <Card>
+      {/* overflow-visible so SearchableSelect dropdowns aren't clipped (Card uses overflow-hidden) */}
+      <div className="rounded-2xl bg-white dark:bg-gray-900 shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">From branch</label>
@@ -142,9 +143,10 @@ export default function CreateTransferPage() {
             />
           </div>
         </div>
-      </Card>
+      </div>
 
-      <Card title="Items">
+      <div className="rounded-2xl bg-white dark:bg-gray-900 shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5">
+        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">Items</h3>
         <div className="space-y-2">
           {/* header */}
           <div className="hidden grid-cols-[2fr_1fr_auto] gap-3 px-1 pb-1 text-2xs font-semibold uppercase tracking-wider text-gray-500 sm:grid">
@@ -186,7 +188,7 @@ export default function CreateTransferPage() {
             <i className="bx bx-plus" /> Add item
           </Button>
         </div>
-      </Card>
+      </div>
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="secondary" href="/ims/transfers">

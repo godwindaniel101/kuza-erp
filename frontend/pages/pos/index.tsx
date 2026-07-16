@@ -84,8 +84,12 @@ export default function PosPage() {
         if (branchesRes.success) {
           setBranches(branchesRes.data);
           if (branchesRes.data.length > 0) {
+            // Restore the last-used branch so the cashier doesn't reselect each visit.
+            const saved = typeof window !== 'undefined' ? localStorage.getItem('kuza.pos.branchId') : null;
             const preferred =
-              branchesRes.data.find((b) => b.isDefault) || branchesRes.data[0];
+              (saved && branchesRes.data.find((b) => b.id === saved)) ||
+              branchesRes.data.find((b) => b.isDefault) ||
+              branchesRes.data[0];
             setBranchId(preferred.id);
           }
         }
@@ -315,7 +319,10 @@ export default function PosPage() {
                   label: `${branch.name}${branch.isDefault ? ' (Default)' : ''}`,
                 }))}
                 value={branchId}
-                onChange={setBranchId}
+                onChange={(v) => {
+                  setBranchId(v);
+                  if (typeof window !== 'undefined') localStorage.setItem('kuza.pos.branchId', v);
+                }}
                 placeholder="Select branch"
                 searchPlaceholder="Search branch…"
                 disabled={loading || branches.length === 0}
@@ -325,7 +332,7 @@ export default function PosPage() {
         </div>
 
         {/* Two panes */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_384px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_344px]">
           {/* Left — products */}
           <div className="min-h-0 min-w-0">
             <ProductGrid
