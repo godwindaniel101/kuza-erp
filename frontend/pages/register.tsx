@@ -5,15 +5,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
 import type { BusinessType } from '@/store/globalStore';
-import {
-  APP_REGISTRY,
-  AppKey,
-  enabledDependents,
-  getApp,
-  missingDependencies,
-  presetFor,
-  withDependencies,
-} from '@/lib/apps';
+import { AppKey, getApp, presetFor, withDependencies } from '@/lib/apps';
 import Icon, { IconName } from '@/components/ui/Icon';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -46,9 +38,6 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stepErrors, setStepErrors] = useState<{ [key: number]: string }>({});
-  const [showMoreApps, setShowMoreApps] = useState(false);
-  /** Small note under the apps grid when dependencies auto-check/uncheck. */
-  const [depNote, setDepNote] = useState('');
   // Manual edits survive business-type switches (where sane — deps re-close).
   const manualAdds = useRef(new Set<string>());
   const manualRemoves = useRef(new Set<string>());
@@ -77,50 +66,12 @@ export default function Register() {
       ...Array.from(manualAdds.current),
     ];
     setFormData((prev) => ({ ...prev, businessType: type, apps: withDependencies(base) }));
-    setDepNote('');
     setStepErrors((prev) => ({ ...prev, 1: '' }));
-  };
-
-  const handleAppToggle = (key: AppKey) => {
-    const checked = formData.apps.includes(key);
-    let nextApps: string[];
-    let note = '';
-
-    if (checked) {
-      // Unchecking also unchecks apps that depend on it.
-      const dependents = enabledDependents(key, formData.apps);
-      nextApps = formData.apps.filter((k) => k !== key && !dependents.includes(k as AppKey));
-      manualRemoves.current.add(key);
-      manualAdds.current.delete(key);
-      dependents.forEach((d) => {
-        manualRemoves.current.add(d);
-        manualAdds.current.delete(d);
-      });
-      if (dependents.length > 0) {
-        note = `Also turned off ${joinNames(dependents)} — ${dependents.length > 1 ? 'they need' : 'it needs'} ${
-          getApp(key)?.name ?? key
-        }.`;
-      }
-    } else {
-      // Checking auto-checks its dependencies.
-      const added = missingDependencies(key, formData.apps);
-      nextApps = withDependencies([...formData.apps, key]);
-      manualAdds.current.add(key);
-      manualRemoves.current.delete(key);
-      added.forEach((d) => manualRemoves.current.delete(d));
-      if (added.length > 0) {
-        note = `Also enabled ${joinNames(added)} — required by ${getApp(key)?.name ?? key}.`;
-      }
-    }
-
-    setFormData((prev) => ({ ...prev, apps: nextApps }));
-    setDepNote(note);
-    setStepErrors((prev) => ({ ...prev, 2: '' }));
   };
 
   const handleCountrySelect = (country: string) => {
     setFormData((prev) => ({ ...prev, country }));
-    setStepErrors((prev) => ({ ...prev, 3: '' }));
+    setStepErrors((prev) => ({ ...prev, 2: '' }));
   };
 
   const validateStep = (step: number): boolean => {
@@ -132,15 +83,8 @@ export default function Register() {
       return true;
     }
     if (step === 2) {
-      if (formData.apps.length === 0) {
-        setStepErrors((prev) => ({ ...prev, 2: 'Please keep at least one app enabled' }));
-        return false;
-      }
-      return true;
-    }
-    if (step === 3) {
       if (!formData.country) {
-        setStepErrors((prev) => ({ ...prev, 3: 'Please select a country' }));
+        setStepErrors((prev) => ({ ...prev, 2: 'Please select a country' }));
         return false;
       }
       return true;
@@ -150,7 +94,7 @@ export default function Register() {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4));
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
     }
   };
 
@@ -216,9 +160,8 @@ export default function Register() {
               <div className="flex items-center justify-between">
                 {[
                   { n: 1, label: 'Business' },
-                  { n: 2, label: 'Apps' },
-                  { n: 3, label: 'Country' },
-                  { n: 4, label: 'Details' },
+                  { n: 2, label: 'Country' },
+                  { n: 3, label: 'Details' },
                 ].map((step, i) => (
                   <div key={step.n} className="flex items-center min-w-0 flex-1 last:flex-none">
                     {i > 0 && (
@@ -316,6 +259,12 @@ export default function Register() {
                     </div>
                   </div>
 
+                  {formData.businessType && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Includes: {joinNames(presetFor(formData.businessType))}. You can change apps any time in Settings.
+                    </p>
+                  )}
+
                   {stepErrors[1] && (
                     <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
                       <i className="bx bx-error-circle mr-1"></i>
@@ -329,93 +278,6 @@ export default function Register() {
                       onClick={nextStep}
                       className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
-                      <span>Continue to Apps</span>
-                      <i className="bx bx-right-arrow-alt ml-2"></i>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Your apps (its own stage) */}
-              {currentStep === 2 && (
-                <div className="space-y-5">
-                  <div>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      We picked a starting set for your{' '}
-                      {BUSINESS_TYPES.find((b) => b.type === formData.businessType)?.label.toLowerCase() || 'business'} —
-                      edit it freely. You can change apps any time in Settings.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {APP_REGISTRY.filter((app) => presetFor(formData.businessType || 'general').includes(app.key)).map(
-                      (app) => (
-                        <AppCheckCard
-                          key={app.key}
-                          icon={app.icon}
-                          name={app.name}
-                          description={app.description}
-                          checked={formData.apps.includes(app.key)}
-                          onToggle={() => handleAppToggle(app.key)}
-                        />
-                      ),
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowMoreApps((v) => !v)}
-                    aria-expanded={showMoreApps}
-                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
-                  >
-                    <Icon name="chevron-down" size={14} className={showMoreApps ? 'rotate-180' : ''} />
-                    More apps
-                  </button>
-                  {showMoreApps && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {APP_REGISTRY.filter(
-                        (app) => !presetFor(formData.businessType || 'general').includes(app.key),
-                      ).map((app) => (
-                        <AppCheckCard
-                          key={app.key}
-                          icon={app.icon}
-                          name={app.name}
-                          description={app.description}
-                          checked={formData.apps.includes(app.key)}
-                          onToggle={() => handleAppToggle(app.key)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {depNote && (
-                    <p className="flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
-                      <Icon name="sparkles" size={13} />
-                      <span>{depNote}</span>
-                    </p>
-                  )}
-
-                  {stepErrors[2] && (
-                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
-                      <i className="bx bx-error-circle mr-1"></i>
-                      <span>{stepErrors[2]}</span>
-                    </p>
-                  )}
-
-                  <div className="flex justify-end gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={previousStep}
-                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
-                    >
-                      <i className="bx bx-left-arrow-alt mr-1"></i>
-                      <span>Back</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={nextStep}
-                      className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
-                    >
                       <span>Continue to Country</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
                     </button>
@@ -423,8 +285,8 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Step 3: Country Selection */}
-              {currentStep === 3 && (
+              {/* Step 2: Country Selection */}
+              {currentStep === 2 && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -453,10 +315,10 @@ export default function Register() {
                         </label>
                       ))}
                     </div>
-                    {stepErrors[3] && (
+                    {stepErrors[2] && (
                       <p className="mt-3 text-sm text-red-600 dark:text-red-400 flex items-center">
                         <i className="bx bx-error-circle mr-1"></i>
-                        <span>{stepErrors[3]}</span>
+                        <span>{stepErrors[2]}</span>
                       </p>
                     )}
                     <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
@@ -485,8 +347,8 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Step 4: User Details */}
-              {currentStep === 4 && (
+              {/* Step 3: User Details */}
+              {currentStep === 3 && (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -679,56 +541,6 @@ export default function Register() {
         </div>
       </div>
     </>
-  );
-}
-
-/** Checkable app card — icon tile, name, one-liner (registration step 1). */
-function AppCheckCard({
-  icon,
-  name,
-  description,
-  checked,
-  onToggle,
-}: {
-  icon: IconName;
-  name: string;
-  description: string;
-  checked: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <label
-      className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors duration-150 ${
-        checked
-          ? 'ring-2 ring-brand-500 bg-brand-50 dark:bg-brand-500/10'
-          : 'ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-brand-300 dark:hover:ring-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-500/5'
-      }`}
-    >
-      <input type="checkbox" checked={checked} onChange={onToggle} className="sr-only" />
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-          checked
-            ? 'bg-brand-gradient text-white'
-            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-        }`}
-      >
-        <Icon name={icon} size={18} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{name}</span>
-        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{description}</span>
-      </span>
-      <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-          checked
-            ? 'bg-brand-gradient text-white'
-            : 'ring-1 ring-inset ring-gray-300 dark:ring-gray-600'
-        }`}
-        aria-hidden="true"
-      >
-        {checked && <Icon name="check" size={12} />}
-      </span>
-    </label>
   );
 }
 
