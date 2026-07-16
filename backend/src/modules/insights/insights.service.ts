@@ -40,6 +40,34 @@ export interface InsightCard {
   severity: 'info' | 'positive' | 'warning' | 'critical';
 }
 
+/** A single (label, value) point on a copilot chart. Values are real. */
+export interface CopilotChartPoint {
+  label: string;
+  value: number;
+}
+
+/** The chart the copilot may attach to an answer. Points are code-computed. */
+export interface CopilotChart {
+  type: 'area' | 'bar' | 'line';
+  title: string;
+  points: CopilotChartPoint[];
+}
+
+/**
+ * A pre-computed, named series the model may pick from. The model only ever
+ * chooses the key + chart type — it never supplies the points, which are
+ * filled in by the backend from real tenant figures.
+ */
+interface NamedSeries {
+  title: string;
+  type: 'area' | 'bar' | 'line';
+  /** Short description shown to the model so it can pick the right series. */
+  description: string;
+  points: CopilotChartPoint[];
+}
+
+const CHART_TYPES = ['area', 'bar', 'line'] as const;
+
 const CURRENCY_SYMBOLS: Record<string, string> = {
   NGN: '₦',
   USD: '$',
@@ -462,6 +490,175 @@ export class InsightsService {
     return Number(rows[0]?.expense || 0);
   }
 
+  /** Invoiced sales revenue per day for the last `days` days (zero-filled). */
+  private async salesByDay(days = 14): Promise<CopilotChartPoint[]> {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const start = new Date(end);
+    start.setDate(end.getDate() - days);
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`;
+
+    const rows = await this.sql<{ day: string; total: string }>(
+      `SELECT to_char(issue_date, 'YYYY-MM-DD') AS day,
+              COALESCE(SUM(total), 0) AS total
+         FROM invoices
+        WHERE status NOT IN ('DRAFT', 'VOID')
+          AND issue_date >= $1 AND issue_date < $2
+        GROUP BY to_char(issue_date, 'YYYY-MM-DD')`,
+      [iso(start), iso(end)],
+    );
+    const byDay = new Map(
+      rows.map((r) => [String(r.day).slice(0, 10), Number(r.total || 0)]),
+    );
+
+    const points: CopilotChartPoint[] = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const label = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      points.push({ label, value: byDay.get(iso(d)) ?? 0 });
+    }
+    return points;
+  }
+
+  /**
+   * Assemble the whitelist of named series the copilot may chart. Every point
+   * comes from an already-computed digest figure (or the graceful salesByDay
+   * query) — the model can only pick a key + type, never invent numbers. Only
+   * series that actually have data are exposed.
+   */
+  private async buildSeries(
+    digest: Awaited<ReturnType<InsightsService['getDigest']>>,
+  ): Promise<Record<string, NamedSeries>> {
+    const series: Record<string, NamedSeries> = {};
+
+    // Confined to the copilot path (not the dashboard digest) to avoid an
+    // extra query on every digest read; degrades to [] on any failure.
+    const daily = await this.safe(() => this.salesByDay(), []);
+    if (daily.some((p) => p.value > 0)) {
+      series.sales_by_day = {
+        title: 'Sales over the last 14 days',
+        type: 'area',
+        description: 'Daily invoiced sales revenue for the last 14 days',
+        points: daily,
+      };
+    }
+
+    const profit = digest.profitThisMonth;
+    if (profit && ((profit.income ?? 0) > 0 || (profit.expense ?? 0) > 0)) {
+      series.income_vs_expense = {
+        title: 'Income vs expenses this month',
+        type: 'bar',
+        description: "This month's total income compared with total expenses",
+        points: [
+          { label: 'Income', value: Number(profit.income || 0) },
+          { label: 'Expenses', value: Number(profit.expense || 0) },
+        ],
+      };
+    }
+
+    if (Array.isArray(digest.topItems) && digest.topItems.length > 0) {
+      series.top_items = {
+        title: 'Best-selling items this month',
+        type: 'bar',
+        description: 'Top items ranked by sales revenue this month',
+        points: digest.topItems.map((i) => ({
+          label: i.name,
+          value: Number(i.revenue || 0),
+        })),
+      };
+    }
+
+    const trend = digest.salesTrend;
+    if (trend && ((trend.thisMonth ?? 0) > 0 || (trend.lastMonth ?? 0) > 0)) {
+      series.sales_month_comparison = {
+        title: 'Sales: this month vs last month',
+        type: 'bar',
+        description: 'Total sales this month compared with last month',
+        points: [
+          { label: 'Last month', value: Number(trend.lastMonth || 0) },
+          { label: 'This month', value: Number(trend.thisMonth || 0) },
+        ],
+      };
+    }
+
+    if (Array.isArray(digest.topDebtors) && digest.topDebtors.length > 0) {
+      series.top_debtors = {
+        title: 'Who owes you the most',
+        type: 'bar',
+        description: 'Customers ranked by outstanding (unpaid) balance',
+        points: digest.topDebtors.map((d) => ({
+          label: d.name,
+          value: Number(d.outstanding || 0),
+        })),
+      };
+    }
+
+    if (Array.isArray(digest.lowStock) && digest.lowStock.length > 0) {
+      series.low_stock = {
+        title: 'Items low on stock',
+        type: 'bar',
+        description: 'Items at or below minimum stock (current quantity left)',
+        points: digest.lowStock.map((i) => ({
+          label: i.name,
+          value: Number(i.currentStock || 0),
+        })),
+      };
+    }
+
+    return series;
+  }
+
+  /**
+   * Best-effort JSON extraction from a model reply: tolerates ```json fences
+   * and surrounding prose. Returns the parsed object, or null when the reply
+   * is not JSON (in which case the caller treats the whole text as the answer).
+   */
+  private extractJson(text: string): any | null {
+    if (!text) return null;
+    let t = text.trim();
+    const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) t = fenced[1].trim();
+    const first = t.indexOf('{');
+    const last = t.lastIndexOf('}');
+    if (first === -1 || last === -1 || last < first) return null;
+    try {
+      return JSON.parse(t.slice(first, last + 1));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Validate the model's chart choice against the real series whitelist. The
+   * model only supplies `seriesKey` (must match one we provided) and `type`;
+   * the actual points always come from `series`, never the model. Returns
+   * undefined for any unknown key / empty series so no chart is attached.
+   */
+  private resolveChart(
+    chart: any,
+    series: Record<string, NamedSeries>,
+  ): CopilotChart | undefined {
+    if (!chart || typeof chart !== 'object') return undefined;
+    const key = typeof chart.seriesKey === 'string' ? chart.seriesKey : '';
+    const chosen = series[key];
+    if (!chosen || chosen.points.length === 0) return undefined;
+
+    const type = CHART_TYPES.includes(chart.type) ? chart.type : chosen.type;
+    const title =
+      typeof chart.title === 'string' && chart.title.trim()
+        ? chart.title.trim()
+        : chosen.title;
+    // Points are the code-computed figures — never anything from the model.
+    return { type, title, points: chosen.points };
+  }
+
   /**
    * Kuza Copilot: answers a plain-language question using ONLY the digest
    * data as context. Never throws — degraded states come back as
@@ -469,11 +666,22 @@ export class InsightsService {
    */
   async ask(question: string) {
     const digest = await this.getDigest();
+    const series = await this.buildSeries(digest);
+
+    const seriesKeys = Object.keys(series);
+    const seriesBlock = seriesKeys.length
+      ? `Available chart series (use one of these EXACT keys as seriesKey, never invent one):\n${seriesKeys
+          .map((k) => `- ${k} (${series[k].type}): ${series[k].description}`)
+          .join('\n')}`
+      : 'No chart series are available for this business right now — do not include a chart.';
+
     const context = [
       `Business name: ${digest.businessName}`,
       `Currency: ${digest.currency}`,
       `Business data (JSON):`,
       JSON.stringify(digest),
+      '',
+      seriesBlock,
     ].join('\n');
 
     // Provider-agnostic: LlmService picks the backend from AI_PROVIDER and
@@ -486,7 +694,15 @@ export class InsightsService {
         'sentences a non-accountant understands — no accounting jargon. ' +
         'If the data does not contain the answer, say so honestly and suggest ' +
         'what the owner could check instead. Use the business currency when ' +
-        'talking about money.',
+        'talking about money.\n\n' +
+        'Respond with STRICT JSON ONLY (no markdown, no prose outside the JSON) ' +
+        'matching this shape:\n' +
+        '{"answer": string, "chart"?: {"type": "area"|"bar"|"line", "title": string, "seriesKey": string}}\n' +
+        'Put your plain-language reply in "answer". Include "chart" ONLY when a ' +
+        'visualisation genuinely helps AND a relevant series exists. "seriesKey" ' +
+        'MUST be exactly one of the provided chart series keys — never invent a ' +
+        'key. You only choose the chart type and which series to show; you must ' +
+        'NEVER invent or include data points yourself.',
       messages: [
         {
           role: 'user',
@@ -511,6 +727,18 @@ export class InsightsService {
         answer:
           'I cannot help with that question. Try asking about your sales, cash, stock or debtors.',
       };
+    }
+
+    // Parse the model reply. If it is JSON with an "answer", use that and
+    // (optionally) attach a chart whose points are our real figures. If it is
+    // not JSON, fall back to treating the whole reply as the answer text so the
+    // existing text-only behaviour keeps working with any provider.
+    const parsed = this.extractJson(result.text);
+    if (parsed && typeof parsed.answer === 'string' && parsed.answer.trim()) {
+      const chart = this.resolveChart(parsed.chart, series);
+      return chart
+        ? { available: true, answer: parsed.answer.trim(), chart }
+        : { available: true, answer: parsed.answer.trim() };
     }
 
     return { available: true, answer: result.text };

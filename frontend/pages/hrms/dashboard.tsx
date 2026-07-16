@@ -9,6 +9,7 @@ import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { WeeklyBarChart } from '@/components/ui/charts';
 
 const AVATAR_TONES = [
   'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
@@ -56,6 +57,7 @@ export default function HRMSDashboard() {
     absentToday: 0,
   });
   const [deptDist, setDeptDist] = useState<{ name: string; count: number }[]>([]);
+  const [attendanceTrend, setAttendanceTrend] = useState<{ label: string; value: number }[]>([]);
   const [recentEmployees, setRecentEmployees] = useState<any[]>([]);
   const [recentLeaves, setRecentLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,6 +126,27 @@ export default function HRMSDashboard() {
         todayAttendance = todayEntries.length;
         clockedIn = todayEntries.filter((a: any) => a.clockIn && !a.clockOut).length;
         presentToday = todayEntries.filter((a: any) => a.clockIn).length;
+
+        // Present headcount per day over the last 7 days (entries with a clock-in)
+        const byDay = new Map<string, number>();
+        const trend: { label: string; value: number }[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const key = d.toISOString().split('T')[0];
+          byDay.set(key, 0);
+          trend.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), value: 0 });
+        }
+        attendanceRes.data.forEach((a: any) => {
+          const key = a.date ? String(a.date).split('T')[0] : null;
+          if (key && byDay.has(key) && a.clockIn) byDay.set(key, (byDay.get(key) || 0) + 1);
+        });
+        let idx = 0;
+        byDay.forEach((v) => {
+          trend[idx].value = v;
+          idx += 1;
+        });
+        setAttendanceTrend(trend);
       }
 
       const activeEmployees = employees.filter((e: any) => e.isActive !== false).length;
@@ -185,6 +208,22 @@ export default function HRMSDashboard() {
           <StatCard label="Departments" value={stats.departmentsCount} icon="bx-buildings" tone="default" caption={`${stats.pendingLeaves} leaves pending`} />
         </div>
       )}
+
+      {/* Attendance trend — present headcount over the last 7 days */}
+      <Card title="Attendance this week" subtitle="Present headcount per day">
+        {loading ? (
+          <div className="h-40 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+        ) : (
+          <div className="pt-1">
+            <WeeklyBarChart
+              data={attendanceTrend}
+              height={190}
+              formatValue={(v) => `${Math.round(v)}`}
+              emptyMessage="No attendance recorded yet"
+            />
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Department distribution */}

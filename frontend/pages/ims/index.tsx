@@ -8,11 +8,13 @@ import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { WeeklyBarChart } from '@/components/ui/charts';
 import { formatMoney, formatDate, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
   name: string;
+  category?: string;
   currentStock?: number | string;
   reorderPoint?: number | string;
   reorderLevel?: number | string;
@@ -71,6 +73,20 @@ export default function InventoryDashboardPage() {
   const outOfStock = items.filter((i) => num(i.currentStock) <= 0).length;
   const stockValue = items.reduce((s, i) => s + num(i.currentStock) * num(i.unitCost ?? i.costPrice), 0);
 
+  // Stock value grouped by category (top 6) — derived from items already loaded.
+  const stockByCategory = (() => {
+    const map = new Map<string, number>();
+    items.forEach((i) => {
+      const cat = (typeof i.category === 'string' && i.category.trim()) || 'Uncategorized';
+      map.set(cat, (map.get(cat) || 0) + num(i.currentStock) * num(i.unitCost ?? i.costPrice));
+    });
+    return Array.from(map.entries())
+      .map(([label, value]) => ({ label, value }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  })();
+
   return (
     <div>
       <PageHeader
@@ -102,6 +118,24 @@ export default function InventoryDashboardPage() {
           <StatCard label="Stock Value" value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" />
         </div>
       )}
+
+      {/* Stock value by category — where your money is tied up */}
+      <div className="mt-6">
+        <Card title="Stock value by category" subtitle="Where your inventory value sits">
+          {loading ? (
+            <div className="h-40 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+          ) : (
+            <div className="pt-1">
+              <WeeklyBarChart
+                data={stockByCategory}
+                height={200}
+                formatValue={(v) => formatMoney(v, currency)}
+                emptyMessage="No valued stock yet"
+              />
+            </div>
+          )}
+        </Card>
+      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Low-stock worklist — actionable */}

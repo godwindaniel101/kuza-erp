@@ -24,9 +24,24 @@ export interface InsightItem {
 
 export type AiStatus = 'ok' | 'unavailable' | 'error';
 
+export type CopilotChartType = 'area' | 'bar' | 'line';
+
+export interface CopilotChartPoint {
+  label: string;
+  value: number;
+}
+
+export interface CopilotChart {
+  type: CopilotChartType;
+  title: string;
+  points: CopilotChartPoint[];
+}
+
 export interface CopilotResult {
   status: AiStatus;
   answer?: string;
+  /** Optional chart the backend attached (points are real, code-computed). */
+  chart?: CopilotChart;
   /** Human-readable message for error/unavailable states. */
   message?: string;
 }
@@ -100,10 +115,40 @@ export async function askCopilot(question: string): Promise<CopilotResult> {
       return { status: 'unavailable', message: UNAVAILABLE_MESSAGE };
     }
 
-    return { status: 'ok', answer };
+    const chart = normalizeChart(payload?.chart ?? raw?.chart);
+    return chart ? { status: 'ok', answer, chart } : { status: 'ok', answer };
   } catch (err) {
     return classifyError(err);
   }
+}
+
+/**
+ * Defensively validate a chart payload from the backend. Returns undefined for
+ * anything malformed so the UI simply renders the answer without a chart.
+ */
+function normalizeChart(chart: any): CopilotChart | undefined {
+  if (!chart || typeof chart !== 'object') return undefined;
+  const type =
+    chart.type === 'area' || chart.type === 'bar' || chart.type === 'line'
+      ? chart.type
+      : undefined;
+  if (!type) return undefined;
+  if (!Array.isArray(chart.points)) return undefined;
+
+  const points: CopilotChartPoint[] = chart.points
+    .filter(
+      (p: any) =>
+        p && typeof p === 'object' && Number.isFinite(Number(p.value)),
+    )
+    .map((p: any) => ({ label: String(p.label ?? ''), value: Number(p.value) }));
+
+  if (points.length === 0) return undefined;
+
+  const title =
+    typeof chart.title === 'string' && chart.title.trim()
+      ? chart.title.trim()
+      : 'Chart';
+  return { type, title, points };
 }
 
 export async function fetchInsightsSummary(): Promise<SummaryResult> {

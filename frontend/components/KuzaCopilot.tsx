@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, useCallback, Fragment } from 'react';
-import { askCopilot } from '@/lib/insights';
+import { askCopilot, type CopilotChart } from '@/lib/insights';
+import {
+  RevenueAreaChart,
+  WeeklyBarChart,
+  type AreaPoint,
+} from '@/components/ui/charts';
 
 interface ChatMessage {
   id: string;
@@ -7,6 +12,33 @@ interface ChatMessage {
   content: string;
   /** Assistant-only: soft error / unavailable rendering. */
   variant?: 'normal' | 'notice';
+  /** Assistant-only: optional chart with real, backend-computed points. */
+  chart?: CopilotChart;
+}
+
+/**
+ * Render a copilot chart inline under an answer, mapping the backend chart
+ * type onto the shared chart components: area/line -> RevenueAreaChart,
+ * bar -> WeeklyBarChart. Points arrive as {label, value} — the AreaPoint /
+ * SimpleBarPoint shape — so they pass straight through.
+ */
+function CopilotChartBlock({ chart }: { chart: CopilotChart }) {
+  const points: AreaPoint[] = chart.points.map((p) => ({
+    label: p.label,
+    value: p.value,
+  }));
+  return (
+    <div className="mt-2 max-w-[92%] rounded-2xl bg-gray-50 px-3 pb-2 pt-3 ring-1 ring-inset ring-gray-100 dark:bg-gray-800/60 dark:ring-gray-800">
+      <p className="mb-1.5 px-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+        {chart.title}
+      </p>
+      {chart.type === 'bar' ? (
+        <WeeklyBarChart data={points} />
+      ) : (
+        <RevenueAreaChart data={points} height={150} />
+      )}
+    </div>
+  );
 }
 
 const SUGGESTIONS = [
@@ -120,6 +152,7 @@ export default function KuzaCopilot() {
               role: 'assistant',
               content: result.answer ?? '',
               variant: 'normal',
+              chart: result.chart,
             }
           : {
               id: `a-${Date.now()}`,
@@ -237,7 +270,7 @@ export default function KuzaCopilot() {
                 </div>
               </div>
             ) : (
-              <div key={m.id} className="flex justify-start">
+              <div key={m.id} className="flex flex-col items-start">
                 <div
                   className={`max-w-[85%] break-words rounded-2xl rounded-bl-sm px-3.5 py-2 text-[13px] leading-relaxed ${
                     m.variant === 'notice'
@@ -247,6 +280,7 @@ export default function KuzaCopilot() {
                 >
                   {renderRichText(m.content)}
                 </div>
+                {m.chart && <CopilotChartBlock chart={m.chart} />}
               </div>
             ),
           )}
