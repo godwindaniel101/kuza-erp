@@ -124,7 +124,7 @@ export default function NewInvoicePage() {
         customerId,
         issueDate,
         dueDate,
-        currency: currency || undefined,
+        currency: defaultCurrency,
         notes: notes.trim() || undefined,
         lines: validLines.map((l) => ({
           itemId: l.itemId || undefined,
@@ -171,15 +171,7 @@ export default function NewInvoicePage() {
         </div>
         <FormField label="Issue Date" name="invoice-issue" type="date" required value={issueDate} onChange={setIssueDate} />
         <FormField label="Due Date" name="invoice-due" type="date" required value={dueDate} onChange={setDueDate} />
-        <FormField
-          label="Currency"
-          name="invoice-currency"
-          type="select"
-          value={currency}
-          onChange={setCurrency}
-          placeholder={`Default (${defaultCurrency})`}
-          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-        />
+        {/* Single-currency: invoices use the business currency (Settings > General). */}
       </div>
 
       {/* Line editor */}

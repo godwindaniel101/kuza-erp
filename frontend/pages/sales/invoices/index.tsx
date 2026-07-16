@@ -166,13 +166,13 @@ export default function InvoicesPage() {
       key: 'total',
       label: 'Total',
       align: 'right',
-      render: (inv) => formatMoney(inv.total, inv.currency || currency),
+      render: (inv) => formatMoney(inv.total, currency),
     },
     {
       key: 'amountPaid',
       label: 'Paid',
       align: 'right',
-      render: (inv) => formatMoney(inv.amountPaid, inv.currency || currency),
+      render: (inv) => formatMoney(inv.amountPaid, currency),
     },
     {
       key: 'status',

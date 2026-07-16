@@ -276,7 +276,7 @@ export default function SalesDashboardPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {formatMoney(inv.total, inv.currency || currency)}
+                        {formatMoney(inv.total, currency)}
                       </span>
                       <InvoiceStatusBadge status={inv.status} size="sm" />
                     </div>

@@ -225,10 +225,10 @@ export default function CustomerDetailPage() {
                           {formatDate(inv.dueDate)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                          {formatMoney(inv.total, inv.currency || currency)}
+                          {formatMoney(inv.total, currency)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                          {formatMoney(inv.balance, inv.currency || currency)}
+                          {formatMoney(inv.balance, currency)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <InvoiceStatusBadge status={inv.status} size="sm" />

@@ -95,7 +95,7 @@ export default function InflowDetailsPage() {
   }, [id]);
 
   const formatCurrency = (amount: number, inflowCurrency?: string): string =>
-    formatMoney(amount, inflowCurrency || currency);
+    formatMoney(amount, currency);
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
@@ -280,7 +280,7 @@ export default function InflowDetailsPage() {
                       {t("currency") || "Currency"}
                     </label>
                     <p className="text-gray-900 dark:text-gray-100 mt-1">
-                      {inflow.currency || currency}
+                      {currency}
                     </p>
                   </div>
                 </div>

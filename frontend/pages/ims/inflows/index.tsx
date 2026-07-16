@@ -52,7 +52,7 @@ export default function InflowsPage() {
   }, [searchQuery]);
 
   const formatCurrency = (amount: number, inflowCurrency?: string): string =>
-    formatMoney(amount, inflowCurrency || currency);
+    formatMoney(amount, currency);
 
   const loadBranch = async (id: string) => {
     try {
