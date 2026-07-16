@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Invoice } from '../invoicing/entities/invoice.entity';
 import { Business } from '../../common/entities/business.entity';
+import { LlmService } from '../../common/ai/llm.service';
 
 /**
  * "Accountant in your pocket": computes plain-language insights from data
@@ -39,10 +40,6 @@ export interface InsightCard {
   severity: 'info' | 'positive' | 'warning' | 'critical';
 }
 
-/** Model ids — kept in one place so they are easy to audit/update. */
-const COPILOT_MODEL = 'claude-sonnet-5';
-const DIGEST_MODEL = 'claude-haiku-4-5-20251001';
-
 const CURRENCY_SYMBOLS: Record<string, string> = {
   NGN: '₦',
   USD: '$',
@@ -75,6 +72,7 @@ export class InsightsService {
     private readonly invoiceRepository: Repository<Invoice>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    private readonly llm: LlmService,
   ) {}
 
   private async sql<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -470,14 +468,6 @@ export class InsightsService {
    * { available: false, message } with HTTP 200.
    */
   async ask(question: string) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return {
-        available: false,
-        message: 'AI assistant not configured',
-      };
-    }
-
     const digest = await this.getDigest();
     const context = [
       `Business name: ${digest.businessName}`,
@@ -486,79 +476,43 @@ export class InsightsService {
       JSON.stringify(digest),
     ].join('\n');
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20_000);
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+    // Provider-agnostic: LlmService picks the backend from AI_PROVIDER and
+    // never throws — an unconfigured/unreachable/errored provider comes back
+    // as { available: false } and we degrade to the "not configured" shape.
+    const result = await this.llm.chat({
+      system:
+        'You are Kuza Copilot, a financial assistant for small businesses. ' +
+        'Answer ONLY from the provided business data. Speak plainly, in short ' +
+        'sentences a non-accountant understands — no accounting jargon. ' +
+        'If the data does not contain the answer, say so honestly and suggest ' +
+        'what the owner could check instead. Use the business currency when ' +
+        'talking about money.',
+      messages: [
+        {
+          role: 'user',
+          content: `${context}\n\nQuestion: ${question}`,
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 1024,
-          system:
-            'You are Kuza Copilot, a financial assistant for small businesses. ' +
-            'Answer ONLY from the provided business data. Speak plainly, in short ' +
-            'sentences a non-accountant understands — no accounting jargon. ' +
-            'If the data does not contain the answer, say so honestly and suggest ' +
-            'what the owner could check instead. Use the business currency when ' +
-            'talking about money.',
-          messages: [
-            {
-              role: 'user',
-              content: `${context}\n\nQuestion: ${question}`,
-            },
-          ],
-        }),
-      });
+      ],
+      maxTokens: 1024,
+    });
 
-      if (!response.ok) {
-        this.logger.warn(
-          `Anthropic API returned ${response.status} for copilot question`,
-        );
-        return {
-          available: false,
-          message: 'AI assistant is temporarily unavailable — try again shortly',
-        };
-      }
-
-      const data: any = await response.json();
-      if (data?.stop_reason === 'refusal') {
-        return {
-          available: true,
-          answer:
-            'I cannot help with that question. Try asking about your sales, cash, stock or debtors.',
-        };
-      }
-      const answer = Array.isArray(data?.content)
-        ? data.content
-            .filter((block: any) => block?.type === 'text')
-            .map((block: any) => block.text)
-            .join('')
-            .trim()
-        : '';
-
-      if (!answer) {
-        return {
-          available: false,
-          message: 'AI assistant returned no answer — try again shortly',
-        };
-      }
-
-      return { available: true, answer };
-    } catch (error) {
-      this.logger.warn(`Copilot call failed: ${error?.message}`);
+    if (!result.available) {
       return {
         available: false,
-        message: 'AI assistant is temporarily unavailable — try again shortly',
+        message: 'AI assistant not configured',
       };
-    } finally {
-      clearTimeout(timeout);
     }
+
+    if (!result.text) {
+      // Available but empty: a model refusal or an empty completion. Preserve
+      // the friendly copilot fallback rather than surfacing a hard error.
+      return {
+        available: true,
+        answer:
+          'I cannot help with that question. Try asking about your sales, cash, stock or debtors.',
+      };
+    }
+
+    return { available: true, answer: result.text };
   }
 }

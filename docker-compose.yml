@@ -47,6 +47,20 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ERP Platform}
+      # --- AI / LLM provider (provider-agnostic; switch backend by config) ---
+      # AI_PROVIDER selects the backend: 'anthropic' (default) or 'openai'
+      # (OpenAI-compatible, used to reach Llama-on-Docker via Ollama/llama.cpp/
+      # vLLM/LM Studio). To use the bundled 'ollama' service below, set:
+      #   AI_PROVIDER=openai
+      #   AI_BASE_URL=http://ollama:11434/v1
+      #   AI_MODEL=llama3.1
+      # then pull the model: docker exec erp_ollama ollama pull llama3.1
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      # Back-compat: still honoured when AI_PROVIDER=anthropic and AI_API_KEY is unset.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-4001}:4001"
     depends_on:
@@ -96,9 +110,28 @@ services:
       - erp_network
     restart: unless-stopped
 
+  # Optional: local Llama (OpenAI-compatible) LLM backend.
+  # This service is opt-in — the backend does not depend on it, so nothing
+  # breaks if you never start it. To use it as the AI backend:
+  #   1) docker compose up -d ollama
+  #   2) docker exec erp_ollama ollama pull llama3.1
+  #   3) set AI_PROVIDER=openai, AI_BASE_URL=http://ollama:11434/v1,
+  #      AI_MODEL=llama3.1 (see the backend service env above) and restart backend.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: erp_ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - erp_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   backend_uploads:
+  ollama_data:
 
 networks:
   erp_network:
