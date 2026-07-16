@@ -106,12 +106,15 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
-/* Product rule: no text input or select should stretch wider than 300px.
-   Applies globally; grid/table cell inputs are narrower than this so are
-   unaffected. Excludes toggles/range/color/file and multi-line textareas. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
-select {
-  max-width: 350px;
+/* Product rule: no text input or select should stretch too wide by default.
+   Lives in @layer base so it's a low-priority DEFAULT — any Tailwind max-w-*
+   utility (e.g. max-w-none on the login inputs) overrides it normally. w-full
+   inputs stay capped (w-full sets width, not max-width). Excludes toggles/etc. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select {
+    max-width: 350px;
+  }
 }
 
 * {
