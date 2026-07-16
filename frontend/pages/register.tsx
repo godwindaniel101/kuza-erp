@@ -19,11 +19,11 @@ import Link from 'next/link';
 import Head from 'next/head';
 
 const BUSINESS_TYPES: { type: BusinessType; label: string; description: string; icon: IconName }[] = [
-  { type: 'hospitality', label: 'Hospitality', description: 'Restaurants, hotels, lounges & bars', icon: 'menu-book' },
-  { type: 'accounts', label: 'Digital Accounts', description: 'Books, invoicing & getting paid', icon: 'calculator' },
-  { type: 'retail', label: 'Retail MS', description: 'Products, checkout & purchases', icon: 'building-storefront' },
-  { type: 'hr', label: 'Human Resource MS', description: 'Employees, leave & attendance', icon: 'users' },
-  { type: 'warehouse', label: 'Warehouse MS', description: 'Stock, receiving & locations', icon: 'cube' },
+  { type: 'hospitality', label: 'Restaurant & Hospitality', description: 'Restaurants, hotels, lounges & bars', icon: 'menu-book' },
+  { type: 'retail', label: 'Retail Shop', description: 'Products, checkout & sales', icon: 'building-storefront' },
+  { type: 'accounts', label: 'Accounting & Invoicing', description: 'Books, invoicing & getting paid', icon: 'calculator' },
+  { type: 'hr', label: 'People & Payroll', description: 'Employees, leave & attendance', icon: 'users' },
+  { type: 'warehouse', label: 'Warehouse & Stock', description: 'Stock, receiving & locations', icon: 'cube' },
 ];
 
 const joinNames = (keys: AppKey[]) => keys.map((k) => getApp(k)?.name ?? k).join(', ');
@@ -282,7 +282,7 @@ export default function Register() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                       What kind of business? <span className="text-red-500">*</span>
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {BUSINESS_TYPES.map((bt) => {
                         const selected = formData.businessType === bt.type;
                         return (
