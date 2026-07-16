@@ -50,7 +50,7 @@ const TYPE_TOKENS: Record<MovementType, { label: string; classes: string; icon: 
   RETURN: { label: 'Return', classes: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300', icon: 'bx-undo' },
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function TypeBadge({ type }: { type: MovementType }) {
   const token = TYPE_TOKENS[type] ?? { label: type, classes: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300', icon: 'bx-transfer' };

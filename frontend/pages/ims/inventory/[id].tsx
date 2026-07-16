@@ -180,7 +180,7 @@ export default function InventoryItemViewPage() {
 
   return (
     <PermissionGuard permission="inventory.view">
-      <div className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="w-full max-w-5xl space-y-5">
         <PageHeader
           title={item.name}
           subtitle="Stock, batches and history for this item"
@@ -260,7 +260,7 @@ export default function InventoryItemViewPage() {
 
 // Tab Components
 const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => (
-  <div className="mx-auto w-full max-w-5xl space-y-5">
+  <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
       {t('generalInformation')}
     </h2>
@@ -401,7 +401,7 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
 );
 
 const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, t }: any) => (
-  <div className="mx-auto w-full max-w-5xl space-y-5">
+  <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
       {t('inflowHistory')}
     </h2>
@@ -479,7 +479,7 @@ const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, 
 );
 
 const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t }: any) => (
-  <div className="mx-auto w-full max-w-5xl space-y-5">
+  <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
       {t('salesHistory')}
     </h2>
@@ -551,7 +551,7 @@ const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t 
 );
 
 const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency, t }: any) => (
-  <div className="mx-auto w-full max-w-5xl space-y-5">
+  <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
       {t('branchItemInventory')}
     </h2>

@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import PermissionGuard from "@/components/PermissionGuard";
 import Toast from "@/components/Toast";
 import PageHeader from "@/components/ui/PageHeader";
+import { formatMoney, useCurrency } from "@/lib/format";
 
 interface BulkUploadLog {
   id: string;
@@ -79,7 +80,7 @@ export default function InflowDetailsPage() {
   const { id } = router.query;
   const [inflow, setInflow] = useState<InflowDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState<string>("NGN");
+  const currency = useCurrency();
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -90,41 +91,11 @@ export default function InflowDetailsPage() {
   useEffect(() => {
     if (id) {
       loadInflow();
-      loadCurrency();
     }
   }, [id]);
 
-  const loadCurrency = async () => {
-    try {
-      const response = await api.get<{
-        success: boolean;
-        data: { currency_code?: string; currency?: string };
-      }>("/settings");
-      if (response.success && response.data) {
-        setCurrency(
-          response.data.currency_code || response.data.currency || "NGN",
-        );
-      }
-    } catch (err) {
-      console.error("Failed to load currency:", err);
-      setCurrency("NGN");
-    }
-  };
-
-  const formatCurrency = (amount: number, inflowCurrency?: string): string => {
-    const currencySymbols: { [key: string]: string } = {
-      NGN: "₦",
-      USD: "$",
-      EUR: "€",
-      GBP: "£",
-      GHS: "₵",
-      KES: "KSh",
-      ZAR: "R",
-    };
-    const currencyCode = inflowCurrency || currency;
-    const symbol = currencySymbols[currencyCode] || currencyCode;
-    return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number, inflowCurrency?: string): string =>
+    formatMoney(amount, inflowCurrency || currency);
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
@@ -198,7 +169,7 @@ export default function InflowDetailsPage() {
 
   return (
     <PermissionGuard permission="inventory.view">
-      <div className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="w-full max-w-5xl space-y-5">
         {toast && (
           <Toast
             message={toast.message}
@@ -258,7 +229,7 @@ export default function InflowDetailsPage() {
 
         {/* Tab Content */}
         {activeTab === "details" && (
-          <div className="mx-auto w-full max-w-5xl space-y-5">
+          <div className="w-full max-w-5xl space-y-5">
             {/* Comprehensive Inflow Information */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-6 flex items-center">

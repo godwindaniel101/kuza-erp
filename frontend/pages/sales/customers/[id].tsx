@@ -84,7 +84,7 @@ export default function CustomerDetailPage() {
   }, [load]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title={customer?.name || 'Customer'}
         subtitle={customer?.email || undefined}
@@ -105,7 +105,7 @@ export default function CustomerDetailPage() {
       />
 
       {loading ? (
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <CardSkeleton count={3} />
           </div>

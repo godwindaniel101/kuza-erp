@@ -12,7 +12,7 @@ export type PageWidth = 'full' | 'wide' | 'narrow';
 
 export const pageWidthClasses: Record<PageWidth, string> = {
   full: 'max-w-none',
-  wide: 'mx-auto w-full max-w-5xl',
+  wide: 'w-full max-w-5xl',
   narrow: 'mx-auto w-full max-w-3xl',
 };
 

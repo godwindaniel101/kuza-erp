@@ -32,7 +32,7 @@ interface JournalEntry {
   lines: JournalEntryLine[];
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const entryStatusVariant: Record<JournalEntry['status'], { variant: StatusBadgeVariant; label: string }> = {
   DRAFT: { variant: 'pending', label: 'Draft' },

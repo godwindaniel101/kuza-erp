@@ -122,7 +122,7 @@ export default function AdjustmentDetailPage() {
   const itemName = (item: AdjustmentItem) => item.itemName || item.item?.name || itemNames[item.itemId] || item.itemId;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title={adjustment ? `Adjustment ${adjustment.adjustmentNumber}` : 'Stock Adjustment'}
         subtitle={adjustment ? REASON_LABELS[adjustment.reason] || adjustment.reason : undefined}

@@ -94,7 +94,7 @@ export default function JournalEntryDetailPage() {
   const status = entry ? entryStatusVariant[entry.status] ?? entryStatusVariant.DRAFT : null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title={entry ? `Entry ${entry.entryNumber}` : 'Journal Entry'}
         subtitle={entry?.memo || undefined}

@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
-import { downloadCsv } from '@/lib/format';
+import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
 
 const inflowStatusVariant = (status?: string): StatusBadgeVariant => {
   const s = (status || '').toLowerCase();
@@ -33,7 +33,7 @@ export default function InflowsPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [currency, setCurrency] = useState<string>('NGN');
+  const currency = useCurrency();
   const [currentBranch, setCurrentBranch] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -44,7 +44,6 @@ export default function InflowsPage() {
       setCurrentBranch(null);
     }
     loadInflows();
-    loadCurrency();
   }, [branchId, batchId]);
 
   // Reset to page 1 when search changes
@@ -52,32 +51,8 @@ export default function InflowsPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  const loadCurrency = async () => {
-    try {
-      const response = await api.get<{ success: boolean; data: { currency_code?: string; currency?: string } }>('/settings');
-      if (response.success && response.data) {
-        setCurrency(response.data.currency_code || response.data.currency || 'NGN');
-      }
-    } catch (err) {
-      console.error('Failed to load currency:', err);
-      setCurrency('NGN');
-    }
-  };
-
-  const formatCurrency = (amount: number, inflowCurrency?: string): string => {
-    const currencySymbols: { [key: string]: string } = {
-      'NGN': '₦',
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'GHS': '₵',
-      'KES': 'KSh',
-      'ZAR': 'R',
-    };
-    const currencyCode = inflowCurrency || currency;
-    const symbol = currencySymbols[currencyCode] || currencyCode;
-    return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number, inflowCurrency?: string): string =>
+    formatMoney(amount, inflowCurrency || currency);
 
   const loadBranch = async (id: string) => {
     try {

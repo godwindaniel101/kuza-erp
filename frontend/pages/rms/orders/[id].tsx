@@ -73,7 +73,7 @@ export default function OrderViewPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="w-full max-w-5xl space-y-5">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 dark:border-brand-400 mx-auto"></div>
           <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</p>
@@ -85,7 +85,7 @@ export default function OrderViewPage() {
   if (!order) {
     return (
       <PermissionGuard permission="orders.view">
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">{t('orderNotFound') || 'Order not found'}</p>
             <Link href="/rms/orders" className="mt-4 inline-block text-brand-600 hover:text-brand-700 dark:text-brand-400">
@@ -105,7 +105,7 @@ export default function OrderViewPage() {
 
   return (
     <PermissionGuard permission="orders.view">
-      <div className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="w-full max-w-5xl space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}

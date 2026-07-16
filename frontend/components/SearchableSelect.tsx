@@ -143,7 +143,7 @@ export default function SearchableSelect({
         disabled={disabled}
         onKeyDown={handleKeyDown}
           className={`
-          w-full max-w-[300px] border rounded-md
+          w-full max-w-[350px] border rounded-md
           ${size === 'sm' ? 'px-3 h-9 text-sm' : 'px-3 h-9 text-sm'}
           bg-white dark:bg-gray-800
           text-gray-900 dark:text-gray-100

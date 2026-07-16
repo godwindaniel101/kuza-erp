@@ -155,7 +155,7 @@ export default function InvoiceDetailPage() {
   const canRecordPayment = invoice && !['PAID', 'VOID', 'DRAFT'].includes(invoice.status) && Number(invoice.balance) > 0;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       {/* Print CSS: hide chrome, show only the invoice document */}
       <style jsx global>{`
         @media print {

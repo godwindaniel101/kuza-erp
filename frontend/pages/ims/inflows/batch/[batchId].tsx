@@ -95,7 +95,7 @@ export default function BatchSummaryPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title={t('purchaseBatch') || 'Purchase Batch'}
         subtitle={typeof batchId === 'string' ? batchId : undefined}
@@ -121,7 +121,7 @@ export default function BatchSummaryPage() {
           {error}
         </div>
       ) : summary ? (
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           {/* Summary stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label={t('totalValue') || 'Total value'} value={fmt(summary.totalAmount)} icon="bx-money" tone="red" />

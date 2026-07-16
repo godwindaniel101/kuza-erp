@@ -135,6 +135,12 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
           label: 'Insights',
           items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
         },
+        {
+          label: 'Setup',
+          items: [
+            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
+          ],
+        },
       ],
     },
     {
@@ -173,6 +179,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
         {
           label: 'Setup',
           items: [
+            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
             { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
             { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
             { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
@@ -271,7 +278,6 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
         {
           items: [
             { href: '/settings', label: 'General', icon: 'cog', exact: true },
-            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
             { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
             { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
             { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
@@ -318,7 +324,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
   const appForPath = useCallback(
     (path: string): AppDef => {
       // System-settings subpaths that belong to a *module* app, not Settings.
-      const inventorySetup = ['/settings/categories', '/settings/uoms', '/settings/allocation-method'];
+      const inventorySetup = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method'];
       if (inventorySetup.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'inventory')!;
 
       if (path.startsWith('/hrms')) return apps.find((a) => a.id === 'hr')!;

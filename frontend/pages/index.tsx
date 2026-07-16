@@ -14,6 +14,7 @@ import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
 import { RevenueAreaChart, WeeklyBarChart, AreaPoint } from '@/components/ui/charts';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatMoney, useCurrency } from '@/lib/format';
 
 interface AnalyticsData {
   bestBranch: {
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const { t } = useTranslation('common');
   const { user } = useAuthStore();
   const { businessType, fetchTenantContext } = useTenantStore();
+  const currency = useCurrency();
   const [period, setPeriod] = useState('today');
   const [revenueSeries, setRevenueSeries] = useState<AreaPoint[]>([]);
   const [outstandingInvoices, setOutstandingInvoices] = useState<number | null>(null);
@@ -187,9 +189,7 @@ export default function Dashboard() {
       ? `${(v / 1_000).toFixed(Math.abs(v) >= 10_000 ? 0 : 1)}k`
       : `${Math.round(v)}`;
 
-  const formatCurrency = (amount: number) => {
-    return `₦${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number) => formatMoney(amount, currency);
 
   if (loading) {
     return (

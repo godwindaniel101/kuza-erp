@@ -14,6 +14,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import { useTenantStore } from "@/store/globalStore";
 import { term } from "@/lib/terminology";
+import { formatMoney, useCurrency } from "@/lib/format";
 
 interface InflowItem {
   inventoryItemId: string;
@@ -69,7 +70,7 @@ export default function CreateInflowPage() {
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [creatingSupplier, setCreatingSupplier] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
-  const [currency, setCurrency] = useState<string>("NGN");
+  const currency = useCurrency();
   const [newSupplier, setNewSupplier] = useState({
     name: "",
     email: "",
@@ -80,39 +81,9 @@ export default function CreateInflowPage() {
 
   useEffect(() => {
     loadData();
-    loadCurrency();
   }, []);
 
-  const loadCurrency = async () => {
-    try {
-      const response = await api.get<{
-        success: boolean;
-        data: { currency_code?: string; currency?: string };
-      }>("/settings");
-      if (response.success && response.data) {
-        setCurrency(
-          response.data.currency_code || response.data.currency || "NGN"
-        );
-      }
-    } catch (err) {
-      console.error("Failed to load currency:", err);
-      setCurrency("NGN");
-    }
-  };
-
-  const formatCurrency = (amount: number): string => {
-    const currencySymbols: { [key: string]: string } = {
-      NGN: "₦",
-      USD: "$",
-      EUR: "€",
-      GBP: "£",
-    };
-    const symbol = currencySymbols[currency] || currency;
-    return `${symbol}${amount.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
+  const formatCurrency = (amount: number): string => formatMoney(amount, currency);
 
   const loadData = async () => {
     try {
@@ -452,7 +423,7 @@ export default function CreateInflowPage() {
         />
       )}
 
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="w-full max-w-5xl">
         <PageHeader
           title={term(businessType, "recordGoodsIn")}
           subtitle="Record stock coming in — supplier, items and costs"
@@ -463,7 +434,7 @@ export default function CreateInflowPage() {
         />
       </div>
 
-      <form onSubmit={handleSubmit} className="mx-auto w-full max-w-5xl space-y-5">
+      <form onSubmit={handleSubmit} className="w-full max-w-5xl space-y-5">
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">

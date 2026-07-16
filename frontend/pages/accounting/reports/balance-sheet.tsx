@@ -139,7 +139,7 @@ export default function BalanceSheetPage() {
   const liabPlusEquity = (data?.totalLiabilities ?? 0) + (data?.totalEquity ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="Balance Sheet"
         subtitle={`As of ${formatDate(asOf)}`}
@@ -190,7 +190,7 @@ export default function BalanceSheetPage() {
       )}
 
       {loading ? (
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           <TableSkeleton rows={3} columns={2} />
           <TableSkeleton rows={3} columns={2} />
           <TableSkeleton rows={3} columns={2} />

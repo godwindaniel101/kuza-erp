@@ -65,7 +65,7 @@ export default function TrialBalancePage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="Trial Balance"
         subtitle={`As of ${formatDate(asOf)}`}

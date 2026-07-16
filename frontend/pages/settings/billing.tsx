@@ -162,7 +162,7 @@ export default function BillingPage() {
   const currentPlanCode = subscription?.plan?.code;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="Billing & Plans"
         subtitle="Your subscription, usage and available plans"
@@ -170,7 +170,7 @@ export default function BillingPage() {
       />
 
       {loading ? (
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <CardSkeleton count={2} />
           </div>

@@ -89,7 +89,7 @@ export default function AiAnalyticsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title={t('aiAnalytics')}
         subtitle="Ask questions about your stock and sales"

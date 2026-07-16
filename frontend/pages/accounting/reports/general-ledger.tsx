@@ -105,7 +105,7 @@ export default function GeneralLedgerPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="General Ledger"
         subtitle={selectedAccount ? `${selectedAccount.code} — ${selectedAccount.name}` : 'Select an account to view its activity'}

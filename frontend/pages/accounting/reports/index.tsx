@@ -32,7 +32,7 @@ const reports = [
 
 export default function AccountingReportsPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="Reports"
         subtitle="Financial statements and account activity"

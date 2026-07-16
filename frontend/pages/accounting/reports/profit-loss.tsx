@@ -120,7 +120,7 @@ export default function ProfitLossPage() {
   const profitable = (data?.netProfit ?? 0) >= 0;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-5xl space-y-5">
       <PageHeader
         title="Profit & Loss"
         subtitle={`${formatDate(from)} – ${formatDate(to)}`}
@@ -156,7 +156,7 @@ export default function ProfitLossPage() {
       />
 
       {loading ? (
-        <div className="mx-auto w-full max-w-5xl space-y-5">
+        <div className="w-full max-w-5xl space-y-5">
           <TableSkeleton rows={4} columns={2} />
           <TableSkeleton rows={4} columns={2} />
         </div>

@@ -56,7 +56,7 @@ const adjustmentStatusVariant: Record<AdjustmentStatus, { variant: StatusBadgeVa
   REJECTED: { variant: 'rejected', label: 'Rejected' },
 };
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export default function AdjustmentsPage() {
   const router = useRouter();

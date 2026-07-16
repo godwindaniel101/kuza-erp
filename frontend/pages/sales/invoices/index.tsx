@@ -66,7 +66,7 @@ interface CustomerOption {
   name: string;
 }
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export default function InvoicesPage() {
   const router = useRouter();
