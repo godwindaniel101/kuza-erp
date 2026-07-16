@@ -1,217 +1,150 @@
-/**
- * Kuza — marketing site interactions.
- * ===========================================================================
- * Vanilla JS only. No external libraries or CDNs. Everything degrades
- * gracefully and respects prefers-reduced-motion.
- * ===========================================================================
- */
+/* ==========================================================================
+   Kuza marketing site — shared behaviour.
+   Nav dropdown, mobile drawer, scroll-reveal, count-up, pricing toggle, FAQ.
+   All motion respects prefers-reduced-motion.
+   ========================================================================== */
 (function () {
-  'use strict';
+  "use strict";
 
-  var reduceMotion =
-    window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* ---- Current year ---------------------------------------------------- */
-  var yearEl = document.getElementById('year');
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
-
-  /* ---- Theme toggle ---------------------------------------------------- */
-  var toggle = document.getElementById('themeToggle');
-  if (toggle) {
-    toggle.addEventListener('click', function () {
-      var isDark = document.documentElement.classList.toggle('dark');
-      try {
-        localStorage.setItem('kuza-theme', isDark ? 'dark' : 'light');
-      } catch (e) {}
-    });
-  }
-
-  /* ---- Header shadow on scroll ---------------------------------------- */
-  var header = document.getElementById('siteHeader');
+  /* ---------- Header shadow on scroll ---------- */
+  var header = document.querySelector(".site-header");
   if (header) {
     var onScroll = function () {
-      header.classList.toggle('scrolled', window.scrollY > 8);
+      header.classList.toggle("is-stuck", window.scrollY > 8);
     };
     onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
   }
 
-  /* ---- Mobile nav ------------------------------------------------------ */
-  var navToggle = document.getElementById('navToggle');
-  var mobileNav = document.getElementById('mobileNav');
-  if (navToggle && mobileNav) {
-    var closeNav = function () {
-      mobileNav.classList.remove('open');
-      mobileNav.hidden = true;
-      navToggle.setAttribute('aria-expanded', 'false');
-      navToggle.setAttribute('aria-label', 'Open menu');
-    };
-    navToggle.addEventListener('click', function () {
-      var open = mobileNav.classList.toggle('open');
-      mobileNav.hidden = !open;
-      navToggle.setAttribute('aria-expanded', String(open));
-      navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-    });
-    mobileNav.querySelectorAll('a').forEach(function (a) {
-      a.addEventListener('click', closeNav);
-    });
+  /* ---------- Products dropdown (desktop) ---------- */
+  var drop = document.querySelector(".nav-item--drop");
+  if (drop) {
+    var trigger = drop.querySelector(".nav-trigger");
+    var close = function () { drop.classList.remove("open"); if (trigger) trigger.setAttribute("aria-expanded", "false"); };
+    var open = function () { drop.classList.add("open"); if (trigger) trigger.setAttribute("aria-expanded", "true"); };
+    if (trigger) {
+      trigger.addEventListener("click", function (e) {
+        e.stopPropagation();
+        drop.classList.contains("open") ? close() : open();
+      });
+    }
+    drop.addEventListener("mouseenter", open);
+    drop.addEventListener("mouseleave", close);
+    document.addEventListener("click", function (e) { if (!drop.contains(e.target)) close(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
   }
 
-  /* ---- Scroll-reveal (staggered) -------------------------------------- */
-  var revealEls = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
-  if (reduceMotion || !('IntersectionObserver' in window)) {
-    revealEls.forEach(function (el) {
-      el.classList.add('in-view');
-    });
-  } else {
-    var revObserver = new IntersectionObserver(
-      function (entries, obs) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          var el = entry.target;
-          var delay = parseInt(el.getAttribute('data-delay') || '0', 10);
-          el.style.transitionDelay = delay + 'ms';
-          el.classList.add('in-view');
-          obs.unobserve(el);
-        });
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
-    );
-    revealEls.forEach(function (el) {
-      revObserver.observe(el);
-    });
-  }
+  /* ---------- Mobile drawer ---------- */
+  var drawer = document.getElementById("drawer");
+  var openBtn = document.querySelector(".nav-toggle");
+  var closeBtn = drawer ? drawer.querySelector(".drawer-close") : null;
+  var scrim = drawer ? drawer.querySelector(".drawer-scrim") : null;
+  var openDrawer = function () { if (!drawer) return; drawer.classList.add("open"); document.body.style.overflow = "hidden"; };
+  var closeDrawer = function () { if (!drawer) return; drawer.classList.remove("open"); document.body.style.overflow = ""; };
+  if (openBtn) openBtn.addEventListener("click", openDrawer);
+  if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+  if (scrim) scrim.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDrawer(); });
 
-  /* ---- Number counters ------------------------------------------------- */
-  function formatValue(value, el) {
-    var format = el.getAttribute('data-format');
-    var out;
-    if (format === 'comma') {
-      out = Math.round(value).toLocaleString('en-US');
-    } else if (format === 'short') {
-      // 10000 -> "10k"
-      if (value >= 1000) {
-        out = (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'k';
-      } else {
-        out = String(Math.round(value));
-      }
+  /* ---------- Scroll reveal ---------- */
+  var reveals = document.querySelectorAll(".reveal");
+  if (reveals.length) {
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      reveals.forEach(function (el) { el.classList.add("in"); });
     } else {
-      out = String(Math.round(value));
-    }
-    return out;
-  }
-
-  function animateCount(el) {
-    var target = parseFloat(el.getAttribute('data-count')) || 0;
-    var suffix = el.getAttribute('data-suffix') || '';
-    if (reduceMotion) {
-      el.textContent = formatValue(target, el) + suffix;
-      return;
-    }
-    var duration = 1600;
-    var start = null;
-    function step(ts) {
-      if (start === null) start = ts;
-      var progress = Math.min((ts - start) / duration, 1);
-      // easeOutCubic
-      var eased = 1 - Math.pow(1 - progress, 3);
-      el.textContent = formatValue(target * eased, el) + suffix;
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        el.textContent = formatValue(target, el) + suffix;
-      }
-    }
-    requestAnimationFrame(step);
-  }
-
-  var counters = Array.prototype.slice.call(document.querySelectorAll('[data-count]'));
-  if (!('IntersectionObserver' in window)) {
-    counters.forEach(animateCount);
-  } else {
-    var countObserver = new IntersectionObserver(
-      function (entries, obs) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          animateCount(entry.target);
-          obs.unobserve(entry.target);
+      var io = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add("in"); obs.unobserve(en.target); }
         });
-      },
-      { threshold: 0.4 }
-    );
-    counters.forEach(function (el) {
-      countObserver.observe(el);
+      }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+      reveals.forEach(function (el) { io.observe(el); });
+    }
+  }
+
+  /* ---------- Count-up ---------- */
+  function formatNum(val, decimals) {
+    return Number(val).toLocaleString("en-US", {
+      minimumFractionDigits: decimals, maximumFractionDigits: decimals
     });
   }
-
-  /* ---- Marquee: duplicate track for seamless loop --------------------- */
-  var track = document.getElementById('marqueeTrack');
-  if (track && !reduceMotion) {
-    var clone = track.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.setAttribute('aria-hidden', 'true');
-    track.parentNode.appendChild(clone);
-    // The keyframe translates -50%; the duplicate makes that seamless.
+  var counters = document.querySelectorAll("[data-count]");
+  if (counters.length) {
+    var runCount = function (el) {
+      var target = parseFloat(el.getAttribute("data-count"));
+      var decimals = (el.getAttribute("data-count").split(".")[1] || "").length;
+      var prefix = el.getAttribute("data-prefix") || "";
+      var suffix = el.getAttribute("data-suffix") || "";
+      if (reduceMotion) { el.textContent = prefix + formatNum(target, decimals) + suffix; return; }
+      var dur = 1600, start = null;
+      var tick = function (ts) {
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = prefix + formatNum(target * eased, decimals) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = prefix + formatNum(target, decimals) + suffix;
+      };
+      requestAnimationFrame(tick);
+    };
+    if (!("IntersectionObserver" in window)) {
+      counters.forEach(runCount);
+    } else {
+      var cio = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { runCount(en.target); obs.unobserve(en.target); }
+        });
+      }, { threshold: 0.5 });
+      counters.forEach(function (el) { cio.observe(el); });
+    }
   }
 
-  /* ---- FAQ: single-open accordion ------------------------------------- */
-  var faqItems = Array.prototype.slice.call(document.querySelectorAll('.faq-item'));
-  faqItems.forEach(function (item) {
-    item.addEventListener('toggle', function () {
-      if (!item.open) return;
-      faqItems.forEach(function (other) {
-        if (other !== item) other.open = false;
+  /* ---------- Marquee duplication (seamless loop) ---------- */
+  var track = document.querySelector(".marquee-track");
+  if (track && !track.dataset.cloned) {
+    track.innerHTML += track.innerHTML;
+    track.dataset.cloned = "true";
+  }
+
+  /* ---------- Pricing currency toggle ---------- */
+  var toggle = document.querySelector(".price-toggle");
+  if (toggle) {
+    toggle.addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-cur]");
+      if (!btn) return;
+      var cur = btn.getAttribute("data-cur");
+      toggle.querySelectorAll("button").forEach(function (b) { b.classList.toggle("active", b === btn); });
+      document.querySelectorAll("[data-ngn]").forEach(function (el) {
+        var v = el.getAttribute("data-" + cur.toLowerCase());
+        if (v !== null) el.textContent = v;
+      });
+      document.querySelectorAll("[data-cur-sym]").forEach(function (el) {
+        el.textContent = cur === "USD" ? "$" : "₦";
       });
     });
-  });
-
-  /* ---- Pricing currency switch (local-first: NGN/KSh primary) --------- */
-  var SYMBOLS = { NGN: '₦', KES: 'KSh', USD: '$' };
-  var ORDER = ['NGN', 'KES', 'USD'];
-
-  // Preserve the trailing note (trial / billing) per card before wiring.
-  document.querySelectorAll('[data-secondary]').forEach(function (el) {
-    var parts = el.textContent.split('·');
-    if (parts.length) {
-      el.setAttribute('data-trial', parts[parts.length - 1].trim());
-    }
-  });
-
-  function setCurrency(cur) {
-    document.querySelectorAll('[data-price]').forEach(function (el) {
-      var map;
-      try {
-        map = JSON.parse(el.getAttribute('data-price'));
-      } catch (e) {
-        return;
-      }
-      el.textContent = map[cur];
-      var card = el.closest('.price-card');
-      if (!card) return;
-      var symEl = card.querySelector('[data-cur-symbol]');
-      if (symEl) symEl.textContent = SYMBOLS[cur];
-      var secEl = card.querySelector('[data-secondary]');
-      if (secEl) {
-        var others = ORDER.filter(function (c) {
-          return c !== cur;
-        })
-          .map(function (c) {
-            return SYMBOLS[c] + ' ' + map[c];
-          })
-          .join(' · ');
-        var trial = secEl.getAttribute('data-trial') || '';
-        secEl.textContent = '≈ ' + others + (trial ? ' · ' + trial : '');
-      }
-    });
-    document.querySelectorAll('.currency-switch button').forEach(function (b) {
-      b.classList.toggle('active', b.getAttribute('data-cur') === cur);
-    });
   }
 
-  document.querySelectorAll('.currency-switch button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      setCurrency(b.getAttribute('data-cur'));
+  /* ---------- FAQ accordion ---------- */
+  document.querySelectorAll(".faq-q").forEach(function (q) {
+    q.addEventListener("click", function () {
+      var item = q.closest(".faq-item");
+      var isOpen = item.classList.contains("open");
+      document.querySelectorAll(".faq-item.open").forEach(function (i) { if (i !== item) i.classList.remove("open"); });
+      item.classList.toggle("open", !isOpen);
+    });
+  });
+
+  /* ---------- Footer year ---------- */
+  var yr = document.getElementById("year");
+  if (yr) yr.textContent = new Date().getFullYear();
+
+  /* ---------- Newsletter (no backend — friendly acknowledgement) ---------- */
+  document.querySelectorAll(".news-row").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var input = form.querySelector("input");
+      if (input && input.value) { input.value = ""; input.placeholder = "Thanks — you're on the list ✓"; }
     });
   });
 })();
