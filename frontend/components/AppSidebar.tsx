@@ -97,27 +97,10 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
   };
 
   const [profileOpen, setProfileOpen] = useState(false);
-  const [launcherOpen, setLauncherOpen] = useState(false);
-  const launcherRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) fetchTenantContext();
   }, [user, fetchTenantContext]);
-
-  // Close launcher on outside click / Escape.
-  useEffect(() => {
-    if (!launcherOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (launcherRef.current && !launcherRef.current.contains(e.target as Node)) setLauncherOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setLauncherOpen(false);
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [launcherOpen]);
 
   // ---- App catalog -----------------------------------------------------
 
@@ -407,15 +390,9 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       } flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800`}
       style={mobile ? undefined : { width: 'var(--sidebar-width)' }}
     >
-      {/* App switcher header — current app + launcher */}
-      <div className="relative shrink-0 px-2 pt-2.5 pb-2" ref={launcherRef}>
-        <button
-          type="button"
-          onClick={() => setLauncherOpen((v) => !v)}
-          aria-haspopup="menu"
-          aria-expanded={launcherOpen}
-          className="flex w-full items-center gap-2.5 rounded-xl p-2 text-left transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
+      {/* Current app identity (static — switch apps from the top-bar launcher) */}
+      <div className="shrink-0 px-2 pt-2.5 pb-2">
+        <div className="flex w-full items-center gap-2.5 rounded-xl p-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white">
             <Icon name={activeApp.icon} size={18} />
           </span>
@@ -428,56 +405,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
               {EDITION_CHIPS[businessType ?? ''] ? ` · ${EDITION_CHIPS[businessType ?? '']}` : ''}
             </span>
           </span>
-          <Icon name="squares-2x2" size={16} className="text-gray-400 dark:text-gray-500" />
-        </button>
-
-        {launcherOpen && (
-          <div
-            role="menu"
-            className="absolute left-2 right-2 top-full z-50 mt-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 shadow-popover"
-          >
-            <p className="px-2 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-              Apps
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {businessApps.map((app) => (
-                <Link
-                  key={app.id}
-                  href={app.home}
-                  role="menuitem"
-                  onClick={() => {
-                    setLauncherOpen(false);
-                    onNavigate?.();
-                  }}
-                  className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 transition-colors duration-150 ${
-                    app.id === activeApp.id
-                      ? 'border-brand-200 bg-brand-50/70 dark:border-brand-500/30 dark:bg-brand-500/10'
-                      : 'border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800/70'
-                  }`}
-                  title={app.blurb}
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-gradient text-white">
-                    <Icon name={app.icon} size={15} />
-                  </span>
-                  <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{app.name}</span>
-                </Link>
-              ))}
-            </div>
-            <div className="my-1.5 border-t border-gray-200 dark:border-gray-800" />
-            <Link
-              href="/settings"
-              role="menuitem"
-              onClick={() => {
-                setLauncherOpen(false);
-                onNavigate?.();
-              }}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
-            >
-              <Icon name="cog" size={16} className="text-gray-400 dark:text-gray-500" />
-              Settings
-            </Link>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Active app navigation */}
