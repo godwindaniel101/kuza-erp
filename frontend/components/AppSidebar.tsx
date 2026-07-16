@@ -160,7 +160,7 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
           label: 'Sell',
           items: [
             { href: '/pos', label: 'Point of Sale', icon: 'building-storefront', permission: 'orders.create' },
-            { href: '/rms/orders', label: 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+            { href: '/rms/orders', label: 'Sales History', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
           ],
         },
         {

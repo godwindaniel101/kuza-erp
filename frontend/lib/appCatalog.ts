@@ -11,6 +11,8 @@ export interface CoarseApp {
   name: string;
   /** Display name override for the hospitality edition. */
   hospitalityName?: string;
+  /** Display name override for the retail edition. */
+  retailName?: string;
   icon: IconName;
   home: string;
   /** Any-of registry keys that enable this app. null = always available. */
@@ -18,7 +20,7 @@ export interface CoarseApp {
 }
 
 export const COARSE_APPS: CoarseApp[] = [
-  { id: 'pos', name: 'Point of Sale', hospitalityName: 'Restaurant', icon: 'building-storefront', home: '/', appKeys: ['pos', 'tables', 'menu'] },
+  { id: 'pos', name: 'Point of Sale', hospitalityName: 'Restaurant', retailName: 'Shop', icon: 'building-storefront', home: '/', appKeys: ['pos', 'tables', 'menu'] },
   { id: 'inventory', name: 'Inventory', icon: 'cube', home: '/ims', appKeys: ['items', 'goods-in'] },
   { id: 'sales', name: 'Sales', icon: 'banknotes', home: '/sales', appKeys: ['customers', 'invoicing'] },
   { id: 'accounting', name: 'Accounting', icon: 'calculator', home: '/accounting', appKeys: ['books', 'insights'] },
@@ -29,6 +31,9 @@ export const COARSE_APPS: CoarseApp[] = [
 export function appDisplayName(app: CoarseApp, businessType?: string | null): string {
   if (app.hospitalityName && (businessType === 'restaurant' || businessType === 'hospitality')) {
     return app.hospitalityName;
+  }
+  if (app.retailName && businessType === 'retail') {
+    return app.retailName;
   }
   return app.name;
 }
