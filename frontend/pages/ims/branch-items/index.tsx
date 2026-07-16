@@ -238,21 +238,21 @@ export default function BranchItemsPage() {
                         </div>
                       </th>
                       {branches.map((branch) => (
-                        <th key={branch.id} className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase min-w-[120px]">
+                        <th key={branch.id} className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase min-w-[120px]">
                           {branch.name}
                           {branch.isDefault && <span className="ml-1 text-xs text-gray-400">({t('default') || 'Default'})</span>}
                         </th>
                       ))}
                       <th
-                        className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => handleSort('totalStock')}
                       >
-                        <div className="flex items-center justify-center space-x-1">
+                        <div className="flex items-center justify-end space-x-1">
                           <span>{t('totalStock') || 'Total Stock'}</span>
                           <SortIcon field="totalStock" />
                         </div>
                       </th>
-                      <th className="px-6 py-2.5 text-center text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                         {t('unit') || 'Unit'}
                       </th>
                     </tr>
@@ -297,24 +297,22 @@ export default function BranchItemsPage() {
                         const isLowStock = branchStock?.minimumStock && stock <= Number(branchStock.minimumStock);
                         
                         return (
-                          <td key={branch.id} className="px-6 py-3 whitespace-nowrap text-center text-[13px]">
-                            <div className="flex flex-col items-center">
-                              <span className={`font-medium ${isLowStock ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                                {stock.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                              </span>
-                              {branchStock?.minimumStock !== null && branchStock?.minimumStock !== undefined && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  Min: {Number(branchStock.minimumStock).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                                </span>
-                              )}
-                            </div>
+                          <td key={branch.id} className="px-4 py-3 whitespace-nowrap text-right text-[13px] tabular-nums">
+                            <span className={`font-medium ${isLowStock ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                              {stock.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                            {branchStock?.minimumStock !== null && branchStock?.minimumStock !== undefined && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Min: {Number(branchStock.minimumStock).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                              </div>
+                            )}
                           </td>
                         );
                       })}
-                      <td className="px-6 py-3 whitespace-nowrap text-center text-[13px] font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-[13px] font-medium tabular-nums text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900">
                         {Number(item.totalStock || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-center text-[13px] text-gray-500 dark:text-gray-300">
+                      <td className="px-4 py-3 whitespace-nowrap text-left text-[13px] text-gray-500 dark:text-gray-300">
                         {item.unit && item.unit !== 'Unknown' ? item.unit : '-'}
                       </td>
                     </tr>

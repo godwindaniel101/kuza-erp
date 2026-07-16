@@ -8,11 +8,14 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
+import Receipt from '@/components/Receipt';
 import { formatMoney, useCurrency } from '@/lib/format';
+import { useTenantStore } from '@/store/globalStore';
 
 export default function OrderViewPage() {
   const { t } = useTranslation('common');
   const currency = useCurrency();
+  const { businessName } = useTenantStore();
   const router = useRouter();
   const { id } = router.query;
   const [loading, setLoading] = useState(true);
@@ -117,7 +120,20 @@ export default function OrderViewPage() {
             { label: t('orders') || 'Orders', href: '/rms/orders' },
             { label: order.orderNumber },
           ]}
+          actions={
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 px-3 h-9 text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus-ring"
+            >
+              <i className="bx bx-printer text-base" aria-hidden="true"></i>
+              {t('printReceipt') || 'Print receipt'}
+            </button>
+          }
         />
+
+        {/* Hidden on screen; only this prints (see .receipt-print / @media print) */}
+        <Receipt order={order} currency={currency} businessName={businessName || undefined} />
 
         {/* First Row: Order Information and Payment History */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">

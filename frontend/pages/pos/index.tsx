@@ -5,7 +5,11 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
+import Modal from '@/components/Modal';
+import Receipt from '@/components/Receipt';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useCurrency } from '@/lib/format';
+import { useTenantStore } from '@/store/globalStore';
 import { OrderIcon, BranchIcon, PaymentIcon } from '@/components/icons';
 import {
   ProductGrid,
@@ -49,6 +53,8 @@ const EMPTY_META: OrderMeta = {
  * both are visible; on phones the ticket collapses into a bottom bar + drawer.
  */
 export default function PosPage() {
+  const currency = useCurrency();
+  const { businessName } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<PosBranch[]>([]);
   const [branchId, setBranchId] = useState('');
@@ -68,6 +74,9 @@ export default function PosPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false); // mobile drawer
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  // Just-completed sale — used to offer a receipt print in the success modal.
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   /* ---------------------------------------------------------------- */
   /* Data loading                                                      */
@@ -232,7 +241,7 @@ export default function PosPage() {
     }
     setSaving(true);
     try {
-      const response = await api.post<{ success: boolean }>('/rms/orders', {
+      const response = await api.post<{ success: boolean; data?: any }>('/rms/orders', {
         branchId,
         tableId: meta.tableId || undefined,
         type: meta.type,
@@ -248,7 +257,34 @@ export default function PosPage() {
         })),
       });
       if (response.success) {
-        setToast({ message: 'Order placed successfully', type: 'success' });
+        // Build a receipt-ready order from the create response, falling back to
+        // the just-submitted ticket for any fields the API doesn't echo back.
+        const created = response.data || {};
+        const branch = branches.find((b) => b.id === branchId);
+        const receiptOrder = {
+          ...created,
+          orderNumber: created.orderNumber || created.id || '',
+          createdAt: created.createdAt || new Date().toISOString(),
+          orderType: created.orderType ?? meta.type,
+          branch: created.branch || (branch ? { name: branch.name } : undefined),
+          customerName: created.customerName ?? (meta.customerName || undefined),
+          customerPhone: created.customerPhone ?? (meta.customerPhone || undefined),
+          items:
+            Array.isArray(created.items) && created.items.length > 0
+              ? created.items
+              : lines.map((l) => ({
+                  name: l.name,
+                  quantity: l.quantity,
+                  uom: l.uoms?.find((u) => u.id === l.uomId),
+                  unitPrice: l.unitPrice,
+                  totalPrice: l.unitPrice * l.quantity,
+                })),
+          subtotal: created.subtotal ?? subtotal,
+          tax: created.tax ?? vat,
+          totalAmount: created.totalAmount ?? total,
+        };
+        setLastOrder(receiptOrder);
+        setSuccessOpen(true);
         setLines([]);
         setMeta(EMPTY_META);
         setCartOpen(false);
@@ -264,7 +300,7 @@ export default function PosPage() {
     } finally {
       setSaving(false);
     }
-  }, [branchId, lines, meta, loadProducts]);
+  }, [branchId, lines, meta, loadProducts, branches, subtotal, vat, total]);
 
   /* ---------------------------------------------------------------- */
   /* Render                                                            */
@@ -396,6 +432,52 @@ export default function PosPage() {
         tables={tables}
         onSave={(next) => setMeta(next)}
       />
+
+      {/* Sale-completed: offer to print the receipt for the just-created order. */}
+      <Modal
+        isOpen={successOpen}
+        onClose={() => setSuccessOpen(false)}
+        title="Sale completed"
+        maxWidth="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setSuccessOpen(false)}
+              className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 h-9 inline-flex items-center text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Done
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-lg bg-brand-gradient px-4 h-9 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white hover:opacity-90"
+            >
+              <i className="bx bx-printer text-base" aria-hidden="true"></i>
+              Print receipt
+            </button>
+          </>
+        }
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+            <i className="bx bx-check text-xl" aria-hidden="true"></i>
+          </span>
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <p className="font-medium text-gray-900 dark:text-gray-100">Order placed successfully</p>
+            <p className="mt-0.5 text-gray-500 dark:text-gray-400">
+              {lastOrder?.orderNumber
+                ? `Receipt ${lastOrder.orderNumber}`
+                : 'You can print a receipt for this sale.'}
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Hidden on screen; only this prints (see .receipt-print / @media print) */}
+      {lastOrder && (
+        <Receipt order={lastOrder} currency={currency} businessName={businessName || undefined} />
+      )}
     </PermissionGuard>
   );
 }

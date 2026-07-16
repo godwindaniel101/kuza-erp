@@ -111,7 +111,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    unaffected. Excludes toggles/range/color/file and multi-line textareas. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
 select {
-  max-width: 300px;
+  max-width: 350px;
 }
 
 * {
@@ -261,11 +261,86 @@ html.dark select option {
   .no-print {
     display: none !important;
   }
-  
+
   .barcode-sheet {
     padding: 0;
     margin: 0;
     page-break-after: always;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Printable receipt (components/Receipt.tsx)                          */
+/* Rendered via a portal to <body>, so it is a sibling of the Next     */
+/* app root. Hidden on screen; on print we hide everything except the  */
+/* receipt so ONLY the receipt prints (no sidebar / header / chrome).  */
+/* ------------------------------------------------------------------ */
+.receipt-print {
+  display: none;
+}
+
+.receipt-paper {
+  width: 80mm;
+  max-width: 80mm;
+  margin: 0 auto;
+  padding: 4mm;
+  color: #000;
+  background: #fff;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-business {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.receipt-hr {
+  border-top: 1px solid #000;
+  margin: 6px 0;
+}
+
+.receipt-hr-dashed {
+  border-top: 1px dashed #000;
+  margin: 5px 0;
+}
+
+.receipt-item {
+  margin-bottom: 4px;
+}
+
+.receipt-item-name {
+  font-weight: 700;
+}
+
+.receipt-footer {
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+@media print {
+  /* Hide the entire app (chrome + page content + any modals) and reveal
+     only the receipt, which lives at <body> level via a portal. */
+  body > *:not(.receipt-print) {
+    display: none !important;
+  }
+  .receipt-print {
+    display: block !important;
+    position: static;
+  }
+  .receipt-paper {
+    width: 100%;
+    max-width: none;
+  }
+  @page {
+    size: 80mm auto;
+    margin: 0;
   }
 }
 

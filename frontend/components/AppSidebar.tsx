@@ -155,10 +155,12 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
         { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
         {
           // Inventory/retail sells via its OWN Point of Sale (/pos) — a
-          // different surface from the Restaurant order flow. Just one entry.
+          // different surface from the Restaurant order flow. 'Point of Sale'
+          // makes a sale; 'Sales' views past sales (the order history).
           label: 'Sell',
           items: [
             { href: '/pos', label: 'Point of Sale', icon: 'building-storefront', permission: 'orders.create' },
+            { href: '/rms/orders', label: 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
           ],
         },
         {
@@ -333,6 +335,16 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
       if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
       if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
+      // Sales history (/rms/orders) belongs to the Restaurant (pos) app when the
+      // tenant has it. A retail tenant WITHOUT the Restaurant app views its
+      // sales inside the Inventory app instead.
+      if (path.startsWith('/rms/orders')) {
+        const hasRestaurant = businessApps.some((a) => a.id === 'pos');
+        if (!hasRestaurant && businessApps.some((a) => a.id === 'inventory')) {
+          return apps.find((a) => a.id === 'inventory')!;
+        }
+        return apps.find((a) => a.id === 'pos')!;
+      }
       // /pos is the RETAIL Point of Sale — it belongs to the Inventory app.
       // The Restaurant app sells through its own /rms/orders flow instead.
       if (path.startsWith('/pos')) return apps.find((a) => a.id === 'inventory')!;
