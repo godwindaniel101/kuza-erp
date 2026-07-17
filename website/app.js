@@ -163,6 +163,22 @@
   var yr = document.getElementById("year");
   if (yr) yr.textContent = new Date().getFullYear();
 
+  /* ---------- App links ----------
+     The marketing site and the app run on separate origins, so "Sign in" /
+     "Start free" must point at the app. Dev defaults to localhost:5001;
+     production sets window.KUZA_APP_URL (e.g. "https://app.kuza.africa") once,
+     before this script. Rewrites both [data-app-path] anchors and any legacy
+     hardcoded localhost:5001 links across every page — no per-page edits. */
+  (function () {
+    var APP_URL = (window.KUZA_APP_URL || "http://localhost:5001").replace(/\/+$/, "");
+    document.querySelectorAll("a[data-app-path]").forEach(function (a) {
+      a.href = APP_URL + a.getAttribute("data-app-path");
+    });
+    document.querySelectorAll('a[href*="localhost:5001"]').forEach(function (a) {
+      a.href = a.href.replace(/https?:\/\/localhost:5001/, APP_URL);
+    });
+  })();
+
   /* ---------- Newsletter (no backend — friendly acknowledgement) ---------- */
   document.querySelectorAll(".news-row").forEach(function (form) {
     form.addEventListener("submit", function (e) {

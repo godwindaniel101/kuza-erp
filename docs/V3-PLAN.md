@@ -69,17 +69,30 @@ The product is judged as one continuous ribbon — any rough seam breaks the "wo
 
 ## 4. Current state (grounded in the codebase)
 
-> Filled from the codebase map. Legend: ✅ solid · 🟡 partial/needs work · 🔴 stub/missing.
+> Grounded in a full codebase scan. Legend: ✅ solid · 🟡 partial/needs work · 🔴 stub/missing.
 
-_(reconciled against the repo scan — see §6 backlog for the gaps this exposes)_
-
-- **Onboarding / sign-up:** _<map pending>_
-- **Website:** _<map pending>_
-- **Payments (collect):** _<map pending>_
-- **Reconciliation:** _<map pending>_
-- **Payroll:** _<map pending>_
-- **Tax:** _<map pending>_
-- **Accounting / Invoicing / Inventory / POS / HR / Insights-AI / Admin-billing:** _<map pending>_
+- **Onboarding / sign-up:** 🟡 The 3-step sign-up wizard (business type → country/currency →
+  details) and multi-tenant provisioning (per-tenant schema, app presets, Google SSO) are ✅ solid.
+  Gap: no post-signup guided setup — users landed on an empty dashboard. **Fixed this branch** with
+  a business-type-aware "Get started" guide (`frontend/components/GettingStarted.tsx`).
+- **Website:** 🟡 Near-complete multi-page static site (index + 8 vertical pages + pricing, Docker +
+  nginx clean-URLs). Rough edges: amateur visual craft (oversized type / weak hierarchy — being
+  rewritten to a Stripe-caliber design system) and hardcoded `localhost:5001` app links.
+- **Payments (collect):** 🟡 Real. Paystack + Monnify adapters behind a `PaymentProviderPort`, live
+  API calls, virtual accounts. Gap: **Nigeria-only** — no Flutterwave / M-Pesa yet.
+- **Reconciliation:** 🟡 Payment→invoice auto-match on webhook (idempotent, HMAC-verified) is ✅.
+  Gap: **no bank-statement / cash reconciliation** workspace.
+- **Payroll:** 🔴 for Africa. A real payroll engine exists but is **US-shaped** (federal/state tax,
+  $4,300 allowances, country "US"). Tax brackets are data-driven from a `TaxConfiguration` table, so
+  a **Nigerian country pack is a seed + logic job, not a rewrite** — but PAYE / pension / NHF / NSITF
+  logic does **not** exist yet. This is the single biggest "for Africa" gap.
+- **Tax:** 🔴 Generic per-line `taxRate` only. **No VAT-specific or WHT (withholding) handling**, no
+  tax returns.
+- **Everything else:** ✅ mostly solid — Accounting (double-entry, posting service + specs),
+  Invoicing (line-level tax, send, record-payment, void), Inventory (items/inflows/movements/
+  ledger + recon report), POS/Restaurant (orders/tables/menus/QR sites), HR (employees/attendance/
+  leave), Billing (Paystack checkout + signed webhook + subscription ledger), Insights/AI
+  (real digest computed in SQL + provider-agnostic copilot), Admin back-office. No bare stubs.
 
 ---
 
@@ -115,8 +128,29 @@ Each phase ends with: QA pass, typecheck/build green, product validation, demo-a
 
 _High-leverage, ranked; checked when done._
 
-- [x] Phase 0: branch + dead-code/junk removal
-- [ ] _Phase 1+ items enumerated from the codebase map_
+**Phase 0 — done**
+- [x] Cut `feat/v3`
+- [x] Remove HTTrack/doola scrape (25MB) + `.DS_Store` + typo CSV
+- [x] North-star + research + this plan
+
+**Phase 1 — front door (in progress)**
+- [x] Guided first-run "Get started" guide on the dashboard
+- [ ] Website total rewrite → Stripe-caliber design system (exemplar → all pages)
+- [ ] Make website app links prod-configurable (drop hardcoded `localhost:5001`)
+- [ ] Teaching empty states across modules
+
+**Phase 2 — Collect & Reconcile**
+- [ ] `PaymentRail` port + Flutterwave, then M-Pesa (Daraja) adapters
+- [ ] Bank/cash reconciliation workspace (import statement → auto-match → unmatched worklist)
+
+**Phase 3 — Pay & Comply (biggest differentiator)**
+- [ ] Nigerian payroll country pack: PAYE (CRA + progressive bands), pension 8%/10%, NHF 2.5%, NSITF
+- [ ] Seed `TaxConfiguration` for NG; make `country` drive the pack; payslips
+- [ ] VAT (7.5%) + WHT engine on invoices/purchases + tax reports
+
+**Phase 4 — See & Scale**
+- [ ] AI copilot on live tenant data (Llama-on-Docker option) + on-demand charts
+- [ ] Mobile-first + offline-tolerance passes; performance & polish
 
 ---
 
