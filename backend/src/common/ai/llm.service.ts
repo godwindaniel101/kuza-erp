@@ -22,16 +22,22 @@ export interface LlmChatResult {
 }
 
 /** Providers the abstraction can dispatch to. Add new ids here and to `handlers`. */
-type ProviderId = 'anthropic' | 'openai';
+type ProviderId = 'ollama' | 'openai' | 'anthropic';
 
 /**
  * Provider-agnostic LLM gateway. The provider is chosen entirely by env
- * (AI_PROVIDER) so the LLM backend can be switched by config, not code:
+ * (AI_PROVIDER) so the LLM backend is switched by config, not code:
  *
- *   - 'anthropic' (default): api.anthropic.com-compatible /v1/messages.
- *   - 'openai': OpenAI-compatible /v1/chat/completions — this is how
- *     Llama-on-Docker is reached (Ollama, llama.cpp, vLLM, LM Studio all
- *     expose this shape).
+ *   - 'ollama' (default): a LOCAL OpenAI-compatible /chat/completions endpoint
+ *     (Docker Model Runner, Ollama, llama.cpp, vLLM, LM Studio). No API key.
+ *       AI_PROVIDER=ollama
+ *       OLLAMA_BASE_URL=http://model-runner.docker.internal/engines/v1
+ *       OLLAMA_MODEL=ai/llama3.2:latest
+ *       OLLAMA_TIMEOUT=30000
+ *   - 'openai' : OpenAI (or any OpenAI-compatible) — OPENAI_API_KEY,
+ *     OPENAI_MODEL (default gpt-4o-mini), OPENAI_BASE_URL.
+ *   - 'anthropic' : Claude — ANTHROPIC_API_KEY, ANTHROPIC_MODEL (default
+ *     claude-sonnet-5).
  *
  * chat() NEVER throws: any misconfiguration, timeout, transport error, or
  * unparseable response degrades to { text: '', available: false } so callers
@@ -41,7 +47,7 @@ type ProviderId = 'anthropic' | 'openai';
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
 
-  private static readonly TIMEOUT_MS = 20_000;
+  private static readonly DEFAULT_TIMEOUT_MS = 30_000;
   private static readonly DEFAULT_MAX_TOKENS = 1024;
 
   /** Provider dispatch table — extend this map to add more providers. */
@@ -49,12 +55,13 @@ export class LlmService {
     ProviderId,
     (params: LlmChatParams) => Promise<LlmChatResult>
   > = {
+    ollama: (params) => this.callOllama(params),
+    openai: (params) => this.callOpenAi(params),
     anthropic: (params) => this.callAnthropic(params),
-    openai: (params) => this.callOpenAiCompatible(params),
   };
 
   async chat(params: LlmChatParams): Promise<LlmChatResult> {
-    const provider = (process.env.AI_PROVIDER || 'anthropic').toLowerCase();
+    const provider = (process.env.AI_PROVIDER || 'ollama').toLowerCase();
     const handler = this.handlers[provider as ProviderId];
     if (!handler) {
       this.logger.warn(`Unknown AI_PROVIDER "${provider}" — AI unavailable`);
@@ -68,19 +75,39 @@ export class LlmService {
     }
   }
 
-  /** Anthropic Messages API (or any api.anthropic.com-compatible endpoint). */
-  private async callAnthropic(params: LlmChatParams): Promise<LlmChatResult> {
-    const apiKey = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY;
+  /** Local model via an OpenAI-compatible /chat/completions endpoint. */
+  private async callOllama(params: LlmChatParams): Promise<LlmChatResult> {
+    const baseUrl =
+      process.env.OLLAMA_BASE_URL ||
+      process.env.OLLAMA_BASE_URI ||
+      process.env.AI_BASE_URL ||
+      'http://model-runner.docker.internal/engines/v1';
+    const model = process.env.OLLAMA_MODEL || process.env.AI_MODEL || 'ai/llama3.2:latest';
+    const timeoutMs = Number(process.env.OLLAMA_TIMEOUT) || LlmService.DEFAULT_TIMEOUT_MS;
+    // Local runtimes ignore the key; send a harmless default so headers are valid.
+    return this.chatCompletions(baseUrl, model, 'ollama', params, timeoutMs);
+  }
+
+  /** OpenAI (or any OpenAI-compatible provider) — requires an API key. */
+  private async callOpenAi(params: LlmChatParams): Promise<LlmChatResult> {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.AI_API_KEY;
     if (!apiKey) {
-      // Matches prior behaviour: no key -> not configured.
+      this.logger.warn('AI_PROVIDER=openai but OPENAI_API_KEY is not set');
       return { text: '', available: false };
     }
+    const baseUrl = process.env.OPENAI_BASE_URL || process.env.AI_BASE_URL || 'https://api.openai.com/v1';
+    const model = process.env.OPENAI_MODEL || process.env.AI_MODEL || 'gpt-4o-mini';
+    return this.chatCompletions(baseUrl, model, apiKey, params, LlmService.DEFAULT_TIMEOUT_MS);
+  }
 
-    const baseUrl = (process.env.AI_BASE_URL || 'https://api.anthropic.com').replace(
-      /\/+$/,
-      '',
-    );
-    const model = process.env.AI_MODEL || 'claude-sonnet-5';
+  /** Anthropic Messages API (or any api.anthropic.com-compatible endpoint). */
+  private async callAnthropic(params: LlmChatParams): Promise<LlmChatResult> {
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY;
+    if (!apiKey) {
+      return { text: '', available: false };
+    }
+    const baseUrl = (process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '');
+    const model = process.env.ANTHROPIC_MODEL || process.env.AI_MODEL || 'claude-sonnet-5';
 
     const body: Record<string, any> = {
       model,
@@ -90,18 +117,14 @@ export class LlmService {
     if (params.system) body.system = params.system;
     if (params.temperature !== undefined) body.temperature = params.temperature;
 
-    const data = await this.postJson(`${baseUrl}/v1/messages`, {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    }, body);
+    const data = await this.postJson(
+      `${baseUrl}/v1/messages`,
+      { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body,
+      LlmService.DEFAULT_TIMEOUT_MS,
+    );
     if (data === null) return { text: '', available: false };
-
-    if (data?.stop_reason === 'refusal') {
-      // Model refused: this is a real, "available" response with empty text so
-      // the caller can decide how to phrase it.
-      return { text: '', available: true };
-    }
+    if (data?.stop_reason === 'refusal') return { text: '', available: true };
 
     const text = Array.isArray(data?.content)
       ? data.content
@@ -110,31 +133,23 @@ export class LlmService {
           .join('')
           .trim()
       : '';
-
     return { text, available: true };
   }
 
   /**
-   * OpenAI-compatible Chat Completions. AI_BASE_URL should include the API
-   * root, e.g. http://ollama:11434/v1 — we POST to {AI_BASE_URL}/chat/completions.
+   * Shared OpenAI-compatible Chat Completions call. `baseUrl` is the API root
+   * (e.g. http://model-runner.docker.internal/engines/v1); we POST to
+   * {baseUrl}/chat/completions and read choices[0].message.content, falling
+   * back to native Ollama shapes (message.content / response).
    */
-  private async callOpenAiCompatible(
+  private async chatCompletions(
+    baseUrl: string,
+    model: string,
+    apiKey: string,
     params: LlmChatParams,
+    timeoutMs: number,
   ): Promise<LlmChatResult> {
-    const baseUrl = process.env.AI_BASE_URL;
-    if (!baseUrl) {
-      this.logger.warn('AI_PROVIDER=openai but AI_BASE_URL is not set');
-      return { text: '', available: false };
-    }
     const root = baseUrl.replace(/\/+$/, '');
-    const model = process.env.AI_MODEL;
-    if (!model) {
-      this.logger.warn('AI_PROVIDER=openai but AI_MODEL is not set');
-      return { text: '', available: false };
-    }
-    // Many local servers ignore the key entirely; send a harmless default.
-    const apiKey = process.env.AI_API_KEY || 'ollama';
-
     const messages: Array<{ role: string; content: string }> = [];
     if (params.system) messages.push({ role: 'system', content: params.system });
     messages.push(...params.messages);
@@ -143,34 +158,36 @@ export class LlmService {
       model,
       max_tokens: params.maxTokens ?? LlmService.DEFAULT_MAX_TOKENS,
       messages,
+      stream: false,
     };
     if (params.temperature !== undefined) body.temperature = params.temperature;
 
-    const data = await this.postJson(`${root}/chat/completions`, {
-      'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`,
-    }, body);
+    const data = await this.postJson(
+      `${root}/chat/completions`,
+      { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+      body,
+      timeoutMs,
+    );
     if (data === null) return { text: '', available: false };
 
-    const content = data?.choices?.[0]?.message?.content;
+    const content =
+      data?.choices?.[0]?.message?.content ?? data?.message?.content ?? data?.response;
     const text = typeof content === 'string' ? content.trim() : '';
     return { text, available: true };
   }
 
   /**
-   * Shared POST with a 20s timeout and defensive parsing. Returns the parsed
-   * JSON body, or null on any non-2xx / transport / parse failure (logged).
+   * Shared POST with a timeout and defensive parsing. Returns the parsed JSON
+   * body, or null on any non-2xx / transport / parse failure (logged).
    */
   private async postJson(
     url: string,
     headers: Record<string, string>,
     body: Record<string, any>,
+    timeoutMs: number,
   ): Promise<any | null> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      LlmService.TIMEOUT_MS,
-    );
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(url, {
         method: 'POST',

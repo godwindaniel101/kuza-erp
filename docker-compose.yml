@@ -47,20 +47,28 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ERP Platform}
-      # --- AI / LLM provider (provider-agnostic; switch backend by config) ---
-      # AI_PROVIDER selects the backend: 'anthropic' (default) or 'openai'
-      # (OpenAI-compatible, used to reach Llama-on-Docker via Ollama/llama.cpp/
-      # vLLM/LM Studio). To use the bundled 'ollama' service below, set:
-      #   AI_PROVIDER=openai
-      #   AI_BASE_URL=http://ollama:11434/v1
-      #   AI_MODEL=llama3.1
-      # then pull the model: docker exec erp_ollama ollama pull llama3.1
-      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      # --- AI / LLM provider (provider-agnostic; switch by config, not code) ---
+      # AI_PROVIDER selects the backend:
+      #   'ollama'    (default) — LOCAL, OpenAI-compatible /chat/completions
+      #                (Docker Model Runner / Ollama / llama.cpp / LM Studio)
+      #   'openai'    — OpenAI / ChatGPT (or any OpenAI-compatible API)
+      #   'anthropic' — Claude
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      # Local model (default = Docker Model Runner):
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://model-runner.docker.internal/engines/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-ai/llama3.2:latest}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-30000}
+      # OpenAI / ChatGPT (set AI_PROVIDER=openai + OPENAI_API_KEY):
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      # Anthropic / Claude (set AI_PROVIDER=anthropic + ANTHROPIC_API_KEY):
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      # Optional generic overrides (fallback for any provider):
       AI_BASE_URL: ${AI_BASE_URL:-}
       AI_MODEL: ${AI_MODEL:-}
       AI_API_KEY: ${AI_API_KEY:-}
-      # Back-compat: still honoured when AI_PROVIDER=anthropic and AI_API_KEY is unset.
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-4001}:4001"
     depends_on:
