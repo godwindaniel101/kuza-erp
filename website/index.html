@@ -12,7 +12,7 @@
       <svg class="logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect width="40" height="40" rx="11" fill="url(#lg)"/>
         <path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/>
+        <circle cx="28.5" cy="12.5" r="2.6" fill="#ffffff"/>
         <defs><linearGradient id="lg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs>
       </svg>
       <span>Kuza</span>
@@ -58,7 +58,7 @@
   <div class="drawer-scrim"></div>
   <div class="drawer-panel" role="dialog" aria-label="Menu">
     <div class="drawer-head">
-      <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lg2)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+      <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lg2)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#ffffff"/><defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
       <button class="drawer-close" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     </div>
     <span class="drawer-sub">Products</span>
@@ -82,59 +82,69 @@
 
 <main>
   <!-- ===== HERO ===== -->
-  <section class="hero">
-    <div class="container hero-grid">
+  <section class="kx-hero">
+    <div class="container kx-hero-grid">
       <div class="hero-copy">
-        <span class="eyebrow reveal"><span class="dot"></span> AI-powered ERP for Africa</span>
-        <h1 class="h-display reveal" data-delay="1">The operating system for <span class="grad-text">growing African businesses</span>.</h1>
-        <p class="lead measure reveal" data-delay="2">Kuza does your books and collects your money — no accountant required. Run your restaurant, shop, inventory, invoicing, payroll and payments from one beautifully simple platform.</p>
-        <div class="btn-row reveal" data-delay="3">
+        <span class="kx-eyebrow reveal"><span class="dot"></span> The operating system for African business</span>
+        <h1 class="kx-h1 reveal" data-delay="1">Run your entire business on <span class="g">one platform</span>.</h1>
+        <p class="kx-sub reveal" data-delay="2">Sales, stock, invoicing, accounting, payroll and payments — all in one place, built for how African businesses actually run. Kuza keeps your books true and collects your money. No accountant required.</p>
+        <div class="btn-row reveal" data-delay="3" style="margin-top:28px">
           <a href="http://localhost:5001/register" class="btn btn--primary btn--lg">Start free
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-          <a href="/menu" class="btn btn--ghost btn--lg">Get a free QR menu</a>
+          <a href="#spotlight" class="btn btn--ghost btn--lg">See how it works</a>
         </div>
-        <p class="hero-note reveal" data-delay="4">
+        <p class="hero-note reveal" data-delay="4" style="margin-top:18px">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Free forever plan · No card required · Set up in minutes
+          Free-forever plan · No card required · Priced in your currency
         </p>
       </div>
 
-      <!-- Hero mockup: unified dashboard -->
+      <!-- Realistic product screen -->
       <div class="hero-visual reveal" data-delay="2">
-        <div class="mock mock-anim" style="position:relative">
-          <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Kuza · Business overview</span></div>
-          <div class="mock-body">
-            <div class="m-grid2">
-              <div class="m-kpi"><div class="k-lbl">Revenue today</div><div class="k-val">₦842,500 <small>+18%</small></div></div>
-              <div class="m-kpi"><div class="k-lbl">Cash collected</div><div class="k-val">₦611,200 <small>+9%</small></div></div>
-            </div>
-            <div class="m-kpi" style="margin-bottom:12px">
-              <div class="k-lbl">This week</div>
-              <div class="bars" aria-hidden="true">
-                <span class="bar" style="height:38%"></span><span class="bar" style="height:56%"></span>
-                <span class="bar" style="height:44%"></span><span class="bar" style="height:72%"></span>
-                <span class="bar g" style="height:88%"></span><span class="bar" style="height:60%"></span>
-                <span class="bar" style="height:78%"></span>
+        <div class="kx-appwin mock-anim">
+          <div class="kx-chrome"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="url">app.kuza.africa/dashboard</span></div>
+          <div class="kx-app">
+            <aside class="kx-side">
+              <div class="logo"><i>KZ</i> Kuza</div>
+              <div class="kx-nav on"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-5H4v5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg> Dashboard</div>
+              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Sales</div>
+              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Inventory</div>
+              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Invoicing</div>
+              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Payroll</div>
+              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Payments</div>
+            </aside>
+            <div class="kx-main">
+              <div class="kx-top">
+                <div><div class="h">Good morning, Amara</div><div class="s">Tuesday · today's overview</div></div>
+                <span class="kx-chip">This month ▾</span>
               </div>
+              <div class="kx-kpis">
+                <div class="kx-kpi"><div class="l">Revenue</div><div class="v">₦842,500<span class="u">+18%</span></div></div>
+                <div class="kx-kpi"><div class="l">Cash collected</div><div class="v">₦611,200</div></div>
+                <div class="kx-kpi"><div class="l">Outstanding</div><div class="v">₦96,400</div></div>
+              </div>
+              <div class="kx-card">
+                <div class="ch"><span class="t">Revenue</span><span class="m">Last 14 days</span></div>
+                <svg class="kx-chart" viewBox="0 0 320 96" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><linearGradient id="kxg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f9d6e" stop-opacity=".26"/><stop offset="1" stop-color="#0f9d6e" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M0 72 L36 62 L72 68 L108 46 L144 54 L180 32 L216 40 L252 20 L288 28 L320 16 L320 96 L0 96 Z" fill="url(#kxg)"/>
+                  <path d="M0 72 L36 62 L72 68 L108 46 L144 54 L180 32 L216 40 L252 20 L288 28 L320 16" fill="none" stroke="#0f9d6e" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <table class="kx-tbl">
+                <tr><td><span class="kx-ava bg-em">AK</span>Adaeze Stores</td><td class="amt">₦85,000</td><td style="text-align:right"><span class="kx-pill ok">Paid</span></td></tr>
+                <tr><td><span class="kx-ava bg-in">CV</span>Chidi Ventures</td><td class="amt">₦212,400</td><td style="text-align:right"><span class="kx-pill due">Due</span></td></tr>
+                <tr><td><span class="kx-ava bg-em">LB</span>Lekki counter</td><td class="amt">₦18,900</td><td style="text-align:right"><span class="kx-pill ok">Paid</span></td></tr>
+              </table>
             </div>
-            <div class="m-row"><span class="m-ava bg-em">AK</span><div style="flex:1"><div class="m-line md" style="margin-bottom:6px"></div><div class="m-line sm"></div></div><span class="m-pill ok">Paid</span></div>
-            <div class="m-row"><span class="m-ava bg-in">TO</span><div style="flex:1"><div class="m-line lg" style="margin-bottom:6px"></div><div class="m-line sm"></div></div><span class="m-pill warn">Due</span></div>
           </div>
-        </div>
-        <div class="float-badge float-badge--tl">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#0f9d6e18"/><path d="M8 12l3 3 5-6" stroke="#0f9d6e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div><div class="fb-lbl">Books</div><div class="fb-val">Auto-posted</div></div>
-        </div>
-        <div class="float-badge float-badge--br">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3" fill="#f5b30122"/><path d="M2 10h20" stroke="#d99406" stroke-width="2"/></svg>
-          <div><div class="fb-lbl">Payment in</div><div class="fb-val">₦25,000</div></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== TRUST / MARQUEE ===== -->
+  <!-- ===== TRUST ===== -->
   <section class="trustbar">
     <div class="container">
       <p class="trust-label">Built for every kind of African business</p>
@@ -152,43 +162,112 @@
     </div>
   </section>
 
-  <!-- ===== ONE PLATFORM ===== -->
-  <section class="section">
+  <!-- ===== SPOTLIGHTS ===== -->
+  <section class="kx-sec" id="spotlight">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow reveal"><span class="dot"></span> One platform</span>
-        <h2 class="h2 reveal" data-delay="1">Stop stitching together spreadsheets, WhatsApp and a notebook</h2>
-        <p class="lead reveal" data-delay="2">Everything your business runs on — sales, stock, staff, money and books — lives in one place, updates in real time, and talks to itself. Sell something and the books post, stock drops and cash reconciles. Automatically.</p>
+      <div class="kx-head">
+        <span class="kx-eyebrow reveal"><span class="dot"></span> One platform, end to end</span>
+        <h2 class="reveal" data-delay="1">Sell, get paid, and pay your people — without leaving Kuza.</h2>
+        <p class="reveal" data-delay="2">Everything talks to itself. A sale drops your stock, posts to your books and reconciles your cash — automatically.</p>
       </div>
-      <div class="grid grid-3">
-        <div class="card reveal">
-          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Zm8-5v5l3 2" stroke="#0f9d6e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h3 class="h3">Real-time, everywhere</h3>
-          <p>Ring a sale on the till and your dashboard, stock and ledger update instantly — on phone, tablet or laptop.</p>
+
+      <!-- 1: Sell -->
+      <div class="kx-spot reveal" style="margin-top:clamp(34px,4vw,56px)">
+        <div class="kx-spot-copy">
+          <span class="kx-eyebrow"><span class="dot"></span> Sell anywhere</span>
+          <h3>A fast, modern counter for shops and restaurants.</h3>
+          <p>Ring up sales on any device — barcode scan, split payments, instant receipts and QR menus for the table. Every sale updates stock and books in real time.</p>
+          <ul class="kx-checks">
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>POS &amp; restaurant orders</b> with tables, kitchen tickets and receipts.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stock drops and the ledger posts <b>the moment you sell</b>.</span></li>
+          </ul>
         </div>
-        <div class="card reveal" data-delay="1">
-          <div class="ic-tile ic-tile--gold"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 2 2.4 5.8L20 8.6l-4.3 3.9L17 18l-5-3-5 3 1.3-5.5L4 8.6l5.6-.8L12 2Z" stroke="#d99406" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
-          <h3 class="h3">No accountant required</h3>
-          <p>Every transaction posts to a proper double-entry ledger behind the scenes. You get clean books, not homework.</p>
+        <div class="kx-spot-media">
+          <div class="kx-screen">
+            <div class="sh"><span class="t">Checkout · Lekki branch</span><span class="kx-pill ok">Open ticket</span></div>
+            <div class="kx-li"><span class="ic bg-em">×2</span><span><span class="tt">Jollof combo</span><span class="ss">₦3,500 each</span></span><span class="rt">₦7,000</span></div>
+            <div class="kx-li"><span class="ic bg-in">×2</span><span><span class="tt">Chapman</span><span class="ss">₦1,500 each</span></span><span class="rt">₦3,000</span></div>
+            <div class="kx-li"><span class="ic bg-em">×1</span><span><span class="tt">Grilled chicken</span><span class="ss">₦5,500 each</span></span><span class="rt">₦5,500</span></div>
+            <div class="kx-prow net"><span class="l">Total due</span><span class="r">₦15,500</span></div>
+          </div>
         </div>
-        <div class="card reveal" data-delay="2">
-          <div class="ic-tile ic-tile--indigo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10h-10V2Z" stroke="#4f46e5" stroke-width="1.9" stroke-linejoin="round"/><path d="M14 2a8 8 0 0 1 8 8h-8V2Z" stroke="#4f46e5" stroke-width="1.9"/></svg></div>
-          <h3 class="h3">Money that moves itself</h3>
-          <p>Collect by link, card or transfer. Payments auto-match to invoices and reconcile — no more chasing who paid what.</p>
+      </div>
+
+      <!-- 2: Get paid & reconcile -->
+      <div class="kx-spot flip reveal">
+        <div class="kx-spot-copy">
+          <span class="kx-eyebrow"><span class="dot"></span> Get paid &amp; reconcile</span>
+          <h3>Money that collects — and reconciles — itself.</h3>
+          <p>Take payment by transfer, card or mobile money. Kuza catches it, matches it to the right invoice, marks it paid and posts the entry. The month-end reconciliation just disappears.</p>
+          <ul class="kx-checks">
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Paystack &amp; Monnify</b> pay-by-link and virtual accounts, live today.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Auto-matched</b> across bank, card and cash — nothing slips through.</span></li>
+          </ul>
+        </div>
+        <div class="kx-spot-media">
+          <div class="kx-screen">
+            <div class="sh"><span class="t">Reconciliation · today</span><span class="kx-pill ok">3 matched</span></div>
+            <div class="kx-li"><span class="ic bg-em">Mo</span><span><span class="tt">MTN MoMo → Adaeze Stores</span><span class="ss">Invoice #1043 · paid</span></span><span class="rt">₦85,000</span></div>
+            <div class="kx-li"><span class="ic bg-in">Bk</span><span><span class="tt">Bank transfer → Chidi Ventures</span><span class="ss">Invoice #1044 · paid</span></span><span class="rt">₦212,400</span></div>
+            <div class="kx-li"><span class="ic bg-em">Cs</span><span><span class="tt">Cash → counter sale</span><span class="ss">Lekki branch · posted</span></span><span class="rt">₦18,900</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3: Payroll -->
+      <div class="kx-spot reveal">
+        <div class="kx-spot-copy">
+          <span class="kx-eyebrow"><span class="dot"></span> Payroll for Africa</span>
+          <h3>Payroll that already speaks PAYE, pension &amp; NHF.</h3>
+          <p>Foreign systems ship US tax tables and make you hire a consultant for the local statutory. Kuza is built the other way round — enter a salary and the deductions, payslip and net pay come out right.</p>
+          <ul class="kx-checks">
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>PAYE, pension and NHF</b> computed automatically.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Payslips out, <b>net pay disbursed</b> — no accountant needed.</span></li>
+          </ul>
+        </div>
+        <div class="kx-spot-media">
+          <div class="kx-screen">
+            <div class="sh"><span class="t">Payslip · June</span><span class="kx-pill ok">Ready</span></div>
+            <div class="kx-prow"><span class="l">Gross salary</span><span class="r">₦450,000</span></div>
+            <div class="kx-prow neg"><span class="l">PAYE</span><span class="r">−₦38,250</span></div>
+            <div class="kx-prow neg"><span class="l">Pension (8%)</span><span class="r">−₦36,000</span></div>
+            <div class="kx-prow neg"><span class="l">NHF (2.5%)</span><span class="r">−₦11,250</span></div>
+            <div class="kx-prow net"><span class="l">Net pay</span><span class="r">₦364,500</span></div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== PRODUCT GRID ===== -->
-  <section class="section" style="padding-top:0">
+  <!-- ===== BRAND STATEMENT ===== -->
+  <section class="kx-sec" style="padding-top:0">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow reveal"><span class="dot"></span> Products</span>
-        <h2 class="h2 reveal" data-delay="1">Pick what you need. It all fits together.</h2>
-        <p class="lead reveal" data-delay="2">Start with one module and add more as you grow. Same login, same data, one bill.</p>
+      <div class="kx-band reveal">
+        <span class="kx-eyebrow" style="color:#7ff0c8"><span class="dot" style="background:#3fe0a8"></span> Why Kuza</span>
+        <h2>Built for how African businesses actually run.</h2>
+        <p>Mobile money, local payroll, tax that fits and prices in your currency — not a foreign template you bend to fit. One platform your whole team logs into, set up in minutes.</p>
+        <div class="btn-row">
+          <a href="http://localhost:5001/register" class="btn btn--light btn--lg">Start free</a>
+          <a href="/pricing" class="btn btn--light btn--lg" style="background:transparent">See pricing</a>
+        </div>
+        <div class="kx-bstats">
+          <div><div class="n">Minutes</div><div class="l">from sign-up to your first sale</div></div>
+          <div><div class="n">7 in 1</div><div class="l">sales, stock, invoicing, accounting, payroll &amp; payments</div></div>
+          <div><div class="n">₦ local</div><div class="l">priced in your currency — no dollar surprises</div></div>
+        </div>
       </div>
-      <div class="grid grid-3">
+    </div>
+  </section>
+
+  <!-- ===== PRODUCT SUITE ===== -->
+  <section class="kx-sec" style="padding-top:0">
+    <div class="container">
+      <div class="kx-head mid">
+        <span class="kx-eyebrow reveal"><span class="dot"></span> The complete suite</span>
+        <h2 class="reveal" data-delay="1">Switch on what you need. It all fits together.</h2>
+        <p class="reveal" data-delay="2">Start with one module and add more as you grow — same login, same data, one bill.</p>
+      </div>
+      <div class="grid grid-3" style="margin-top:clamp(28px,4vw,44px)">
         <a href="/restaurant" class="card prod-card reveal">
           <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-1.7 0-3 2-3 5s1.3 4 3 4v9" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <h3 class="h3">Restaurant</h3>
@@ -233,40 +312,28 @@
         </a>
         <a href="/menu" class="card prod-card reveal" data-delay="1">
           <span class="prod-tag">Free</span>
-          <div class="ic-tile ic-tile--gold"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="#d99406" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <h3 class="h3">Kuza Menu</h3>
           <p>A free, beautiful QR menu customers scan at the table — your on-ramp to the whole platform.</p>
           <span class="link-arrow">Get a free menu <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
         <a href="/pricing" class="card prod-card reveal" data-delay="2">
-          <div class="ic-tile ic-tile--indigo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Zm9-4v8m-2.5-6h3.5a2 2 0 0 1 0 4H10m0 0h3.5a2 2 0 0 1 0 4H9.5" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Zm9-4v8m-2.5-6h3.5a2 2 0 0 1 0 4H10m0 0h3.5a2 2 0 0 1 0 4H9.5" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <h3 class="h3">Simple pricing</h3>
-          <p>Free forever to start, then flat plans in Naira with no per-transaction surprises.</p>
+          <p>Free forever to start, then flat plans in your currency with no per-transaction surprises.</p>
           <span class="link-arrow">See pricing <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
       </div>
     </div>
   </section>
 
-  <!-- ===== STATS ===== -->
-  <section class="section section--tight">
-    <div class="container">
-      <div class="stats">
-        <div class="stat reveal"><div class="num"><span data-count="12000" data-suffix="+">0</span></div><div class="lbl">Businesses onboarded</div></div>
-        <div class="stat reveal" data-delay="1"><div class="num"><span data-prefix="₦" data-count="48" data-suffix="B+">0</span></div><div class="lbl">Processed for merchants</div></div>
-        <div class="stat reveal" data-delay="2"><div class="num"><span data-count="99.9" data-suffix="%">0</span></div><div class="lbl">Uptime, always on</div></div>
-        <div class="stat reveal" data-delay="3"><div class="num"><span data-count="36" data-suffix=" states">0</span></div><div class="lbl">Across Nigeria & beyond</div></div>
-      </div>
-    </div>
-  </section>
-
   <!-- ===== AI TEASER ===== -->
-  <section class="section" id="ai" style="padding-top:0">
+  <section class="kx-sec" id="ai" style="padding-top:0">
     <div class="container">
       <div class="ai-panel reveal">
         <div class="ai-inner">
           <div>
-            <span class="eyebrow" style="background:#ffffff14;border-color:#ffffff26;color:#ffe9b0"><span class="dot" style="background:#f5b301"></span> Kuza AI</span>
+            <span class="eyebrow" style="background:#ffffff14;border-color:#ffffff26;color:#c7f9e5"><span class="dot" style="background:#34d399"></span> Kuza AI</span>
             <h2 class="h2" style="color:#fff;margin-top:16px">Just ask. Your business, in plain language.</h2>
             <p class="lead" style="margin-top:16px">Kuza AI reads your live data and answers the questions you'd normally pay for. "How did we do last month?" "Which items are running low?" "Who still owes me?" — and it can draft the invoice or reorder for you.</p>
             <div class="btn-row" style="margin-top:26px">
@@ -285,14 +352,14 @@
   </section>
 
   <!-- ===== PRICING TEASER ===== -->
-  <section class="section" style="padding-top:0">
+  <section class="kx-sec" style="padding-top:0">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow reveal"><span class="dot"></span> Pricing</span>
-        <h2 class="h2 reveal" data-delay="1">Fair, flat, in Naira</h2>
-        <p class="lead reveal" data-delay="2">Start free forever. Upgrade when you're ready — no per-transaction nibbling, no surprise bills.</p>
+      <div class="kx-head mid">
+        <span class="kx-eyebrow reveal"><span class="dot"></span> Pricing</span>
+        <h2 class="reveal" data-delay="1">Fair, flat, in your currency</h2>
+        <p class="reveal" data-delay="2">Start free forever. Upgrade when you're ready — no per-transaction nibbling, no surprise bills.</p>
       </div>
-      <div class="grid grid-3">
+      <div class="grid grid-3" style="margin-top:clamp(28px,4vw,44px)">
         <div class="card reveal">
           <div class="price-name">Free</div>
           <div class="price-desc">For getting started and QR menus.</div>
@@ -317,7 +384,7 @@
   </section>
 
   <!-- ===== FINAL CTA ===== -->
-  <section class="section" style="padding-top:0">
+  <section class="kx-sec" style="padding-top:0">
     <div class="container">
       <div class="cta-band reveal">
         <h2>Run your whole business on Kuza</h2>
@@ -336,7 +403,7 @@
   <div class="container">
     <div class="footer-top">
       <div class="footer-brand">
-        <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lgf)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lgf" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+        <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lgf)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#ffffff"/><defs><linearGradient id="lgf" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
         <p>The operating system for growing African businesses. Does your books and collects your money — no accountant required.</p>
         <form class="footer-news news-row" aria-label="Newsletter signup">
           <input type="email" placeholder="Work email" aria-label="Work email" required>
