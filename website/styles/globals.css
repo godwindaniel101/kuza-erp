@@ -6,12 +6,12 @@
 /* ---------- Design tokens ---------- */
 :root {
   /* Brand — emerald→indigo, matching the Kuza app/dashboard */
-  --emerald:      #0f9d6e;
-  --emerald-deep: #067a53;
+  --emerald:      #2e56d3;
+  --emerald-deep: #22398b;
   --indigo:       #4f46e5;
   --indigo-deep:  #3730a3;
-  --gold:         #0f9d6e;   /* legacy alias — retoned to emerald (no gold) */
-  --gold-deep:    #067a53;
+  --gold:         #2e56d3;   /* legacy alias — retoned to emerald (no gold) */
+  --gold-deep:    #22398b;
 
   /* Ink & surfaces — white cards on a soft, cool near-white canvas */
   --ink:      #0b1220;       /* cool near-black headings (matches the app) */
@@ -26,11 +26,11 @@
 
   /* Gradients — emerald→indigo only (no gold/cream) */
   --grad-brand: linear-gradient(120deg, var(--emerald) 0%, var(--indigo) 100%);
-  --grad-brand-soft: linear-gradient(120deg, #0f9d6e14 0%, #4f46e514 100%);
-  --grad-warm:  linear-gradient(120deg, #12b07d 0%, #6366f1 100%);   /* alias kept for legacy classes — now brand-toned */
+  --grad-brand-soft: linear-gradient(120deg, #2e56d314 0%, #4f46e514 100%);
+  --grad-warm:  linear-gradient(120deg, #2e56d3 0%, #6366f1 100%);   /* alias kept for legacy classes — now brand-toned */
   --grad-ink:   linear-gradient(150deg, #0e1420 0%, #141b29 60%, #171e2e 100%);
   --grad-mesh:
-     radial-gradient(58% 85% at 10% 4%,  #0f9d6e14 0%, transparent 60%),
+     radial-gradient(58% 85% at 10% 4%,  #2e56d314 0%, transparent 60%),
      radial-gradient(52% 78% at 94% 8%,  #4f46e514 0%, transparent 60%);
 
   /* Radii — calmer, less bubbly */
@@ -122,7 +122,7 @@ p { margin: 0; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
   font-weight: 600; font-size: .92rem; line-height: 1;
-  padding: 12px 22px; border-radius: var(--r-pill);
+  padding: 12px 20px; border-radius: 8px;   /* match the app's rounded-lg (0.5rem) CTA */
   border: 1px solid transparent; white-space: nowrap;
   transition: transform .18s ease, box-shadow .25s ease, background .25s ease, border-color .2s ease;
 }
@@ -202,7 +202,7 @@ p { margin: 0; }
 .nav-item--drop.open .dropdown { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(-50%) translateY(0); }
 .drop-link { display: flex; gap: 12px; padding: 12px; border-radius: var(--r-md); transition: background .16s ease; }
 .drop-link:hover { background: var(--surface-2); }
-.drop-ic { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px; display: grid; place-items: center; background: var(--grad-brand-soft); border: 1px solid #0f9d6e28; color: var(--emerald-deep); }
+.drop-ic { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px; display: grid; place-items: center; background: var(--grad-brand-soft); border: 1px solid #2e56d328; color: var(--emerald-deep); }
 .drop-ic svg { width: 20px; height: 20px; }
 /* Recolour inline SVG icons that carry hard-coded stroke attributes so they
    pick up the warm palette instead of the old emerald/indigo. */
@@ -287,7 +287,7 @@ p { margin: 0; }
 .card:hover { transform: translateY(-3px); box-shadow: var(--sh-lg); border-color: #d3dae2; }
 @media (prefers-reduced-motion: reduce) { .card:hover { transform: none; } }
 
-.ic-tile { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; background: var(--grad-brand-soft); border: 1px solid #0f9d6e24; color: var(--emerald-deep); margin-bottom: 18px; }
+.ic-tile { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; background: var(--grad-brand-soft); border: 1px solid #2e56d324; color: var(--emerald-deep); margin-bottom: 18px; }
 .ic-tile svg { width: 26px; height: 26px; }
 /* Drive inline SVG icon colour from the tile's `color`, overriding hard-coded strokes. */
 .ic-tile svg [stroke] { stroke: currentColor; }
@@ -307,7 +307,7 @@ p { margin: 0; }
 .prod-card .ic-tile { margin-bottom: 16px; }
 .prod-card .link-arrow { margin-top: 16px; }
 .prod-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--grad-brand); opacity: 0; transition: opacity .3s ease; pointer-events: none; }
-.prod-tag { position: absolute; top: 18px; right: 18px; font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--emerald-deep); background: #0f9d6e1a; border: 1px solid #0f9d6e3a; padding: 4px 9px; border-radius: var(--r-pill); }
+.prod-tag { position: absolute; top: 18px; right: 18px; font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--emerald-deep); background: #2e56d31a; border: 1px solid #2e56d33a; padding: 4px 9px; border-radius: var(--r-pill); }
 
 /* Stats / count-up */
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(18px, 3vw, 34px); }
@@ -384,11 +384,11 @@ p { margin: 0; }
 }
 /* Header band with the tier tagline, centered — soft brand tint */
 .pc-band { text-align: center; font-weight: 700; font-size: .9rem; color: var(--emerald-deep);
-  background: #0f9d6e14; padding: 12px 16px; letter-spacing: .01em; }
+  background: #2e56d314; padding: 12px 16px; letter-spacing: .01em; }
 .pc-body { display: flex; flex-direction: column; flex: 1; padding: clamp(22px, 2.4vw, 30px); }
 
 .pc-icon { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center;
-  background: var(--grad-brand-soft); border: 1px solid #0f9d6e24; color: var(--emerald-deep); margin-bottom: 16px; }
+  background: var(--grad-brand-soft); border: 1px solid #2e56d324; color: var(--emerald-deep); margin-bottom: 16px; }
 .pc-icon svg { width: 26px; height: 26px; }
 .pc-icon svg [stroke] { stroke: currentColor; }
 
@@ -517,7 +517,7 @@ p { margin: 0; }
 .m-line { height: 9px; border-radius: 6px; background: var(--wash); }
 .m-line.sm { width: 40%; } .m-line.md { width: 62%; } .m-line.lg { width: 84%; }
 .m-pill { margin-left: auto; font-size: .74rem; font-weight: 800; padding: 4px 10px; border-radius: var(--r-pill); }
-.m-pill.ok { color: var(--emerald-deep); background: #0f9d6e18; }
+.m-pill.ok { color: var(--emerald-deep); background: #2e56d318; }
 .m-pill.warn { color: var(--gold-deep); background: #f5b30120; }
 .m-pill.info { color: var(--indigo); background: #4f46e516; }
 .m-kpi { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
@@ -559,13 +559,13 @@ p { margin: 0; }
 .kx-side .logo i{width:26px;height:26px;border-radius:8px;background:var(--grad-brand);display:grid;place-items:center;font-size:.7rem;color:#fff}
 .kx-nav{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;color:#93a49b;font-size:.82rem;font-weight:600}
 .kx-nav svg{width:16px;height:16px}
-.kx-nav.on{background:linear-gradient(120deg,#0f9d6e2e,#4f46e52e);color:#fff}
-.kx-nav.on svg{color:#3fe0a8}
+.kx-nav.on{background:linear-gradient(120deg,#2e56d32e,#4f46e52e);color:#fff}
+.kx-nav.on svg{color:#7aa2ff}
 .kx-main{padding:18px 20px;background:var(--surface)}
 .kx-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .kx-top .h{font-weight:800;color:var(--ink);font-size:1.05rem;letter-spacing:-.01em}
 .kx-top .s{font-size:.76rem;color:var(--faint)}
-.kx-chip{font-size:.72rem;font-weight:700;color:var(--emerald-deep);background:#0f9d6e14;border:1px solid #0f9d6e2e;padding:5px 11px;border-radius:999px}
+.kx-chip{font-size:.72rem;font-weight:700;color:var(--emerald-deep);background:#2e56d314;border:1px solid #2e56d32e;padding:5px 11px;border-radius:999px}
 .kx-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
 .kx-kpi{border:1px solid var(--line-2,var(--line));border-radius:12px;padding:13px}
 .kx-kpi .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700}
@@ -581,7 +581,7 @@ p { margin: 0; }
 .kx-tbl tr:first-child td{border-top:0}
 .kx-tbl .amt{text-align:right;font-weight:700;color:var(--ink)}
 .kx-pill{display:inline-block;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:999px}
-.kx-pill.ok{color:var(--emerald-deep);background:#0f9d6e18}
+.kx-pill.ok{color:var(--emerald-deep);background:#2e56d318}
 .kx-pill.due{color:var(--indigo);background:#4f46e514}
 .kx-ava{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;color:#fff;font-size:.66rem;font-weight:800;margin-right:9px;vertical-align:middle}
 @media (max-width:560px){.kx-app{grid-template-columns:1fr}.kx-side{display:none}}
@@ -589,7 +589,7 @@ p { margin: 0; }
 /* --- section rhythm (tighter, cohesive) --- */
 .kx-hero{padding:clamp(40px,6vw,76px) 0 clamp(30px,4vw,56px);position:relative;overflow:hidden}
 .kx-hero::before{content:"";position:absolute;inset:0;z-index:-1;
-  background:radial-gradient(60% 60% at 10% -10%,#0f9d6e14,transparent 60%),radial-gradient(50% 55% at 100% -5%,#4f46e512,transparent 55%)}
+  background:radial-gradient(60% 60% at 10% -10%,#2e56d314,transparent 60%),radial-gradient(50% 55% at 100% -5%,#4f46e512,transparent 55%)}
 .kx-hero-grid{display:grid;grid-template-columns:.92fr 1.08fr;gap:clamp(28px,4vw,56px);align-items:center}
 .kx-h1{font-size:clamp(2.3rem,1.4rem+3vw,3.4rem);font-weight:800;letter-spacing:-.03em;line-height:1.04;color:var(--ink)}
 .kx-h1 .g{background:var(--grad-brand);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -634,7 +634,7 @@ p { margin: 0; }
 .kx-band{background:linear-gradient(120deg,#0b2e22 0%,#0e1a3f 100%);border-radius:22px;padding:clamp(36px,5vw,64px);
   color:#fff;position:relative;overflow:hidden}
 .kx-band::before{content:"";position:absolute;inset:0;
-  background:radial-gradient(45% 80% at 8% 0%,#0f9d6e40,transparent 60%),radial-gradient(45% 80% at 95% 100%,#4f46e540,transparent 55%)}
+  background:radial-gradient(45% 80% at 8% 0%,#2e56d340,transparent 60%),radial-gradient(45% 80% at 95% 100%,#4f46e540,transparent 55%)}
 .kx-band>*{position:relative}
 .kx-band h2{font-size:clamp(1.7rem,1.2rem+1.8vw,2.5rem);font-weight:800;letter-spacing:-.02em;color:#fff;max-width:22ch;line-height:1.12}
 .kx-band p{color:#bfe9d8;margin-top:16px;font-size:1.08rem;max-width:48ch}
@@ -649,7 +649,7 @@ p { margin: 0; }
    ========================================================================== */
 /* Intentional photo placeholder — a real <img> drops in later, no redesign. */
 .kx-photo{position:relative;border-radius:22px;overflow:hidden;border:1px solid var(--line);
-  background:linear-gradient(140deg,#0f9d6e2b 0%,#4f46e52b 100%);box-shadow:var(--sh-lg)}
+  background:linear-gradient(140deg,#2e56d32b 0%,#4f46e52b 100%);box-shadow:var(--sh-lg)}
 .kx-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .kx-photo.tall{aspect-ratio:1/1}
 .kx-photo.wide{aspect-ratio:1/1}

@@ -169,7 +169,7 @@ export default function Home() {
         <section className="kx-sec" style={{ paddingTop: 0 }}>
           <div className="container">
             <div className="kx-band reveal">
-              <span className="kx-eyebrow" style={{ color: '#7ff0c8' }}><span className="dot" style={{ background: '#3fe0a8' }}></span> Why Kuza</span>
+              <span className="kx-eyebrow" style={{ color: '#aec7ff' }}><span className="dot" style={{ background: '#7aa2ff' }}></span> Why Kuza</span>
               <h2>Built for how African businesses actually run.</h2>
               <p>Mobile money, local payroll, tax that fits and prices in your currency — not a foreign template you bend to fit. One platform your whole team logs into, set up in minutes.</p>
               <div className="btn-row">
@@ -219,7 +219,7 @@ export default function Home() {
             <div className="ai-panel reveal">
               <div className="ai-inner">
                 <div>
-                  <span className="eyebrow" style={{ background: '#ffffff14', borderColor: '#ffffff26', color: '#c7f9e5' }}><span className="dot" style={{ background: '#34d399' }}></span> Kuza AI</span>
+                  <span className="eyebrow" style={{ background: '#ffffff14', borderColor: '#ffffff26', color: '#dfe9fd' }}><span className="dot" style={{ background: '#6f99f0' }}></span> Kuza AI</span>
                   <h2 className="h2" style={{ color: '#fff', marginTop: '16px' }}>Just ask. Your business, in plain language.</h2>
                   <p className="lead" style={{ marginTop: '16px' }}>Kuza AI reads your live data and answers the questions you'd normally pay for. "How did we do last month?" "Which items are running low?" "Who still owes me?" — and it can draft the invoice or reorder for you.</p>
                   <div className="btn-row" style={{ marginTop: '26px' }}>

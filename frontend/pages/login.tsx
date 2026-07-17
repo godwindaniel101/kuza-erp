@@ -6,6 +6,7 @@ import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
 import Head from 'next/head';
 
 export default function Login() {
@@ -70,13 +71,11 @@ export default function Login() {
         <title>Login - ERP Platform</title>
       </Head>
       <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2.5 mb-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-lg font-bold text-white shadow-card">
-                K
-              </span>
+              <BrandMark size={40} className="rounded-xl shadow-card" />
               <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Good to see you again</p>

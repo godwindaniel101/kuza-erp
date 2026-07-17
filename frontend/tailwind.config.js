@@ -26,6 +26,8 @@ module.exports = {
         // Single brand accent for the whole product (primary actions,
         // active nav, focus rings, links). Refined deep navy-blue —
         // pairs with `bg-brand-gradient` on active/primary elements.
+        // Kuza brand — blue primary (pairs with indigo in bg-brand-gradient).
+        // Emerald is reserved for `success` only, so the product reads blue.
         brand: {
           50: '#eef4ff',
           100: '#dfe9fd',
@@ -39,8 +41,8 @@ module.exports = {
           900: '#1f326d',
           950: '#16214a',
         },
-        // Warm off-white page canvas (light mode). Dark canvas stays gray-950.
-        canvas: '#f3f4f1',
+        // Cool, blue-toned off-white canvas — same as the marketing site.
+        canvas: '#f7f9fb',
         // Semantic aliases — always use these for status, never raw hues.
         success: colors.emerald,
         warning: colors.amber,
@@ -48,9 +50,10 @@ module.exports = {
         info: colors.sky,
       },
       backgroundImage: {
-        // Navy gradient for active nav pills and primary buttons.
-        'brand-gradient': 'linear-gradient(108deg, #22398b 0%, #2e56d3 60%, #3f68e4 100%)',
-        'brand-gradient-hover': 'linear-gradient(108deg, #1f326d 0%, #2645ab 60%, #2e56d3 100%)',
+        // Blue→indigo brand gradient (shared with the website) for active nav
+        // pills and primary buttons.
+        'brand-gradient': 'linear-gradient(120deg, #2e56d3 0%, #4f46e5 100%)',
+        'brand-gradient-hover': 'linear-gradient(120deg, #2645ab 0%, #3f37c9 100%)',
       },
       boxShadow: {
         // ONE soft diffuse card shadow — large blur, very low alpha.
