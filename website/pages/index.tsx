@@ -125,9 +125,8 @@ export default function Home() {
         <section className="kx-sec" id="business">
           <div className="container">
             <div className="kx-head">
-              <span className="kx-eyebrow reveal"><span className="dot"></span> Built for your business</span>
-              <h2 className="reveal" data-delay="1">However you make your money, Kuza fits the way you work.</h2>
-              <p className="reveal" data-delay="2">Kuza shapes itself to your trade — then runs the sales, stock, invoicing, payroll and books underneath, the same for everyone.</p>
+              <h2 className="reveal">However you make your money, Kuza fits the way you work.</h2>
+              <p className="reveal" data-delay="1">Kuza shapes itself to your trade — then runs the sales, stock, invoicing, payroll and books underneath, the same for everyone.</p>
             </div>
             <div className="kx-bizgrid">
               {BIZ.map((b) => (
@@ -151,9 +150,8 @@ export default function Home() {
         <section className="kx-sec" style={{ paddingTop: 0 }}>
           <div className="container">
             <div className="kx-head mid">
-              <span className="kx-eyebrow reveal"><span className="dot"></span> One login, every tool</span>
-              <h2 className="reveal" data-delay="1">The whole business, in one place.</h2>
-              <p className="reveal" data-delay="2">Switch on what you need today and add the rest as you grow — same data, one bill.</p>
+              <h2 className="reveal">The whole business, in one place.</h2>
+              <p className="reveal" data-delay="1">Switch on what you need today and add the rest as you grow — same data, one bill.</p>
             </div>
             <div className="kx-mods">
               {MODS.map((m) => (
