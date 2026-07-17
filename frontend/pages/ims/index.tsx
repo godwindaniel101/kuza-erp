@@ -72,7 +72,7 @@ export default function InventoryDashboardPage() {
     (async () => {
       const [inv, mv, br, od] = await Promise.allSettled([
         api.get<{ success: boolean; data: any[] }>('/ims/inventory?withBranchStock=true'),
-        api.get<{ success: boolean; data: { items: StockMovement[] } }>('/ims/stock-movements?page=1&limit=8'),
+        api.get<{ success: boolean; data: { items: StockMovement[] } }>('/ims/stock-movements?page=1&limit=5'),
         api.get<{ success: boolean; data: { id: string; name: string }[] }>('/settings/branches'),
         api.get<{ success: boolean; data: any[] }>('/rms/orders?limit=200'),
       ]);
@@ -308,7 +308,7 @@ export default function InventoryDashboardPage() {
                 <p className="text-xs text-gray-500">Receive stock or make a sale to see activity here.</p>
               </div>
             ) : (
-              movements.map((m) => {
+              movements.slice(0, 5).map((m) => {
                 const t = (m.movementType || '').toUpperCase();
                 return (
                   <div key={m.id} className="flex items-center justify-between px-5 py-3">
