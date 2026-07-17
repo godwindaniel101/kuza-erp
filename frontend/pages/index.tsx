@@ -16,6 +16,7 @@ import { RevenueAreaChart, WeeklyBarChart, AreaPoint } from '@/components/ui/cha
 import PageHeader from '@/components/ui/PageHeader';
 import { formatMoney, useCurrency } from '@/lib/format';
 import AiInsights from '@/components/AiInsights';
+import GettingStarted from '@/components/GettingStarted';
 
 interface AnalyticsData {
   bestBranch: {
@@ -285,6 +286,9 @@ export default function Dashboard() {
             </div>
           }
         />
+
+        {/* Guided first-run — self-hides once the workspace is set up */}
+        <GettingStarted />
 
         {/* KPI row — progressive disclosure by business type */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
