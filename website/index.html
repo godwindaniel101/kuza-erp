@@ -81,7 +81,7 @@
 </div>
 
 <main>
-  <!-- ===== HERO ===== -->
+  <!-- ===== HERO (lifestyle-led) ===== -->
   <section class="kx-hero">
     <div class="container kx-hero-grid">
       <div class="hero-copy">
@@ -100,45 +100,22 @@
         </p>
       </div>
 
-      <!-- Realistic product screen -->
-      <div class="hero-visual reveal" data-delay="2">
-        <div class="kx-appwin mock-anim">
-          <div class="kx-chrome"><span class="d d1"></span><span class="d d2"></span><span class="d d3"></span><span class="url">app.kuza.africa/dashboard</span></div>
-          <div class="kx-app">
-            <aside class="kx-side">
-              <div class="logo"><i>KZ</i> Kuza</div>
-              <div class="kx-nav on"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-5H4v5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg> Dashboard</div>
-              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Sales</div>
-              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Inventory</div>
-              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Invoicing</div>
-              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Payroll</div>
-              <div class="kx-nav"><svg viewBox="0 0 24 24" fill="none"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Payments</div>
-            </aside>
-            <div class="kx-main">
-              <div class="kx-top">
-                <div><div class="h">Good morning, Amara</div><div class="s">Tuesday · today's overview</div></div>
-                <span class="kx-chip">This month ▾</span>
-              </div>
-              <div class="kx-kpis">
-                <div class="kx-kpi"><div class="l">Revenue</div><div class="v">₦842,500<span class="u">+18%</span></div></div>
-                <div class="kx-kpi"><div class="l">Cash collected</div><div class="v">₦611,200</div></div>
-                <div class="kx-kpi"><div class="l">Outstanding</div><div class="v">₦96,400</div></div>
-              </div>
-              <div class="kx-card">
-                <div class="ch"><span class="t">Revenue</span><span class="m">Last 14 days</span></div>
-                <svg class="kx-chart" viewBox="0 0 320 96" preserveAspectRatio="none" aria-hidden="true">
-                  <defs><linearGradient id="kxg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f9d6e" stop-opacity=".26"/><stop offset="1" stop-color="#0f9d6e" stop-opacity="0"/></linearGradient></defs>
-                  <path d="M0 72 L36 62 L72 68 L108 46 L144 54 L180 32 L216 40 L252 20 L288 28 L320 16 L320 96 L0 96 Z" fill="url(#kxg)"/>
-                  <path d="M0 72 L36 62 L72 68 L108 46 L144 54 L180 32 L216 40 L252 20 L288 28 L320 16" fill="none" stroke="#0f9d6e" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <table class="kx-tbl">
-                <tr><td><span class="kx-ava bg-em">AK</span>Adaeze Stores</td><td class="amt">₦85,000</td><td style="text-align:right"><span class="kx-pill ok">Paid</span></td></tr>
-                <tr><td><span class="kx-ava bg-in">CV</span>Chidi Ventures</td><td class="amt">₦212,400</td><td style="text-align:right"><span class="kx-pill due">Due</span></td></tr>
-                <tr><td><span class="kx-ava bg-em">LB</span>Lekki counter</td><td class="amt">₦18,900</td><td style="text-align:right"><span class="kx-pill ok">Paid</span></td></tr>
-              </table>
-            </div>
+      <!-- Photo-led hero: image slot + floating product proof. Drop a real photo into .kx-photo. -->
+      <div class="hero-visual reveal" data-delay="2" style="position:relative">
+        <div class="kx-photo tall">
+          <!-- Replace with: <img src="/img/hero-owner.jpg" alt="A Kuza business owner"> -->
+          <div class="ph">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <b>Business owner</b>
           </div>
+        </div>
+        <div class="kx-fchip" style="left:-16px;bottom:64px">
+          <span class="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span><span class="l">Revenue today</span><span class="v">₦842,500</span></span>
+        </div>
+        <div class="kx-fchip" style="right:-14px;top:44px">
+          <span class="ic bg-in"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span><span class="l">Payments</span><span class="v">Auto-reconciled</span></span>
         </div>
       </div>
     </div>
@@ -162,7 +139,7 @@
     </div>
   </section>
 
-  <!-- ===== SPOTLIGHTS ===== -->
+  <!-- ===== SPOTLIGHTS (numbered, photo-led) ===== -->
   <section class="kx-sec" id="spotlight">
     <div class="container">
       <div class="kx-head">
@@ -171,10 +148,10 @@
         <p class="reveal" data-delay="2">Everything talks to itself. A sale drops your stock, posts to your books and reconciles your cash — automatically.</p>
       </div>
 
-      <!-- 1: Sell -->
+      <!-- 01 Sell -->
       <div class="kx-spot reveal" style="margin-top:clamp(34px,4vw,56px)">
         <div class="kx-spot-copy">
-          <span class="kx-eyebrow"><span class="dot"></span> Sell anywhere</span>
+          <span class="kx-num"><span class="n">01</span><span class="bar"></span> Sell anywhere</span>
           <h3>A fast, modern counter for shops and restaurants.</h3>
           <p>Ring up sales on any device — barcode scan, split payments, instant receipts and QR menus for the table. Every sale updates stock and books in real time.</p>
           <ul class="kx-checks">
@@ -182,21 +159,22 @@
             <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stock drops and the ledger posts <b>the moment you sell</b>.</span></li>
           </ul>
         </div>
-        <div class="kx-spot-media">
-          <div class="kx-screen">
-            <div class="sh"><span class="t">Checkout · Lekki branch</span><span class="kx-pill ok">Open ticket</span></div>
-            <div class="kx-li"><span class="ic bg-em">×2</span><span><span class="tt">Jollof combo</span><span class="ss">₦3,500 each</span></span><span class="rt">₦7,000</span></div>
-            <div class="kx-li"><span class="ic bg-in">×2</span><span><span class="tt">Chapman</span><span class="ss">₦1,500 each</span></span><span class="rt">₦3,000</span></div>
-            <div class="kx-li"><span class="ic bg-em">×1</span><span><span class="tt">Grilled chicken</span><span class="ss">₦5,500 each</span></span><span class="rt">₦5,500</span></div>
-            <div class="kx-prow net"><span class="l">Total due</span><span class="r">₦15,500</span></div>
+        <div class="kx-spot-media" style="position:relative">
+          <div class="kx-photo wide">
+            <!-- Replace with: <img src="/img/counter.jpg" alt="At the counter"> -->
+            <div class="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><b>At the counter</b></div>
+          </div>
+          <div class="kx-fchip" style="right:-14px;bottom:-16px">
+            <span class="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Z" stroke="#fff" stroke-width="1.9"/></svg></span>
+            <span><span class="l">Sale complete</span><span class="v">₦15,500</span></span>
           </div>
         </div>
       </div>
 
-      <!-- 2: Get paid & reconcile -->
+      <!-- 02 Get paid -->
       <div class="kx-spot flip reveal">
         <div class="kx-spot-copy">
-          <span class="kx-eyebrow"><span class="dot"></span> Get paid &amp; reconcile</span>
+          <span class="kx-num"><span class="n">02</span><span class="bar"></span> Get paid &amp; reconcile</span>
           <h3>Money that collects — and reconciles — itself.</h3>
           <p>Take payment by transfer, card or mobile money. Kuza catches it, matches it to the right invoice, marks it paid and posts the entry. The month-end reconciliation just disappears.</p>
           <ul class="kx-checks">
@@ -204,20 +182,22 @@
             <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Auto-matched</b> across bank, card and cash — nothing slips through.</span></li>
           </ul>
         </div>
-        <div class="kx-spot-media">
-          <div class="kx-screen">
-            <div class="sh"><span class="t">Reconciliation · today</span><span class="kx-pill ok">3 matched</span></div>
-            <div class="kx-li"><span class="ic bg-em">Mo</span><span><span class="tt">MTN MoMo → Adaeze Stores</span><span class="ss">Invoice #1043 · paid</span></span><span class="rt">₦85,000</span></div>
-            <div class="kx-li"><span class="ic bg-in">Bk</span><span><span class="tt">Bank transfer → Chidi Ventures</span><span class="ss">Invoice #1044 · paid</span></span><span class="rt">₦212,400</span></div>
-            <div class="kx-li"><span class="ic bg-em">Cs</span><span><span class="tt">Cash → counter sale</span><span class="ss">Lekki branch · posted</span></span><span class="rt">₦18,900</span></div>
+        <div class="kx-spot-media" style="position:relative">
+          <div class="kx-photo wide">
+            <!-- Replace with: <img src="/img/market.jpg" alt="A market trader"> -->
+            <div class="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Getting paid</b></div>
+          </div>
+          <div class="kx-fchip" style="left:-16px;bottom:-16px">
+            <span class="ic bg-in"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span><span class="l">MoMo → Invoice #1043</span><span class="v">Matched · ₦85,000</span></span>
           </div>
         </div>
       </div>
 
-      <!-- 3: Payroll -->
+      <!-- 03 Payroll -->
       <div class="kx-spot reveal">
         <div class="kx-spot-copy">
-          <span class="kx-eyebrow"><span class="dot"></span> Payroll for Africa</span>
+          <span class="kx-num"><span class="n">03</span><span class="bar"></span> Payroll for Africa</span>
           <h3>Payroll that already speaks PAYE, pension &amp; NHF.</h3>
           <p>Foreign systems ship US tax tables and make you hire a consultant for the local statutory. Kuza is built the other way round — enter a salary and the deductions, payslip and net pay come out right.</p>
           <ul class="kx-checks">
@@ -225,14 +205,14 @@
             <li><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Payslips out, <b>net pay disbursed</b> — no accountant needed.</span></li>
           </ul>
         </div>
-        <div class="kx-spot-media">
-          <div class="kx-screen">
-            <div class="sh"><span class="t">Payslip · June</span><span class="kx-pill ok">Ready</span></div>
-            <div class="kx-prow"><span class="l">Gross salary</span><span class="r">₦450,000</span></div>
-            <div class="kx-prow neg"><span class="l">PAYE</span><span class="r">−₦38,250</span></div>
-            <div class="kx-prow neg"><span class="l">Pension (8%)</span><span class="r">−₦36,000</span></div>
-            <div class="kx-prow neg"><span class="l">NHF (2.5%)</span><span class="r">−₦11,250</span></div>
-            <div class="kx-prow net"><span class="l">Net pay</span><span class="r">₦364,500</span></div>
+        <div class="kx-spot-media" style="position:relative">
+          <div class="kx-photo wide">
+            <!-- Replace with: <img src="/img/team.jpg" alt="A team at work"> -->
+            <div class="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Payday</b></div>
+          </div>
+          <div class="kx-fchip" style="right:-14px;bottom:-16px">
+            <span class="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20m5-16H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span><span class="l">Net pay · June</span><span class="v">₦364,500</span></span>
           </div>
         </div>
       </div>
@@ -254,6 +234,34 @@
           <div><div class="n">Minutes</div><div class="l">from sign-up to your first sale</div></div>
           <div><div class="n">7 in 1</div><div class="l">sales, stock, invoicing, accounting, payroll &amp; payments</div></div>
           <div><div class="n">₦ local</div><div class="l">priced in your currency — no dollar surprises</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS (placeholder faces + representative quotes) ===== -->
+  <section class="kx-sec" style="padding-top:0">
+    <div class="container">
+      <div class="kx-head mid">
+        <span class="kx-eyebrow reveal"><span class="dot"></span> From the shop floor</span>
+        <h2 class="reveal" data-delay="1">Made with African operators, for African operators.</h2>
+        <p class="reveal" data-delay="2">Real words go here — swap these for your customers' as they come in.</p>
+      </div>
+      <div class="kx-testi-grid">
+        <div class="kx-testi reveal">
+          <div class="quote">“</div>
+          <p>Before Kuza I closed late every night reconciling cash and transfers. Now it's done by the time I lock up.</p>
+          <div class="who"><span class="av bg-em">AO</span><span><span class="nm">Amara O.</span><span class="rl">Grill house · Lagos</span></span></div>
+        </div>
+        <div class="kx-testi reveal" data-delay="1">
+          <div class="quote">“</div>
+          <p>Payroll used to mean a spreadsheet and a headache. Kuza works out PAYE and pension and just pays everyone.</p>
+          <div class="who"><span class="av bg-in">KM</span><span><span class="nm">Kwame M.</span><span class="rl">Pharmacy chain · Accra</span></span></div>
+        </div>
+        <div class="kx-testi reveal" data-delay="2">
+          <div class="quote">“</div>
+          <p>One login for my two shops — sales, stock and books all in one place. I finally know where the business stands.</p>
+          <div class="who"><span class="av bg-em">NE</span><span><span class="nm">Ngozi E.</span><span class="rl">Fashion retail · Abuja</span></span></div>
         </div>
       </div>
     </div>

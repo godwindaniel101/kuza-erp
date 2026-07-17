@@ -1,0 +1,339 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuza Accounting — Auto double-entry books & reports</title>
+<meta name="description" content="Every sale, expense and payment across Kuza auto-posts to a proper double-entry ledger. Get accurate P&L, balance sheet, cash flow and tax-ready reports — with no accountant.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%230f9d6e'/%3E%3Cpath d='M13 27V13m0 7 8-7m-8 7 8 7' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/styles.css">
+
+<!-- ===== HEADER (identical on every page) ===== -->
+<header class="site-header">
+  <div class="container nav">
+    <a href="/" class="brand" aria-label="Kuza home">
+      <svg class="logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="40" height="40" rx="11" fill="url(#lg)"/>
+        <path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/>
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs>
+      </svg>
+      <span>Kuza</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary">
+      <li class="nav-item--drop">
+        <button class="nav-trigger" aria-expanded="false" aria-haspopup="true">Products
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown" role="menu">
+          <a class="drop-link" href="/restaurant" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-1.7 0-3 2-3 5s1.3 4 3 4v9" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Restaurant</span><span class="drop-ds">Orders, tables & kitchen display</span></span></a>
+          <a class="drop-link" href="/shop" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Shop / POS</span><span class="drop-ds">Fast retail checkout & receipts</span></span></a>
+          <a class="drop-link" href="/inventory" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Inventory</span><span class="drop-ds">Stock, transfers & valuation</span></span></a>
+          <a class="drop-link" href="/invoicing" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8M8 16h5" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Invoicing</span><span class="drop-ds">Invoices & pay-by-link</span></span></a>
+          <a class="drop-link" href="/accounting" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 4h8M8 11h3m-3 4h3m4-4v4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Accounting</span><span class="drop-ds">Auto double-entry books</span></span></a>
+          <a class="drop-link" href="/people" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">People & Payroll</span><span class="drop-ds">Staff, leave & payroll</span></span></a>
+          <a class="drop-link" href="/payments" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Payments</span><span class="drop-ds">Collect & auto-reconcile</span></span></a>
+          <a class="drop-link" href="/menu" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Kuza Menu</span><span class="drop-ds">Free QR menus — start here</span></span></a>
+        </div>
+      </li>
+      <li><a href="/pricing">Pricing</a></li>
+      <li><a href="/menu">Free QR Menu</a></li>
+      <li><a href="/#ai">Kuza AI</a></li>
+    </nav>
+
+    <div class="nav-cta">
+      <!-- App links are env/prod-configurable (e.g. https://app.kuza.africa/login) -->
+      <a href="http://localhost:5001/login" class="btn btn--ghost">Sign in</a>
+      <a href="http://localhost:5001/register" class="btn btn--primary">Start free
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+
+    <button class="nav-toggle" aria-label="Open menu" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile drawer -->
+<div class="drawer" id="drawer">
+  <div class="drawer-scrim"></div>
+  <div class="drawer-panel" role="dialog" aria-label="Menu">
+    <div class="drawer-head">
+      <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lg2)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+      <button class="drawer-close" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <span class="drawer-sub">Products</span>
+    <a href="/restaurant">Restaurant</a>
+    <a href="/shop">Shop / POS</a>
+    <a href="/inventory">Inventory</a>
+    <a href="/invoicing">Invoicing</a>
+    <a href="/accounting">Accounting</a>
+    <a href="/people">People & Payroll</a>
+    <a href="/payments">Payments</a>
+    <a href="/menu">Kuza Menu</a>
+    <span class="drawer-sub">Company</span>
+    <a href="/pricing">Pricing</a>
+    <a href="/#ai">Kuza AI</a>
+    <div class="drawer-actions">
+      <a href="http://localhost:5001/login" class="btn btn--ghost btn--block">Sign in</a>
+      <a href="http://localhost:5001/register" class="btn btn--primary btn--block">Start free</a>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- ===== PRODUCT HERO ===== -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow reveal"><span class="dot"></span> Kuza Accounting</span>
+        <h1 class="h1 reveal" data-delay="1">Real books, <span class="grad-text">zero bookkeeping</span>.</h1>
+        <p class="lead measure reveal" data-delay="2">Every transaction across Kuza posts itself to a proper double-entry ledger — so you always have an accurate P&L, balance sheet and tax-ready reports. No spreadsheets, no month-end scramble, no accountant required.</p>
+        <div class="btn-row reveal" data-delay="3">
+          <a href="http://localhost:5001/register" class="btn btn--primary btn--lg">Start free
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="/pricing" class="btn btn--ghost btn--lg">See pricing</a>
+        </div>
+        <p class="hero-note reveal" data-delay="4">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Double-entry · Tax-ready · Exportable
+        </p>
+      </div>
+
+      <!-- Bespoke mockup: P&L / financial summary -->
+      <div class="hero-visual reveal" data-delay="2">
+        <div class="mock mock-anim" style="position:relative">
+          <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Books · Profit & loss</span></div>
+          <div class="mock-body">
+            <div class="m-grid2">
+              <div class="m-kpi"><div class="k-lbl">Revenue</div><div class="k-val" style="font-size:1.15rem">₦4.2M</div></div>
+              <div class="m-kpi"><div class="k-lbl">Expenses</div><div class="k-val" style="font-size:1.15rem">₦2.5M</div></div>
+            </div>
+            <div class="m-kpi" style="margin-bottom:12px;background:#0f9d6e0a">
+              <div class="k-lbl">Net profit</div><div class="k-val">₦1.7M <small>40% margin</small></div>
+              <div class="bars" aria-hidden="true">
+                <span class="bar" style="height:42%"></span><span class="bar" style="height:55%"></span>
+                <span class="bar" style="height:48%"></span><span class="bar" style="height:70%"></span>
+                <span class="bar g" style="height:86%"></span><span class="bar" style="height:64%"></span>
+              </div>
+            </div>
+            <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px">JE</span><div style="flex:1"><b style="font-size:.86rem">Auto entry · Sale #4821</b><div style="font-size:.76rem;color:var(--faint);margin-top:4px">Dr Cash ₦25,000 · Cr Sales ₦25,000</div></div><span class="m-pill ok">Posted</span></div>
+          </div>
+        </div>
+        <div class="float-badge float-badge--tl">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#0f9d6e18"/><path d="M8 12l3 3 5-6" stroke="#0f9d6e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><div class="fb-lbl">Books</div><div class="fb-val">Auto-posted</div></div>
+        </div>
+        <div class="float-badge float-badge--br">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="#f5b30122"/><path d="M7 9h10M7 13h6" stroke="#d99406" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <div><div class="fb-lbl">Net profit</div><div class="fb-val">₦1.7M</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURE BLOCKS ===== -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow reveal"><span class="dot"></span> Features</span>
+        <h2 class="h2 reveal" data-delay="1">Clean books, without the busywork</h2>
+        <p class="lead reveal" data-delay="2">Kuza keeps a real general ledger behind the scenes — you get the reports, not the data entry.</p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-copy reveal">
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z" stroke="#0f9d6e" stroke-width="1.9" stroke-linejoin="round"/><path d="M14 3a8 8 0 0 1 8 8h-8V3Z" stroke="#0f9d6e" stroke-width="1.9"/></svg></div>
+          <h3 class="h2">Auto-posting double-entry</h3>
+          <p class="lead">Sell an item, pay a supplier, run payroll or collect a payment — Kuza writes the matching debit and credit for you, every time. Your ledger stays balanced without a single manual journal.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Sales, expenses & payroll</b> post to the right accounts automatically.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Payments auto-reconcile</b> so cash and bank always match reality.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Always balanced</b> — debits equal credits, guaranteed.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">General ledger · Journals</span></div>
+            <div class="mock-body">
+              <div class="m-row"><div style="flex:1"><b style="font-size:.86rem">Sale · Table 4</b><div style="font-size:.76rem;color:var(--faint);margin-top:4px">Dr Cash ₦14,500 · Cr Sales ₦14,500</div></div><span class="m-pill ok">Posted</span></div>
+              <div class="m-row"><div style="flex:1"><b style="font-size:.86rem">Supplier payment</b><div style="font-size:.76rem;color:var(--faint);margin-top:4px">Dr Inventory ₦80,000 · Cr Bank ₦80,000</div></div><span class="m-pill ok">Posted</span></div>
+              <div class="m-row"><div style="flex:1"><b style="font-size:.86rem">Payroll · March</b><div style="font-size:.76rem;color:var(--faint);margin-top:4px">Dr Wages ₦420,000 · Cr Bank ₦420,000</div></div><span class="m-pill info">Auto</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature feature--flip">
+        <div class="feature-copy reveal">
+          <div class="ic-tile ic-tile--gold"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8" stroke="#d99406" stroke-width="1.9" stroke-linecap="round"/></svg></div>
+          <h3 class="h2">Reports that are ready when you are</h3>
+          <p class="lead">Open a live profit &amp; loss, balance sheet, cash flow or trial balance any day of the month. Filter by branch or period, then export to PDF or Excel in a click.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>P&L, balance sheet & cash flow</b> updated in real time.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Trial balance</b> to prove the books tie out.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Per-branch views</b> and period comparisons out of the box.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Reports · This quarter</span></div>
+            <div class="mock-body">
+              <div class="m-grid2">
+                <div class="m-kpi"><div class="k-lbl">Gross profit</div><div class="k-val" style="font-size:1.05rem">₦2.9M</div></div>
+                <div class="m-kpi"><div class="k-lbl">Cash flow</div><div class="k-val" style="font-size:1.05rem">₦1.1M</div></div>
+              </div>
+              <div class="m-kpi"><div class="k-lbl">Revenue trend</div>
+                <div class="bars" aria-hidden="true">
+                  <span class="bar" style="height:40%"></span><span class="bar" style="height:58%"></span>
+                  <span class="bar" style="height:50%"></span><span class="bar g" style="height:82%"></span>
+                  <span class="bar" style="height:66%"></span><span class="bar" style="height:74%"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-copy reveal">
+          <div class="ic-tile ic-tile--indigo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v18" stroke="#4f46e5" stroke-width="1.9" stroke-linecap="round"/></svg></div>
+          <h3 class="h2">Your chart of accounts, your rules</h3>
+          <p class="lead">Start with a sensible chart of accounts and adjust it to fit your business. Add manual journals, post accruals and make corrections — with a full audit trail on every entry.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Editable chart of accounts</b> tailored to your business.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Manual journals & accruals</b> when you need the control.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Full audit trail</b> — who posted what, and when.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Chart of accounts</span></div>
+            <div class="mock-body">
+              <div class="m-row"><span class="m-ava bg-em" style="border-radius:10px">10</span><div style="flex:1"><b style="font-size:.86rem">1000 · Cash & bank</b><div class="m-line sm" style="margin-top:6px"></div></div><b style="font-size:.86rem">₦3.4M</b></div>
+              <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px">40</span><div style="flex:1"><b style="font-size:.86rem">4000 · Sales revenue</b><div class="m-line sm" style="margin-top:6px"></div></div><b style="font-size:.86rem">₦4.2M</b></div>
+              <div class="m-row"><span class="m-ava bg-gd" style="border-radius:10px">50</span><div style="flex:1"><b style="font-size:.86rem">5000 · Cost of sales</b><div class="m-line sm" style="margin-top:6px"></div></div><b style="font-size:.86rem">₦1.3M</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature feature--flip">
+        <div class="feature-copy reveal">
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2h9l3 3v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm2 9 2 2 4-4" stroke="#0f9d6e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3 class="h2">Tax &amp; VAT ready</h3>
+          <p class="lead">Kuza tracks VAT and other taxes as you go, so filing season is a report — not a reconstruction. Export clean, itemised statements for your accountant or the tax authority.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>VAT tracked automatically</b> on sales and purchases.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Tax-ready reports</b> you can hand over as-is.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Export to PDF & Excel</b> for filing or your accountant.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">VAT summary · Q1</span></div>
+            <div class="mock-body">
+              <div class="m-grid2">
+                <div class="m-kpi"><div class="k-lbl">Output VAT</div><div class="k-val" style="font-size:1.05rem">₦315,000</div></div>
+                <div class="m-kpi"><div class="k-lbl">Input VAT</div><div class="k-val" style="font-size:1.05rem">₦188,000</div></div>
+              </div>
+              <div class="m-row" style="background:#0f9d6e0a"><div style="flex:1"><b style="font-size:.88rem">Net VAT payable</b><div class="m-line sm" style="margin-top:6px"></div></div><b style="font-size:.95rem">₦127,000</b></div>
+              <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div style="flex:1"><b style="font-size:.86rem">Export VAT return</b></div><span class="m-pill info">PDF · Excel</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS STRIP ===== -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="strip-dark reveal">
+        <div style="max-width:620px">
+          <span class="eyebrow" style="background:#ffffff14;border-color:#ffffff26;color:#9be9c9"><span class="dot"></span> How it works</span>
+          <h2 class="h2" style="color:#fff;margin-top:16px">Books that keep themselves</h2>
+          <p class="lead">You run the business. Kuza keeps the ledger — and hands you a clean report whenever you want one.</p>
+        </div>
+        <div class="steps" style="margin-top:34px">
+          <div class="step"><div class="step-n">1</div><h3 class="h3" style="color:#fff">Run your business on Kuza</h3><p style="color:#aab2c3">Sell, buy, pay staff and collect money as you normally would.</p></div>
+          <div class="step"><div class="step-n">2</div><h3 class="h3" style="color:#fff">Every transaction posts automatically</h3><p style="color:#aab2c3">Kuza writes balanced double-entry journals behind the scenes.</p></div>
+          <div class="step"><div class="step-n">3</div><h3 class="h3" style="color:#fff">Open a clean report anytime</h3><p style="color:#aab2c3">P&L, balance sheet and tax reports, ready to export.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA BAND ===== -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="cta-band reveal">
+        <h2>Close the books without opening a spreadsheet</h2>
+        <p class="lead measure mx-auto">Accurate, always-balanced accounting that runs itself. Start free — no accountant required.</p>
+        <div class="btn-row">
+          <a href="http://localhost:5001/register" class="btn btn--dark btn--lg">Start free</a>
+          <a href="/pricing" class="btn btn--light btn--lg">See pricing</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== FOOTER (identical on every page) ===== -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lgf)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lgf" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+        <p>The operating system for growing African businesses. Does your books and collects your money — no accountant required.</p>
+        <form class="footer-news news-row" aria-label="Newsletter signup">
+          <input type="email" placeholder="Work email" aria-label="Work email" required>
+          <button type="submit" aria-label="Subscribe"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </form>
+      </div>
+      <div class="footer-col">
+        <h4>Products</h4>
+        <a href="/restaurant">Restaurant</a>
+        <a href="/shop">Shop / POS</a>
+        <a href="/inventory">Inventory</a>
+        <a href="/invoicing">Invoicing</a>
+        <a href="/accounting">Accounting</a>
+      </div>
+      <div class="footer-col">
+        <h4>More</h4>
+        <a href="/people">People & Payroll</a>
+        <a href="/payments">Payments</a>
+        <a href="/menu">Kuza Menu</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/#ai">Kuza AI</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#">About</a>
+        <a href="/#">Customers</a>
+        <a href="/#">Careers</a>
+        <a href="/#">Blog</a>
+        <a href="/#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <a href="/#">Help center</a>
+        <a href="/#">Guides</a>
+        <a href="/#">API docs</a>
+        <a href="/#">Status</a>
+        <a href="/#">Privacy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; <span id="year">2026</span> Kuza Technologies. Built for African businesses.</p>
+      <div class="socials">
+        <a href="/#" aria-label="Kuza on X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.3 8.3L23 22h-6.8l-5.3-6.9L4.8 22H1.7l7.8-8.9L1 2h6.9l4.8 6.4L18.9 2Zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20Z"/></svg></a>
+        <a href="/#" aria-label="Kuza on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5A2.5 2.5 0 1 1 5 8.5a2.5 2.5 0 0 1-.02-5ZM3 9h4v12H3V9Zm6 0h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.7 8.65 22 10.6 22 14v7h-4v-6.2c0-1.5-.03-3.4-2.07-3.4-2.07 0-2.39 1.6-2.39 3.3V21H9V9Z"/></svg></a>
+        <a href="/#" aria-label="Kuza on Instagram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg></a>
+        <a href="/#" aria-label="Kuza on WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.9 5-1.3A10 10 0 1 0 12 2Zm5.7 14.1c-.24.67-1.4 1.28-1.93 1.32-.5.05-1.13.24-3.7-.77-3.11-1.23-5.1-4.4-5.25-4.6-.15-.2-1.25-1.66-1.25-3.17s.79-2.25 1.07-2.56c.28-.31.61-.38.81-.38l.58.01c.19.01.44-.07.68.52.24.6.83 2.06.9 2.21.07.15.12.33.02.53-.1.2-.15.33-.3.5l-.44.52c-.15.15-.3.31-.13.61.17.3.77 1.27 1.65 2.06 1.14 1.02 2.1 1.33 2.4 1.48.3.15.47.13.65-.08.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.72.81 2.01.96.3.15.5.22.57.35.07.13.07.72-.17 1.39Z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="/app.js" defer></script>

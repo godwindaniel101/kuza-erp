@@ -1,0 +1,338 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuza Inventory — Stock, receiving, transfers & valuation</title>
+<meta name="description" content="Track stock across every branch with Kuza Inventory: real-time counts, receiving and purchase orders, transfers between locations, live valuation and low-stock alerts. Stop stockouts and shrinkage.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%230f9d6e'/%3E%3Cpath d='M13 27V13m0 7 8-7m-8 7 8 7' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/styles.css">
+
+<!-- ===== HEADER (identical on every page) ===== -->
+<header class="site-header">
+  <div class="container nav">
+    <a href="/" class="brand" aria-label="Kuza home">
+      <svg class="logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="40" height="40" rx="11" fill="url(#lg)"/>
+        <path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/>
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs>
+      </svg>
+      <span>Kuza</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary">
+      <li class="nav-item--drop">
+        <button class="nav-trigger" aria-expanded="false" aria-haspopup="true">Products
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="dropdown" role="menu">
+          <a class="drop-link" href="/restaurant" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-1.7 0-3 2-3 5s1.3 4 3 4v9" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Restaurant</span><span class="drop-ds">Orders, tables & kitchen display</span></span></a>
+          <a class="drop-link" href="/shop" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Shop / POS</span><span class="drop-ds">Fast retail checkout & receipts</span></span></a>
+          <a class="drop-link" href="/inventory" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Inventory</span><span class="drop-ds">Stock, transfers & valuation</span></span></a>
+          <a class="drop-link" href="/invoicing" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8M8 16h5" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Invoicing</span><span class="drop-ds">Invoices & pay-by-link</span></span></a>
+          <a class="drop-link" href="/accounting" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 4h8M8 11h3m-3 4h3m4-4v4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Accounting</span><span class="drop-ds">Auto double-entry books</span></span></a>
+          <a class="drop-link" href="/people" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">People & Payroll</span><span class="drop-ds">Staff, leave & payroll</span></span></a>
+          <a class="drop-link" href="/payments" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Payments</span><span class="drop-ds">Collect & auto-reconcile</span></span></a>
+          <a class="drop-link" href="/menu" role="menuitem"><span class="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="#0f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="drop-tt">Kuza Menu</span><span class="drop-ds">Free QR menus — start here</span></span></a>
+        </div>
+      </li>
+      <li><a href="/pricing">Pricing</a></li>
+      <li><a href="/menu">Free QR Menu</a></li>
+      <li><a href="/#ai">Kuza AI</a></li>
+    </nav>
+
+    <div class="nav-cta">
+      <!-- App links are env/prod-configurable (e.g. https://app.kuza.africa/login) -->
+      <a href="http://localhost:5001/login" class="btn btn--ghost">Sign in</a>
+      <a href="http://localhost:5001/register" class="btn btn--primary">Start free
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+
+    <button class="nav-toggle" aria-label="Open menu" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile drawer -->
+<div class="drawer" id="drawer">
+  <div class="drawer-scrim"></div>
+  <div class="drawer-panel" role="dialog" aria-label="Menu">
+    <div class="drawer-head">
+      <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lg2)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+      <button class="drawer-close" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <span class="drawer-sub">Products</span>
+    <a href="/restaurant">Restaurant</a>
+    <a href="/shop">Shop / POS</a>
+    <a href="/inventory">Inventory</a>
+    <a href="/invoicing">Invoicing</a>
+    <a href="/accounting">Accounting</a>
+    <a href="/people">People & Payroll</a>
+    <a href="/payments">Payments</a>
+    <a href="/menu">Kuza Menu</a>
+    <span class="drawer-sub">Company</span>
+    <a href="/pricing">Pricing</a>
+    <a href="/#ai">Kuza AI</a>
+    <div class="drawer-actions">
+      <a href="http://localhost:5001/login" class="btn btn--ghost btn--block">Sign in</a>
+      <a href="http://localhost:5001/register" class="btn btn--primary btn--block">Start free</a>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- ===== PRODUCT HERO ===== -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow reveal"><span class="dot"></span> Kuza Inventory</span>
+        <h1 class="h1 reveal" data-delay="1">Know exactly what you have, <span class="grad-text">everywhere</span>.</h1>
+        <p class="lead measure reveal" data-delay="2">Real-time stock across every branch, receiving and transfers that actually add up, live valuation of what's on your shelves, and low-stock alerts that reach you before you run out. Kuza Inventory ends stockouts and shrinkage.</p>
+        <div class="btn-row reveal" data-delay="3">
+          <a href="http://localhost:5001/register" class="btn btn--primary btn--lg">Start free
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="/pricing" class="btn btn--ghost btn--lg">See pricing</a>
+        </div>
+        <p class="hero-note reveal" data-delay="4">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Multi-branch · Real-time counts
+        </p>
+      </div>
+
+      <!-- Bespoke mockup: Stock list with status pills -->
+      <div class="hero-visual reveal" data-delay="2">
+        <div class="mock mock-anim" style="position:relative">
+          <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Inventory · All branches</span></div>
+          <div class="mock-body">
+            <div class="m-grid2">
+              <div class="m-kpi"><div class="k-lbl">Stock value</div><div class="k-val">₦3.4M</div></div>
+              <div class="m-kpi"><div class="k-lbl">SKUs tracked</div><div class="k-val">428</div></div>
+            </div>
+            <div class="m-row"><span class="m-ava bg-em" style="border-radius:10px">RC</span><div style="flex:1"><b style="font-size:.9rem">Rice 50kg</b><div style="font-size:.74rem;color:var(--faint);margin-top:4px">SKU RC-050 · 84 on hand</div></div><span class="m-pill ok">In stock</span></div>
+            <div class="m-row"><span class="m-ava bg-gd" style="border-radius:10px">OL</span><div style="flex:1"><b style="font-size:.9rem">Cooking oil 5L</b><div style="font-size:.74rem;color:var(--faint);margin-top:4px">SKU OL-005 · 7 on hand</div></div><span class="m-pill warn">Low</span></div>
+            <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px">SG</span><div style="flex:1"><b style="font-size:.9rem">Sugar 1kg</b><div style="font-size:.74rem;color:var(--faint);margin-top:4px">SKU SG-001 · 0 on hand</div></div><span class="m-pill" style="color:#ff5f57;background:#ff5f5718">Out</span></div>
+          </div>
+        </div>
+        <div class="float-badge float-badge--tl">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7" stroke="#0f9d6e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><div class="fb-lbl">Stock value</div><div class="fb-val">₦3.4M</div></div>
+        </div>
+        <div class="float-badge float-badge--br">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v10m0 4v.5M4 20a8 8 0 0 1 16 0" stroke="#d99406" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <div><div class="fb-lbl">Alerts</div><div class="fb-val">6 low-stock</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURE BLOCKS ===== -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow reveal"><span class="dot"></span> Features</span>
+        <h2 class="h2 reveal" data-delay="1">Every item, counted and accounted for</h2>
+        <p class="lead reveal" data-delay="2">From the loading bay to the shop floor — one accurate, live view of your stock.</p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-copy reveal">
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10" stroke="#0f9d6e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3 class="h2">Real-time stock across branches</h3>
+          <p class="lead">Every sale, return and transfer updates counts the instant it happens — so head office and every branch see the same numbers, all the time.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>One live count</b> per SKU per location — no end-of-day guessing.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Barcode & SKU lookup</b> to find any item in seconds.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Full audit trail</b> so you always know why a count changed.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Stock movement · 7 days</span></div>
+            <div class="mock-body">
+              <div class="m-kpi" style="margin-bottom:12px">
+                <div class="k-lbl">Units moved</div>
+                <div class="bars" aria-hidden="true">
+                  <span class="bar" style="height:44%"></span><span class="bar" style="height:62%"></span>
+                  <span class="bar" style="height:50%"></span><span class="bar g" style="height:84%"></span>
+                  <span class="bar" style="height:58%"></span><span class="bar" style="height:70%"></span>
+                  <span class="bar" style="height:48%"></span>
+                </div>
+              </div>
+              <div class="m-row"><span class="m-ava bg-em">LG</span><div style="flex:1"><b style="font-size:.88rem">Lagos · Ikeja</b><div class="m-line md" style="margin-top:6px"></div></div><span class="m-pill ok">184 SKUs</span></div>
+              <div class="m-row"><span class="m-ava bg-in">AB</span><div style="flex:1"><b style="font-size:.88rem">Abuja · Wuse</b><div class="m-line sm" style="margin-top:6px"></div></div><span class="m-pill info">122 SKUs</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature feature--flip">
+        <div class="feature-copy reveal">
+          <div class="ic-tile ic-tile--gold"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16v13H4zM4 7l2-4h12l2 4M9 11h6" stroke="#d99406" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3 class="h2">Receiving & purchase orders</h3>
+          <p class="lead">Raise a purchase order, send it to your supplier, and receive against it at the door. Counts and costs update automatically — even for partial deliveries.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Purchase orders</b> that track ordered vs received quantities.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Landed cost capture</b> so valuation reflects what you really paid.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Supplier history</b> to see who's reliable and who's slipping.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">PO-2041 · Receiving</span></div>
+            <div class="mock-body">
+              <div class="m-row"><span class="m-ava bg-em" style="border-radius:10px">RC</span><div style="flex:1"><b style="font-size:.9rem">Rice 50kg</b><div class="m-line sm" style="margin-top:6px"></div></div><span class="m-pill ok">40 / 40</span></div>
+              <div class="m-row"><span class="m-ava bg-gd" style="border-radius:10px">OL</span><div style="flex:1"><b style="font-size:.9rem">Cooking oil 5L</b><div class="m-line sm" style="margin-top:6px"></div></div><span class="m-pill warn">18 / 25</span></div>
+              <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px">FL</span><div style="flex:1"><b style="font-size:.9rem">Flour 25kg</b><div class="m-line sm" style="margin-top:6px"></div></div><span class="m-pill ok">30 / 30</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><span style="font-size:.82rem;color:var(--muted)">PO total received</span><b>₦486,000</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-copy reveal">
+          <div class="ic-tile ic-tile--indigo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h11l-3-3m3 3-3 3M20 16H9l3-3m-3 3 3 3" stroke="#4f46e5" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3 class="h2">Transfers between locations</h3>
+          <p class="lead">Move stock from the warehouse to a branch, or between branches, in a few taps. Both sides update the moment goods are dispatched and received — nothing goes missing in transit.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>In-transit tracking</b> so dispatched stock is never double-counted.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Receive & confirm</b> at the destination to close the loop.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Discrepancy flags</b> when what arrives doesn't match what left.</span></li>
+          </ul>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Transfer TR-118</span></div>
+            <div class="mock-body">
+              <div class="m-grid2">
+                <div class="m-kpi" style="background:#0f9d6e0a"><div class="k-lbl">From</div><div class="k-val" style="font-size:1.05rem">Warehouse</div></div>
+                <div class="m-kpi" style="background:#4f46e50a"><div class="k-lbl">To</div><div class="k-val" style="font-size:1.05rem">Ikeja</div></div>
+              </div>
+              <div class="m-row"><div style="flex:1"><b style="font-size:.88rem">42 items dispatched</b><div class="m-line md" style="margin-top:6px"></div></div><span class="m-pill info">In transit</span></div>
+              <div class="m-row"><div style="flex:1"><b style="font-size:.88rem">Awaiting receipt</b><div class="m-line sm" style="margin-top:6px"></div></div><span class="m-pill warn">Pending</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature feature--flip">
+        <div class="feature-copy reveal">
+          <div class="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6" stroke="#0f9d6e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3 class="h2">Valuation & low-stock alerts</h3>
+          <p class="lead">Know what your stock is worth at any moment with FIFO or weighted-average valuation, and set reorder points so Kuza nudges you before an item runs dry.</p>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>FIFO or weighted-average</b> valuation, always current.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Reorder points</b> that trigger a low-stock alert automatically.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Cost of goods sold</b> flows straight to your books.</span></li>
+          </ul>
+          <p style="margin-top:20px"><a href="/accounting" class="link-arrow">See how it posts to Accounting <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
+        </div>
+        <div class="feature-media reveal" data-delay="1">
+          <div class="mock">
+            <div class="mock-bar"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span><span class="mock-title">Valuation & alerts</span></div>
+            <div class="mock-body">
+              <div class="m-grid2">
+                <div class="m-kpi"><div class="k-lbl">Total value</div><div class="k-val">₦3.42M <small>+4%</small></div></div>
+                <div class="m-kpi"><div class="k-lbl">Below reorder</div><div class="k-val">6</div></div>
+              </div>
+              <div class="m-row"><span class="m-ava bg-gd" style="border-radius:10px">OL</span><div style="flex:1"><b style="font-size:.88rem">Cooking oil 5L</b><div style="font-size:.74rem;color:var(--faint);margin-top:4px">7 left · reorder at 10</div></div><span class="m-pill warn">Reorder</span></div>
+              <div class="m-row"><span class="m-ava bg-in" style="border-radius:10px">SG</span><div style="flex:1"><b style="font-size:.88rem">Sugar 1kg</b><div style="font-size:.74rem;color:var(--faint);margin-top:4px">0 left · reorder at 20</div></div><span class="m-pill" style="color:#ff5f57;background:#ff5f5718">Urgent</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS STRIP ===== -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="strip-dark reveal">
+        <div style="max-width:620px">
+          <span class="eyebrow" style="background:#ffffff14;border-color:#ffffff26;color:#9be9c9"><span class="dot"></span> How it works</span>
+          <h2 class="h2" style="color:#fff;margin-top:16px">Accurate stock in three steps</h2>
+          <p class="lead">Set it up once and every sale keeps your counts and books honest — automatically.</p>
+        </div>
+        <div class="steps" style="margin-top:34px">
+          <div class="step"><div class="step-n">1</div><h3 class="h3" style="color:#fff">Import your items</h3><p style="color:#aab2c3">Bulk-upload products with SKUs, costs and reorder points — or scan them in.</p></div>
+          <div class="step"><div class="step-n">2</div><h3 class="h3" style="color:#fff">Receive & count</h3><p style="color:#aab2c3">Receive against POs, transfer between branches and do quick stock counts.</p></div>
+          <div class="step"><div class="step-n">3</div><h3 class="h3" style="color:#fff">Sell — it updates itself</h3><p style="color:#aab2c3">Every sale drops stock, values COGS and posts to your books automatically.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA BAND ===== -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="cta-band reveal">
+        <h2>Never lose money to a stockout again</h2>
+        <p class="lead measure mx-auto">Live counts, clean valuation and alerts that reach you in time. Start free — and connect Shop, Restaurant and Accounting whenever you're ready.</p>
+        <div class="btn-row">
+          <a href="http://localhost:5001/register" class="btn btn--dark btn--lg">Start free</a>
+          <a href="/pricing" class="btn btn--light btn--lg">See pricing</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== FOOTER (identical on every page) ===== -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="brand"><svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect width="40" height="40" rx="11" fill="url(#lgf)"/><path d="M13 27V13m0 7 8-7m-8 7 8 7" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.5" cy="12.5" r="2.6" fill="#f5b301"/><defs><linearGradient id="lgf" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#0f9d6e"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs></svg><span>Kuza</span></a>
+        <p>The operating system for growing African businesses. Does your books and collects your money — no accountant required.</p>
+        <form class="footer-news news-row" aria-label="Newsletter signup">
+          <input type="email" placeholder="Work email" aria-label="Work email" required>
+          <button type="submit" aria-label="Subscribe"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </form>
+      </div>
+      <div class="footer-col">
+        <h4>Products</h4>
+        <a href="/restaurant">Restaurant</a>
+        <a href="/shop">Shop / POS</a>
+        <a href="/inventory">Inventory</a>
+        <a href="/invoicing">Invoicing</a>
+        <a href="/accounting">Accounting</a>
+      </div>
+      <div class="footer-col">
+        <h4>More</h4>
+        <a href="/people">People & Payroll</a>
+        <a href="/payments">Payments</a>
+        <a href="/menu">Kuza Menu</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/#ai">Kuza AI</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#">About</a>
+        <a href="/#">Customers</a>
+        <a href="/#">Careers</a>
+        <a href="/#">Blog</a>
+        <a href="/#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <a href="/#">Help center</a>
+        <a href="/#">Guides</a>
+        <a href="/#">API docs</a>
+        <a href="/#">Status</a>
+        <a href="/#">Privacy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; <span id="year">2026</span> Kuza Technologies. Built for African businesses.</p>
+      <div class="socials">
+        <a href="/#" aria-label="Kuza on X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.3 8.3L23 22h-6.8l-5.3-6.9L4.8 22H1.7l7.8-8.9L1 2h6.9l4.8 6.4L18.9 2Zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20Z"/></svg></a>
+        <a href="/#" aria-label="Kuza on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5A2.5 2.5 0 1 1 5 8.5a2.5 2.5 0 0 1-.02-5ZM3 9h4v12H3V9Zm6 0h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C20.7 8.65 22 10.6 22 14v7h-4v-6.2c0-1.5-.03-3.4-2.07-3.4-2.07 0-2.39 1.6-2.39 3.3V21H9V9Z"/></svg></a>
+        <a href="/#" aria-label="Kuza on Instagram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg></a>
+        <a href="/#" aria-label="Kuza on WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.9 5-1.3A10 10 0 1 0 12 2Zm5.7 14.1c-.24.67-1.4 1.28-1.93 1.32-.5.05-1.13.24-3.7-.77-3.11-1.23-5.1-4.4-5.25-4.6-.15-.2-1.25-1.66-1.25-3.17s.79-2.25 1.07-2.56c.28-.31.61-.38.81-.38l.58.01c.19.01.44-.07.68.52.24.6.83 2.06.9 2.21.07.15.12.33.02.53-.1.2-.15.33-.3.5l-.44.52c-.15.15-.3.31-.13.61.17.3.77 1.27 1.65 2.06 1.14 1.02 2.1 1.33 2.4 1.48.3.15.47.13.65-.08.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.72.81 2.01.96.3.15.5.22.57.35.07.13.07.72-.17 1.39Z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="/app.js" defer></script>

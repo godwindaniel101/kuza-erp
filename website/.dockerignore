@@ -1,4 +1,9 @@
-Dockerfile
 .dockerignore
 *.md
 .DS_Store
+node_modules
+.next
+out
+.git
+npm-debug.log*
+*.log
