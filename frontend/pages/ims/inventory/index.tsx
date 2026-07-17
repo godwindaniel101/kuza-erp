@@ -15,7 +15,6 @@ import DataTable, { type DataTableColumn, type RowAction } from '@/components/ui
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
 import StockStatusBadge from '@/components/ui/StockStatusBadge';
-import InventoryTabs from '@/components/ui/InventoryTabs';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import { useTableState } from '@/hooks/useTableState';
@@ -369,7 +368,6 @@ export default function InventoryPage() {
         }
       />
 
-      <InventoryTabs active="items" counts={{ items: loading ? undefined : items.length }} />
 
       {/* Filters */}
       {!loading && items.length > 0 && (

@@ -7,9 +7,9 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
+import Modal from '@/components/Modal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { WeeklyBarChart, RevenueAreaChart, AreaPoint } from '@/components/ui/charts';
-import InventoryTabs from '@/components/ui/InventoryTabs';
 import { formatMoney, formatDate, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
@@ -155,7 +155,7 @@ export default function InventoryDashboardPage() {
       });
     });
     return Array.from(map.entries())
-      .map(([bid, value]) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value }))
+      .map(([bid, value]) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value, bid }))
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
@@ -163,10 +163,34 @@ export default function InventoryDashboardPage() {
 
   // Top products by stock value (top 6).
   const topProducts = items
-    .map((i) => ({ label: (i.name as string) || 'Item', value: num(i.totalStock) * num(i.salePrice) }))
+    .map((i) => ({ label: (i.name as string) || 'Item', value: num(i.totalStock) * num(i.salePrice), id: i.id as string }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+
+  // Bar drill-down: click a branch bar → its item breakdown; a product bar → its per-branch stock.
+  const [drill, setDrill] = useState<{ title: string; rows: { label: string; value: number }[]; href?: string } | null>(null);
+  const openBranchDrill = (i: number) => {
+    const b = stockByBranch[i];
+    if (!b) return;
+    const rows = items
+      .map((it) => ({ label: (it.name as string) || 'Item', value: num(it.branchStocks?.[b.bid]?.stock) * num(it.salePrice) }))
+      .filter((r) => r.value > 0)
+      .sort((x, y) => y.value - x.value)
+      .slice(0, 12);
+    setDrill({ title: `${b.label} · stock value by item`, rows });
+  };
+  const openProductDrill = (i: number) => {
+    const p = topProducts[i];
+    if (!p) return;
+    const it = items.find((x) => x.id === p.id);
+    const bs = it?.branchStocks || {};
+    const rows = Object.keys(bs)
+      .map((bid) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value: num(bs[bid]?.stock) * num(it?.salePrice) }))
+      .filter((r) => r.value > 0)
+      .sort((x, y) => y.value - x.value);
+    setDrill({ title: `${p.label} · value by branch`, rows, href: `/ims/inventory/${p.id}` });
+  };
 
   return (
     <div>
@@ -184,10 +208,6 @@ export default function InventoryDashboardPage() {
           </div>
         }
       />
-
-      <div className="mb-5">
-        <InventoryTabs active="overview" counts={{ items: totalItems }} />
-      </div>
 
       {loading ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -210,14 +230,14 @@ export default function InventoryDashboardPage() {
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" />
+            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" onBarClick={openBranchDrill} />
           )}
         </Card>
         <Card title="Top products by value">
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" />
+            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" onBarClick={openProductDrill} />
           )}
         </Card>
         <Card title="Sales & revenue" subtitle="Last 14 days">
@@ -314,6 +334,38 @@ export default function InventoryDashboardPage() {
           </div>
         </Card>
       </div>
+      {/* Bar drill-down details */}
+      <Modal
+        isOpen={!!drill}
+        onClose={() => setDrill(null)}
+        title={drill?.title}
+        maxWidth="sm"
+        footer={
+          drill?.href ? (
+            <Link
+              href={drill.href}
+              className="inline-flex h-9 items-center rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white hover:opacity-90"
+            >
+              View item
+            </Link>
+          ) : undefined
+        }
+      >
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          {drill && drill.rows.length > 0 ? (
+            drill.rows.map((r, idx) => (
+              <div key={idx} className="flex items-center justify-between gap-3 py-2">
+                <span className="truncate text-sm text-gray-700 dark:text-gray-300">{r.label}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+                  {formatMoney(r.value, currency)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="py-4 text-sm text-gray-400">No details.</p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

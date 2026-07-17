@@ -240,11 +240,14 @@ export function WeeklyBarChart({
   height = 160,
   formatValue = fmtCompact,
   emptyMessage = 'No activity yet',
+  onBarClick,
 }: {
   data: SimpleBarPoint[];
   height?: number;
   formatValue?: (v: number) => string;
   emptyMessage?: string;
+  /** When set, bars become clickable (drill-down) and show a pointer cursor. */
+  onBarClick?: (index: number) => void;
 }) {
   const gradientId = useId();
   const [hover, setHover] = useState<number | null>(null);
@@ -309,13 +312,15 @@ export function WeeklyBarChart({
                 fill={isPeak ? `url(#${gradientId})` : undefined}
                 className={isPeak ? undefined : 'fill-gray-200 dark:fill-gray-700'}
                 opacity={hover != null && hover !== i ? 0.55 : 1}
+                style={onBarClick ? { cursor: 'pointer' } : undefined}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
+                onClick={onBarClick ? () => onBarClick(i) : undefined}
               >
-                <title>{`${d.label}: ${formatValue(d.value)}`}</title>
+                <title>{onBarClick ? `${d.label}: ${formatValue(d.value)} — click for details` : `${d.label}: ${formatValue(d.value)}`}</title>
               </path>
               <text x={x + barW / 2} y={height - 5} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500 text-[9px]">
-                {d.label}
+                {d.label.length > 9 ? `${d.label.slice(0, 8)}…` : d.label}
               </text>
             </g>
           );

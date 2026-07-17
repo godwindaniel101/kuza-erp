@@ -7,7 +7,6 @@ import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
-import InventoryTabs from '@/components/ui/InventoryTabs';
 import { downloadCsv } from '@/lib/format';
 
 export default function BranchItemsPage() {
@@ -169,7 +168,6 @@ export default function BranchItemsPage() {
           }
         />
 
-        <InventoryTabs active="branch" counts={{ branch: loading ? undefined : filteredItems.length }} />
 
         {/* Search and Filters */}
         {!loading && inventoryItems.length > 0 && (
