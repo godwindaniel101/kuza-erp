@@ -62,6 +62,7 @@ export default function BatchSummaryPage() {
   const [summary, setSummary] = useState<BatchSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'branch' | 'items' | 'inflows'>('branch');
 
   const fmt = useCallback(
     (amount: number) => {
@@ -152,8 +153,33 @@ export default function BatchSummaryPage() {
             )}
           </div>
 
+          {/* Tabs: By branch · Items · Inflows */}
+          <div className="border-b border-gray-200 dark:border-gray-800">
+            <nav className="-mb-px flex gap-6" aria-label="Batch sections">
+              {([
+                { k: 'branch', label: t('byBranch') || 'By branch' },
+                { k: 'items', label: `${t('items') || 'Items'} (${summary.items.length})` },
+                { k: 'inflows', label: `${t('inflows') || 'Inflows'} (${summary.inflows.length})` },
+              ] as const).map((tb) => (
+                <button
+                  key={tb.k}
+                  type="button"
+                  onClick={() => setTab(tb.k)}
+                  aria-current={tab === tb.k ? 'page' : undefined}
+                  className={`-mb-px whitespace-nowrap border-b-2 py-2.5 px-1 text-[13px] font-medium transition-colors ${
+                    tab === tb.k
+                      ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {tb.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
           {/* Per-branch breakdown */}
-          {summary.branches.length > 0 && (
+          {tab === 'branch' && summary.branches.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
               <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
                 {t('byBranch') || 'By branch'}
@@ -171,6 +197,7 @@ export default function BatchSummaryPage() {
           )}
 
           {/* Line items */}
+          {tab === 'items' && (
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
             <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
               {t('items') || 'Items'} ({summary.items.length})
@@ -208,9 +235,10 @@ export default function BatchSummaryPage() {
               </table>
             </div>
           </div>
+          )}
 
           {/* Linked inflows */}
-          {summary.inflows.length > 0 && (
+          {tab === 'inflows' && summary.inflows.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
               <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
                 {t('inflows') || 'Inflows'} ({summary.inflows.length})
