@@ -33,10 +33,9 @@ export default function Header() {
                 <a className="drop-link" href="/accounting" role="menuitem"><span className="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 4h8M8 11h3m-3 4h3m4-4v4" stroke="#2e56d3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span><span className="drop-tt">Accounting</span><span className="drop-ds">Auto double-entry books</span></span></a>
                 <a className="drop-link" href="/people" role="menuitem"><span className="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="#2e56d3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span><span className="drop-tt">People & Payroll</span><span className="drop-ds">Staff, leave & payroll</span></span></a>
                 <a className="drop-link" href="/payments" role="menuitem"><span className="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="#2e56d3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span><span className="drop-tt">Payments</span><span className="drop-ds">Collect & auto-reconcile</span></span></a>
-                <a className="drop-link" href="/menu" role="menuitem"><span className="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="#2e56d3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span><span className="drop-tt">Kuza Menu</span><span className="drop-ds">Free QR menus — start here</span></span></a>
               </div>
             </li>
-            <li><a href="/menu">Free QR Menu</a></li>
+            <li><a href="/#business">Business types</a></li>
             <li><a href="/#ai">Kuza AI</a></li>
           </nav>
 
@@ -70,7 +69,6 @@ export default function Header() {
           <a href="/accounting">Accounting</a>
           <a href="/people">People & Payroll</a>
           <a href="/payments">Payments</a>
-          <a href="/menu">Kuza Menu</a>
           <span className="drawer-sub">Company</span>
           <a href="/#ai">Kuza AI</a>
           <div className="drawer-actions">
