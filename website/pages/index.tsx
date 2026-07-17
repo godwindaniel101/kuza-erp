@@ -174,7 +174,7 @@ export default function Home() {
               <p>Mobile money, local payroll, tax that fits and prices in your currency — not a foreign template you bend to fit. One platform your whole team logs into, set up in minutes.</p>
               <div className="btn-row">
                 <a href="http://localhost:5001/register" className="btn btn--light btn--lg">Start free</a>
-                <a href="/pricing" className="btn btn--light btn--lg" style={{ background: 'transparent' }}>See pricing</a>
+                <a href="/#business" className="btn btn--light btn--lg" style={{ background: 'transparent' }}>See how it works</a>
               </div>
               <div className="kx-bstats">
                 <div><div className="n">Minutes</div><div className="l">from sign-up to your first sale</div></div>
@@ -237,38 +237,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== PRICING TEASER ===== */}
-        <section className="kx-sec" style={{ paddingTop: 0 }}>
-          <div className="container">
-            <div className="kx-head mid">
-              <span className="kx-eyebrow reveal"><span className="dot"></span> Pricing</span>
-              <h2 className="reveal" data-delay="1">Fair, flat, in your currency</h2>
-              <p className="reveal" data-delay="2">Start free forever. Upgrade when you're ready — no per-transaction nibbling, no surprise bills.</p>
-            </div>
-            <div className="grid grid-3" style={{ marginTop: 'clamp(28px,4vw,44px)' }}>
-              <div className="card reveal">
-                <div className="price-name">Free</div>
-                <div className="price-desc">For getting started and QR menus.</div>
-                <div className="price-amt"><span className="cur">₦</span><span className="val">0</span><span className="per">/mo</span></div>
-                <a href="http://localhost:5001/register" className="btn btn--ghost btn--block">Start free</a>
-              </div>
-              <div className="card reveal" data-delay="1" style={{ border: '1.5px solid transparent', background: 'linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad-brand) border-box', boxShadow: 'var(--sh-lg)' }}>
-                <div className="price-name">Growth <span style={{ fontSize: '.7rem', color: '#fff', background: 'var(--emerald)', padding: '3px 9px', borderRadius: '999px', verticalAlign: 'middle', marginLeft: '6px' }}>Popular</span></div>
-                <div className="price-desc">Everything a busy business needs.</div>
-                <div className="price-amt"><span className="cur">₦</span><span className="val">18,000</span><span className="per">/mo</span></div>
-                <a href="/pricing" className="btn btn--primary btn--block">See what's included</a>
-              </div>
-              <div className="card reveal" data-delay="2">
-                <div className="price-name">Enterprise</div>
-                <div className="price-desc">Multi-branch, roles and support.</div>
-                <div className="price-amt"><span className="val" style={{ fontSize: '1.8rem' }}>Custom</span></div>
-                <a href="/pricing" className="btn btn--ghost btn--block">Talk to sales</a>
-              </div>
-            </div>
-            <p className="center reveal" style={{ marginTop: '26px' }}><a href="/pricing" className="link-arrow" style={{ justifyContent: 'center' }}>Compare all plans <ArrowR /></a></p>
-          </div>
-        </section>
-
         {/* ===== FINAL CTA ===== */}
         <section className="kx-sec" style={{ paddingTop: 0 }}>
           <div className="container">
@@ -277,7 +245,7 @@ export default function Home() {
               <p className="lead measure mx-auto">Books that keep themselves, money that collects itself, and AI that answers the hard questions. Start free — no card, no accountant.</p>
               <div className="btn-row">
                 <a href="http://localhost:5001/register" className="btn btn--dark btn--lg">Start free</a>
-                <a href="/pricing" className="btn btn--light btn--lg">See pricing</a>
+                <a href="/#business" className="btn btn--light btn--lg">See how it works</a>
               </div>
             </div>
           </div>

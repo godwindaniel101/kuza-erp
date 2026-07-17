@@ -24,7 +24,6 @@ export default function Footer() {
             <a href="/people">People & Payroll</a>
             <a href="/payments">Payments</a>
             <a href="/menu">Kuza Menu</a>
-            <a href="/pricing">Pricing</a>
             <a href="/#ai">Kuza AI</a>
           </div>
           <div className="footer-col">

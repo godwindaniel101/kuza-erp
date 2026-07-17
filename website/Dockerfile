@@ -11,12 +11,8 @@ RUN npm run build
 
 # ---- serve stage: nginx serves the static export ----
 FROM nginx:alpine
-# Next.js homepage + assets (public/ -> out/, hashed CSS/JS in out/_next).
+# The whole site is now Next.js (public/ -> out/, hashed CSS/JS in out/_next).
 COPY --from=build /app/out /usr/share/nginx/html
-# Bridge: sub-pages not yet ported to Next (restaurant, shop, ...) + their shared
-# stylesheet. Removed page-by-page as each is rebuilt in React.
-COPY --from=build /app/legacy/ /usr/share/nginx/html/
-COPY --from=build /app/styles.css /usr/share/nginx/html/styles.css
 # Clean URLs (/restaurant -> restaurant.html) + gzip + caching.
 COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
 

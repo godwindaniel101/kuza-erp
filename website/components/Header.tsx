@@ -36,7 +36,6 @@ export default function Header() {
                 <a className="drop-link" href="/menu" role="menuitem"><span className="drop-ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="#2e56d3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span><span className="drop-tt">Kuza Menu</span><span className="drop-ds">Free QR menus — start here</span></span></a>
               </div>
             </li>
-            <li><a href="/pricing">Pricing</a></li>
             <li><a href="/menu">Free QR Menu</a></li>
             <li><a href="/#ai">Kuza AI</a></li>
           </nav>
@@ -73,7 +72,6 @@ export default function Header() {
           <a href="/payments">Payments</a>
           <a href="/menu">Kuza Menu</a>
           <span className="drawer-sub">Company</span>
-          <a href="/pricing">Pricing</a>
           <a href="/#ai">Kuza AI</a>
           <div className="drawer-actions">
             <a href="http://localhost:5001/login" className="btn btn--ghost btn--block">Sign in</a>
