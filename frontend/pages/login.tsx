@@ -68,7 +68,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Login - ERP Platform</title>
+        <title>Sign in · Kuza</title>
       </Head>
       <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-sm">

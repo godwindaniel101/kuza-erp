@@ -135,7 +135,7 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>Register - ERP Platform</title>
+        <title>Create your account · Kuza</title>
       </Head>
       <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
