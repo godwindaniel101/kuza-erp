@@ -5,9 +5,58 @@ import Footer from '../components/Footer';
 const ArrowR = () => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
-const Check = () => (
-  <svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
+
+// Business verticals — photo on top, description underneath.
+const BIZ = [
+  {
+    href: '/restaurant',
+    tag: 'Restaurants & food',
+    img: '/img/istockphoto-2032134582-1024x1024.jpg',
+    alt: 'A family at a restaurant table',
+    title: 'Restaurants & food',
+    desc: 'Menus, tables, kitchen tickets and QR ordering — with your books and stock kept behind the scenes.',
+    cta: 'Explore Restaurant',
+  },
+  {
+    href: '/shop',
+    tag: 'Retail & shops',
+    img: '/img/istockphoto-2242938419-1024x1024.jpg',
+    alt: 'A shop owner checking stock',
+    title: 'Retail & shops',
+    desc: 'Fast POS, barcode stock and instant receipts across every branch — takings reconciled automatically.',
+    cta: 'Explore Shop',
+  },
+  {
+    href: '/inventory',
+    tag: 'Wholesale & agribusiness',
+    img: '/img/istockphoto-1703931443-1024x1024.jpg',
+    alt: 'A farmer using a tablet',
+    title: 'Wholesale & agribusiness',
+    desc: 'Bulk orders, multi-branch stock and credit customers — tracked, invoiced and settled in one place.',
+    cta: 'Explore Inventory',
+  },
+  {
+    href: '/invoicing',
+    tag: 'Services & specialty',
+    img: '/img/istockphoto-2259853301-1024x1024.jpg',
+    alt: 'A specialty shop owner on the phone',
+    title: 'Services & specialty',
+    desc: 'Invoices, payments and payroll for salons, pharmacies, agencies and service firms of every size.',
+    cta: 'Explore Invoicing',
+  },
+];
+
+// Capabilities — the actual modules, presented cleanly (no pricing/menu mixed in).
+const MODS = [
+  { title: 'Sell & POS', desc: 'Counter, orders and receipts on any device.', d: 'M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2' },
+  { title: 'Inventory', desc: 'Stock, transfers and valuation across branches.', d: 'M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10' },
+  { title: 'Invoicing', desc: 'Branded invoices with pay-by-link.', d: 'M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8' },
+  { title: 'Accounting', desc: 'Double-entry books that post themselves.', d: 'M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 4h8M8 11h3m-3 4h3m4-4v4' },
+  { title: 'People & Payroll', desc: 'Staff, leave and PAYE/pension payroll.', d: 'M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8' },
+  { title: 'Payments', desc: 'Collect and auto-reconcile every kobo.', d: 'M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4' },
+  { title: 'Kuza AI', desc: 'Plain-language answers from your data.', d: 'M12 3a9 9 0 1 0 9 9M12 3v9l6-6M12 3a9 9 0 0 1 6 3' },
+  { title: 'Reports', desc: 'Live dashboards and tax-ready exports.', d: 'M4 19V5m0 14h16M8 15l3-4 3 2 4-6' },
+];
 
 export default function Home() {
   return (
@@ -21,7 +70,7 @@ export default function Home() {
       <Header />
 
       <main>
-        {/* ===== HERO (lifestyle-led) ===== */}
+        {/* ===== HERO ===== */}
         <section className="kx-hero">
           <div className="container kx-hero-grid">
             <div className="hero-copy">
@@ -30,7 +79,7 @@ export default function Home() {
               <p className="kx-sub reveal" data-delay="2">Sales, stock, invoicing, accounting, payroll and payments — all in one place, built for how African businesses actually run. Kuza keeps your books true and collects your money. No accountant required.</p>
               <div className="btn-row reveal" data-delay="3" style={{ marginTop: '28px' }}>
                 <a href="http://localhost:5001/register" className="btn btn--primary btn--lg">Start free <ArrowR /></a>
-                <a href="#spotlight" className="btn btn--ghost btn--lg">See how it works</a>
+                <a href="#business" className="btn btn--ghost btn--lg">See how it works</a>
               </div>
               <p className="hero-note reveal" data-delay="4" style={{ marginTop: '18px' }}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -38,14 +87,9 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Photo-led hero: image slot + floating product proof. Drop a real photo into .kx-photo. */}
             <div className="hero-visual reveal" data-delay="2" style={{ position: 'relative' }}>
               <div className="kx-photo tall">
-                {/* Replace with: <img src="/img/hero-owner.jpg" alt="A Kuza business owner" /> */}
-                <div className="ph">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" /><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                  <b>Business owner</b>
-                </div>
+                <img src="/img/istockphoto-2242939497-1024x1024.jpg" alt="A Kuza retail owner using the app in her shop" />
               </div>
               <div className="kx-fchip" style={{ left: '-16px', bottom: '64px' }}>
                 <span className="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
@@ -77,79 +121,48 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== SPOTLIGHTS (numbered, photo-led) ===== */}
-        <section className="kx-sec" id="spotlight">
+        {/* ===== BUILT FOR YOUR BUSINESS (photo top, description under) ===== */}
+        <section className="kx-sec" id="business">
           <div className="container">
             <div className="kx-head">
-              <span className="kx-eyebrow reveal"><span className="dot"></span> One platform, end to end</span>
-              <h2 className="reveal" data-delay="1">Sell, get paid, and pay your people — without leaving Kuza.</h2>
-              <p className="reveal" data-delay="2">Everything talks to itself. A sale drops your stock, posts to your books and reconciles your cash — automatically.</p>
+              <span className="kx-eyebrow reveal"><span className="dot"></span> Built for your business</span>
+              <h2 className="reveal" data-delay="1">However you make your money, Kuza fits the way you work.</h2>
+              <p className="reveal" data-delay="2">Kuza shapes itself to your trade — then runs the sales, stock, invoicing, payroll and books underneath, the same for everyone.</p>
             </div>
-
-            {/* 01 Sell */}
-            <div className="kx-spot reveal" style={{ marginTop: 'clamp(34px,4vw,56px)' }}>
-              <div className="kx-spot-copy">
-                <span className="kx-num"><span className="n">01</span><span className="bar"></span> Sell anywhere</span>
-                <h3>A fast, modern counter for shops and restaurants.</h3>
-                <p>Ring up sales on any device — barcode scan, split payments, instant receipts and QR menus for the table. Every sale updates stock and books in real time.</p>
-                <ul className="kx-checks">
-                  <li><Check /><span><b>POS & restaurant orders</b> with tables, kitchen tickets and receipts.</span></li>
-                  <li><Check /><span>Stock drops and the ledger posts <b>the moment you sell</b>.</span></li>
-                </ul>
-              </div>
-              <div className="kx-spot-media" style={{ position: 'relative' }}>
-                <div className="kx-photo wide">
-                  <div className="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg><b>At the counter</b></div>
-                </div>
-                <div className="kx-fchip" style={{ right: '-14px', bottom: '-16px' }}>
-                  <span className="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Z" stroke="#fff" strokeWidth="1.9" /></svg></span>
-                  <span><span className="l">Sale complete</span><span className="v">₦15,500</span></span>
-                </div>
-              </div>
+            <div className="kx-bizgrid">
+              {BIZ.map((b) => (
+                <a className="kx-bizcard reveal" href={b.href} key={b.href}>
+                  <div className="pic">
+                    <img src={b.img} alt={b.alt} />
+                    <span className="tag">{b.tag}</span>
+                  </div>
+                  <div className="bd">
+                    <h3>{b.title}</h3>
+                    <p>{b.desc}</p>
+                    <span className="link-arrow">{b.cta} <ArrowR /></span>
+                  </div>
+                </a>
+              ))}
             </div>
+          </div>
+        </section>
 
-            {/* 02 Get paid */}
-            <div className="kx-spot flip reveal">
-              <div className="kx-spot-copy">
-                <span className="kx-num"><span className="n">02</span><span className="bar"></span> Get paid & reconcile</span>
-                <h3>Money that collects — and reconciles — itself.</h3>
-                <p>Take payment by transfer, card or mobile money. Kuza catches it, matches it to the right invoice, marks it paid and posts the entry. The month-end reconciliation just disappears.</p>
-                <ul className="kx-checks">
-                  <li><Check /><span><b>Paystack & Monnify</b> pay-by-link and virtual accounts, live today.</span></li>
-                  <li><Check /><span><b>Auto-matched</b> across bank, card and cash — nothing slips through.</span></li>
-                </ul>
-              </div>
-              <div className="kx-spot-media" style={{ position: 'relative' }}>
-                <div className="kx-photo wide">
-                  <div className="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg><b>Getting paid</b></div>
-                </div>
-                <div className="kx-fchip" style={{ left: '-16px', bottom: '-16px' }}>
-                  <span className="ic bg-in"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-                  <span><span className="l">MoMo → Invoice #1043</span><span className="v">Matched · ₦85,000</span></span>
-                </div>
-              </div>
+        {/* ===== EVERYTHING IN ONE LOGIN (clean module grid) ===== */}
+        <section className="kx-sec" style={{ paddingTop: 0 }}>
+          <div className="container">
+            <div className="kx-head mid">
+              <span className="kx-eyebrow reveal"><span className="dot"></span> One login, every tool</span>
+              <h2 className="reveal" data-delay="1">The whole business, in one place.</h2>
+              <p className="reveal" data-delay="2">Switch on what you need today and add the rest as you grow — same data, one bill.</p>
             </div>
-
-            {/* 03 Payroll */}
-            <div className="kx-spot reveal">
-              <div className="kx-spot-copy">
-                <span className="kx-num"><span className="n">03</span><span className="bar"></span> Payroll for Africa</span>
-                <h3>Payroll that already speaks PAYE, pension & NHF.</h3>
-                <p>Foreign systems ship US tax tables and make you hire a consultant for the local statutory. Kuza is built the other way round — enter a salary and the deductions, payslip and net pay come out right.</p>
-                <ul className="kx-checks">
-                  <li><Check /><span><b>PAYE, pension and NHF</b> computed automatically.</span></li>
-                  <li><Check /><span>Payslips out, <b>net pay disbursed</b> — no accountant needed.</span></li>
-                </ul>
-              </div>
-              <div className="kx-spot-media" style={{ position: 'relative' }}>
-                <div className="kx-photo wide">
-                  <div className="ph"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg><b>Payday</b></div>
+            <div className="kx-mods">
+              {MODS.map((m) => (
+                <div className="kx-mod reveal" key={m.title}>
+                  <span className="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={m.d} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+                  <h4>{m.title}</h4>
+                  <p>{m.desc}</p>
                 </div>
-                <div className="kx-fchip" style={{ right: '-14px', bottom: '-16px' }}>
-                  <span className="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20m5-16H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-                  <span><span className="l">Net pay · June</span><span className="v">₦364,500</span></span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -198,74 +211,6 @@ export default function Home() {
                 <p>One login for my two shops — sales, stock and books all in one place. I finally know where the business stands.</p>
                 <div className="who"><span className="av bg-em">NE</span><span><span className="nm">Ngozi E.</span><span className="rl">Fashion retail · Abuja</span></span></div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== PRODUCT SUITE ===== */}
-        <section className="kx-sec" style={{ paddingTop: 0 }}>
-          <div className="container">
-            <div className="kx-head mid">
-              <span className="kx-eyebrow reveal"><span className="dot"></span> The complete suite</span>
-              <h2 className="reveal" data-delay="1">Switch on what you need. It all fits together.</h2>
-              <p className="reveal" data-delay="2">Start with one module and add more as you grow — same login, same data, one bill.</p>
-            </div>
-            <div className="grid grid-3" style={{ marginTop: 'clamp(28px,4vw,44px)' }}>
-              <a href="/restaurant" className="card prod-card reveal">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 3c-1.7 0-3 2-3 5s1.3 4 3 4v9" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Restaurant</h3>
-                <p>Orders, tables, menus and a kitchen display that keeps every ticket moving.</p>
-                <span className="link-arrow">Explore Restaurant <ArrowR /></span>
-              </a>
-              <a href="/shop" className="card prod-card reveal" data-delay="1">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9h18l-1.4 9.3A2 2 0 0 1 17.6 20H6.4a2 2 0 0 1-2-1.7L3 9Zm3 0V7a4 4 0 0 1 8 0v2" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Shop / POS</h3>
-                <p>Lightning-fast checkout with barcode scanning, split payments and instant receipts.</p>
-                <span className="link-arrow">Explore Shop <ArrowR /></span>
-              </a>
-              <a href="/inventory" className="card prod-card reveal" data-delay="2">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7 12 3l9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Inventory</h3>
-                <p>Track stock across branches with receiving, transfers, valuation and low-stock alerts.</p>
-                <span className="link-arrow">Explore Inventory <ArrowR /></span>
-              </a>
-              <a href="/invoicing" className="card prod-card reveal">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2h9l3 3v17l-2.5-1.5L13 22l-2.5-1.5L8 22l-2.5-1.5L4 22V4a2 2 0 0 1 2-2Zm2 6h8M8 12h8M8 16h5" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Invoicing</h3>
-                <p>Send branded invoices with a pay-by-link and watch accounts receivable clear itself.</p>
-                <span className="link-arrow">Explore Invoicing <ArrowR /></span>
-              </a>
-              <a href="/accounting" className="card prod-card reveal" data-delay="1">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 4h8M8 11h3m-3 4h3m4-4v4" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Accounting</h3>
-                <p>Double-entry books that post themselves, plus P&L, balance sheet and tax-ready reports.</p>
-                <span className="link-arrow">Explore Accounting <ArrowR /></span>
-              </a>
-              <a href="/people" className="card prod-card reveal" data-delay="2">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">People & Payroll</h3>
-                <p>Employees, attendance, leave and payroll that runs on time with the right deductions.</p>
-                <span className="link-arrow">Explore People <ArrowR /></span>
-              </a>
-              <a href="/payments" className="card prod-card reveal">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 7h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7Zm0 4h20M6 15h4" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Payments</h3>
-                <p>Collect with Paystack links and cards, then auto-reconcile every kobo to your ledger.</p>
-                <span className="link-arrow">Explore Payments <ArrowR /></span>
-              </a>
-              <a href="/menu" className="card prod-card reveal" data-delay="1">
-                <span className="prod-tag">Free</span>
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 3h3m0 0h1m-4 4h4v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Kuza Menu</h3>
-                <p>A free, beautiful QR menu customers scan at the table — your on-ramp to the whole platform.</p>
-                <span className="link-arrow">Get a free menu <ArrowR /></span>
-              </a>
-              <a href="/pricing" className="card prod-card reveal" data-delay="2">
-                <div className="ic-tile"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Zm9-4v8m-2.5-6h3.5a2 2 0 0 1 0 4H10m0 0h3.5a2 2 0 0 1 0 4H9.5" stroke="#0f9d6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-                <h3 className="h3">Simple pricing</h3>
-                <p>Free forever to start, then flat plans in your currency with no per-transaction surprises.</p>
-                <span className="link-arrow">See pricing <ArrowR /></span>
-              </a>
             </div>
           </div>
         </section>

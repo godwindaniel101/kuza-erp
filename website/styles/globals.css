@@ -679,3 +679,34 @@ p { margin: 0; }
 /* soft organic divider (grey.co-style curve) into the dark brand band */
 .kx-curve{display:block;width:100%;height:clamp(40px,5vw,72px);margin-bottom:-1px}
 .kx-curve path{fill:#0a1310}
+
+/* ==========================================================================
+   Business-type cards (photo on top, description UNDER) + clean module grid
+   ========================================================================== */
+.kx-bizgrid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:clamp(28px,4vw,46px)}
+@media (min-width:560px){.kx-bizgrid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.kx-bizgrid{grid-template-columns:repeat(4,1fr)}}
+.kx-bizcard{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
+  border-radius:18px;overflow:hidden;box-shadow:var(--sh-sm);transition:transform .2s ease,box-shadow .25s ease,border-color .2s ease}
+.kx-bizcard:hover{transform:translateY(-4px);box-shadow:var(--sh-lg);border-color:color-mix(in srgb,var(--emerald) 26%,var(--line))}
+.kx-bizcard .pic{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--surface-2)}
+.kx-bizcard .pic img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s ease}
+.kx-bizcard:hover .pic img{transform:scale(1.04)}
+.kx-bizcard .pic .tag{position:absolute;left:12px;bottom:12px;z-index:2;font-size:.72rem;font-weight:700;
+  color:#fff;background:#0b1220b3;backdrop-filter:blur(4px);padding:5px 11px;border-radius:999px}
+.kx-bizcard .pic::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,#0b122066)}
+.kx-bizcard .bd{display:flex;flex-direction:column;gap:8px;flex:1;padding:18px 20px 20px}
+.kx-bizcard h3{font-size:1.12rem;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.kx-bizcard p{font-size:.9rem;color:var(--muted);flex:1;line-height:1.5}
+.kx-bizcard .link-arrow{margin-top:4px;font-size:.85rem}
+
+.kx-mods{display:grid;grid-template-columns:1fr;gap:14px;margin-top:clamp(28px,4vw,44px)}
+@media (min-width:560px){.kx-mods{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:900px){.kx-mods{grid-template-columns:repeat(4,1fr)}}
+.kx-mod{display:flex;flex-direction:column;gap:9px;padding:20px;border:1px solid var(--line);border-radius:14px;
+  background:var(--surface);transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.kx-mod:hover{border-color:color-mix(in srgb,var(--emerald) 30%,var(--line));box-shadow:var(--sh-sm);transform:translateY(-2px)}
+.kx-mod .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:var(--surface-2);color:var(--emerald-deep)}
+.kx-mod .ic svg{width:21px;height:21px}
+.kx-mod h4{font-size:1rem;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.kx-mod p{font-size:.86rem;color:var(--muted);line-height:1.45}
