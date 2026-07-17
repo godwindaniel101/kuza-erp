@@ -472,13 +472,18 @@ p { margin: 0; }
 /* ==========================================================================
    Scroll reveal
    ========================================================================== */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,.8,.3,1), transform .7s cubic-bezier(.16,.8,.3,1); }
+/* Self-completing reveal: content always ends visible even if JS never runs. */
+.reveal { opacity: 0; transform: translateY(18px); animation: kxrise .7s cubic-bezier(.16,.8,.3,1) .05s forwards; }
 .reveal.in { opacity: 1; transform: none; }
-.reveal[data-delay="1"] { transition-delay: .08s; }
-.reveal[data-delay="2"] { transition-delay: .16s; }
-.reveal[data-delay="3"] { transition-delay: .24s; }
-.reveal[data-delay="4"] { transition-delay: .32s; }
-@media (prefers-reduced-motion: reduce){ .reveal { opacity: 1 !important; transform: none !important; transition: none !important; } }
+.reveal[data-delay="1"] { animation-delay: .12s; }
+.reveal[data-delay="2"] { animation-delay: .2s; }
+.reveal[data-delay="3"] { animation-delay: .28s; }
+.reveal[data-delay="4"] { animation-delay: .36s; }
+@keyframes kxrise { to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce){ .reveal { opacity: 1 !important; transform: none !important; animation: none !important; } }
+
+/* Nav items are bare <li> inside <nav> — strip the default disc bullet. */
+.nav-links, .nav-links li { list-style: none; }
 
 /* ==========================================================================
    Mockups (CSS + SVG) — shared "app window" chrome
@@ -646,10 +651,10 @@ p { margin: 0; }
 .kx-photo{position:relative;border-radius:22px;overflow:hidden;border:1px solid var(--line);
   background:linear-gradient(140deg,#0f9d6e2b 0%,#4f46e52b 100%);box-shadow:var(--sh-lg)}
 .kx-photo img{width:100%;height:100%;object-fit:cover;display:block}
-.kx-photo.tall{aspect-ratio:4/5}
+.kx-photo.tall{aspect-ratio:1/1}
 .kx-photo.wide{aspect-ratio:1/1}
 /* focus the hero crop on the subject (upper-right) rather than dead-centre */
-.kx-photo.tall img{object-position:72% 32%}
+.kx-photo.tall img{object-position:72% 28%}
 .kx-photo .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#5f7a70}
 .kx-photo .ph svg{width:52px;height:52px;opacity:.5}
 .kx-photo .ph b{font-size:.74rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.72}
