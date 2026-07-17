@@ -11,7 +11,7 @@ const BIZ = [
   {
     href: '/restaurant',
     tag: 'Restaurants & food',
-    img: '/img/istockphoto-2032134582-1024x1024.jpg',
+    img: '/img/woman-selling-with-kids.jpeg',
     alt: 'A family at a restaurant table',
     title: 'Restaurants & food',
     desc: 'Menus, tables, kitchen tickets and QR ordering — with your books and stock kept behind the scenes.',
@@ -20,7 +20,7 @@ const BIZ = [
   {
     href: '/shop',
     tag: 'Retail & shops',
-    img: '/img/istockphoto-2242938419-1024x1024.jpg',
+    img: '/img/woman-selling-cup.jpeg',
     alt: 'A shop owner checking stock',
     title: 'Retail & shops',
     desc: 'Fast POS, barcode stock and instant receipts across every branch — takings reconciled automatically.',
@@ -28,17 +28,17 @@ const BIZ = [
   },
   {
     href: '/inventory',
-    tag: 'Wholesale & agribusiness',
-    img: '/img/istockphoto-1703931443-1024x1024.jpg',
-    alt: 'A farmer using a tablet',
-    title: 'Wholesale & agribusiness',
+    tag: 'Wholesale & distribution',
+    img: '/img/woman-selling.jpeg',
+    alt: 'A business owner managing stock on a laptop',
+    title: 'Wholesale & distribution',
     desc: 'Bulk orders, multi-branch stock and credit customers — tracked, invoiced and settled in one place.',
     cta: 'Explore Inventory',
   },
   {
     href: '/invoicing',
     tag: 'Services & specialty',
-    img: '/img/istockphoto-2259853301-1024x1024.jpg',
+    img: '/img/woman-selling-makeup.jpeg',
     alt: 'A specialty shop owner on the phone',
     title: 'Services & specialty',
     desc: 'Invoices, payments and payroll for salons, pharmacies, agencies and service firms of every size.',
@@ -89,7 +89,7 @@ export default function Home() {
 
             <div className="hero-visual reveal" data-delay="2" style={{ position: 'relative' }}>
               <div className="kx-photo tall">
-                <img src="/img/istockphoto-2242939497-1024x1024.jpg" alt="A Kuza retail owner using the app in her shop" />
+                <img src="/img/woman-selling.jpeg" alt="A Kuza retail owner using the app in her shop" />
               </div>
               <div className="kx-fchip" style={{ left: '-16px', bottom: '64px' }}>
                 <span className="ic bg-em"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg></span>

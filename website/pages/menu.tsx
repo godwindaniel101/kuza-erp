@@ -39,7 +39,7 @@ export default function Menu() {
             </div>
             <div className="hero-visual reveal" data-delay="2">
               <div className="kx-photo tall">
-                <img src="/img/istockphoto-2032134582-1024x1024.jpg" alt="Guests at a restaurant table" />
+                <img src="/img/woman-selling-with-kids.jpeg" alt="Guests at a restaurant table" />
               </div>
             </div>
           </div>
