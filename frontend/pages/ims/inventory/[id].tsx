@@ -313,107 +313,103 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
       
       {/* Basic Information */}
       <div className="lg:col-span-1">
-        <h3 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+        <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           {t('basicInformation')}
         </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('name')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">{item.name}</span>
+        <dl className="divide-y divide-gray-100 rounded-xl bg-white px-4 ring-1 ring-gray-200 dark:divide-gray-800 dark:bg-gray-900 dark:ring-gray-800">
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('name')}</dt>
+            <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{item.name}</dd>
           </div>
           {item.barcode && (
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">{t('barcode')}:</span>
-              <span className="text-gray-900 dark:text-white font-medium">{item.barcode}</span>
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="text-sm text-gray-500 dark:text-gray-400">{t('barcode')}</dt>
+              <dd className="text-right font-mono text-sm text-gray-900 dark:text-gray-100">{item.barcode}</dd>
             </div>
           )}
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('category')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">{item.category || '-'}</span>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('category')}</dt>
+            <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{item.category || '—'}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('subcategory')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">{item.subcategory || '-'}</span>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('subcategory')}</dt>
+            <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{item.subcategory || '—'}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('unit')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">
-              {item.baseUom?.name || item.baseUom?.abbreviation || '-'}
-            </span>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('unit')}</dt>
+            <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{item.baseUom?.name || item.baseUom?.abbreviation || '—'}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('salePrice')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">
-              {formatCurrency(Number(item.salePrice || 0))}
-            </span>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('salePrice')}</dt>
+            <dd className="text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(item.salePrice || 0))}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('trackStock')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">
-              {item.isTrackable ? t('yes') : t('no')}
-            </span>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-gray-500 dark:text-gray-400">{t('trackStock')}</dt>
+            <dd className="text-right">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.isTrackable ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>{item.isTrackable ? t('yes') : t('no')}</span>
+            </dd>
           </div>
           {item.description && (
-            <div>
-              <span className="text-gray-600 dark:text-gray-400 block mb-1">{t('description')}:</span>
-              <p className="text-gray-900 dark:text-white text-sm">{item.description}</p>
+            <div className="py-2.5">
+              <dt className="mb-1 text-sm text-gray-500 dark:text-gray-400">{t('description')}</dt>
+              <dd className="text-sm text-gray-700 dark:text-gray-300">{item.description}</dd>
             </div>
           )}
-        </div>
+        </dl>
       </div>
       
       {/* Stock Information */}
       <div className="lg:col-span-1">
-        <h3 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+        <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           {t('stockInformation')}
         </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('currentStock')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium text-lg">
-              {Number(item.currentStock || 0).toLocaleString()}{' '}
-              {item.baseUom?.abbreviation || item.baseUom?.name || ''}
-            </span>
-          </div>
-          {item.isTrackable && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">{t('minimumStock')}:</span>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {Number(item.minimumStock || 0).toLocaleString()}{' '}
+        <div className="rounded-xl bg-white ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800">
+          <div className="flex items-end justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('currentStock')}</p>
+              <p className="mt-0.5 text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+                {Number(item.currentStock || 0).toLocaleString()}
+                <span className="ml-1 text-sm font-normal text-gray-400">
                   {item.baseUom?.abbreviation || item.baseUom?.name || ''}
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">{t('maximumStock')}:</span>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {Number(item.maximumStock || 0).toLocaleString()}{' '}
-                  {item.baseUom?.abbreviation || item.baseUom?.name || ''}
-                </span>
-              </div>
-            </>
-          )}
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('createdDate')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">{formatDate(item.createdAt)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">{t('lastUpdated')}:</span>
-            <span className="text-gray-900 dark:text-white font-medium">{formatDate(item.updatedAt)}</span>
-          </div>
-          <div className="mt-4">
-            <div
-              className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+              </p>
+            </div>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
                 Number(item.currentStock || 0) <= Number(item.minimumStock || 0)
-                  ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300'
-                  : 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+                  ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
               }`}
             >
-              {Number(item.currentStock || 0) <= Number(item.minimumStock || 0)
-                ? t('lowStock')
-                : t('inStock')}
-            </div>
+              {Number(item.currentStock || 0) <= Number(item.minimumStock || 0) ? t('lowStock') : t('inStock')}
+            </span>
           </div>
+          <dl className="divide-y divide-gray-100 px-4 dark:divide-gray-800">
+            {item.isTrackable && (
+              <>
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('minimumStock')}</dt>
+                  <dd className="text-right text-sm font-medium tabular-nums text-gray-900 dark:text-gray-100">
+                    {Number(item.minimumStock || 0).toLocaleString()} {item.baseUom?.abbreviation || item.baseUom?.name || ''}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('maximumStock')}</dt>
+                  <dd className="text-right text-sm font-medium tabular-nums text-gray-900 dark:text-gray-100">
+                    {Number(item.maximumStock || 0).toLocaleString()} {item.baseUom?.abbreviation || item.baseUom?.name || ''}
+                  </dd>
+                </div>
+              </>
+            )}
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="text-sm text-gray-500 dark:text-gray-400">{t('createdDate')}</dt>
+              <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(item.createdAt)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lastUpdated')}</dt>
+              <dd className="text-right text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(item.updatedAt)}</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>

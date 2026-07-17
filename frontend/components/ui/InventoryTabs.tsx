@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-export type InventoryTabKey = 'items' | 'branch' | 'inflows';
+export type InventoryTabKey = 'overview' | 'items' | 'branch' | 'inflows';
 
 interface InventoryTabsProps {
   /** Which tab is active. */
@@ -18,6 +18,7 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
+  { key: 'overview', label: 'Overview', href: '/ims', icon: 'bx-grid-alt' },
   { key: 'items', label: 'Items', href: '/ims/inventory', icon: 'bx-box' },
   { key: 'branch', label: 'Branch', href: '/ims/branch-items', icon: 'bx-store' },
   { key: 'inflows', label: 'Inflows', href: '/ims/inflows', icon: 'bx-transfer-alt' },

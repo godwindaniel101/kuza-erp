@@ -8,7 +8,8 @@ import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { WeeklyBarChart } from '@/components/ui/charts';
+import { WeeklyBarChart, RevenueAreaChart, AreaPoint } from '@/components/ui/charts';
+import InventoryTabs from '@/components/ui/InventoryTabs';
 import { formatMoney, formatDate, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
@@ -64,17 +65,21 @@ export default function InventoryDashboardPage() {
   const [items, setItems] = useState<any[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [lowStockRows, setLowStockRows] = useState<LowStockRow[]>([]);
+  const [branchList, setBranchList] = useState<{ id: string; name: string }[]>([]);
+  const [revenueSeries, setRevenueSeries] = useState<AreaPoint[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [inv, mv, br] = await Promise.allSettled([
+      const [inv, mv, br, od] = await Promise.allSettled([
         api.get<{ success: boolean; data: any[] }>('/ims/inventory?withBranchStock=true'),
         api.get<{ success: boolean; data: { items: StockMovement[] } }>('/ims/stock-movements?page=1&limit=8'),
         api.get<{ success: boolean; data: { id: string; name: string }[] }>('/settings/branches'),
+        api.get<{ success: boolean; data: any[] }>('/rms/orders?limit=200'),
       ]);
       const branchMap = new Map<string, string>();
       if (br.status === 'fulfilled' && br.value.success && Array.isArray(br.value.data)) {
         br.value.data.forEach((b) => branchMap.set(b.id, b.name));
+        setBranchList(br.value.data);
       }
       let inventory: any[] = [];
       if (inv.status === 'fulfilled' && inv.value.success && Array.isArray(inv.value.data)) {
@@ -106,31 +111,62 @@ export default function InventoryDashboardPage() {
           mv.value.data.items.map((m) => ({ ...m, branchName: m.branchName || (m.branchId ? branchMap.get(m.branchId) : undefined) })),
         );
       }
+      // 14-day sales & revenue trend from recent orders (renders flat when empty).
+      const days: AreaPoint[] = [];
+      const buckets = new Map<string, number>();
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        buckets.set(d.toISOString().slice(0, 10), 0);
+        days.push({ label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), value: 0 });
+      }
+      if (od.status === 'fulfilled' && od.value.success && Array.isArray(od.value.data)) {
+        od.value.data.forEach((o: any) => {
+          const key = String(o?.createdAt || o?.created_at || '').slice(0, 10);
+          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + (o.total ? parseFloat(o.total) : 0));
+        });
+        let idx = 0;
+        buckets.forEach((v) => {
+          days[idx].value = v;
+          idx += 1;
+        });
+      }
+      setRevenueSeries(days);
       setLoading(false);
     })();
   }, []);
 
-  const reorderOf = (i: InventoryItem) => num(i.reorderPoint ?? i.reorderLevel ?? i.minStock);
+  // NOTE: `?withBranchStock=true` returns aggregate `totalStock` + `minimumStock`
+  // + `salePrice` (not `currentStock`/`unitCost`), so derive everything from those.
   const totalItems = items.length;
   const lowStockItems = items
-    .filter((i) => num(i.currentStock) <= reorderOf(i))
-    .sort((a, b) => num(a.currentStock) - num(b.currentStock));
-  const outOfStock = items.filter((i) => num(i.currentStock) <= 0).length;
-  const stockValue = items.reduce((s, i) => s + num(i.currentStock) * num(i.unitCost ?? i.costPrice), 0);
+    .filter((i) => num(i.minimumStock) > 0 && num(i.totalStock) <= num(i.minimumStock))
+    .sort((a, b) => num(a.totalStock) - num(b.totalStock));
+  const outOfStock = items.filter((i) => num(i.totalStock) <= 0).length;
+  const stockValue = items.reduce((s, i) => s + num(i.totalStock) * num(i.salePrice), 0);
 
-  // Stock value grouped by category (top 6) — derived from items already loaded.
-  const stockByCategory = (() => {
+  // Stock value by branch (top 6) — value at sale price, summed per branch.
+  const stockByBranch = (() => {
     const map = new Map<string, number>();
     items.forEach((i) => {
-      const cat = (typeof i.category === 'string' && i.category.trim()) || 'Uncategorized';
-      map.set(cat, (map.get(cat) || 0) + num(i.currentStock) * num(i.unitCost ?? i.costPrice));
+      const bs = i.branchStocks || {};
+      Object.keys(bs).forEach((bid) => {
+        map.set(bid, (map.get(bid) || 0) + num(bs[bid]?.stock) * num(i.salePrice));
+      });
     });
     return Array.from(map.entries())
-      .map(([label, value]) => ({ label, value }))
+      .map(([bid, value]) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value }))
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
   })();
+
+  // Top products by stock value (top 6).
+  const topProducts = items
+    .map((i) => ({ label: (i.name as string) || 'Item', value: num(i.totalStock) * num(i.salePrice) }))
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
 
   return (
     <div>
@@ -149,6 +185,10 @@ export default function InventoryDashboardPage() {
         }
       />
 
+      <div className="mb-5">
+        <InventoryTabs active="overview" counts={{ items: totalItems }} />
+      </div>
+
       {loading ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[0, 1, 2, 3].map((k) => (
@@ -160,22 +200,31 @@ export default function InventoryDashboardPage() {
           <StatCard label="Stock Items" value={totalItems} icon="bx-box" tone="info" />
           <StatCard label="Low Stock" value={lowStockItems.length} icon="bx-error" tone="warning" caption="at or below reorder point" />
           <StatCard label="Out of Stock" value={outOfStock} icon="bx-x-circle" tone="error" />
-          <StatCard label="Stock Value" value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" />
+          <StatCard label="Stock Value" value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" caption="at sale price" />
         </div>
       )}
 
-      {/* Stock value by category — where your money is tied up */}
-      <div className="mt-6">
-        <Card title="Stock value by category">
+      {/* Three scoped charts: by branch · by product · sales & revenue */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card title="Stock value by branch">
           {loading ? (
-            <div className="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+            <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart
-              data={stockByCategory}
-              height={130}
-              formatValue={(v) => formatMoney(v, currency)}
-              emptyMessage="No valued stock yet"
-            />
+            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" />
+          )}
+        </Card>
+        <Card title="Top products by value">
+          {loading ? (
+            <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+          ) : (
+            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" />
+          )}
+        </Card>
+        <Card title="Sales & revenue" subtitle="Last 14 days">
+          {loading ? (
+            <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+          ) : (
+            <RevenueAreaChart data={revenueSeries} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No sales yet" />
           )}
         </Card>
       </div>

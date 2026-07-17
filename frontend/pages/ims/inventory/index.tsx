@@ -321,13 +321,8 @@ export default function InventoryPage() {
     downloadCsv(`inventory-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
 
+  // Row click opens the item; the kebab keeps only Edit + Delete.
   const rowActions: RowAction<InventoryItem>[] = [
-    {
-      label: t('view'),
-      icon: 'bx-show',
-      iconColor: 'text-green-600',
-      onClick: (item) => router.push(`/ims/inventory/${item.id}`),
-    },
     {
       label: t('edit'),
       icon: 'bx-edit',
@@ -439,6 +434,7 @@ export default function InventoryPage() {
         loading={loading}
         sort={{ field: table.sortField, direction: table.sortDirection }}
         onSortChange={table.toggleSort}
+        onRowClick={(item) => router.push(`/ims/inventory/${item.id}`)}
         rowActions={rowActions}
         actionsLabel={t('moreActions') || 'More actions'}
         pagination={{
