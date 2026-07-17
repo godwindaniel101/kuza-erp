@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -64,8 +64,77 @@ export default function PosPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  const [lines, setLines] = useState<CartLine[]>([]);
-  const [meta, setMeta] = useState<OrderMeta>(EMPTY_META);
+  // Multiple concurrent sales — each "tab" holds its own cart + order meta, so a
+  // cashier can park a sale and start another. Branch & products are shared.
+  type SaleTab = { id: string; lines: CartLine[]; meta: OrderMeta };
+  const [tabs, setTabs] = useState<SaleTab[]>([{ id: 'sale-1', lines: [], meta: EMPTY_META }]);
+  const [activeTabId, setActiveTabId] = useState('sale-1');
+  const activeTabIdRef = useRef(activeTabId);
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+  const tabSeq = useRef(1);
+
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  const lines = activeTab.lines;
+  const meta = activeTab.meta;
+
+  // Wrappers so the rest of the file is unchanged: they update only the active
+  // tab's cart / meta, and accept either a value or an updater function.
+  const setLines = useCallback(
+    (v: CartLine[] | ((p: CartLine[]) => CartLine[])) =>
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabIdRef.current
+            ? { ...t, lines: typeof v === 'function' ? (v as (p: CartLine[]) => CartLine[])(t.lines) : v }
+            : t,
+        ),
+      ),
+    [],
+  );
+  const setMeta = useCallback(
+    (v: OrderMeta | ((p: OrderMeta) => OrderMeta)) =>
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabIdRef.current
+            ? { ...t, meta: typeof v === 'function' ? (v as (p: OrderMeta) => OrderMeta)(t.meta) : v }
+            : t,
+        ),
+      ),
+    [],
+  );
+
+  const addTab = useCallback(() => {
+    tabSeq.current += 1;
+    const id = `sale-${tabSeq.current}`;
+    setTabs((prev) => [...prev, { id, lines: [], meta: EMPTY_META }]);
+    setActiveTabId(id);
+  }, []);
+  const closeTab = useCallback((id: string) => {
+    setTabs((prev) => {
+      if (prev.length <= 1) return prev.map((t) => ({ ...t, lines: [], meta: EMPTY_META }));
+      const idx = prev.findIndex((t) => t.id === id);
+      const next = prev.filter((t) => t.id !== id);
+      if (id === activeTabIdRef.current) setActiveTabId((next[Math.max(0, idx - 1)] || next[0]).id);
+      return next;
+    });
+  }, []);
+
+  // Full-screen toggle (browser Fullscreen API) for a distraction-free counter.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(typeof document !== 'undefined' && !!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    if (!document.fullscreenElement) {
+      void (document.documentElement.requestFullscreen?.() ?? Promise.resolve()).catch(() => {});
+    } else {
+      void document.exitFullscreen?.();
+    }
+  }, []);
 
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
@@ -144,10 +213,12 @@ export default function PosPage() {
   // Reload products and reset the ticket whenever the branch changes — stock,
   // prices and available items are all branch-scoped.
   useEffect(() => {
-    setLines([]);
+    // Branch change invalidates every open cart (stock & prices are branch-scoped).
+    setTabs([{ id: 'sale-1', lines: [], meta: EMPTY_META }]);
+    setActiveTabId('sale-1');
+    tabSeq.current = 1;
     setSearch('');
     setActiveCategory(ALL_CATEGORIES);
-    setMeta((m) => ({ ...m, tableId: '' }));
     loadProducts();
   }, [branchId, loadProducts]);
 
@@ -364,7 +435,63 @@ export default function PosPage() {
                 disabled={loading || branches.length === 0}
               />
             </div>
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit full screen' : 'Full screen'}
+              aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+              className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <i className={`bx ${isFullscreen ? 'bx-exit-fullscreen' : 'bx-fullscreen'} text-lg`} aria-hidden="true" />
+            </button>
           </div>
+        </div>
+
+        {/* Sale tabs — park multiple carts and switch between them */}
+        <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
+          {tabs.map((t, i) => {
+            const count = t.lines.reduce((s, l) => s + l.quantity, 0);
+            const active = t.id === activeTabId;
+            return (
+              <div
+                key={t.id}
+                onClick={() => setActiveTabId(t.id)}
+                className={`flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition ${
+                  active
+                    ? 'border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/30 dark:text-brand-300'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
+              >
+                <span>Sale {i + 1}</span>
+                {count > 0 && (
+                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-gradient px-1 text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                )}
+                {tabs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(t.id);
+                    }}
+                    aria-label={`Close Sale ${i + 1}`}
+                    className="-mr-1 ml-0.5 flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-red-500"
+                  >
+                    <i className="bx bx-x text-base" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={addTab}
+            aria-label="New sale"
+            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-dashed border-gray-300 px-2.5 text-[13px] font-medium text-gray-500 transition hover:border-brand-400 hover:text-brand-600 dark:border-gray-600"
+          >
+            <i className="bx bx-plus text-base" aria-hidden="true" /> New sale
+          </button>
         </div>
 
         {/* Two panes */}
