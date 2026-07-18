@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
@@ -184,14 +183,25 @@ export default function BatchSummaryPage() {
               <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
                 {t('byBranch') || 'By branch'}
               </h3>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {summary.branches.map((b) => (
-                  <div key={b.branchId} className="px-4 py-3 flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{b.branchName}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{b.itemCount} {t('items') || 'items'}</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{fmt(b.totalAmount)}</span>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm divide-y divide-gray-100 dark:divide-gray-800">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('branch') || 'Branch'}</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('items') || 'Items'}</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('totalAmount') || 'Total'}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {summary.branches.map((b) => (
+                      <tr key={b.branchId} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <td className="px-4 py-2.5 whitespace-nowrap font-medium text-gray-900 dark:text-gray-100">{b.branchName}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-400">{b.itemCount}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{fmt(b.totalAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -243,19 +253,31 @@ export default function BatchSummaryPage() {
               <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
                 {t('inflows') || 'Inflows'} ({summary.inflows.length})
               </h3>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {summary.inflows.map((inf) => (
-                  <Link
-                    key={inf.id}
-                    href={`/ims/inflows/${inf.id}`}
-                    className="px-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50 dark:hover:bg-gray-700/40"
-                  >
-                    <span className="text-gray-900 dark:text-gray-100">{inf.branchName}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{inf.invoiceNumber || '-'}</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(inf.totalAmount)}</span>
-                    <i className="bx bx-chevron-right text-gray-400" aria-hidden="true"></i>
-                  </Link>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm divide-y divide-gray-100 dark:divide-gray-800">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('branch') || 'Branch'}</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('invoiceNumber') || 'Invoice'}</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('totalAmount') || 'Total'}</th>
+                      <th className="px-4 py-2" aria-hidden="true"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {summary.inflows.map((inf) => (
+                      <tr
+                        key={inf.id}
+                        onClick={() => router.push(`/ims/inflows/${inf.id}`)}
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                      >
+                        <td className="px-4 py-2.5 whitespace-nowrap font-medium text-gray-900 dark:text-gray-100">{inf.branchName}</td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">{inf.invoiceNumber || '-'}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{fmt(inf.totalAmount)}</td>
+                        <td className="px-4 py-2.5 text-right"><i className="bx bx-chevron-right text-gray-400" aria-hidden="true"></i></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
