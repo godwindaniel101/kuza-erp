@@ -360,9 +360,13 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
       // Retail checkout belongs to Shop.
       if (path.startsWith('/pos')) return apps.find((a) => a.id === 'shop')!;
       // Shared selling surfaces (dashboard, orders/sales, analytics) resolve to the
-      // tenant's single selling app — so nothing ever flips to a different app.
-      if (path === '/' || path.startsWith('/rms'))
-        return apps.find((a) => a.id === sellingAppId)!;
+      // tenant's selling app — BUT only if that app is actually enabled. A tenant
+      // without a selling app (e.g. Payroll-only) must not be shown Shop/Sales;
+      // fall back to their first available app instead.
+      if (path === '/' || path.startsWith('/rms')) {
+        const selling = businessApps.find((a) => a.id === sellingAppId);
+        return selling ?? businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
+      }
       // Fallback: first available business app, else settings.
       return businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
     },
