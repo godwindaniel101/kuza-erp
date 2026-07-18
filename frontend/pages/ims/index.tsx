@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/Card';
 import Modal from '@/components/Modal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { WeeklyBarChart, RevenueAreaChart, AreaPoint } from '@/components/ui/charts';
+import { RevenueAreaChart, AreaPoint } from '@/components/ui/charts';
 import { formatMoney, formatDate, useCurrency } from '@/lib/format';
 
 interface InventoryItem {
@@ -230,14 +230,14 @@ export default function InventoryDashboardPage() {
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" onBarClick={openBranchDrill} />
+            <RevenueAreaChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" onPointClick={openBranchDrill} />
           )}
         </Card>
         <Card title="Top products by value">
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" onBarClick={openProductDrill} />
+            <RevenueAreaChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" onPointClick={openProductDrill} />
           )}
         </Card>
         <Card title="Sales & revenue" subtitle="Last 14 days">

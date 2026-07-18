@@ -10,7 +10,7 @@
  */
 import { useId, useMemo, useRef, useState } from 'react';
 
-export const SERIES_1 = '#4a77e8';
+export const SERIES_1 = '#2e56d3';
 export const SERIES_2 = '#d97706';
 export const SERIES_POSITIVE = '#10b981';
 
@@ -86,11 +86,14 @@ export function RevenueAreaChart({
   height = 180,
   formatValue = fmtCompact,
   emptyMessage = 'No revenue recorded yet',
+  onPointClick,
 }: {
   data: AreaPoint[];
   height?: number;
   formatValue?: (v: number) => string;
   emptyMessage?: string;
+  /** When set, clicking the chart drills into the nearest point (pointer cursor). */
+  onPointClick?: (index: number) => void;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -147,8 +150,10 @@ export function RevenueAreaChart({
         className="block w-full"
         role="img"
         aria-label="Revenue, last 14 days"
+        style={onPointClick ? { cursor: 'pointer' } : undefined}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
+        onClick={onPointClick ? () => hover != null && onPointClick(hover) : undefined}
       >
         <defs>
           {/* soft vertical gradient: series color -> transparent */}
