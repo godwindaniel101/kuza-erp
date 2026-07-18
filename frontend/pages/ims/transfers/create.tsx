@@ -20,7 +20,8 @@ interface Item {
   name: string;
   baseUomId?: string;
   unit?: string;
-  currentStock?: number | string;
+  /** Branch-scoped stock from findForOrders (?forOrders=true&branchId=). */
+  stock?: number | string;
   uoms?: Array<{ id: string; name: string }>;
 }
 
@@ -72,7 +73,9 @@ export default function CreateTransferPage() {
     setItemsLoading(true);
     setLines([newLine()]);
     api
-      .get<{ success: boolean; data: Item[] }>(`/ims/inventory?branchId=${fromBranchId}`)
+      // forOrders=true returns branch-scoped `stock` and only items in stock AT
+      // that branch — the same source of truth the POS uses.
+      .get<{ success: boolean; data: Item[] }>(`/ims/inventory?forOrders=true&branchId=${fromBranchId}`)
       .then((res) => setItems(res.success && Array.isArray(res.data) ? res.data : []))
       .catch(() => setItems([]))
       .finally(() => setItemsLoading(false));
@@ -88,7 +91,7 @@ export default function CreateTransferPage() {
       inventoryItemId: itemId,
       uomId,
       unit: item?.unit || item?.uoms?.[0]?.name || '',
-      available: Number(item?.currentStock || 0),
+      available: Number(item?.stock || 0),
       quantity: '',
     });
   };
@@ -142,10 +145,10 @@ export default function CreateTransferPage() {
   // Only in-stock items of the source branch are transferable; show the level.
   const chosen = new Set(lines.map((l) => l.inventoryItemId).filter(Boolean));
   const itemOptions = items
-    .filter((i) => Number(i.currentStock || 0) > 0)
+    .filter((i) => Number(i.stock || 0) > 0)
     .map((i) => ({
       value: i.id,
-      label: `${i.name} · ${Number(i.currentStock || 0).toLocaleString()} in stock`,
+      label: `${i.name} · ${Number(i.stock || 0).toLocaleString()} in stock`,
       disabled: chosen.has(i.id),
     }));
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import { resolveImageUrl } from '@/lib/format';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import Modal from '@/components/Modal';
@@ -104,10 +105,11 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     });
 
     if (itemData.frontImage) {
-      setFrontImagePreview(itemData.frontImage);
+      // Stored /uploads paths are served by the API origin, not the frontend.
+      setFrontImagePreview(resolveImageUrl(itemData.frontImage));
     }
     if (itemData.additionalImages && itemData.additionalImages.length > 0) {
-      setAdditionalImagePreviews(itemData.additionalImages);
+      setAdditionalImagePreviews(itemData.additionalImages.map((u: string) => resolveImageUrl(u)));
     }
 
     if (itemData.categoryId) {
