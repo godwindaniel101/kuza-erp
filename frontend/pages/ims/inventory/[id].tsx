@@ -36,11 +36,7 @@ export default function InventoryItemViewPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [itemStats, setItemStats] = useState<any>(null);
-  const [inflowHistory, setInflowHistory] = useState<any[]>([]);
-  const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [currency, setCurrency] = useState<string>('NGN');
-  const [loadingInflow, setLoadingInflow] = useState(false);
-  const [loadingSales, setLoadingSales] = useState(false);
 
   // Tabs definition
   const tabs: { id: Tab; label: string; icon: string }[] = [
@@ -56,16 +52,6 @@ export default function InventoryItemViewPage() {
       loadCurrency();
     }
   }, [id]);
-
-  // Load data when switching to specific tabs
-  useEffect(() => {
-    if (id && activeTab === 'inflow') {
-      loadInflowHistory();
-    }
-    if (id && activeTab === 'sales' && salesHistory.length === 0) {
-      loadSalesHistory();
-    }
-  }, [id, activeTab]);
 
   const loadCurrency = async () => {
     try {
@@ -112,7 +98,6 @@ export default function InventoryItemViewPage() {
       const response = await api.get<{ success: boolean; data: any }>(
         `/ims/inventory/${id}?stats=true`
       );
-      console.log('--- Item Stats API Response ---', response.data); // <-- ADDING LOG
       if (response.success && response.data) {
         setItemStats(response.data);
       }
@@ -120,59 +105,6 @@ export default function InventoryItemViewPage() {
       console.error('Failed to load item stats:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadInflowHistory = async () => {
-    setLoadingInflow(true);
-    try {
-      const response = await api.get<{ success: boolean; data: any[] }>(
-        `/ims/inflows?itemId=${id}`
-      );
-      console.log('--- Inflow History API Response ---', response.data); // <-- ADDING LOG
-      if (response.success) {
-        const mapped = (response.data || []).map((row: any) => ({
-          receivedAt: row['Received At'] || row.receivedAt || row.received_at,
-          quantity: row['Quantity Received'] ?? row.quantity ?? row.qty,
-          uom: { name: row['Unit'] || row.uom?.name || row.unit },
-          costPerUnit: row['Cost Per Unit'] ?? row.costPerUnit ?? row.unit_cost,
-          totalCost: row['Total Cost'] ?? row.totalCost ?? row.total_amount ?? row.amount,
-          batchNumber: row['Batch Number'] ?? row.batchNumber ?? row.batch,
-          expiryDate: row['Expiry Date'] ?? row.expiryDate,
-          supplier: { name: row['Supplier'] || row.supplier?.name || row.supplier_name || row.supplier },
-        }));
-        setInflowHistory(mapped);
-      }
-    } catch (err: any) {
-      console.error('Failed to load inflow history:', err);
-    } finally {
-      setLoadingInflow(false);
-    }
-  };
-
-  const loadSalesHistory = async () => {
-    setLoadingSales(true);
-    try {
-      const response = await api.get<{ success: boolean; data: any[] }>(
-        `/rms/sales?itemId=${id}`
-      );
-      console.log('--- Sales History API Response ---', response.data); // <-- ADDING LOG
-      if (response.success) {
-        const mapped = (response.data || []).map((row: any) => ({
-          createdAt: row['Sale Date'] || row.createdAt || row.created_at,
-          quantity: row['Quantity Sold'] ?? row.quantity ?? row.qty,
-          uom: { name: row['Unit'] || row.uom?.name || row.unit },
-          unitPrice: row['Sold At'] ?? row.unitPrice ?? row.sold_at ?? row.unit_price,
-          totalPrice: row['Total Amount' ] ?? row.totalPrice ?? row.total_amount ?? row.amount,
-          branch: { name: row['Branch'] || row.branch?.name || row.branch_name || row.branch },
-          order: { orderNumber: row['Order Number'] || row.order?.orderNumber || row.order_number || row.orderId },
-        }));
-        setSalesHistory(mapped);
-      }
-    } catch (err: any) {
-      console.error('Failed to load sales history:', err);
-    } finally {
-      setLoadingSales(false);
     }
   };
 
@@ -194,7 +126,14 @@ export default function InventoryItemViewPage() {
     );
   }
 
-  const { item, branchStocks, sales, salesByBranch } = itemStats;
+  const {
+    item,
+    branchStocks,
+    sales,
+    salesByBranch,
+    inflowHistory = [],
+    salesHistory = [],
+  } = itemStats;
 
   return (
     <PermissionGuard permission="inventory.view">
@@ -244,21 +183,21 @@ export default function InventoryItemViewPage() {
             <GeneralInformationTab item={item} formatCurrency={formatCurrency} formatDate={formatDate} t={t} />
           )}
           {activeTab === 'inflow' && (
-            <InflowHistoryTab 
-              inflowHistory={inflowHistory} 
-              loading={loadingInflow} 
+            <InflowHistoryTab
+              inflowHistory={inflowHistory}
+              loading={false}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
-              t={t} 
+              t={t}
             />
           )}
           {activeTab === 'sales' && (
-            <SalesHistoryTab 
-              salesHistory={salesHistory} 
-              loading={loadingSales}
+            <SalesHistoryTab
+              salesHistory={salesHistory}
+              loading={false}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
-              t={t} 
+              t={t}
             />
           )}
           {activeTab === 'branch' && (
@@ -278,7 +217,7 @@ export default function InventoryItemViewPage() {
 
 // Tab Components
 const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => {
-  const frontImageUrl = resolveImageUrl(item.frontImage);
+  const frontImageUrl = resolveImageUrl(item.frontImage) || '/img/item-placeholder.svg';
   return (
   <div className="w-full max-w-5xl space-y-5">
     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -291,23 +230,18 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
         <h3 className="text-md font-medium text-gray-900 dark:text-white mb-3">
           {t('itemImage')}
         </h3>
-        <div className="relative w-full max-w-sm">
-          {frontImageUrl ? (
-            <img
-              src={frontImageUrl}
-              alt={item.name}
-              className="w-full h-auto rounded-lg ring-1 ring-gray-200 dark:ring-gray-800"
-            />
-          ) : (
-            <div className="w-full h-48 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center border border-gray-200 dark:border-gray-600">
-              <div className="text-center">
-                <i className="bx bx-image text-4xl text-gray-400 dark:text-gray-500 mb-2"></i>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('noImageAvailable')}
-                </p>
-              </div>
-            </div>
-          )}
+        {/* Fixed square frame so every item image is the same size regardless
+            of the source photo's dimensions; object-cover crops to fill. */}
+        <div className="relative aspect-square w-full max-w-sm overflow-hidden rounded-lg bg-gray-50 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-800">
+          <img
+            src={frontImageUrl}
+            alt={item.name}
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.src.endsWith('/img/item-placeholder.svg')) img.src = '/img/item-placeholder.svg';
+            }}
+            className="h-full w-full object-cover"
+          />
         </div>
       </div>
       
@@ -602,21 +536,15 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
               {branchStocks.map((branch: any) => {
-                const isLowStock = Number(branch.stock || 0) <= Number(branch.minimumStock || 0);
-                // Remaining stock hint (if salesByBranch available)
-                const branchId = branch.branchId;
-                const salesForBranch = Array.isArray(salesByBranch)
-                  ? salesByBranch.find((b: any) => b.branchId === branchId)
-                  : null;
-                const soldQty = Number(salesForBranch?.quantity || 0);
-                const remaining = Math.max(0, Number(branch.stock || 0) - soldQty);
+                const currentStock = Number(branch.currentStock || 0);
+                const isLowStock = currentStock <= Number(branch.minimumStock || 0);
                 return (
                   <tr key={branch.branchId}>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-white">
                       {branch.branchName || t('unknownBranch') || 'Unknown Branch'}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
-                      {Number(branch.stock || 0).toLocaleString()}{' '}
+                      {currentStock.toLocaleString()}{' '}
                       {item.baseUom?.abbreviation || item.baseUom?.name || ''}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
@@ -637,9 +565,6 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
                       >
                         {isLowStock ? t('lowStock') : t('inStock')}
                       </span>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {t('remaining') || 'Remaining'}: {remaining.toLocaleString()} {item.baseUom?.abbreviation || item.baseUom?.name || ''}
-                      </div>
                     </td>
                   </tr>
                 );
@@ -692,14 +617,14 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
                     {branch.branchName}
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
-                    {Number(branch.quantity || 0).toLocaleString()}{' '}
+                    {Number(branch.totalQuantity || 0).toLocaleString()}{' '}
                     {item.baseUom?.abbreviation || item.baseUom?.name || ''}
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
-                    {formatCurrency(Number(branch.salesAmount || 0))}
+                    {formatCurrency(Number(branch.totalAmount || 0))}
                   </td>
-                  <td className="px-6 py-3 whitespace-nowrap text-[13px] text-green-600 dark:text-green-400 font-medium">
-                    {formatCurrency(Number(branch.profit || 0))}
+                  <td className={`px-6 py-3 whitespace-nowrap text-[13px] font-medium ${Number(branch.totalProfit || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {formatCurrency(Number(branch.totalProfit || 0))}
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                     {branch.orderCount || 0}

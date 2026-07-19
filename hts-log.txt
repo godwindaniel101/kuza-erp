@@ -1,0 +1,19 @@
+HTTrack3.49-2 launched on Fri, 17 Jul 2026 15:02:37 at https://moniepoint.com/
+(httrack https://moniepoint.com/ )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+15:02:41	Warning: 	Permanent Redirect for https://moniepoint.com/
+15:02:41	Warning: 	File has moved from https://moniepoint.com/ to /ng/business
+15:05:09	Error: 	"Not Found" (404) at link https://moniepoint.com/business/hero.png (from https://moniepoint.com/ng/business)
+15:10:46	Error: 	"Not Found" (404) at link https://moniepoint.com/cdn-cgi/l/email-protection (from https://moniepoint.com/ng/business)
+15:10:49	Error: 	"Not Found" (404) at link https://moniepoint.com/ng/www.moniepoint.com/ng (from https://moniepoint.com/ng/privacy-policy)
+15:10:49	Error: 	"Not Found" (404) at link https://moniepoint.com/ng/www.atm.moniepoint.com/login/web (from https://moniepoint.com/ng/privacy-policy)
+15:13:30	Error: 	"Not Found" (404) at link https://moniepoint.com/static/pos-a5b64aedfeeba008a185b750fff44160.mp4 (from https://moniepoint.com/ng/business/point-of-sale-terminal)
+15:18:11	Error: 	"Not Found" (404) at link https://moniepoint.com/ng/business/moniebook (from https://moniepoint.com/blog/inventory-management-matters-for-business-owners)
+
+HTTrack Website Copier/3.49-2 mirror complete in 15 minutes 36 seconds : 565 links scanned, 557 files written (67136245 bytes overall), 557 files updated [53900936 bytes received at 57586 bytes/sec], 20953733 bytes transferred using HTTP compression in 328 files, ratio 33%, 56.5 requests per connection
+(6 errors, 2 warnings, 0 messages)

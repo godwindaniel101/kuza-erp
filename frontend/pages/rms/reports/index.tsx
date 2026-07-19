@@ -65,7 +65,7 @@ export default function ReportsPage() {
   const { t } = useTranslation('common');
   const currency = useCurrency();
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('today');
+  const [period, setPeriod] = useState('month');
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   // Fallback to English where a translation key is missing.

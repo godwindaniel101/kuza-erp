@@ -208,8 +208,8 @@ p { margin: 0; }
 /* Recolour inline SVG icons that carry hard-coded stroke attributes so they
    pick up the warm palette instead of the old emerald/indigo. */
 .drop-ic svg [stroke] { stroke: currentColor; }
-.drop-tt { display: block; font-weight: 700; font-size: .95rem; color: var(--ink); }
-.drop-ds { display: block; font-size: .82rem; color: var(--muted); line-height: 1.4; }
+.drop-tt { display: block; font-weight: 500; font-size: .95rem; color: var(--ink); }
+.drop-ds { display: block; font-size: .72rem; color: var(--muted); line-height: 1.4; }
 
 /* Mobile drawer */
 .nav-toggle { display: none; margin-left: auto; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); align-items: center; justify-content: center; }

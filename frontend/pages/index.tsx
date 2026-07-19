@@ -70,7 +70,7 @@ export default function Dashboard() {
   const { user } = useAuthStore();
   const { businessType, fetchTenantContext } = useTenantStore();
   const currency = useCurrency();
-  const [period, setPeriod] = useState('today');
+  const [period, setPeriod] = useState('month');
   const [revenueSeries, setRevenueSeries] = useState<AreaPoint[]>([]);
   const [outstandingInvoices, setOutstandingInvoices] = useState<number | null>(null);
   const [stats, setStats] = useState({
@@ -151,7 +151,7 @@ export default function Dashboard() {
           if (!raw) continue;
           const key = String(raw).slice(0, 10);
           if (buckets.has(key)) {
-            buckets.set(key, (buckets.get(key) || 0) + (order.total ? parseFloat(order.total) : 0));
+            buckets.set(key, (buckets.get(key) || 0) + Number(order.totalAmount ?? order.subtotal ?? 0));
           }
         }
         let idx = 0;
@@ -610,7 +610,7 @@ export default function Dashboard() {
                           />
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {formatCurrency(order.total ? parseFloat(order.total) : 0)}
+                          {formatCurrency(Number(order.totalAmount ?? order.subtotal ?? 0))}
                         </td>
                       </tr>
                     ))}

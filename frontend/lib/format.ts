@@ -18,6 +18,21 @@ export function resolveImageUrl(src?: string | null): string {
   return `${API_ORIGIN}${src.startsWith('/') ? '' : '/'}${src}`;
 }
 
+/** Neutral image shown when an item has no photo, or its photo fails to load. */
+export const ITEM_PLACEHOLDER = '/img/item-placeholder.svg';
+
+/** Resolve an item image, always returning a src (placeholder when absent). */
+export function itemImageSrc(src?: string | null): string {
+  return resolveImageUrl(src) || ITEM_PLACEHOLDER;
+}
+
+/** <img onError> handler: swap a broken/failed image for the placeholder once. */
+export function onItemImageError(e: { currentTarget: HTMLImageElement }): void {
+  const img = e.currentTarget;
+  if (img.src.endsWith(ITEM_PLACEHOLDER)) return;
+  img.src = ITEM_PLACEHOLDER;
+}
+
 const currencySymbols: { [key: string]: string } = {
   NGN: '₦',
   USD: '$',

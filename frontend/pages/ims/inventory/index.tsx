@@ -18,7 +18,7 @@ import StockStatusBadge from '@/components/ui/StockStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
 import { useTableState } from '@/hooks/useTableState';
-import { downloadCsv, resolveImageUrl } from '@/lib/format';
+import { downloadCsv, itemImageSrc, onItemImageError } from '@/lib/format';
 
 interface InventoryItem {
   id: string;
@@ -205,20 +205,12 @@ export default function InventoryPage() {
       sortable: true,
       render: (item) => (
         <div className="flex items-center gap-2.5">
-          {item.frontImage ? (
-            <img
-              src={resolveImageUrl(item.frontImage)}
-              alt=""
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }}
-              className="h-9 w-9 flex-shrink-0 rounded-md object-cover ring-1 ring-gray-200 dark:ring-gray-700"
-            />
-          ) : (
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-400 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:ring-gray-700">
-              <i className="bx bx-image text-lg" aria-hidden="true"></i>
-            </div>
-          )}
+          <img
+            src={itemImageSrc(item.frontImage)}
+            alt=""
+            onError={onItemImageError}
+            className="h-9 w-9 flex-shrink-0 rounded-md bg-gray-50 object-cover ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+          />
           <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
         </div>
       ),

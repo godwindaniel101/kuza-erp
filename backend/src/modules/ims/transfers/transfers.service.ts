@@ -11,6 +11,8 @@ import { InventoryTransferItem } from "../entities/inventory-transfer-item.entit
 import { InventoryItem } from "../entities/inventory-item.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
 import { Uom } from "../entities/uom.entity";
+import { InventoryInflow } from "../entities/inventory-inflow.entity";
+import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
 import {
   CreateInventoryTransferDto,
   UpdateTransferStatusDto,
@@ -33,6 +35,10 @@ export class TransfersService {
     private branchInventoryRepository: Repository<BranchInventoryItem>,
     @InjectRepository(Uom)
     private uomRepository: Repository<Uom>,
+    @InjectRepository(InventoryInflow)
+    private inflowRepository: Repository<InventoryInflow>,
+    @InjectRepository(InventoryInflowItem)
+    private inflowItemRepository: Repository<InventoryInflowItem>,
     private uomConversionsService: UomConversionsService,
     private stockMovementsService: StockMovementsService,
   ) {}
@@ -56,6 +62,97 @@ export class TransfersService {
         { branchId, inventoryItemId },
       )
       .getOne();
+  }
+
+  /**
+   * Move `baseQuantity` (base units) of an item from the source branch's inflow
+   * batches to a new batch at the destination branch, preserving FIFO cost.
+   *
+   * A sale allocates from `inventory_inflow_items` scoped to the SELLING branch,
+   * so transferred stock is only sellable if it exists as inflow batches at the
+   * destination. (Before this, transfers moved the `currentStock` counter only,
+   * so the POS showed stock the sale engine could not allocate.) This consumes
+   * the source batches oldest-first — reducing their base quantity but never
+   * below what has already been sold — and recreates the moved quantity as
+   * destination batches carrying the original unit cost, keeping COGS accurate.
+   */
+  private async moveInflowBatchesToBranch(
+    inventoryItem: InventoryItem,
+    fromBranchId: string,
+    toBranchId: string,
+    baseQuantity: number,
+  ): Promise<void> {
+    let remaining = Number(baseQuantity) || 0;
+    if (remaining <= 0) return;
+
+    // Source batches for this item at the source branch, oldest first (FIFO).
+    const sourceBatches = await this.inflowItemRepository.find({
+      where: { inventoryItemId: inventoryItem.id, branchId: fromBranchId },
+      order: { createdAt: "ASC" },
+    });
+
+    const consumed: Array<{ unitCost: number; quantity: number }> = [];
+
+    for (const batch of sourceBatches) {
+      if (remaining <= 0) break;
+      // Un-sold portion of this batch (mirrors the sale-allocation formula).
+      const soldRows = await this.inflowItemRepository.manager.query(
+        `SELECT COALESCE(SUM(quantity_used), 0) AS total_sold
+         FROM order_item_inflow_items WHERE inflow_item_id = $1`,
+        [batch.id],
+      );
+      const sold = Number(soldRows[0]?.total_sold || 0);
+      const available = Math.max(0, Number(batch.baseQuantity || 0) - sold);
+      if (available <= 0) continue;
+
+      const take = Math.min(remaining, available);
+      batch.baseQuantity = Number(batch.baseQuantity || 0) - take;
+      await this.inflowItemRepository.save(batch);
+
+      consumed.push({ unitCost: Number(batch.unitCost || 0), quantity: take });
+      remaining -= take;
+    }
+
+    // Shortfall (source had no backing batches — e.g. legacy/opening stock) is
+    // still moved so the destination is sellable, valued at the item's cost.
+    if (remaining > 0) {
+      consumed.push({
+        unitCost: Number(inventoryItem.unitCost || 0),
+        quantity: remaining,
+      });
+      remaining = 0;
+    }
+
+    if (consumed.length === 0) return;
+
+    const totalAmount = consumed.reduce(
+      (sum, c) => sum + c.unitCost * c.quantity,
+      0,
+    );
+    const inflow = await this.inflowRepository.save(
+      this.inflowRepository.create({
+        branchId: toBranchId,
+        receivedDate: new Date(),
+        status: "received",
+        type: "transfer",
+        totalAmount: Math.round(totalAmount * 100) / 100,
+      }),
+    );
+
+    for (const c of consumed) {
+      await this.inflowItemRepository.save(
+        this.inflowItemRepository.create({
+          inflowId: inflow.id,
+          inventoryItemId: inventoryItem.id,
+          branchId: toBranchId,
+          uomId: inventoryItem.baseUomId,
+          quantity: c.quantity,
+          baseQuantity: c.quantity,
+          unitCost: c.unitCost,
+          totalCost: Math.round(c.unitCost * c.quantity * 100) / 100,
+        }),
+      );
+    }
   }
 
   @Transactional()
@@ -319,6 +416,16 @@ export class TransfersService {
         destBranchInventory.currentStock =
           Number(destBranchInventory.currentStock) + Number(baseQuantity);
         await this.branchInventoryRepository.save(destBranchInventory);
+
+        // Move the FIFO inflow batches (with cost basis) from source to
+        // destination so the transferred stock is actually sellable at the
+        // destination branch — the counter above is display-only.
+        await this.moveInflowBatchesToBranch(
+          inventoryItem,
+          transfer.fromBranchId,
+          transfer.toBranchId,
+          Number(baseQuantity),
+        );
 
         // Update main inventory stock
         inventoryItem.currentStock =

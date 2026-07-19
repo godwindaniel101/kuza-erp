@@ -104,7 +104,7 @@ export default function ProductGrid({
       )}
 
       {/* Body */}
-      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 py-2">
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (

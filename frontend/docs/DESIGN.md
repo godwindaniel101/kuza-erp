@@ -24,7 +24,7 @@ not adjectives. A PR that violates a number below is wrong.
 ## 0b. Page-width tiers (`components/ui/Page.tsx`)
 
 Every page picks a tier deliberately — `<Page width="...">` or its classes
-(`max-w-none` / `mx-auto w-full max-w-5xl` / `mx-auto w-full max-w-3xl`, always
+(`max-w-none` / `w-full max-w-5xl` / `mx-auto w-full max-w-3xl`, always
 with `space-y-5`). Layout's outer cap (1440px, px-6 gutter) still applies.
 
 | Tier | Class | Pages |

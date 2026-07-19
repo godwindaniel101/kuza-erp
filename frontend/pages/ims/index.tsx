@@ -123,7 +123,7 @@ export default function InventoryDashboardPage() {
       if (od.status === 'fulfilled' && od.value.success && Array.isArray(od.value.data)) {
         od.value.data.forEach((o: any) => {
           const key = String(o?.createdAt || o?.created_at || '').slice(0, 10);
-          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + (o.total ? parseFloat(o.total) : 0));
+          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + Number(o.totalAmount ?? o.subtotal ?? 0));
         });
         let idx = 0;
         buckets.forEach((v) => {
@@ -298,40 +298,50 @@ export default function InventoryDashboardPage() {
               Stock ledger
             </Link>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {loading ? (
-              <div className="p-5 text-sm text-gray-400">Loading…</div>
-            ) : movements.length === 0 ? (
-              <div className="flex flex-col items-center gap-1 p-8 text-center">
-                <i className="bx bx-transfer-alt text-3xl text-gray-300" />
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No movements yet</p>
-                <p className="text-xs text-gray-500">Receive stock or make a sale to see activity here.</p>
-              </div>
-            ) : (
-              movements.slice(0, 5).map((m) => {
-                const t = (m.movementType || '').toUpperCase();
-                return (
-                  <div key={m.id} className="flex items-center justify-between px-5 py-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className={`shrink-0 rounded-lg px-2 py-0.5 text-xs font-medium ${MOVE_TONE[t] || 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
-                        {t || 'MOVE'}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-gray-700 dark:text-gray-300">{m.itemName || m.itemId}</p>
-                        {m.branchName && (
-                          <p className="truncate text-xs text-gray-400"><i className="bx bx-store" /> {m.branchName}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="ml-3 shrink-0 text-right">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{num(m.quantity)}</p>
-                      <p className="text-xs text-gray-400">{formatDate(m.createdAt)}</p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          {loading ? (
+            <div className="p-5 text-sm text-gray-400">Loading…</div>
+          ) : movements.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 p-8 text-center">
+              <i className="bx bx-transfer-alt text-3xl text-gray-300" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No movements yet</p>
+              <p className="text-xs text-gray-500">Receive stock or make a sale to see activity here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-left text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800">
+                    <th className="px-5 py-2 font-medium">Item</th>
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 text-right font-medium">Qty</th>
+                    <th className="px-5 py-2 text-right font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {movements.slice(0, 5).map((m) => {
+                    const t = (m.movementType || '').toUpperCase();
+                    return (
+                      <tr key={m.id}>
+                        <td className="px-5 py-2.5">
+                          <p className="truncate text-gray-700 dark:text-gray-300">{m.itemName || m.itemId}</p>
+                          {m.branchName && (
+                            <p className="truncate text-xs text-gray-400"><i className="bx bx-store" /> {m.branchName}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${MOVE_TONE[t] || 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
+                            {t || 'MOVE'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">{num(m.quantity)}</td>
+                        <td className="px-5 py-2.5 text-right text-xs text-gray-400">{formatDate(m.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
       {/* Bar drill-down details */}

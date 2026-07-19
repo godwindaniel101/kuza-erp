@@ -143,7 +143,7 @@ export default function SearchableSelect({
         disabled={disabled}
         onKeyDown={handleKeyDown}
           className={`
-          w-full max-w-[350px] border rounded-md
+          w-full max-w-[400px] border rounded-md
           ${size === 'sm' ? 'px-3 h-9 text-sm' : 'px-3 h-9 text-sm'}
           bg-white dark:bg-gray-800
           text-gray-900 dark:text-gray-100
@@ -182,7 +182,7 @@ export default function SearchableSelect({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={searchPlaceholder}
-                className={`h-9 w-full pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 text-[13px]`}
+                className={`h-9 w-full max-w-[400px] pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 text-[13px]`}
               />
             </div>
           </div>

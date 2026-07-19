@@ -1,2 +1,0 @@
-Branch Name,Supplier Name,Received At,Inventory Item Name,UOM,Quantity,Cost Per Unit,Batch Number,Expiry Date,Invoice Number,Notes
-Main Branch,Test Supplier,2025-02-04,Test Item,Kilogram,10,50.00,BATCH001,2025-12-31,INV001,Test bulk upload

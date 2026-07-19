@@ -680,21 +680,47 @@ export class OrdersService {
       });
     }
 
-    // Calculate totalCost for each order from items (if not already set) and attach payments
+    // COGS per order: order items store no cost — the true cost of goods sold
+    // lives in the FIFO inflow allocations (order_item_inflow_items.totalCost),
+    // written when the sale is fulfilled. Aggregate it per order in one query.
+    const costMap = new Map<string, number>();
+    if (orderIds.length > 0) {
+      const costRows = await this.orderItemRepository
+        .createQueryBuilder("item")
+        .innerJoin(
+          "order_item_inflow_items",
+          "alloc",
+          "alloc.orderItemId = item.id",
+        )
+        .select("item.orderId", "orderId")
+        .addSelect("COALESCE(SUM(alloc.totalCost), 0)", "cost")
+        .where("item.orderId IN (:...orderIds)", { orderIds })
+        .groupBy("item.orderId")
+        .getRawMany();
+
+      costRows.forEach((row: any) => {
+        costMap.set(row.orderId, Number(row.cost || 0));
+      });
+    }
+
+    // Attach the real COGS + profit (profit may be negative on a loss-making sale)
     return orders.map((order) => {
-      const calculatedTotalCost = (order as any).totalCost || 0;
-      const calculatedProfit =
-        Number(order.subtotal || 0) - calculatedTotalCost;
+      const persisted = (order as any).totalCost;
+      const totalCost =
+        persisted !== undefined && persisted !== null && Number(persisted) > 0
+          ? Number(persisted)
+          : costMap.get(order.id) || 0;
+      const profit = Number(order.subtotal || 0) - totalCost;
       return {
         ...order,
         payments: paymentsMap.get(order.id) || [],
         itemsCount: itemCountsMap.get(order.id) || 0,
         itemsSold: itemQuantityMap.get(order.id) || 0,
-        totalCost: (order as any).totalCost || calculatedTotalCost,
+        totalCost,
         profit:
           order.profit !== undefined && order.profit !== null
-            ? order.profit
-            : calculatedProfit,
+            ? Number(order.profit)
+            : profit,
       };
     });
   }

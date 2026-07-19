@@ -111,16 +111,25 @@ export default function OrdersPage() {
   };
 
   // ---- Derived row helpers (same math as before, per row) ----
-  const rowTotalCost = (order: any) =>
-    order.items?.reduce((sum: number, item: any) => {
-      let itemCost = Number(item.costTotal || 0);
-      if (itemCost === 0) {
-        const unitCost = Number(item.unitCost || item.cost || item.costPrice || 0);
-        const quantity = Number(item.quantity || 0);
-        itemCost = unitCost * quantity;
-      }
-      return sum + itemCost;
-    }, 0) || 0;
+  // COGS is computed server-side from FIFO inflow allocations and attached as
+  // `order.totalCost` (order items themselves carry no cost). Prefer it; fall
+  // back to summing per-item cost only if the API didn't provide it.
+  const rowTotalCost = (order: any) => {
+    if (order.totalCost !== undefined && order.totalCost !== null) {
+      return Number(order.totalCost);
+    }
+    return (
+      order.items?.reduce((sum: number, item: any) => {
+        let itemCost = Number(item.costTotal || 0);
+        if (itemCost === 0) {
+          const unitCost = Number(item.unitCost || item.cost || item.costPrice || 0);
+          const quantity = Number(item.quantity || 0);
+          itemCost = unitCost * quantity;
+        }
+        return sum + itemCost;
+      }, 0) || 0
+    );
+  };
 
   const rowTotalSale = (order: any) => Number(order.subtotal || order.totalAmount || 0);
 

@@ -12,6 +12,7 @@ import { InventoryCategory } from "../entities/inventory-category.entity";
 import { InventorySubcategory } from "../entities/inventory-subcategory.entity";
 import { OrderItem } from "../../rms/entities/order-item.entity";
 import { Order } from "../../rms/entities/order.entity";
+import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
@@ -501,6 +502,19 @@ export class InventoryService {
       .where("bs.inventoryItemId = :id", { id })
       .getMany();
 
+    // Resolve branch names via a direct lookup keyed by id. The bs.branch
+    // relation can hydrate null (tenant-schema join quirk), which surfaced as
+    // "Unknown Branch"; this map guarantees a real name when the branch exists.
+    const branchIdList = branchStocks
+      .map((bs) => bs.branchId)
+      .filter((v): v is string => Boolean(v));
+    const branchRecords = branchIdList.length
+      ? await this.branchRepository.find({ where: { id: In(branchIdList) } })
+      : [];
+    const branchNameById = new Map(branchRecords.map((b) => [b.id, b.name]));
+    const resolveBranchName = (bs: any) =>
+      branchNameById.get(bs.branchId) || bs.branch?.name || "Unknown Branch";
+
     // Use Query Builder for all stats to ensure tenant isolation
     const salesQuery = this.orderItemRepository
       .createQueryBuilder("oi")
@@ -533,12 +547,83 @@ export class InventoryService {
       .groupBy("o.branchId, b.name")
       .orderBy("totalamount", "DESC");
 
+    // Per-sale line-item history for this item (Sales History tab).
+    const salesHistoryQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("o.createdAt", "createdat")
+      .addSelect("o.orderNumber", "ordernumber")
+      .addSelect("oi.quantity", "quantity")
+      .addSelect("oi.unitPrice", "unitprice")
+      .addSelect("oi.totalPrice", "totalprice")
+      .addSelect("u.name", "uomname")
+      .addSelect("b.name", "branchname")
+      .innerJoin("oi.order", "o")
+      .leftJoin("o.branch", "b")
+      .leftJoin("oi.uom", "u")
+      .where("oi.inventoryItemId = :id", { id })
+      .orderBy("o.createdAt", "DESC")
+      .limit(100);
+
+    // Per-receipt inflow history for this item (Inflow History tab). Supplier
+    // may live on the line item or on the parent inflow batch — coalesce both.
+    // Use a tenant-scoped repository's manager so this hits the tenant schema
+    // (the injected repos are tenant-aware; a bare DataSource may not be).
+    const inflowHistoryQuery = this.orderItemRepository.manager
+      .getRepository(InventoryInflowItem)
+      .createQueryBuilder("ii")
+      .select("inflow.receivedDate", "receivedat")
+      .addSelect("ii.quantity", "quantity")
+      .addSelect("ii.unitCost", "unitcost")
+      .addSelect("ii.totalCost", "totalcost")
+      .addSelect("ii.batchNumber", "batchnumber")
+      .addSelect("ii.expiryDate", "expirydate")
+      .addSelect("u.name", "uomname")
+      .addSelect("COALESCE(s.name, isup.name)", "suppliername")
+      .addSelect("b.name", "branchname")
+      .leftJoin("ii.inflow", "inflow")
+      .leftJoin("ii.uom", "u")
+      .leftJoin("ii.supplier", "s")
+      .leftJoin("inflow.supplier", "isup")
+      .leftJoin("ii.branch", "b")
+      .where("ii.inventoryItemId = :id", { id })
+      .orderBy("inflow.receivedDate", "DESC")
+      .limit(100);
+
     try {
-      const [salesData, recentSales, salesByBranch] = await Promise.all([
-        salesQuery.getRawOne(),
-        recentSalesQuery.getRawOne(),
-        salesByBranchQuery.getRawMany(),
-      ]);
+      const [salesData, recentSales, salesByBranch, salesRows, inflowRows] =
+        await Promise.all([
+          salesQuery.getRawOne(),
+          recentSalesQuery.getRawOne(),
+          salesByBranchQuery.getRawMany(),
+          salesHistoryQuery.getRawMany(),
+          inflowHistoryQuery.getRawMany(),
+        ]);
+
+      const salesHistory = (salesRows || []).map((r: any) => ({
+        createdAt: r.createdat,
+        quantity: Number(r.quantity || 0),
+        uom: { name: r.uomname || null },
+        unitPrice: Number(r.unitprice || 0),
+        totalPrice: Number(r.totalprice || 0),
+        branch: { name: r.branchname || null },
+        order: { orderNumber: r.ordernumber || null },
+      }));
+
+      const inflowHistory = (inflowRows || []).map((r: any) => {
+        const qty = Number(r.quantity || 0);
+        const unit = Number(r.unitcost || 0);
+        return {
+          receivedAt: r.receivedat,
+          quantity: qty,
+          uom: { name: r.uomname || null },
+          costPerUnit: unit,
+          totalCost: Number(r.totalcost || 0) || unit * qty,
+          batchNumber: r.batchnumber || null,
+          expiryDate: r.expirydate || null,
+          supplier: { name: r.suppliername || null },
+          branch: { name: r.branchname || null },
+        };
+      });
 
       const totalSalesAmount = Number(salesData?.totalsalesamount || 0);
       const totalCost = Number(salesData?.totalcost || 0);
@@ -564,7 +649,7 @@ export class InventoryService {
         item,
         branchStocks: branchStocks.map((bs) => ({
           branchId: bs.branchId,
-          branchName: bs.branch?.name || "Unknown Branch",
+          branchName: resolveBranchName(bs),
           currentStock: Number(bs.currentStock || 0),
           minimumStock: Number(bs.minimumStock || 0),
           maximumStock: Number(bs.maximumStock || 0),
@@ -592,6 +677,8 @@ export class InventoryService {
           totalProfit:
             Number(branch.totalamount || 0) - Number(branch.totalcost || 0),
         })),
+        inflowHistory,
+        salesHistory,
       };
     } catch (error) {
       console.error("Error getting item stats:", error);
@@ -600,7 +687,7 @@ export class InventoryService {
         item,
         branchStocks: branchStocks.map((bs) => ({
           branchId: bs.branchId,
-          branchName: bs.branch?.name || "Unknown Branch",
+          branchName: resolveBranchName(bs),
           currentStock: Number(bs.currentStock || 0),
           minimumStock: Number(bs.minimumStock || 0),
           maximumStock: Number(bs.maximumStock || 0),
@@ -619,6 +706,8 @@ export class InventoryService {
           },
         },
         salesByBranch: [],
+        inflowHistory: [],
+        salesHistory: [],
       };
     }
   }
