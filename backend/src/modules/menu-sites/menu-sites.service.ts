@@ -1,9 +1,14 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
+import * as sharp from 'sharp';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { MenuSite } from './entities/menu-site.entity';
@@ -11,6 +16,8 @@ import { MenuSlugRoute } from './entities/menu-slug-route.entity';
 import { Menu } from '../rms/entities/menu.entity';
 import { MenuCategory } from '../rms/entities/menu-category.entity';
 import { MenuItem } from '../rms/entities/menu-item.entity';
+import { InventoryItem } from '../ims/entities/inventory-item.entity';
+import { InventorySubcategory } from '../ims/entities/inventory-subcategory.entity';
 import { Business } from '../../common/entities/business.entity';
 import { UpdateMenuSiteDto } from './dto/update-menu-site.dto';
 
@@ -25,6 +32,7 @@ export interface PublicMenuItemPayload {
   description: string | null;
   price: number;
   imageUrl?: string | null;
+  subcategory?: string | null;
   isAvailable: boolean;
 }
 
@@ -49,6 +57,10 @@ export interface PublicVenuePayload {
   phone: string | null;
   whatsapp: string | null;
   instagram: string | null;
+  facebook: string | null;
+  tiktok: string | null;
+  twitter: string | null;
+  feedbackUrl: string | null;
   wifiName: string | null;
   wifiPassword: string | null;
   currency: string;
@@ -93,6 +105,10 @@ export class MenuSitesService {
     private readonly categoryRepository: Repository<MenuCategory>,
     @InjectRepository(MenuItem)
     private readonly itemRepository: Repository<MenuItem>,
+    @InjectRepository(InventoryItem)
+    private readonly inventoryItemRepository: Repository<InventoryItem>,
+    @InjectRepository(InventorySubcategory)
+    private readonly inventorySubcategoryRepository: Repository<InventorySubcategory>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(MenuSlugRoute, 'landlord')
@@ -106,6 +122,51 @@ export class MenuSitesService {
     const base =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4000';
     return `${base.replace(/\/$/, '')}/m/${slug}`;
+  }
+
+  /**
+   * Store an uploaded logo (base64 data URL) under uploads/menu-logos/ and
+   * return its public `/uploads/...` path (served statically by main.ts).
+   * Raster images are resized/normalised to webp; SVGs are written verbatim
+   * (sharp would rasterise them). Mirrors the fs/sharp/crypto approach in
+   * InventoryService.processItemImage.
+   */
+  async uploadLogo(dataUrl: string): Promise<string> {
+    const match = /^data:image\/(png|jpeg|jpg|webp|svg\+xml);base64,(.+)$/s.exec(
+      dataUrl || '',
+    );
+    if (!match) {
+      throw new BadRequestException(
+        'dataUrl must be a base64 data URL for a png, jpeg, jpg, webp or svg+xml image',
+      );
+    }
+
+    const mimeSubtype = match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+    if (buffer.length === 0) {
+      throw new BadRequestException('Uploaded image is empty');
+    }
+
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'menu-logos');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const isSvg = mimeSubtype === 'svg+xml';
+    const ext = isSvg ? 'svg' : 'webp';
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const filePath = path.join(uploadsDir, fileName);
+
+    if (isSvg) {
+      fs.writeFileSync(filePath, buffer);
+    } else {
+      await sharp(buffer)
+        .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 88 })
+        .toFile(filePath);
+    }
+
+    return `/uploads/menu-logos/${fileName}`;
   }
 
   /**
@@ -236,6 +297,10 @@ export class MenuSitesService {
       'phone',
       'whatsapp',
       'instagram',
+      'facebook',
+      'tiktok',
+      'twitter',
+      'feedbackUrl',
       'wifiName',
       'wifiPassword',
       'currency',
@@ -340,6 +405,42 @@ export class MenuSitesService {
       }),
     ]);
 
+    // Only Noir and Roast are image-forward; all other templates are text-only.
+    const imagesOn = ['noir', 'roast', 'sakura'].includes(site.templateKey);
+
+    // Backfill dish photos (image templates) and subcategory names (all
+    // templates) from the linked inventory item, for menus built before these
+    // were copied onto the menu item.
+    const needMeta = items.filter(
+      (i) => i.inventoryItemId && ((imagesOn && !i.image) || !i.subcategory),
+    );
+    if (needMeta.length > 0) {
+      const invIds = [...new Set(needMeta.map((i) => i.inventoryItemId))];
+      const inv = await this.inventoryItemRepository.find({
+        where: { id: In(invIds) },
+      });
+      const invById = new Map(inv.map((i) => [i.id, i]));
+      const subIds = [
+        ...new Set(inv.map((i) => i.subcategoryId).filter(Boolean)),
+      ];
+      const subs = subIds.length
+        ? await this.inventorySubcategoryRepository.find({
+            where: { id: In(subIds) },
+          })
+        : [];
+      const subNameById = new Map(subs.map((s) => [s.id, s.name]));
+      for (const item of needMeta) {
+        const invItem = invById.get(item.inventoryItemId);
+        if (!invItem) continue;
+        if (imagesOn && !item.image && invItem.frontImage) {
+          item.image = invItem.frontImage;
+        }
+        if (!item.subcategory && invItem.subcategoryId) {
+          item.subcategory = subNameById.get(invItem.subcategoryId) || null;
+        }
+      }
+    }
+
     const itemsByCategory = new Map<string, MenuItem[]>();
     const uncategorizedByMenu = new Map<string, MenuItem[]>();
     for (const item of items) {
@@ -359,7 +460,8 @@ export class MenuSitesService {
       name: item.name,
       description: item.description || null,
       price: Number(item.price || 0),
-      imageUrl: item.image || null,
+      imageUrl: imagesOn ? item.image || null : null,
+      subcategory: item.subcategory || null,
       isAvailable: item.isAvailable !== false,
     });
 
@@ -407,6 +509,10 @@ export class MenuSitesService {
       phone: site.phone || null,
       whatsapp: site.whatsapp || null,
       instagram: site.instagram || null,
+      facebook: site.facebook || null,
+      tiktok: site.tiktok || null,
+      twitter: site.twitter || null,
+      feedbackUrl: site.feedbackUrl || null,
       wifiName: site.wifiName || null,
       wifiPassword: site.wifiPassword || null,
       currency: site.currency || 'NGN',

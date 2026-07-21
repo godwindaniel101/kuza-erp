@@ -22,6 +22,18 @@
 @media (min-width: 1024px) {
   .main-content-area {
     margin-left: var(--sidebar-width);
+    /* Slide the content edge in sync with the sidebar's transform. */
+    transition: margin-left 0.3s ease-in-out;
+  }
+  /* Sidebar hidden (collapsed) — reclaim its space so content fills the width. */
+  .main-content-area.sidebar-collapsed {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content-area {
+    transition: none;
   }
 }
 
@@ -111,10 +123,24 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    utility (e.g. max-w-none on the login inputs) overrides it normally. w-full
    inputs stay capped (w-full sets width, not max-width). Excludes toggles/etc. */
 @layer base {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
-  select {
-    max-width: 400px;
+  /* :where() keeps this at element-level specificity (0,0,1) so any Tailwind
+     max-w-* utility (max-w-none, max-w-[140px], max-w-sm …) cleanly overrides
+     it — without :where the 5 chained :not() made this beat those utilities. */
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"])),
+  select,
+  textarea {
+    max-width: 300px;
   }
+}
+
+/* Inside a modal the fields should FILL the dialog, not sit as stunted 300px
+   bars in a wider panel (that reads as "scanty"). Unlayered + more specific, so
+   it overrides the page-level cap above only within modals. */
+.modal-panel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.modal-panel select,
+.modal-panel textarea,
+.modal-panel .ss-control {
+  max-width: 100%;
 }
 
 * {
@@ -220,9 +246,9 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   z-index: 10;
 }
 
-/* Fix select dropdown text overflow */
+/* Selects fill their container but cap at the shared 300px input width. */
 select {
-  max-width: 100%;
+  max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -349,4 +375,79 @@ html.dark select option {
 
 [x-cloak] { 
   display: none !important; 
+}
+/* ============================================================
+   Menu template motion (guest-facing menu pages & preview)
+   ============================================================ */
+@keyframes menuFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes menuSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes menuFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes menuDrawerIn {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes menuScrimIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes menuSheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes menuPop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes menuSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes menuPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+
+.menu-page       { animation: menuFadeUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-page-slide { animation: menuSlideIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-fade       { animation: menuFade 0.4s ease both; }
+.menu-pop        { animation: menuPop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-drawer     { animation: menuDrawerIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-scrim      { animation: menuScrimIn 0.25s ease both; }
+.menu-sheet      { animation: menuSheetUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-spin       { animation: menuSpin 0.9s linear infinite; }
+.menu-preload-dot{ animation: menuPulse 1s ease-in-out infinite; }
+
+/* stagger helpers for tile/card grids */
+.menu-stagger > * { animation: menuFadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.menu-stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.menu-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.menu-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.menu-stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.menu-stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.menu-stagger > *:nth-child(6) { animation-delay: 0.24s; }
+.menu-stagger > *:nth-child(7) { animation-delay: 0.28s; }
+.menu-stagger > *:nth-child(8) { animation-delay: 0.32s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-page, .menu-page-slide, .menu-fade, .menu-pop, .menu-drawer,
+  .menu-scrim, .menu-sheet, .menu-stagger > * {
+    animation-duration: 0.01ms !important;
+  }
+  .menu-spin, .menu-preload-dot { animation: none !important; }
+}
+
+/* Menu create/edit forms: let inputs fill their column uniformly (the global
+   input max-width cap otherwise makes fields look short/uneven). */
+.menu-form input,
+.menu-form select,
+.menu-form textarea {
+  max-width: none;
 }

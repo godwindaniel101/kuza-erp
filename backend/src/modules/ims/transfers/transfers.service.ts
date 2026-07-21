@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { Transactional } from "typeorm-transactional";
 import { InventoryTransfer } from "../entities/inventory-transfer.entity";
 import { InventoryTransferItem } from "../entities/inventory-transfer-item.entity";
@@ -246,8 +246,6 @@ export class TransfersService {
   async findAll(branchId?: string) {
     const query = this.transferRepository
       .createQueryBuilder("transfer")
-      .leftJoinAndSelect("transfer.fromBranch", "fromBranch")
-      .leftJoinAndSelect("transfer.toBranch", "toBranch")
       .orderBy("transfer.transferDate", "DESC")
       .addOrderBy("transfer.createdAt", "DESC");
 
@@ -258,27 +256,116 @@ export class TransfersService {
       );
     }
 
-    return await query.getMany();
+    const transfers = await query.getMany();
+    await this.attachBranchNames(transfers);
+    await this.attachItems(transfers);
+    return transfers;
+  }
+
+  /**
+   * Attach each transfer's line items with resolved item + UOM names, via direct
+   * lookups (relation joins for `inventoryItem`/`uom` don't hydrate under the
+   * tenant schema — the list showed "0 items" and the detail table was empty).
+   */
+  private async attachItems(
+    transfers: Array<{ id: string; items?: any[] }>,
+  ): Promise<void> {
+    const ids = transfers.map((t) => t.id).filter(Boolean);
+    if (ids.length === 0) return;
+    const lines = await this.transferItemRepository.find({
+      where: { transferId: In(ids) },
+    });
+    const itemIds = [
+      ...new Set(lines.map((l) => l.inventoryItemId).filter(Boolean)),
+    ];
+    const uomIds = [...new Set(lines.map((l) => l.uomId).filter(Boolean))];
+    const em = this.transferRepository.manager;
+    const [itemRows, uomRows] = await Promise.all([
+      itemIds.length
+        ? em.query(
+            `SELECT id, name FROM inventory_items WHERE id = ANY($1::uuid[])`,
+            [itemIds],
+          )
+        : [],
+      uomIds.length
+        ? em.query(`SELECT id, name FROM uoms WHERE id = ANY($1::uuid[])`, [
+            uomIds,
+          ])
+        : [],
+    ]);
+    const itemNameById = new Map<string, string>(
+      (itemRows || []).map((r: any) => [r.id, r.name]),
+    );
+    const uomNameById = new Map<string, string>(
+      (uomRows || []).map((r: any) => [r.id, r.name]),
+    );
+    const byTransfer = new Map<string, any[]>();
+    for (const line of lines) {
+      (line as any).inventoryItem = line.inventoryItemId
+        ? { id: line.inventoryItemId, name: itemNameById.get(line.inventoryItemId) || null }
+        : null;
+      (line as any).uom = { name: uomNameById.get(line.uomId) || null };
+      const arr = byTransfer.get(line.transferId) || [];
+      arr.push(line);
+      byTransfer.set(line.transferId, arr);
+    }
+    transfers.forEach((t: any) => {
+      t.items = byTransfer.get(t.id) || [];
+    });
+  }
+
+  /**
+   * Attach fromBranch/toBranch {id,name} via a direct lookup. The relation-join
+   * form (leftJoinAndSelect transfer.fromBranch) resolves to the wrong schema in
+   * this multi-tenant setup and comes back null — the "From"/"To" columns then
+   * render "—". This keeps the shape the UI already reads (transfer.fromBranch.name).
+   */
+  private async attachBranchNames(
+    transfers: Array<{
+      fromBranchId?: string | null;
+      toBranchId?: string | null;
+    }>,
+  ): Promise<void> {
+    const ids = [
+      ...new Set(
+        transfers
+          .flatMap((t) => [t.fromBranchId, t.toBranchId])
+          .filter((v): v is string => Boolean(v)),
+      ),
+    ];
+    if (ids.length === 0) return;
+    const rows = await this.transferRepository.manager.query(
+      `SELECT id, name FROM branches WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
+    const nameById = new Map<string, string>(
+      (rows || []).map((b: any) => [b.id, b.name]),
+    );
+    transfers.forEach((t: any) => {
+      t.fromBranch = t.fromBranchId
+        ? { id: t.fromBranchId, name: nameById.get(t.fromBranchId) || null }
+        : null;
+      t.toBranch = t.toBranchId
+        ? { id: t.toBranchId, name: nameById.get(t.toBranchId) || null }
+        : null;
+    });
   }
 
   async findOne(id: string) {
     const transfer = await this.transferRepository.findOne({
       where: { id },
-      relations: ["fromBranch", "toBranch"],
     });
 
     if (!transfer) {
       throw new NotFoundException("Transfer not found");
     }
 
-    // Load line items via a direct query on the items repository rather than
-    // through the transfer.items OneToMany relation: the relation-join form was
-    // returning an empty collection (the joined table resolved to the wrong
-    // schema), which silently broke all stock movement on status changes.
-    transfer.items = await this.transferItemRepository.find({
-      where: { transferId: id },
-      relations: ["inventoryItem", "inventoryItem.baseUom", "uom"],
-    });
+    // Resolve fromBranch/toBranch names and line items via direct lookups
+    // (relation joins are unreliable in this multi-tenant setup — they resolved
+    // to the wrong schema, emptying the items collection and breaking both the
+    // detail table and stock movement on status changes).
+    await this.attachBranchNames([transfer]);
+    await this.attachItems([transfer]);
 
     return transfer;
   }
@@ -576,6 +663,17 @@ export class TransfersService {
       destBranchInventory.currentStock =
         Number(destBranchInventory.currentStock) + Number(baseQuantity);
       await this.branchInventoryRepository.save(destBranchInventory);
+
+      // Move the FIFO inflow batches (with cost basis) from source to
+      // destination so the received stock is actually sellable — same fix as
+      // the updateStatus receive path. Without this the counter rises but the
+      // sale engine finds no batch at the branch ("item not available").
+      await this.moveInflowBatchesToBranch(
+        inventoryItem,
+        transfer.fromBranchId,
+        transfer.toBranchId,
+        Number(baseQuantity),
+      );
 
       inventoryItem.currentStock =
         Number(inventoryItem.currentStock) + Number(baseQuantity);

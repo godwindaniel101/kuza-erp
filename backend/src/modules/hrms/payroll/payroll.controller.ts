@@ -26,7 +26,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("HRMS - Payroll")
 @Controller("hrms/payroll")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("payroll")
+@RequireApp("people")
 @ApiBearerAuth()
 export class PayrollController {
   constructor(private readonly payrollService: PayrollService) {}

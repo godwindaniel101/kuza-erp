@@ -170,6 +170,7 @@ export default function InventoryDashboardPage() {
 
   // Bar drill-down: click a branch bar → its item breakdown; a product bar → its per-branch stock.
   const [drill, setDrill] = useState<{ title: string; rows: { label: string; value: number }[]; href?: string } | null>(null);
+  const [worklistTab, setWorklistTab] = useState<'restock' | 'expiring'>('restock');
   const openBranchDrill = (i: number) => {
     const b = stockByBranch[i];
     if (!b) return;
@@ -191,6 +192,17 @@ export default function InventoryDashboardPage() {
       .sort((x, y) => y.value - x.value);
     setDrill({ title: `${p.label} · value by branch`, rows, href: `/ims/inventory/${p.id}` });
   };
+
+  // Items with a batch expiring within 60 days, soonest first (dashboard widget).
+  const expiringItems = items
+    .filter((it: any) => it.earliestExpiry)
+    .map((it: any) => {
+      const date = new Date(it.earliestExpiry);
+      const days = Math.ceil((date.getTime() - Date.now()) / 86400000);
+      return { id: it.id, name: it.name as string, date, days, count: num(it.expiringSoonCount) };
+    })
+    .filter((x) => x.days <= 60)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return (
     <div>
@@ -250,44 +262,100 @@ export default function InventoryDashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Low-stock worklist — actionable */}
+        {/* Inventory worklist — Needs restocking / Expiring soon, tabbed */}
         <Card padding={false}>
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Needs restocking</h3>
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 pt-2">
+            <div className="flex gap-4">
+              {([
+                { key: 'restock', label: 'Needs restocking', count: lowStockRows.length },
+                { key: 'expiring', label: 'Expiring soon', count: expiringItems.length },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setWorklistTab(tab.key)}
+                  className={`-mb-px border-b-2 pb-2 pt-1 text-sm font-medium transition-colors ${
+                    worklistTab === tab.key
+                      ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count > 0 && <span className="ml-1.5 text-xs text-gray-400">{tab.count}</span>}
+                </button>
+              ))}
+            </div>
             <Link href="/ims/inventory" className="text-[13px] font-medium text-brand-600 hover:underline">
               View all
             </Link>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {loading ? (
-              <div className="p-5 text-sm text-gray-400">Loading…</div>
-            ) : lowStockRows.length === 0 ? (
+
+          {loading ? (
+            <div className="p-5 text-sm text-gray-400">Loading…</div>
+          ) : worklistTab === 'restock' ? (
+            lowStockRows.length === 0 ? (
               <div className="flex flex-col items-center gap-1 p-8 text-center">
                 <i className="bx bx-check-circle text-3xl text-emerald-500" />
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Everything's well stocked</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Everything&apos;s well stocked</p>
                 <p className="text-xs text-gray-500">No items at or below their reorder point.</p>
               </div>
             ) : (
-              lowStockRows.slice(0, 6).map((r) => (
-                <div key={r.key} className="flex items-center justify-between px-5 py-3">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {lowStockRows.slice(0, 6).map((r) => (
+                  <div key={r.key} className="flex items-center justify-between px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{r.itemName}</p>
+                      <p className="truncate text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1"><i className="bx bx-store text-gray-400" />{r.branchName}</span>
+                        {' · '}{r.stock} {r.unit || 'units'} left · reorder at {r.min}
+                      </p>
+                    </div>
+                    <span
+                      className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        r.stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
+                      }`}
+                    >
+                      {r.stock <= 0 ? 'Out' : 'Low'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : expiringItems.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 p-8 text-center">
+              <i className="bx bx-check-circle text-3xl text-emerald-500" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Nothing expiring soon</p>
+              <p className="text-xs text-gray-500">No batches expire within the next 60 days.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {expiringItems.slice(0, 6).map((x) => (
+                <Link
+                  key={x.id}
+                  href={`/ims/inventory/${x.id}`}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{r.itemName}</p>
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{x.name}</p>
                     <p className="truncate text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1"><i className="bx bx-store text-gray-400" />{r.branchName}</span>
-                      {' · '}{r.stock} {r.unit || 'units'} left · reorder at {r.min}
+                      Expires {x.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {x.count > 1 && ` · ${x.count} batches`}
                     </p>
                   </div>
                   <span
                     className={`ml-3 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      r.stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
+                      x.days <= 0
+                        ? 'bg-red-50 text-red-600 dark:bg-red-500/10'
+                        : x.days <= 30
+                        ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
                     }`}
                   >
-                    {r.stock <= 0 ? 'Out' : 'Low'}
+                    {x.days <= 0 ? 'Expired' : `${x.days}d`}
                   </span>
-                </div>
-              ))
-            )}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Recent stock movements — activity feed */}
@@ -344,6 +412,7 @@ export default function InventoryDashboardPage() {
           )}
         </Card>
       </div>
+
       {/* Bar drill-down details */}
       <Modal
         isOpen={!!drill}

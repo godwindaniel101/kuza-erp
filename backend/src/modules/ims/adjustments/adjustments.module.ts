@@ -6,6 +6,8 @@ import { InventoryAdjustment } from '../entities/inventory-adjustment.entity';
 import { InventoryAdjustmentItem } from '../entities/inventory-adjustment-item.entity';
 import { InventoryItem } from '../entities/inventory-item.entity';
 import { BranchInventoryItem } from '../entities/branch-inventory-item.entity';
+import { InventoryInflow } from '../entities/inventory-inflow.entity';
+import { InventoryInflowItem } from '../entities/inventory-inflow-item.entity';
 import { StockMovementsModule } from '../stock-movements/stock-movements.module';
 import { AccountingModule } from '../../accounting/accounting.module';
 
@@ -16,6 +18,8 @@ import { AccountingModule } from '../../accounting/accounting.module';
       InventoryAdjustmentItem,
       InventoryItem,
       BranchInventoryItem,
+      InventoryInflow,
+      InventoryInflowItem,
     ]),
     StockMovementsModule,
     AccountingModule,

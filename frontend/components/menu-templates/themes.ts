@@ -12,10 +12,27 @@ import {
  * muted ≥ ~4.5:1) in both light and dark sets.
  */
 
+export type ArchetypeGroup =
+  | 'Elegant'
+  | 'Classic'
+  | 'Modern'
+  | 'Nightlife'
+  | 'Cuisine';
+
+/** Order in which groups are shown in the template picker. */
+export const ARCHETYPE_GROUPS: ArchetypeGroup[] = [
+  'Elegant',
+  'Classic',
+  'Modern',
+  'Nightlife',
+  'Cuisine',
+];
+
 export interface ArchetypeMeta {
   key: TemplateKey;
   name: string;
   tagline: string;
+  group: ArchetypeGroup;
   themes: MenuTheme[];
 }
 
@@ -373,42 +390,195 @@ const grand: MenuTheme[] = [
   },
 ];
 
+// ---- Premium, image-forward archetypes -------------------------------------
+
+// Escape — deep, moody, teal (menu.theescape.ng). Rounded, uppercase labels.
+const escape: MenuTheme[] = [
+  {
+    key: 'deep-teal', name: 'Deep Teal', mode: 'dark',
+    bg: '#083344', surface: '#072a38', text: '#E4E4E4', muted: '#9FB4B9',
+    accent: '#14b8a6', border: '#0b4055',
+    headingFont: ROUNDED_STACK, bodyFont: ROUNDED_STACK, radius: '10px',
+  },
+  {
+    key: 'onyx', name: 'Onyx', mode: 'dark',
+    bg: '#0B0F14', surface: '#141A21', text: '#ECECEC', muted: '#9AA3AD',
+    accent: '#E0B15A', border: '#232C36',
+    headingFont: ROUNDED_STACK, bodyFont: ROUNDED_STACK, radius: '10px',
+  },
+  {
+    key: 'plum-night', name: 'Plum Night', mode: 'dark',
+    bg: '#1A1024', surface: '#241634', text: '#EDE7F2', muted: '#B39FC4',
+    accent: '#C79BFF', border: '#37244B',
+    headingFont: ROUNDED_STACK, bodyFont: ROUNDED_STACK, radius: '10px',
+  },
+];
+
+// Botanical — cream editorial with leaf motifs, serif + script (Basil Leaf).
+const botanical: MenuTheme[] = [
+  {
+    key: 'sage-cream', name: 'Sage Cream', mode: 'light',
+    bg: '#F6F3EA', surface: '#FFFFFF', text: '#2B2E26', muted: '#6C7060',
+    accent: '#4B6043', border: '#E2DDCC',
+    headingFont: SERIF_STACK, bodyFont: SANS_STACK, radius: '14px',
+  },
+  {
+    key: 'olive-linen', name: 'Olive Linen', mode: 'light',
+    bg: '#EFEbDE', surface: '#FBF9F3', text: '#33301F', muted: '#726B54',
+    accent: '#6B7A3A', border: '#DED7C3',
+    headingFont: SERIF_STACK, bodyFont: SANS_STACK, radius: '14px',
+  },
+  {
+    key: 'forest-night', name: 'Forest Night', mode: 'dark',
+    bg: '#14211B', surface: '#1C2C24', text: '#EAF0EA', muted: '#A6B7A9',
+    accent: '#9CC08B', border: '#2C3E33',
+    headingFont: SERIF_STACK, bodyFont: SANS_STACK, radius: '14px',
+  },
+];
+
+// Sakura — cream + coral, seigaiha wave pattern, icon category grid (Japanese).
+const sakura: MenuTheme[] = [
+  {
+    key: 'coral-cream', name: 'Coral Cream', mode: 'light',
+    bg: '#F4ECE1', surface: '#FBF6EE', text: '#2A2622', muted: '#7A7169',
+    accent: '#F16B5A', border: '#E6DAC8',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+  {
+    key: 'matcha', name: 'Matcha', mode: 'light',
+    bg: '#EEF0E6', surface: '#F9FAF4', text: '#26291F', muted: '#6E7360',
+    accent: '#7BA05B', border: '#DCE0CF',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+  {
+    key: 'sumi', name: 'Sumi', mode: 'dark',
+    bg: '#141210', surface: '#201C18', text: '#EFE9E1', muted: '#B0A597',
+    accent: '#F16B5A', border: '#332C25',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+];
+
+// Roast — warm beige/brown coffee-house, image product cards + price chips.
+const roast: MenuTheme[] = [
+  {
+    key: 'latte', name: 'Latte', mode: 'light',
+    bg: '#EAD9C2', surface: '#F6ECDD', text: '#3A2A1B', muted: '#7A6650',
+    accent: '#6F4E37', border: '#DBC7AC',
+    headingFont: ROUNDED_STACK, bodyFont: SANS_STACK, radius: '18px',
+  },
+  {
+    key: 'flat-white', name: 'Flat White', mode: 'light',
+    bg: '#F1E9DE', surface: '#FBF6EF', text: '#2E271F', muted: '#7C7061',
+    accent: '#B07D45', border: '#E4D8C7',
+    headingFont: ROUNDED_STACK, bodyFont: SANS_STACK, radius: '18px',
+  },
+  {
+    key: 'espresso', name: 'Espresso', mode: 'dark',
+    bg: '#1B1410', surface: '#271E17', text: '#EFE6DA', muted: '#B7A794',
+    accent: '#D9A066', border: '#3A2D22',
+    headingFont: ROUNDED_STACK, bodyFont: SANS_STACK, radius: '18px',
+  },
+];
+
+// Space — a cosmic nightlife menu: void grounds, nebula accents, star-white text.
+const space: MenuTheme[] = [
+  {
+    key: 'deep-space', name: 'Deep Space', mode: 'dark',
+    bg: '#05060E', surface: '#0E1124', text: '#EAECFF', muted: '#9AA0C7',
+    accent: '#8B5CF6', border: '#1C2044',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+  {
+    key: 'nebula', name: 'Nebula', mode: 'dark',
+    bg: '#0A0614', surface: '#170B28', text: '#F1E9FF', muted: '#B29FD6',
+    accent: '#22D3EE', border: '#2C1A44',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+  {
+    key: 'aurora', name: 'Aurora', mode: 'dark',
+    bg: '#04100E', surface: '#0A1C19', text: '#E7FFF8', muted: '#93C7BC',
+    accent: '#34D399', border: '#123029',
+    headingFont: SANS_STACK, bodyFont: SANS_STACK, radius: '16px',
+  },
+];
+
 export const ARCHETYPES: ArchetypeMeta[] = [
   {
     key: 'elegant',
     name: 'Elegant',
     tagline: 'Fine dining — serif, whitespace, hairline rules',
+    group: 'Elegant',
     themes: elegant,
   },
   {
-    key: 'minimal',
-    name: 'Minimal',
-    tagline: 'Café & brunch — clean airy cards',
-    themes: minimal,
+    key: 'grand',
+    name: 'Grand',
+    tagline: 'Hotel & banquet — formal, engraved, ceremonial',
+    group: 'Elegant',
+    themes: grand,
   },
   {
-    key: 'noir',
-    name: 'Noir',
-    tagline: 'Lounge & nightlife — dark with gold accents',
-    themes: noir,
-  },
-  {
-    key: 'gallery',
-    name: 'Gallery',
-    tagline: 'Fast casual — photo-forward cards',
-    themes: gallery,
+    key: 'botanical',
+    name: 'Botanical',
+    tagline: 'Farm-to-table — cream, leaf motifs, editorial',
+    group: 'Classic',
+    themes: botanical,
   },
   {
     key: 'bistro',
     name: 'Bistro',
     tagline: 'Neighbourhood eatery — warm, hand-drawn feel',
+    group: 'Classic',
     themes: bistro,
   },
   {
-    key: 'grand',
-    name: 'Grand',
-    tagline: 'Hotel & banquet — formal two-column',
-    themes: grand,
+    key: 'minimal',
+    name: 'Minimal',
+    tagline: 'Café & brunch — clean airy layout',
+    group: 'Modern',
+    themes: minimal,
+  },
+  {
+    key: 'gallery',
+    name: 'Gallery',
+    tagline: 'Fast casual — bright, tile-led',
+    group: 'Modern',
+    themes: gallery,
+  },
+  {
+    key: 'noir',
+    name: 'Noir',
+    tagline: 'Fine dining — dark, image-forward, gold accents',
+    group: 'Nightlife',
+    themes: noir,
+  },
+  {
+    key: 'escape',
+    name: 'Sketch',
+    tagline: 'Lounge & bar — hand-drawn doodle backdrop, tile home',
+    group: 'Nightlife',
+    themes: escape,
+  },
+  {
+    key: 'space',
+    name: 'Space',
+    tagline: 'Cosmic nightlife — starfield, orbits, neon glow',
+    group: 'Nightlife',
+    themes: space,
+  },
+  {
+    key: 'sakura',
+    name: 'Sakura',
+    tagline: 'Sushi & Asian — coral, wave pattern, tile grid',
+    group: 'Cuisine',
+    themes: sakura,
+  },
+  {
+    key: 'roast',
+    name: 'Roast',
+    tagline: 'Café & coffee — warm, photo product cards',
+    group: 'Cuisine',
+    themes: roast,
   },
 ];
 

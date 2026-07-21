@@ -75,9 +75,14 @@ export class StockMovementsService {
       qb.andWhere("movement.itemId = :itemId", { itemId: query.itemId });
     }
     if (query.branchId) {
-      qb.andWhere("movement.branchId = :branchId", {
-        branchId: query.branchId,
-      });
+      // Comma-separated list from the branch multi-select filter.
+      const branchIds = query.branchId
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (branchIds.length > 0) {
+        qb.andWhere("movement.branchId IN (:...branchIds)", { branchIds });
+      }
     }
     if (query.type) {
       qb.andWhere("movement.movementType = :type", { type: query.type });
@@ -104,11 +109,25 @@ export class StockMovementsService {
       : [];
     const nameById = new Map(inventoryItems.map((i) => [i.id, i.name]));
 
+    // Resolve branch names the same way (direct lookup — relation joins are
+    // unreliable under the tenant schema).
+    const branchIds = [...new Set(rows.map((m) => m.branchId).filter(Boolean))];
+    const branchRows = branchIds.length
+      ? await this.movementRepository.manager.query(
+          `SELECT id, name FROM branches WHERE id = ANY($1::uuid[])`,
+          [branchIds],
+        )
+      : [];
+    const branchNameById = new Map<string, string>(
+      (branchRows || []).map((b: any) => [b.id, b.name]),
+    );
+
     const items = rows.map((m) => ({
       id: m.id,
       itemId: m.itemId,
       itemName: nameById.get(m.itemId) || null,
       branchId: m.branchId,
+      branchName: m.branchId ? branchNameById.get(m.branchId) || null : null,
       batchId: m.batchId,
       movementType: m.movementType,
       quantity: Number(m.quantity),

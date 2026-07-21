@@ -55,12 +55,35 @@ export function formatNumber(value: number | string | null | undefined, decimals
   return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-/** Format an ISO date string as e.g. "Jan 5, 2026". Returns '-' for empty input. */
+/**
+ * Format a date as e.g. "Jan 5, 2026". Date-only on purpose: adding the time
+ * makes the string timezone-dependent, which mismatches between the SSR render
+ * (server TZ) and the browser (local TZ) and throws a React hydration error.
+ * Use formatDateTime only in client-only contexts where the time matters.
+ */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/**
+ * Date + time, e.g. "Jan 5, 2026, 3:45 PM". Timezone-dependent — only safe in
+ * CLIENT-rendered contexts (data fetched in the browser), never in SSR output,
+ * or it triggers a hydration mismatch.
+ */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 /** Today as YYYY-MM-DD (local time) for date inputs. */

@@ -6,6 +6,7 @@ import { Order } from "../entities/order.entity";
 import { OrderItem } from "../entities/order-item.entity";
 import { InventoryItem } from "../../ims/entities/inventory-item.entity";
 import { BranchInventoryItem } from "../../ims/entities/branch-inventory-item.entity";
+import { Uom } from "../../ims/entities/uom.entity";
 
 @Injectable()
 export class ReportsService {
@@ -85,11 +86,14 @@ export class ReportsService {
       .addSelect("uom.abbreviation", "unitAbbr")
       .addSelect("COALESCE(SUM(orderItem.quantity), 0)", "quantitySold")
       .addSelect("COALESCE(SUM(orderItem.totalPrice), 0)", "revenue")
-      .innerJoin("orderItem.inventoryItem", "item")
-      .innerJoin("orderItem.order", "order")
-      .leftJoin("item.baseUom", "uom")
-
-      .andWhere("order.status != :cancelledStatus", {
+      // Explicit table joins (not relation-name joins). Under the tenant schema
+      // relation joins like "orderItem.inventoryItem" can fail to hydrate, and an
+      // INNER relation join then drops EVERY row — which left Top Products empty
+      // while Top Branches (already using an explicit join) worked.
+      .innerJoin(InventoryItem, "item", "item.id = orderItem.inventoryItemId")
+      .innerJoin(Order, "order", "order.id = orderItem.orderId")
+      .leftJoin(Uom, "uom", "uom.id = item.baseUomId")
+      .where("order.status != :cancelledStatus", {
         cancelledStatus: "cancelled",
       })
       .andWhere("order.createdAt >= :startDate", { startDate })

@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import PermissionGuard from '@/components/PermissionGuard';
@@ -7,6 +8,8 @@ import PageHeader from '@/components/ui/PageHeader';
 
 export default function CreateInventoryItemPage() {
   const { t } = useTranslation('common');
+  const router = useRouter();
+  const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
 
   return (
     <PermissionGuard permission="inventory.create">
@@ -15,7 +18,7 @@ export default function CreateInventoryItemPage() {
           title={<>{t('add')} {t('item')}</>}
           subtitle="Add a new item to your catalog"
           breadcrumbs={[
-            { label: t('inventory') || 'Inventory', href: '/ims/inventory' },
+            { label: t('inventory') || 'Inventory', href: base },
             { label: t('add') || 'Add' },
           ]}
         />

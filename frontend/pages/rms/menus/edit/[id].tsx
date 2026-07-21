@@ -162,6 +162,7 @@ export default function EditMenuPage() {
         branchId: formData.branchId,
         name: formData.name,
         description: formData.description || undefined,
+        inventoryItemIds: selectedItemIds,
       });
 
       if (!updateResponse.success) {
@@ -177,8 +178,8 @@ export default function EditMenuPage() {
       });
       
       setTimeout(() => {
-        // Redirect to template selection (similar to create flow)
-        router.push(`/rms/menus/templates?menu_id=${id}`);
+        // After editing, continue into the QR flow (menu-studio) for this menu.
+        router.push(`/menu-studio?menuId=${id}`);
       }, 1500);
     } catch (err: any) {
       console.error('Failed to update menu:', err);
@@ -226,8 +227,8 @@ export default function EditMenuPage() {
           ]}
         />
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <form onSubmit={handleSubmit} className="menu-form">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             {/* Left Column - Menu Details */}
             <div className="lg:col-span-1">
               <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5 sticky top-6">
@@ -266,20 +267,6 @@ export default function EditMenuPage() {
                   className="mb-5"
                 />
 
-                {/* Description */}
-                <div className="mb-5">
-                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('description')} <span className="text-gray-400 text-xs">({t('optional') || 'Optional'})</span>
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    placeholder={t('briefDescription')}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent resize-none"
-                  />
-                </div>
-
                 {/* Selected Items Summary */}
                 <div className="pt-5 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center justify-between mb-3">
@@ -289,12 +276,12 @@ export default function EditMenuPage() {
                     </span>
                   </div>
 
-                  <div className="space-y-2 h-64 overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
                     {selectedItems.length > 0 ? (
                       selectedItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-[13px]">
+                        <div key={item.id} className="flex items-center justify-between gap-2 py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-[13px]">
                           <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.name}</span>
-                          <span className="text-gray-700 dark:text-gray-300 ml-2">
+                          <span className="text-gray-700 dark:text-gray-300 shrink-0">
                             {formatMoney(item.price, currency)}
                           </span>
                         </div>
@@ -330,7 +317,7 @@ export default function EditMenuPage() {
             </div>
 
             {/* Right Column - Item Selection */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
               <div className="bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5">
                 <div className="flex items-center justify-between mb-5">
                   <div>
@@ -352,51 +339,49 @@ export default function EditMenuPage() {
                   </div>
                 </div>
 
-                {/* Search & Filter */}
-                <div className="mb-5">
-                  <div className="relative">
+                {/* Search + category filter on one row to save space */}
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="relative w-48 shrink-0 sm:w-60">
                     <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={t('searchItemsByNameOrCategory') || 'Search items by name or category...'}
+                      placeholder={t('searchItems') || 'Search items...'}
                       className="h-9 block w-full pl-9 pr-3 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
                     />
                   </div>
-                </div>
-
-                {/* Category Filter */}
-                <div className="flex flex-wrap gap-2 mb-5">
-                  <button
-                    type="button"
-                    onClick={() => setFilterCategory('')}
-                    className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                      filterCategory === ''
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {t('all') || 'All'}
-                  </button>
-                  {categories.map((category) => (
+                  <div className="flex flex-1 gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                     <button
-                      key={category}
                       type="button"
-                      onClick={() => setFilterCategory(category)}
-                      className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                        filterCategory === category
+                      onClick={() => setFilterCategory('')}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                        filterCategory === ''
                           ? 'bg-brand-600 text-white'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {category}
+                      {t('all') || 'All'}
                     </button>
-                  ))}
+                    {categories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setFilterCategory(category)}
+                        className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                          filterCategory === category
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Items Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-[600px] overflow-y-auto pr-1 border-t border-gray-100 dark:border-gray-800 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-[450px] overflow-y-auto pr-1 border-t border-gray-100 dark:border-gray-800 p-2">
                   {filteredItems.length > 0 ? (
                     filteredItems.map((item) => {
                       const isSelected = selectedItemIds.includes(item.id);

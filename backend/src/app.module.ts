@@ -28,6 +28,8 @@ import { BillingModule } from './modules/billing/billing.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { MenuSitesModule } from './modules/menu-sites/menu-sites.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ReservationsModule } from './modules/rms/reservations/reservations.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CommonModule } from './common/common.module';
 import { LandlordModule } from './common/landlord/landlord.module';
@@ -82,6 +84,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     InsightsModule,
     IntegrationsModule,
     MenuSitesModule,
+    PaymentsModule,
+    ReservationsModule,
     AdminModule,
   ],
   controllers: [AppController],

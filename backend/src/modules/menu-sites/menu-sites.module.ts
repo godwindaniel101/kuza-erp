@@ -9,6 +9,8 @@ import { MenuSlugRoute } from './entities/menu-slug-route.entity';
 import { Menu } from '../rms/entities/menu.entity';
 import { MenuCategory } from '../rms/entities/menu-category.entity';
 import { MenuItem } from '../rms/entities/menu-item.entity';
+import { InventoryItem } from '../ims/entities/inventory-item.entity';
+import { InventorySubcategory } from '../ims/entities/inventory-subcategory.entity';
 import { Business } from '../../common/entities/business.entity';
 
 /**
@@ -21,7 +23,7 @@ import { Business } from '../../common/entities/business.entity';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MenuSite, Menu, MenuCategory, MenuItem, Business]),
+    TypeOrmModule.forFeature([MenuSite, Menu, MenuCategory, MenuItem, InventoryItem, InventorySubcategory, Business]),
     TypeOrmModule.forFeature([MenuSlugRoute], 'landlord'),
   ],
   controllers: [MenuSitesController, PublicMenuController],

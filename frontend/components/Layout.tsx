@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { useTenantStore } from '@/store/globalStore';
+import { useUiStore } from '@/store/uiStore';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import Cookies from 'js-cookie';
@@ -24,6 +25,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const { t } = useTranslation('common');
   const { isAuthenticated, isLoading, fetchUser, user } = useAuthStore();
   const { businessType, effectiveApps } = useTenantStore();
+  const { sidebarCollapsed } = useUiStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branchContext, setBranchContext] = useState<{ name: string; address?: string } | null>(null);
   const [inflowInvoiceNumber, setInflowInvoiceNumber] = useState<string | null>(null);
@@ -98,7 +100,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/login' ||
       router.pathname === '/register' ||
       router.pathname === '/auth/callback' ||
-      router.pathname.startsWith('/m/');
+      router.pathname.startsWith('/m/') ||
+      router.pathname.startsWith('/reserve/');
     
     if (isAuthenticated && user) {
       if (!hasFetchedUserRef.current) {
@@ -184,7 +187,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     // Only update cookie, don't redirect
     if (path.startsWith('/hrms')) {
       Cookies.set('service', 'hrms', { expires: 7 });
-    } else if (path !== '/login' && path !== '/register' && path !== '/auth/callback' && !path.startsWith('/m/')) {
+    } else if (path !== '/login' && path !== '/register' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/reserve/')) {
       // Only set RMS cookie if not on auth pages
       Cookies.set('service', 'rms', { expires: 7 });
     }
@@ -196,7 +199,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/login' ||
       router.pathname === '/register' ||
       router.pathname === '/auth/callback' ||
-      router.pathname.startsWith('/m/');
+      router.pathname.startsWith('/m/') ||
+      router.pathname.startsWith('/reserve/');
     if (isAuthPage) return; // Don't redirect if already on auth page
 
     // Check if we have a token - if yes, wait for auth state to resolve
@@ -351,11 +355,12 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
 
   return (
     <div className="flex h-dvh md:h-screen overflow-hidden app-container">
-      {/* Desktop Sidebar */}
-      <AppSidebar />
+      {/* Desktop Sidebar — collapsible via the header toggle / POS full screen.
+          Kept mounted so it slides (animated) instead of snapping in/out. */}
+      <AppSidebar collapsed={sidebarCollapsed} />
 
       {/* Main Content Area - Full Width Minus Sidebar */}
-  <div className="flex-1 flex flex-col min-w-0 h-dvh md:h-screen overflow-hidden main-content-area">
+  <div className={`flex-1 flex flex-col min-w-0 h-dvh md:h-screen overflow-hidden main-content-area${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
         {/* Top Navigation Header - Fixed */}
         <AppHeader 
           title={t(layoutHeader) || layoutHeader} 

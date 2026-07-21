@@ -19,6 +19,63 @@ export class TenantMigrationService implements OnModuleInit {
    */
   async onModuleInit(): Promise<void> {
     await this.ensureTenantSchemaColumns();
+    await this.ensureTenantSchemaTables();
+  }
+
+  /**
+   * New tenant-scoped tables added after a tenant schema was first created are
+   * only synchronized into PUBLIC by dev `synchronize`; existing tenant schemas
+   * inherit them here. New tenants pick them up via `LIKE public` in
+   * initializeTenantSchema. `CREATE TABLE IF NOT EXISTS ... (LIKE public.<t>
+   * INCLUDING ALL)` is idempotent, so this is safe on every boot.
+   */
+  private async ensureTenantSchemaTables(): Promise<void> {
+    // Tenant tables introduced after initial schema creation go here.
+    const tableAdditions: string[] = [
+      'inventory_item_components',
+      'payment_methods',
+      'payment_accounts',
+      'payment_transactions',
+      'payment_settlement',
+      'two_factor',
+      'reservations',
+    ];
+
+    for (const table of tableAdditions) {
+      try {
+        // Skip if the source table doesn't exist in public yet (synchronize off).
+        const [{ exists }]: Array<{ exists: boolean }> = await this.dataSource.query(
+          `SELECT EXISTS (
+             SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = $1
+           ) AS exists`,
+          [table],
+        );
+        if (!exists) continue;
+
+        // A tenant schema is one that has the `businesses` table (same notion
+        // the column-additions step above relies on).
+        const schemas: Array<{ table_schema: string }> = await this.dataSource.query(
+          `SELECT table_schema FROM information_schema.tables
+           WHERE table_name = 'businesses'
+             AND table_schema NOT IN ('public', 'information_schema', 'pg_catalog')`,
+        );
+        let created = 0;
+        for (const { table_schema } of schemas) {
+          await this.dataSource.query(
+            `CREATE TABLE IF NOT EXISTS "${table_schema}"."${table}"
+             (LIKE public."${table}" INCLUDING ALL)`,
+          );
+          created += 1;
+        }
+        if (created > 0) {
+          console.log(`✅ Ensured table ${table} on ${created} tenant schema(s)`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to ensure tenant table ${table}:`, error);
+        throw error;
+      }
+    }
   }
 
   private async ensureTenantSchemaColumns(): Promise<void> {
@@ -37,6 +94,39 @@ export class TenantMigrationService implements OnModuleInit {
         table: 'branch_inventory_items',
         ddl: `ADD COLUMN IF NOT EXISTS "bin_location" character varying`,
       },
+      // Item make-up: items can be sold-at-POS or ingredient-only.
+      {
+        table: 'inventory_items',
+        ddl: `ADD COLUMN IF NOT EXISTS "sell_at_pos" boolean NOT NULL DEFAULT true`,
+      },
+      // Audit trail: created_by / updated_by (+ denormalized name for display).
+      { table: 'inventory_items', ddl: `ADD COLUMN IF NOT EXISTS "created_by" uuid` },
+      { table: 'inventory_items', ddl: `ADD COLUMN IF NOT EXISTS "created_by_name" character varying` },
+      { table: 'inventory_items', ddl: `ADD COLUMN IF NOT EXISTS "updated_by" uuid` },
+      { table: 'inventory_items', ddl: `ADD COLUMN IF NOT EXISTS "updated_by_name" character varying` },
+      { table: 'orders', ddl: `ADD COLUMN IF NOT EXISTS "created_by" uuid` },
+      { table: 'orders', ddl: `ADD COLUMN IF NOT EXISTS "created_by_name" character varying` },
+      { table: 'orders', ddl: `ADD COLUMN IF NOT EXISTS "updated_by" uuid` },
+      { table: 'orders', ddl: `ADD COLUMN IF NOT EXISTS "updated_by_name" character varying` },
+      // RMS recipes: a dish order line carries menu_item_id (not an inventory
+      // item), so inventory_item_id must also become nullable. DROP NOT NULL is
+      // a no-op when the column is already nullable, so it's safe every boot.
+      {
+        table: 'order_items',
+        ddl: `ADD COLUMN IF NOT EXISTS "menu_item_id" uuid`,
+      },
+      {
+        table: 'order_items',
+        ddl: `ALTER COLUMN "inventory_item_id" DROP NOT NULL`,
+      },
+      // Menu items: subcategory name for two-level (category → subcategory) menus.
+      { table: 'menu_items', ddl: `ADD COLUMN IF NOT EXISTS "subcategory" character varying` },
+      // Menu sites: extra social links + a feedback link (used by the guest
+      // menu templates, e.g. Escape's Instagram/Feedback tiles).
+      { table: 'menu_sites', ddl: `ADD COLUMN IF NOT EXISTS "facebook" character varying` },
+      { table: 'menu_sites', ddl: `ADD COLUMN IF NOT EXISTS "tiktok" character varying` },
+      { table: 'menu_sites', ddl: `ADD COLUMN IF NOT EXISTS "twitter" character varying` },
+      { table: 'menu_sites', ddl: `ADD COLUMN IF NOT EXISTS "feedback_url" character varying` },
     ];
 
     for (const { table, ddl } of columnAdditions) {

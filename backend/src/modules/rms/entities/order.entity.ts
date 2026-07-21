@@ -53,6 +53,20 @@ export class Order extends TenantEntity {
   @Column({ type: 'uuid', nullable: true })
   userId: string;
 
+  // Audit: who placed / last changed this order. Name is denormalized so the UI
+  // shows a creator without resolving across the landlord/tenant user split.
+  @Column({ type: 'uuid', nullable: true })
+  createdBy: string;
+
+  @Column({ nullable: true })
+  createdByName: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  updatedBy: string;
+
+  @Column({ nullable: true })
+  updatedByName: string;
+
   @ManyToOne(() => Business, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'businessId' })
   business: Business;

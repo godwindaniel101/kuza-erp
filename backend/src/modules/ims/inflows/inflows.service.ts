@@ -112,7 +112,15 @@ export class InflowsService {
       ...inflowData,
       currency,
       receivedDate: new Date(createDto.receivedDate),
-      invoiceNumber: createDto.invoiceNumber || `INV-${Date.now()}`,
+      // Auto-generate a readable reference when none is supplied, mirroring the
+      // order-number pattern (timestamp tail + short random suffix) instead of a
+      // raw millisecond stamp.
+      invoiceNumber:
+        createDto.invoiceNumber?.trim() ||
+        `INV-${Date.now().toString().slice(-8)}${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`,
     });
 
     const savedInflow = await this.inflowRepository.save(inflow);

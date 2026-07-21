@@ -29,7 +29,7 @@ const BIZ = [
   {
     href: '/inventory',
     tag: 'Wholesale & distribution',
-    img: '/img/woman-selling.jpeg',
+    img: '/img/wholesales-exchange.jpg',
     alt: 'A business owner managing stock on a laptop',
     title: 'Wholesale & distribution',
     desc: 'Bulk orders, multi-branch stock and credit customers — tracked, invoiced and settled in one place.',

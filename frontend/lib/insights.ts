@@ -37,11 +37,20 @@ export interface CopilotChart {
   points: CopilotChartPoint[];
 }
 
+/** A presentable data table the backend attached (rows are real, code-computed). */
+export interface CopilotTable {
+  title: string;
+  columns: string[];
+  rows: (string | number)[][];
+}
+
 export interface CopilotResult {
   status: AiStatus;
   answer?: string;
   /** Optional chart the backend attached (points are real, code-computed). */
   chart?: CopilotChart;
+  /** Optional table the backend attached (rows are real, code-computed). */
+  table?: CopilotTable;
   /** Human-readable message for error/unavailable states. */
   message?: string;
 }
@@ -97,7 +106,9 @@ export async function askCopilot(question: string): Promise<CopilotResult> {
   }
 
   try {
-    const raw = await api.post('/insights/copilot', { question: trimmed });
+    // Bounded above the backend LLM timeout (OLLAMA_TIMEOUT, default 30s) so an
+    // unreachable model resolves to "unavailable" instead of loading forever.
+    const raw = await api.post('/insights/copilot', { question: trimmed }, { timeout: 40000 });
     const payload = unwrap(raw);
 
     if (looksUnavailable(raw) || looksUnavailable(payload)) {
@@ -116,10 +127,29 @@ export async function askCopilot(question: string): Promise<CopilotResult> {
     }
 
     const chart = normalizeChart(payload?.chart ?? raw?.chart);
-    return chart ? { status: 'ok', answer, chart } : { status: 'ok', answer };
+    const table = normalizeTable(payload?.table ?? raw?.table);
+    const result: CopilotResult = { status: 'ok', answer };
+    if (chart) result.chart = chart;
+    if (table) result.table = table;
+    return result;
   } catch (err) {
     return classifyError(err);
   }
+}
+
+/** Defensively validate a table payload; undefined if malformed. */
+function normalizeTable(table: any): CopilotTable | undefined {
+  if (!table || typeof table !== 'object') return undefined;
+  if (!Array.isArray(table.columns) || !Array.isArray(table.rows)) return undefined;
+  const columns = table.columns.map((c: any) => String(c ?? ''));
+  if (columns.length === 0) return undefined;
+  const rows = table.rows
+    .filter((r: any) => Array.isArray(r))
+    .map((r: any[]) => r.map((c) => (typeof c === 'number' ? c : String(c ?? ''))));
+  if (rows.length === 0) return undefined;
+  const title =
+    typeof table.title === 'string' && table.title.trim() ? table.title.trim() : 'Breakdown';
+  return { title, columns, rows };
 }
 
 /**
@@ -153,7 +183,9 @@ function normalizeChart(chart: any): CopilotChart | undefined {
 
 export async function fetchInsightsSummary(): Promise<SummaryResult> {
   try {
-    const raw = await api.get('/insights/summary');
+    // Bounded: the digest is data-only (no LLM), so if it hasn't answered in
+    // 12s treat it as unavailable rather than spinning the loader forever.
+    const raw = await api.get('/insights/summary', { timeout: 12000 });
     const payload = unwrap(raw);
 
     if (looksUnavailable(raw) || looksUnavailable(payload)) {

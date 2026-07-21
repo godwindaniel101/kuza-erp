@@ -32,6 +32,7 @@ function resolveImageUrl(src?: string): string {
 export default function InventoryItemViewPage() {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
   const { id } = router.query;
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('general');
@@ -116,7 +117,7 @@ export default function InventoryItemViewPage() {
             {t('itemNotFound') || 'Item not found'}
           </p>
           <Link
-            href="/ims/inventory"
+            href={base}
             className="text-brand-600 dark:text-brand-400 hover:underline mt-4 inline-block"
           >
             {t('backToInventory') || 'Back to Inventory'}
@@ -142,12 +143,12 @@ export default function InventoryItemViewPage() {
           title={item.name}
           subtitle="Stock, batches and history for this item"
           breadcrumbs={[
-            { label: t('inventory') || 'Inventory', href: '/ims/inventory' },
+            { label: t('inventory') || 'Inventory', href: base },
             { label: item.name },
           ]}
           actions={
             <PermissionGuard permission="inventory.edit">
-              <Button href={`/ims/inventory/edit/${id}`} variant="primary" size="sm">
+              <Button href={`${base}/edit/${id}`} variant="primary" size="sm">
                 <i className="bx bx-edit"></i>
                 <span>{t('edit')}</span>
               </Button>
@@ -220,10 +221,6 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
   const frontImageUrl = resolveImageUrl(item.frontImage) || '/img/item-placeholder.svg';
   return (
   <div className="w-full max-w-5xl space-y-5">
-    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-      {t('generalInformation')}
-    </h2>
-    
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Item Image */}
       <div className="lg:col-span-1">
@@ -353,10 +350,6 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
 
 const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, t }: any) => (
   <div className="w-full max-w-5xl space-y-5">
-    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-      {t('inflowHistory')}
-    </h2>
-    
     {loading ? (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
@@ -431,10 +424,6 @@ const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, 
 
 const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t }: any) => (
   <div className="w-full max-w-5xl space-y-5">
-    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-      {t('salesHistory')}
-    </h2>
-    
     {loading ? (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
@@ -503,15 +492,8 @@ const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t 
 
 const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency, t }: any) => (
   <div className="w-full max-w-5xl space-y-5">
-    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-      {t('branchItemInventory')}
-    </h2>
-    
     {/* Branch Stock Distribution */}
     <div>
-      <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-        {t('branchDistribution')}
-      </h3>
       {branchStocks && branchStocks.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">

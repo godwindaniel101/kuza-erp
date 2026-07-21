@@ -38,7 +38,13 @@ export type TemplateKey =
   | 'noir'
   | 'gallery'
   | 'bistro'
-  | 'grand';
+  | 'grand'
+  // Premium, image-forward archetypes
+  | 'escape'
+  | 'botanical'
+  | 'sakura'
+  | 'roast'
+  | 'space';
 
 export const SERIF_STACK =
   "Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', serif";

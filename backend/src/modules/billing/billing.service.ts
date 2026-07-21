@@ -837,10 +837,28 @@ export class BillingService {
       [JSON.stringify(enabledApps), business.id],
     );
 
+    // Return the SAME overview shape as getAppsOverview so callers (the tenant
+    // Settings→Apps toggle and the admin tenant page) can refresh their app list
+    // straight from the response. Previously this returned {enabledApps, ...}
+    // with no `apps` array, so the UI's `Array.isArray(res.data.apps)` check
+    // failed and showed a false "Could not update" error even though the write
+    // succeeded (a refresh then showed the correct, already-updated state).
+    const apps = APP_REGISTRY.map((appDef) => ({
+      key: appDef.key,
+      name: appDef.name,
+      description: appDef.description,
+      enabled: current.has(appDef.key),
+      allowedByPlan: allowed.has(appDef.key),
+      dependencies: appDef.dependencies,
+      dependents: dependentsOf(appDef.key),
+    }));
+
     return {
+      businessType: business.businessType,
+      apps,
       enabledApps,
       effective: enabledApps.filter((k) => allowed.has(k)),
-      alsoEnabled,
+      addedDependencies: alsoEnabled,
     };
   }
 
@@ -971,11 +989,7 @@ export class BillingService {
   ): Promise<{
     request: AppAccessRequest;
     needsUpgrade: boolean;
-    enabled?: {
-      enabledApps: string[];
-      effective: string[];
-      alsoEnabled: AppKey[];
-    };
+    enabled?: Awaited<ReturnType<BillingService['setAppEnabled']>>;
     message?: string;
   }> {
     const request = await this.getPendingAccessRequest(tenantId, id);

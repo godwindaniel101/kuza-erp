@@ -1,5 +1,101 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
+
+/** Multi-select rendered as a dropdown with checkboxes (collapses long lists). */
+function MultiSelectDropdown({
+  options,
+  selected,
+  onChange,
+  placeholder,
+}: {
+  options: FilterOption[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+
+  const toggle = (v: string) =>
+    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+
+  const label =
+    selected.length === 0
+      ? placeholder ?? 'Select…'
+      : selected.length === 1
+      ? options.find((o) => o.value === selected[0])?.label ?? '1 selected'
+      : `${selected.length} selected`;
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+      >
+        <span className={selected.length ? '' : 'text-gray-400 dark:text-gray-500'}>{label}</span>
+        <i className={`bx bx-chevron-down text-lg text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+        >
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="mb-1 w-full rounded px-2 py-1 text-left text-xs font-medium text-brand-600 hover:bg-gray-50 dark:text-brand-400 dark:hover:bg-gray-700/60"
+            >
+              Clear selection
+            </button>
+          )}
+          {options.length === 0 && (
+            <p className="px-2 py-1.5 text-xs text-gray-400">No options</p>
+          )}
+          {options.map((opt) => {
+            const on = selected.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggle(opt.value)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60"
+              >
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                    on
+                      ? 'border-brand-600 bg-brand-600 text-white'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  {on && <i className="bx bx-check text-xs" aria-hidden="true" />}
+                </span>
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface FilterOption {
   value: string;
@@ -104,39 +200,19 @@ export default function FilterBar({
       );
     }
 
-    // multiselect
+    // multiselect — rendered as a dropdown with checkboxes
     const selected = Array.isArray(value) ? value : [];
-    const toggle = (optValue: string) => {
-      onChange(
-        filter.key,
-        selected.includes(optValue) ? selected.filter((s) => s !== optValue) : [...selected, optValue],
-      );
-    };
     return (
-      <div key={filter.key} className={filter.className ?? 'flex-1 min-w-[200px]'}>
+      <div key={filter.key} className={filter.className ?? 'flex-1 min-w-[180px]'}>
         {filter.label && (
           <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{filter.label}</span>
         )}
-        <div className="flex flex-wrap gap-1.5">
-          {filter.options.map((opt) => {
-            const isOn = selected.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggle(opt.value)}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                  isOn
-                    ? `${chip} border-transparent`
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'
-                }`}
-              >
-                {isOn && <i className="bx bx-check mr-1" aria-hidden="true"></i>}
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
+        <MultiSelectDropdown
+          options={filter.options}
+          selected={selected}
+          onChange={(next) => onChange(filter.key, next)}
+          placeholder={filter.placeholder ?? filter.label}
+        />
       </div>
     );
   };

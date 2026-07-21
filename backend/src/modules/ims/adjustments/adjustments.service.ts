@@ -14,6 +14,8 @@ import {
 import { InventoryAdjustmentItem } from "../entities/inventory-adjustment-item.entity";
 import { InventoryItem } from "../entities/inventory-item.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
+import { InventoryInflow } from "../entities/inventory-inflow.entity";
+import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
 import { StockMovementType } from "../entities/stock-movement.entity";
 import { StockMovementsService } from "../stock-movements/stock-movements.service";
 import { PostingService } from "../../accounting/posting.service";
@@ -40,6 +42,10 @@ export class AdjustmentsService {
     private inventoryItemRepository: Repository<InventoryItem>,
     @InjectRepository(BranchInventoryItem)
     private branchInventoryRepository: Repository<BranchInventoryItem>,
+    @InjectRepository(InventoryInflow)
+    private inflowRepository: Repository<InventoryInflow>,
+    @InjectRepository(InventoryInflowItem)
+    private inflowItemRepository: Repository<InventoryInflowItem>,
     private stockMovementsService: StockMovementsService,
     private postingService: PostingService,
   ) {}
@@ -144,8 +150,26 @@ export class AdjustmentsService {
       linesByAdjustment.set(line.adjustmentId, arr);
     }
 
+    // Resolve branch names by direct lookup (relation joins are unreliable in
+    // this multi-tenant setup) so the list can show which branch each adjusts.
+    const branchIds = [
+      ...new Set(rows.map((r) => r.branchId).filter(Boolean)),
+    ];
+    const branchRows = branchIds.length
+      ? await this.adjustmentRepository.manager.query(
+          `SELECT id, name FROM branches WHERE id = ANY($1::uuid[])`,
+          [branchIds],
+        )
+      : [];
+    const branchNameById = new Map<string, string>(
+      (branchRows || []).map((b: any) => [b.id, b.name]),
+    );
+
     const items = rows.map((adjustment) => ({
       ...adjustment,
+      branchName: adjustment.branchId
+        ? branchNameById.get(adjustment.branchId) || null
+        : null,
       items: linesByAdjustment.get(adjustment.id) || [],
       itemCount: (linesByAdjustment.get(adjustment.id) || []).length,
     }));
@@ -172,8 +196,18 @@ export class AdjustmentsService {
       : [];
     const nameById = new Map(inventoryItems.map((i) => [i.id, i.name]));
 
+    let branchName: string | null = null;
+    if (adjustment.branchId) {
+      const branchRows = await this.adjustmentRepository.manager.query(
+        `SELECT name FROM branches WHERE id = $1 LIMIT 1`,
+        [adjustment.branchId],
+      );
+      branchName = branchRows?.[0]?.name || null;
+    }
+
     return {
       ...adjustment,
+      branchName,
       items: lines.map((line) => ({
         ...line,
         quantityChange: Number(line.quantityChange),
@@ -275,6 +309,16 @@ export class AdjustmentsService {
             `Adjustment would take '${inventoryItem.name}' below zero at the selected branch. Available: 0, change: ${quantityChange}`,
           );
         }
+
+        // Keep the sellable FIFO batches in sync with the counter: an increase
+        // creates a batch at the branch (so it can actually be sold — this was
+        // the "item not available" bug), a decrease consumes existing batches.
+        await this.applyInflowBatchDelta(
+          inventoryItem,
+          adjustment.branchId,
+          quantityChange,
+          line.unitCost != null ? Number(line.unitCost) : null,
+        );
       }
 
       inventoryItem.currentStock = newStock;
@@ -323,6 +367,72 @@ export class AdjustmentsService {
     await this.adjustmentRepository.save(adjustment);
 
     return this.findOne(id);
+  }
+
+  /**
+   * Keep the branch's sellable FIFO inflow batches in sync with an adjustment.
+   * A sale allocates only from `inventory_inflow_items` scoped to the branch, so
+   * an increase must create a batch (carrying a cost basis) or the added stock
+   * is unsellable ("item not available"), and a decrease must consume batches
+   * (oldest first, never below what's already sold) so the sellable pool shrinks
+   * with the counter. See the two-stock-sources-of-truth invariant.
+   */
+  private async applyInflowBatchDelta(
+    inventoryItem: InventoryItem,
+    branchId: string,
+    quantityChange: number,
+    unitCost: number | null,
+  ): Promise<void> {
+    if (quantityChange > 0) {
+      const qty = quantityChange;
+      const cost = Number(unitCost ?? inventoryItem.unitCost) || 0;
+      const total = Math.round(cost * qty * 100) / 100;
+      const inflow = await this.inflowRepository.save(
+        this.inflowRepository.create({
+          branchId,
+          receivedDate: new Date(),
+          status: "received",
+          type: "adjustment",
+          totalAmount: total,
+        }),
+      );
+      await this.inflowItemRepository.save(
+        this.inflowItemRepository.create({
+          inflowId: inflow.id,
+          inventoryItemId: inventoryItem.id,
+          branchId,
+          uomId: inventoryItem.baseUomId,
+          quantity: qty,
+          baseQuantity: qty,
+          unitCost: cost,
+          totalCost: total,
+        }),
+      );
+      return;
+    }
+
+    if (quantityChange < 0) {
+      let remaining = Math.abs(quantityChange);
+      const batches = await this.inflowItemRepository.find({
+        where: { inventoryItemId: inventoryItem.id, branchId },
+        order: { createdAt: "ASC" },
+      });
+      for (const batch of batches) {
+        if (remaining <= 0) break;
+        const soldRows = await this.inflowItemRepository.manager.query(
+          `SELECT COALESCE(SUM(quantity_used), 0) AS total_sold
+           FROM order_item_inflow_items WHERE inflow_item_id = $1`,
+          [batch.id],
+        );
+        const sold = Number(soldRows[0]?.total_sold || 0);
+        const available = Math.max(0, Number(batch.baseQuantity || 0) - sold);
+        if (available <= 0) continue;
+        const take = Math.min(remaining, available);
+        batch.baseQuantity = Number(batch.baseQuantity || 0) - take;
+        await this.inflowItemRepository.save(batch);
+        remaining -= take;
+      }
+    }
   }
 
   @Transactional()

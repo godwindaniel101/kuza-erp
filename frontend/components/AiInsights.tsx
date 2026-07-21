@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   fetchInsightsSummary,
   type InsightItem,
@@ -99,21 +99,29 @@ function InsightSkeleton() {
 export default function AiInsights() {
   const [status, setStatus] = useState<AiStatus | 'loading'>('loading');
   const [insights, setInsights] = useState<InsightItem[]>([]);
-  const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
     let active = true;
-    fetchInsightsSummary()
-      .then((result) => {
-        if (!active) return;
-        setInsights(result.insights);
-        setStatus(result.status);
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
+    let attempts = 0;
+    const load = async () => {
+      attempts += 1;
+      const result = await fetchInsightsSummary().catch(() => ({
+        status: 'error' as AiStatus,
+        insights: [] as InsightItem[],
+      }));
+      if (!active) return;
+      setInsights(result.insights);
+      setStatus(result.status);
+      // Retry transient errors (e.g. a request fired before auth/tenant was
+      // ready on first mount) so the dashboard shows insights whenever the
+      // chat would — up to 3 tries. 'ok' and 'unavailable' are terminal.
+      if (result.status === 'error' && attempts < 3) {
+        setTimeout(() => {
+          if (active) load();
+        }, 2000);
+      }
+    };
+    load();
     return () => {
       active = false;
     };

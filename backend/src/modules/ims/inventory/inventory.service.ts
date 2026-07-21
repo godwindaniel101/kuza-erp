@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In, DataSource } from "typeorm";
+import { Transactional } from "typeorm-transactional";
 import { InventoryItem } from "../entities/inventory-item.entity";
+import { InventoryItemComponent } from "../entities/inventory-item-component.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
-import { CreateInventoryItemDto } from "./dto/create-inventory-item.dto";
+import { CreateInventoryItemDto, ItemComponentDto } from "./dto/create-inventory-item.dto";
 import { UpdateInventoryItemDto } from "./dto/update-inventory-item.dto";
 import { UomConversionsService } from "../uom-conversions/uom-conversions.service";
 import { Uom } from "../entities/uom.entity";
@@ -23,6 +25,8 @@ export class InventoryService {
   constructor(
     @InjectRepository(InventoryItem)
     private inventoryItemRepository: Repository<InventoryItem>,
+    @InjectRepository(InventoryItemComponent)
+    private componentRepository: Repository<InventoryItemComponent>,
     @InjectRepository(BranchInventoryItem)
     private branchInventoryRepository: Repository<BranchInventoryItem>,
     @InjectRepository(Uom)
@@ -41,7 +45,10 @@ export class InventoryService {
     private dataSource: DataSource,
   ) {}
 
-  async create(createDto: CreateInventoryItemDto) {
+  async create(
+    createDto: CreateInventoryItemDto,
+    actor?: { id?: string; name?: string },
+  ) {
     // Validate category if provided
     if (createDto.categoryId) {
       const category = await this.categoryRepository.findOne({
@@ -71,19 +78,75 @@ export class InventoryService {
       }
     }
 
+    const { components, ...itemFields } = createDto;
     const item = this.inventoryItemRepository.create({
-      ...createDto,
-      unitCost: 0, // Cost is captured during inflow, not when creating items
+      ...itemFields,
+      // For tracked items, real cost comes from inflow batches; for untracked /
+      // composed items the provided unitCost is the manual cost price.
+      unitCost: createDto.unitCost ?? 0,
+      createdBy: actor?.id || null,
+      createdByName: actor?.name || null,
+      updatedBy: actor?.id || null,
+      updatedByName: actor?.name || null,
     });
     const savedItem = await this.inventoryItemRepository.save(item);
-    
+
+    if (components && components.length > 0) {
+      await this.setItemComponents(savedItem.id, components);
+    }
+
     // Explicitly load the item with relations to ensure they're available immediately
     const itemWithRelations = await this.inventoryItemRepository.findOne({
       where: { id: savedItem.id },
       relations: ["category", "subcategory", "baseUom"],
     });
-    
+
     return itemWithRelations || savedItem;
+  }
+
+  /**
+   * Replace an item's make-up (bill of materials). v1 rule: components must be
+   * raw items — a component may not itself have components (no nested make-up).
+   */
+  async setItemComponents(itemId: string, components: ItemComponentDto[]) {
+    const lines = (components || []).filter((c) => c.componentItemId);
+    const ids = lines.map((c) => c.componentItemId);
+
+    if (ids.length) {
+      if (ids.includes(itemId)) {
+        throw new BadRequestException("An item cannot be an ingredient of itself.");
+      }
+      if (new Set(ids).size !== ids.length) {
+        throw new BadRequestException("The same ingredient is listed more than once.");
+      }
+      const found = await this.inventoryItemRepository.find({ where: { id: In(ids) } });
+      if (found.length !== ids.length) {
+        throw new BadRequestException("One or more ingredient items were not found.");
+      }
+      // Enforce raw-only ingredients (no nested make-up).
+      const nested = await this.componentRepository.find({
+        where: { parentItemId: In(ids) },
+      });
+      if (nested.length > 0) {
+        throw new BadRequestException(
+          "Ingredients must be raw items — one of them is itself made up of other items.",
+        );
+      }
+    }
+
+    await this.componentRepository.delete({ parentItemId: itemId });
+    if (lines.length) {
+      await this.componentRepository.save(
+        lines.map((c) =>
+          this.componentRepository.create({
+            parentItemId: itemId,
+            componentItemId: c.componentItemId,
+            quantity: c.quantity,
+            uomId: c.uomId ?? null,
+          }),
+        ),
+      );
+    }
   }
 
   async findAll(branchId?: string) {
@@ -285,7 +348,42 @@ export class InventoryService {
         return result;
       });
 
+    await this.attachBatchAndExpiry(itemsWithUoms);
+
     return itemsWithUoms;
+  }
+
+  /**
+   * Attach per-item inflow-batch aggregates (mutates each row in place):
+   *  - batchCount: number of inflow batches (lots) with stock remaining
+   *  - earliestExpiry: the next upcoming batch expiry date (or null)
+   *  - expiringSoonCount: batches expiring within 30 days
+   * Powers the list "Batches" / "Expiring soon" columns and the dashboard
+   * "Expiring soon" widget. One grouped query for the whole page of items.
+   */
+  private async attachBatchAndExpiry(items: any[]): Promise<void> {
+    const ids = (items || []).map((i) => i?.id).filter(Boolean);
+    if (ids.length === 0) return;
+    const rows = await this.inventoryItemRepository.manager.query(
+      `SELECT inventory_item_id AS id,
+              COUNT(*) FILTER (WHERE base_quantity > 0) AS batch_count,
+              MIN(expiry_date) FILTER (WHERE expiry_date >= CURRENT_DATE) AS next_expiry,
+              COUNT(*) FILTER (
+                WHERE expiry_date >= CURRENT_DATE
+                  AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+              ) AS soon_count
+       FROM inventory_inflow_items
+       WHERE inventory_item_id = ANY($1::uuid[])
+       GROUP BY inventory_item_id`,
+      [ids],
+    );
+    const byId = new Map<string, any>((rows || []).map((r: any) => [r.id, r]));
+    items.forEach((it: any) => {
+      const r = byId.get(it.id);
+      it.batchCount = Number(r?.batch_count || 0);
+      it.earliestExpiry = r?.next_expiry || null;
+      it.expiringSoonCount = Number(r?.soon_count || 0);
+    });
   }
 
   async findAllWithBranchStock() {
@@ -373,7 +471,7 @@ export class InventoryService {
       return [];
     }
 
-    return items
+    const mapped = items
       .map((item) => {
         // Guard: skip items without ID
         if (!item || !item.id) {
@@ -465,6 +563,9 @@ export class InventoryService {
         };
       })
       .filter((item) => item !== null); // Filter out any null items
+
+    await this.attachBatchAndExpiry(mapped as any[]);
+    return mapped;
   }
 
   async findOne(id: string) {
@@ -484,10 +585,21 @@ export class InventoryService {
       throw new NotFoundException("Inventory item not found");
     }
 
+    // Make-up (components), so the edit form can prefill the recipe.
+    const components = await this.componentRepository.find({
+      where: { parentItemId: id },
+      order: { createdAt: "ASC" },
+    });
+
     return {
       ...item,
       category: item.category?.name || null,
       subcategory: item.subcategory?.name || null,
+      components: components.map((c) => ({
+        componentItemId: c.componentItemId,
+        quantity: Number(c.quantity),
+        uomId: c.uomId,
+      })),
     };
   }
 
@@ -547,47 +659,46 @@ export class InventoryService {
       .groupBy("o.branchId, b.name")
       .orderBy("totalamount", "DESC");
 
-    // Per-sale line-item history for this item (Sales History tab).
-    const salesHistoryQuery = this.orderItemRepository
-      .createQueryBuilder("oi")
-      .select("o.createdAt", "createdat")
-      .addSelect("o.orderNumber", "ordernumber")
-      .addSelect("oi.quantity", "quantity")
-      .addSelect("oi.unitPrice", "unitprice")
-      .addSelect("oi.totalPrice", "totalprice")
-      .addSelect("u.name", "uomname")
-      .addSelect("b.name", "branchname")
-      .innerJoin("oi.order", "o")
-      .leftJoin("o.branch", "b")
-      .leftJoin("oi.uom", "u")
-      .where("oi.inventoryItemId = :id", { id })
-      .orderBy("o.createdAt", "DESC")
-      .limit(100);
-
-    // Per-receipt inflow history for this item (Inflow History tab). Supplier
-    // may live on the line item or on the parent inflow batch — coalesce both.
-    // Use a tenant-scoped repository's manager so this hits the tenant schema
-    // (the injected repos are tenant-aware; a bare DataSource may not be).
-    const inflowHistoryQuery = this.orderItemRepository.manager
-      .getRepository(InventoryInflowItem)
-      .createQueryBuilder("ii")
-      .select("inflow.receivedDate", "receivedat")
-      .addSelect("ii.quantity", "quantity")
-      .addSelect("ii.unitCost", "unitcost")
-      .addSelect("ii.totalCost", "totalcost")
-      .addSelect("ii.batchNumber", "batchnumber")
-      .addSelect("ii.expiryDate", "expirydate")
-      .addSelect("u.name", "uomname")
-      .addSelect("COALESCE(s.name, isup.name)", "suppliername")
-      .addSelect("b.name", "branchname")
-      .leftJoin("ii.inflow", "inflow")
-      .leftJoin("ii.uom", "u")
-      .leftJoin("ii.supplier", "s")
-      .leftJoin("inflow.supplier", "isup")
-      .leftJoin("ii.branch", "b")
-      .where("ii.inventoryItemId = :id", { id })
-      .orderBy("inflow.receivedDate", "DESC")
-      .limit(100);
+    // Per-sale and per-receipt history use RAW SQL with explicit table joins
+    // instead of QueryBuilder relation joins (`oi.order`, `ii.inflow`, …). Under
+    // the tenant schema those relation joins can fail to hydrate — the documented
+    // recurring bug that left inflow date/supplier and sales history empty — so
+    // we join the real tables directly (proven reliable, like the FIFO query).
+    const em = this.orderItemRepository.manager;
+    const salesHistorySql = `
+      SELECT o.created_at AS createdat,
+             o.order_number AS ordernumber,
+             oi.quantity AS quantity,
+             oi.unit_price AS unitprice,
+             oi.total_price AS totalprice,
+             u.name AS uomname,
+             b.name AS branchname
+      FROM order_items oi
+      INNER JOIN orders o ON o.id = oi.order_id
+      LEFT JOIN branches b ON b.id = o.branch_id
+      LEFT JOIN uoms u ON u.id = oi.uom_id
+      WHERE oi.inventory_item_id = $1
+      ORDER BY o.created_at DESC
+      LIMIT 100`;
+    const inflowHistorySql = `
+      SELECT inflow.received_date AS receivedat,
+             ii.quantity AS quantity,
+             ii.unit_cost AS unitcost,
+             ii.total_cost AS totalcost,
+             ii.batch_number AS batchnumber,
+             ii.expiry_date AS expirydate,
+             u.name AS uomname,
+             COALESCE(s.name, isup.name) AS suppliername,
+             b.name AS branchname
+      FROM inventory_inflow_items ii
+      LEFT JOIN inventory_inflows inflow ON inflow.id = ii.inflow_id
+      LEFT JOIN uoms u ON u.id = ii.uom_id
+      LEFT JOIN suppliers s ON s.id = ii.supplier_id
+      LEFT JOIN suppliers isup ON isup.id = inflow.supplier_id
+      LEFT JOIN branches b ON b.id = ii.branch_id
+      WHERE ii.inventory_item_id = $1
+      ORDER BY inflow.received_date DESC NULLS LAST
+      LIMIT 100`;
 
     try {
       const [salesData, recentSales, salesByBranch, salesRows, inflowRows] =
@@ -595,8 +706,8 @@ export class InventoryService {
           salesQuery.getRawOne(),
           recentSalesQuery.getRawOne(),
           salesByBranchQuery.getRawMany(),
-          salesHistoryQuery.getRawMany(),
-          inflowHistoryQuery.getRawMany(),
+          em.query(salesHistorySql, [id]),
+          em.query(inflowHistorySql, [id]),
         ]);
 
       const salesHistory = (salesRows || []).map((r: any) => ({
@@ -716,15 +827,17 @@ export class InventoryService {
     id: string,
 
     updateDto: UpdateInventoryItemDto,
+    actor?: { id?: string; name?: string },
   ) {
     await this.findOne(id);
 
-    // Prevent baseUomId and unitCost from being changed
-    const { baseUomId, unitCost, ...updateData } = updateDto as any;
+    // Base UOM can't change. Components (make-up) are handled separately below.
+    // unitCost IS allowed now — it doubles as the manual cost price for untracked
+    // / composed items (real COGS for tracked items still comes from inflow).
+    const { baseUomId, components, ...updateData } = updateDto as any;
     if (baseUomId) {
       throw new NotFoundException("Base UOM cannot be changed");
     }
-    // unitCost is removed from updateData - cost is captured during inflow, not when updating items
 
     // Validate category if provided
     if (updateData.categoryId) {
@@ -756,7 +869,17 @@ export class InventoryService {
       }
     }
 
-    await this.inventoryItemRepository.update({ id }, updateData);
+    if (actor?.id) {
+      updateData.updatedBy = actor.id;
+      updateData.updatedByName = actor.name || null;
+    }
+    if (Object.keys(updateData).length > 0) {
+      await this.inventoryItemRepository.update({ id }, updateData);
+    }
+    // Replace the make-up when the caller sent a components array (empty clears).
+    if (components !== undefined) {
+      await this.setItemComponents(id, components || []);
+    }
     return this.findOne(id);
   }
 
@@ -1271,39 +1394,58 @@ export class InventoryService {
       );
     });
 
+    // Make-up + availability precompute. Composed items have no own stock — how
+    // many can be sold is bounded by the limiting TRACKABLE component. Untracked
+    // items (and untracked components) never block.
+    const allComponents = await this.componentRepository.find();
+    const componentsByParent = new Map<string, InventoryItemComponent[]>();
+    for (const c of allComponents) {
+      const list = componentsByParent.get(c.parentItemId) || [];
+      list.push(c);
+      componentsByParent.set(c.parentItemId, list);
+    }
+    const itemById = new Map(items.map((i) => [i.id, i]));
+    const UNLIMITED = 1_000_000;
+    const branchStockOf = (it: any): number => {
+      if (branchId) {
+        const bs = it.branches?.find((b: any) => b.branchId === branchId);
+        return bs ? Number(bs.currentStock || 0) : 0;
+      }
+      return Number(it.currentStock || 0);
+    };
+    const makeableOf = (item: any): number => {
+      const comps = componentsByParent.get(item.id);
+      if (comps && comps.length > 0) {
+        let min = Infinity;
+        for (const c of comps) {
+          const ci = itemById.get(c.componentItemId);
+          if (!ci) return 0;
+          if (ci.isTrackable === false) continue; // untracked never blocks
+          let perBase = Number(c.quantity) || 0;
+          if (c.uomId && c.uomId !== ci.baseUomId) {
+            const f = conversionMap.get(`${c.uomId}-${ci.baseUomId}`);
+            if (f && f > 0) perBase = Number(c.quantity) * f;
+          }
+          if (perBase <= 0) continue;
+          min = Math.min(min, Math.floor(branchStockOf(ci) / perBase));
+        }
+        return min === Infinity ? UNLIMITED : min; // all-untracked ⇒ unlimited
+      }
+      if (item.isTrackable === false) return UNLIMITED;
+      return branchStockOf(item);
+    };
+
     return items
       .filter((item) => {
-        // Filter items with stock > 0 if branch is specified
-        if (branchId) {
-          // ONLY show items that have branch inventory with stock > 0
-          // No fallback to global stock - only items with stock in the selected branch
-          const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId,
-          );
-          if (branchStock) {
-            // Item has branch inventory - use branch stock
-            const stock = Number(branchStock.currentStock || 0);
-            return stock > 0;
-          }
-          // Item doesn't have branch inventory - don't show it
-          return false;
-        }
-        // No branch specified - use global stock
-        return Number(item.currentStock || 0) > 0;
+        // Only items offered for sale (ingredients are hidden) that can be made.
+        if (item.sellAtPos === false) return false;
+        return makeableOf(item) > 0;
       })
       .map((item) => {
-        // Get stock from branch inventory if branchId is specified, otherwise use global stock
-        let stock = Number(item.currentStock || 0);
-        if (branchId) {
-          const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId,
-          );
-          if (branchStock) {
-            // Use branch stock if branch inventory exists
-            stock = Number(branchStock.currentStock || 0);
-          }
-          // If no branch inventory, stock remains 0 (item filtered out above)
-        }
+        // Availability: makeable count (limiting component) / own stock / unlimited.
+        const avail = makeableOf(item);
+        const unlimited = avail >= UNLIMITED; // untracked item / all-untracked make-up
+        const stock = avail;
 
         // Also get sale price from branch inventory if available, otherwise use global
         let price = Number(item.salePrice || 0);
@@ -1387,12 +1529,107 @@ export class InventoryService {
           subcategory: item.subcategory?.name || null,
           price,
           stock,
+          unlimited,
           unit: unitName,
           defaultUomId: baseUomId,
           baseUomId,
           uoms,
           uomToBase,
           uomPrices,
+        };
+      });
+  }
+
+  /**
+   * Ingredient picker options for the dish/recipe editor: EVERY item (no stock
+   * filter — you define a recipe even when out of stock), each with its
+   * convertible UoMs (factor to base) and a cost-per-base-unit. The cost is the
+   * quantity-weighted average of the item's inflow batches (fallback: the item's
+   * unitCost). Lets the editor compute food cost live as you build the recipe.
+   */
+  async getIngredientOptions() {
+    const all = await this.inventoryItemRepository.find({ relations: ["baseUom"] });
+    if (!all.length) return [];
+
+    // v1: ingredients must be RAW items (no nested make-up). Exclude any item
+    // that itself has components.
+    const composed = await this.componentRepository.find();
+    const composedIds = new Set(composed.map((c) => c.parentItemId));
+    const items = all.filter((i) => !composedIds.has(i.id));
+    if (!items.length) return [];
+
+    const [conversions, allUoms] = await Promise.all([
+      this.uomConversionsService.findAll(),
+      this.uomRepository.find({}),
+    ]);
+    const uomById = new Map(allUoms.map((u) => [u.id, u]));
+
+    // Weighted-average cost per item from its inflow batches.
+    const costRows: Array<{ itemId: string; value: string; qty: string }> =
+      await this.inventoryItemRepository.query(
+        `SELECT inventory_item_id AS "itemId",
+                SUM(base_quantity * unit_cost) AS "value",
+                SUM(base_quantity) AS "qty"
+         FROM inventory_inflow_items
+         GROUP BY inventory_item_id`,
+      );
+    const costByItem = new Map<string, number>();
+    costRows.forEach((r) => {
+      const qty = Number(r.qty) || 0;
+      const value = Number(r.value) || 0;
+      if (qty > 0) costByItem.set(r.itemId, value / qty);
+    });
+
+    return items
+      .filter((item) => item.baseUomId)
+      .map((item) => {
+        const baseUomId = item.baseUomId;
+        const baseUom = item.baseUom || uomById.get(baseUomId);
+        const uoms: Array<{
+          id: string;
+          name: string;
+          abbreviation: string;
+          factorToBase: number;
+        }> = [
+          {
+            id: baseUomId,
+            name: baseUom?.name || "Unit",
+            abbreviation: baseUom?.abbreviation || "",
+            factorToBase: 1,
+          },
+        ];
+
+        conversions.forEach((conv) => {
+          if (conv.toUomId === baseUomId && conv.fromUomId) {
+            if (!uoms.find((u) => u.id === conv.fromUomId)) {
+              const u = uomById.get(conv.fromUomId);
+              uoms.push({
+                id: conv.fromUomId,
+                name: u?.name || "Unit",
+                abbreviation: u?.abbreviation || "",
+                factorToBase: Number(conv.factor),
+              });
+            }
+          } else if (conv.fromUomId === baseUomId && conv.toUomId) {
+            if (!uoms.find((u) => u.id === conv.toUomId)) {
+              const u = uomById.get(conv.toUomId);
+              uoms.push({
+                id: conv.toUomId,
+                name: u?.name || "Unit",
+                abbreviation: u?.abbreviation || "",
+                factorToBase: 1 / Number(conv.factor),
+              });
+            }
+          }
+        });
+
+        return {
+          id: item.id,
+          name: item.name,
+          baseUomId,
+          baseUomName: baseUom?.name || "Unit",
+          costPerBaseUnit: costByItem.get(item.id) ?? (Number(item.unitCost) || 0),
+          uoms,
         };
       });
   }

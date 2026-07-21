@@ -24,7 +24,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("RMS - Tables")
 @Controller("rms/tables")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("tables")
+@RequireApp("rms")
 @ApiBearerAuth()
 export class TablesController {
   constructor(private readonly tablesService: TablesService) {}

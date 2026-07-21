@@ -18,6 +18,7 @@ import {
 import { FeatureGateGuard, RequireApp } from '../billing/guards/feature-gate.guard';
 import { MenuSitesService, TenantContext } from './menu-sites.service';
 import { UpdateMenuSiteDto } from './dto/update-menu-site.dto';
+import { UploadLogoDto } from './dto/upload-logo.dto';
 
 /**
  * Authenticated management API for the tenant's Kuza Menu site
@@ -26,7 +27,7 @@ import { UpdateMenuSiteDto } from './dto/update-menu-site.dto';
 @ApiTags('Menu Sites')
 @Controller('menu-sites')
 @UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp('kuza-menu')
+@RequireApp('rms')
 @ApiBearerAuth()
 export class MenuSitesController {
   constructor(private readonly menuSitesService: MenuSitesService) {}
@@ -95,6 +96,16 @@ export class MenuSitesController {
       data: { ...site, publicUrl: this.menuSitesService.publicUrl(site.slug) },
       message: 'Menu site updated',
     };
+  }
+
+  @Post('logo')
+  @RequirePermissions('settings.edit')
+  @ApiOperation({
+    summary: 'Upload a venue logo (base64 data URL) → stored /uploads path',
+  })
+  async uploadLogo(@Body() dto: UploadLogoDto) {
+    const url = await this.menuSitesService.uploadLogo(dto.dataUrl);
+    return { success: true, url };
   }
 
   @Post('publish')

@@ -10,6 +10,7 @@ export class MenuItem extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   categoryId: string;
 
+  /** Links to the inventory item so selling this dish depletes stock / books COGS. */
   @Column({ type: 'uuid', nullable: true })
   inventoryItemId: string;
 
@@ -24,6 +25,10 @@ export class MenuItem extends BaseEntity {
 
   @Column({ nullable: true })
   image: string;
+
+  /** Subcategory name (denormalized from the inventory item) for two-level menus. */
+  @Column({ nullable: true })
+  subcategory: string;
 
   @Column({ default: true })
   isAvailable: boolean;

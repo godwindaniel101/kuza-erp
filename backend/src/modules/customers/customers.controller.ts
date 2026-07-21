@@ -23,7 +23,7 @@ import { FeatureGateGuard, RequireApp } from '../billing/guards/feature-gate.gua
 @ApiTags('Customers')
 @Controller('customers')
 @UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp('customers')
+@RequireApp('invoicing')
 @ApiBearerAuth()
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}

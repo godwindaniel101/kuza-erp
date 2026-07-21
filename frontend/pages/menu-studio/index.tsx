@@ -7,6 +7,7 @@ import Toast from '@/components/Toast';
 import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
+import { resolveImageUrl } from '@/lib/format';
 import {
   MenuSiteRecord,
   PublicMenuData,
@@ -14,11 +15,13 @@ import {
 } from '@/lib/menu-public';
 import {
   ARCHETYPES,
+  ARCHETYPE_GROUPS,
   getArchetype,
   getTemplateComponent,
   resolveTheme,
   SAMPLE_MENU_DATA,
 } from '@/components/menu-templates';
+import type { ArchetypeGroup } from '@/components/menu-templates';
 import {
   downloadDataUrl,
   downloadSvg,
@@ -45,6 +48,10 @@ type SiteForm = Pick<
   | 'phone'
   | 'whatsapp'
   | 'instagram'
+  | 'facebook'
+  | 'tiktok'
+  | 'twitter'
+  | 'feedbackUrl'
   | 'wifiName'
   | 'wifiPassword'
   | 'currency'
@@ -53,7 +60,7 @@ type SiteForm = Pick<
 >;
 
 const inputClass =
-  'h-9 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500';
+  'h-9 w-full !max-w-none rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500';
 const labelClass =
   'block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-1';
 const sectionClass =
@@ -72,6 +79,10 @@ function toForm(site: MenuSiteRecord): SiteForm {
     phone: site.phone,
     whatsapp: site.whatsapp,
     instagram: site.instagram,
+    facebook: site.facebook,
+    tiktok: site.tiktok,
+    twitter: site.twitter,
+    feedbackUrl: site.feedbackUrl,
     wifiName: site.wifiName,
     wifiPassword: site.wifiPassword,
     currency: site.currency,
@@ -130,9 +141,12 @@ export default function MenuStudioPage() {
   const [menus, setMenus] = useState<RmsMenuSummary[]>([]);
   const [preview, setPreview] = useState<PublicMenuData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [templateGroup, setTemplateGroup] = useState<ArchetypeGroup>('Elegant');
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [downloadingQr, setDownloadingQr] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error' | 'info';
@@ -158,7 +172,16 @@ export default function MenuStudioPage() {
         ]);
         if (siteRes.success) {
           setSite(siteRes.data);
-          setForm(toForm(siteRes.data));
+          // Coming from menu create/edit: pre-include that menu in the QR site.
+          const menuId =
+            typeof window !== 'undefined'
+              ? new URLSearchParams(window.location.search).get('menuId')
+              : null;
+          const base = toForm(siteRes.data);
+          if (menuId && !(base.menuIds || []).includes(menuId)) {
+            base.menuIds = [...(base.menuIds || []), menuId];
+          }
+          setForm(base);
         }
         if (menusRes.success) {
           setMenus(
@@ -184,6 +207,39 @@ export default function MenuStudioPage() {
 
   const set = <K extends keyof SiteForm>(key: K, value: SiteForm[K]) =>
     setForm((f) => (f ? { ...f, [key]: value } : f));
+
+  const handleLogoUpload = async (file: File | null | undefined) => {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const res = await api.post<{ success: boolean; url: string }>(
+        '/menu-sites/logo',
+        { dataUrl },
+      );
+      set('logoUrl', res.url);
+      setToast({ message: 'Logo uploaded', type: 'success' });
+    } catch (err: any) {
+      setToast({
+        message: err?.response?.data?.message || 'Failed to upload logo',
+        type: 'error',
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Keep the template-group tab in sync with the selected template.
+  useEffect(() => {
+    if (form?.templateKey) {
+      setTemplateGroup(getArchetype(form.templateKey).group);
+    }
+  }, [form?.templateKey]);
 
   const dirty = useMemo(() => {
     if (!site || !form) return false;
@@ -232,25 +288,41 @@ export default function MenuStudioPage() {
   };
 
   const handlePublishToggle = async () => {
-    if (!site) return;
+    if (!site || !form) return;
+    const goingLive = !site.isPublished;
     setPublishing(true);
     try {
+      // Publishing must persist the current form FIRST — otherwise the edited
+      // slug, template and included menus are dropped, so the slug never gets
+      // routed (public page 404s → "not live") and the public template is stale.
+      if (goingLive) {
+        const saveRes = await api.patch<{ success: boolean; data: MenuSiteRecord }>('/menu-sites', {
+          ...form,
+          accentColor: form.accentColor || null,
+        });
+        if (saveRes.success) {
+          setSite(saveRes.data);
+          setForm(toForm(saveRes.data));
+        }
+      }
       const res = await api.post<{ success: boolean; data: MenuSiteRecord }>(
-        site.isPublished ? '/menu-sites/unpublish' : '/menu-sites/publish',
+        goingLive ? '/menu-sites/publish' : '/menu-sites/unpublish',
       );
       if (res.success) {
         setSite(res.data);
-        setForm((f) => f || toForm(res.data));
+        setForm(toForm(res.data));
         setToast({
-          message: res.data.isPublished
-            ? 'Your menu is live!'
-            : 'Menu unpublished',
+          message: res.data.isPublished ? 'Your menu is live!' : 'Menu unpublished',
           type: 'success',
         });
       }
     } catch (err: any) {
       setToast({
-        message: err?.response?.data?.message || 'Failed to update',
+        message:
+          err?.response?.data?.message ||
+          (err?.response?.status === 409
+            ? 'That link is already taken — try another slug'
+            : 'Failed to update'),
         type: 'error',
       });
     } finally {
@@ -289,6 +361,10 @@ export default function MenuStudioPage() {
       phone: form.phone,
       whatsapp: form.whatsapp,
       instagram: form.instagram,
+      facebook: form.facebook,
+      tiktok: form.tiktok,
+      twitter: form.twitter,
+      feedbackUrl: form.feedbackUrl,
       wifiName: form.wifiName,
       wifiPassword: form.wifiPassword,
       currency: form.currency,
@@ -298,7 +374,19 @@ export default function MenuStudioPage() {
       accentColor: form.accentColor,
       slug: form.slug,
     };
-    return { venue, menus: preview.menus };
+    // Resolve backend-relative "/uploads/..." image paths to the API origin so
+    // dish photos load in the phone preview (backend sends them relative).
+    const menus = preview.menus.map((menu) => ({
+      ...menu,
+      categories: menu.categories.map((cat) => ({
+        ...cat,
+        items: cat.items.map((it) => ({
+          ...it,
+          imageUrl: it.imageUrl ? resolveImageUrl(it.imageUrl) : null,
+        })),
+      })),
+    }));
+    return { venue, menus };
   }, [preview, form]);
 
   const previewTheme = form
@@ -410,20 +498,88 @@ export default function MenuStudioPage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr,430px]">
         {/* ── Left: settings ─────────────────────────────────────── */}
         <div className="space-y-5">
-          {/* Template picker */}
+          {/* Step nav — free navigation, any step clickable anytime */}
+          <div className={sectionClass}>
+            <div className="flex items-center">
+              {([
+                { n: 1, label: 'Template' },
+                { n: 2, label: 'Venue Details' },
+                { n: 3, label: 'Contact & Social' },
+              ] as const).map((s, i) => {
+                const active = step === s.n;
+                const done = step > s.n;
+                return (
+                  <div key={s.n} className="flex flex-1 items-center">
+                    <button
+                      type="button"
+                      onClick={() => setStep(s.n)}
+                      className="flex items-center gap-2 text-left"
+                    >
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                          active
+                            ? 'bg-brand-600 text-white'
+                            : done
+                              ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                        }`}
+                      >
+                        {s.n}
+                      </span>
+                      <span
+                        className={`hidden text-xs font-semibold sm:inline ${
+                          active
+                            ? 'text-gray-900 dark:text-gray-100'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {s.label}
+                      </span>
+                    </button>
+                    {i < 2 && (
+                      <span className="mx-2 h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Step 1 — Template */}
+          {step === 1 && (
           <div className={sectionClass}>
             <h2 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
               Template
             </h2>
             <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-              Six layouts, each with four curated looks
+              Ten layouts across five styles — each with curated looks
             </p>
+
+            {/* Style tabs */}
+            <div className="mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-800">
+              {ARCHETYPE_GROUPS.map((group) => {
+                const on = templateGroup === group;
+                return (
+                  <button
+                    key={group}
+                    type="button"
+                    onClick={() => setTemplateGroup(group)}
+                    className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold transition-colors ${
+                      on
+                        ? 'border-brand-600 text-brand-700 dark:text-brand-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {group}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {ARCHETYPES.map((a) => {
+              {ARCHETYPES.filter((a) => a.group === templateGroup).map((a) => {
                 const selected = form.templateKey === a.key;
-                const themeForThumb = selected
-                  ? form.themeKey
-                  : a.themes[0].key;
+                const themeForThumb = selected ? form.themeKey : a.themes[0].key;
                 return (
                   <button
                     key={a.key}
@@ -516,7 +672,11 @@ export default function MenuStudioPage() {
               )}
             </div>
           </div>
+          )}
 
+          {/* Step 2 — Venue Details (+ public link) */}
+          {step === 2 && (
+          <>
           {/* Venue info */}
           <div className={sectionClass}>
             <h2 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -541,10 +701,42 @@ export default function MenuStudioPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Logo URL</label>
+                <label className={labelClass}>Logo</label>
+                <div className="flex items-center gap-3">
+                  {form.logoUrl ? (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolveImageUrl(form.logoUrl) || ''}
+                        alt="Logo preview"
+                        className="h-12 w-12 rounded-md border border-gray-200 object-contain dark:border-gray-700"
+                      />
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+                        onClick={() => set('logoUrl', null)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : null}
+                  <label className="inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    {uploadingLogo ? 'Uploading…' : 'Upload logo'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => {
+                        handleLogoUpload(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
-                  className={inputClass}
-                  placeholder="https://…"
+                  className={`${inputClass} mt-2`}
+                  placeholder="or paste a URL — https://…"
                   value={form.logoUrl || ''}
                   onChange={(e) => set('logoUrl', e.target.value || null)}
                 />
@@ -612,8 +804,11 @@ export default function MenuStudioPage() {
               </span>
             </p>
           </div>
+          </>
+          )}
 
-          {/* Menus to publish */}
+          {/* Menus to publish — hidden for now (empty = publish all active menus) */}
+          {false && (
           <div className={sectionClass}>
             <h2 className="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">
               Menus to publish
@@ -634,7 +829,7 @@ export default function MenuStudioPage() {
             ) : (
               <div className="space-y-2">
                 {menus.map((m) => {
-                  const checked = (form.menuIds || []).includes(m.id);
+                  const checked = (form?.menuIds || []).includes(m.id);
                   return (
                     <label
                       key={m.id}
@@ -644,7 +839,7 @@ export default function MenuStudioPage() {
                         type="checkbox"
                         checked={checked}
                         onChange={(e) => {
-                          const current = form.menuIds || [];
+                          const current = form?.menuIds || [];
                           set(
                             'menuIds',
                             e.target.checked
@@ -666,11 +861,13 @@ export default function MenuStudioPage() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Contact & WiFi */}
+          {/* Step 3 — Contact & Social */}
+          {step === 3 && (
           <div className={sectionClass}>
             <h2 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">
-              Contact & WiFi
+              Contact &amp; Social
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
@@ -700,7 +897,45 @@ export default function MenuStudioPage() {
                   onChange={(e) => set('instagram', e.target.value || null)}
                 />
               </div>
-              <div />
+              <div>
+                <label className={labelClass}>Facebook</label>
+                <input
+                  className={inputClass}
+                  placeholder="facebook.com/yourvenue"
+                  value={form.facebook || ''}
+                  onChange={(e) => set('facebook', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>TikTok</label>
+                <input
+                  className={inputClass}
+                  placeholder="@yourvenue"
+                  value={form.tiktok || ''}
+                  onChange={(e) => set('tiktok', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>X (Twitter)</label>
+                <input
+                  className={inputClass}
+                  placeholder="@yourvenue"
+                  value={form.twitter || ''}
+                  onChange={(e) => set('twitter', e.target.value || null)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Feedback link</label>
+                <input
+                  className={inputClass}
+                  placeholder="https://forms.gle/…  (review or feedback form)"
+                  value={form.feedbackUrl || ''}
+                  onChange={(e) => set('feedbackUrl', e.target.value || null)}
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Powers the Escape template&apos;s “Feedback” tile.
+                </p>
+              </div>
               <div>
                 <label className={labelClass}>WiFi network</label>
                 <input
@@ -719,16 +954,46 @@ export default function MenuStudioPage() {
               </div>
             </div>
           </div>
+          )}
+
+          {/* Step Back / Next */}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))}
+              disabled={step === 1}
+              className="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Back
+            </button>
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={() => setStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s))}
+                className="h-9 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Next
+              </button>
+            ) : (
+              dirty && (
+                <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
+                  {saving ? 'Saving…' : 'Save changes'}
+                </Button>
+              )
+            )}
+          </div>
         </div>
 
         {/* ── Right: phone preview ───────────────────────────────── */}
         <div className="xl:sticky xl:top-4 xl:self-start">
-          <div className="mx-auto w-[400px] max-w-full">
+          <div className="mx-auto w-[350px] max-w-full">
             <div className="rounded-[2.6rem] border-[10px] border-gray-900 dark:border-gray-700 bg-gray-900 shadow-xl">
-              <div className="relative h-[720px] overflow-hidden rounded-[2rem] bg-white">
+              <div className="relative h-[620px] overflow-hidden rounded-[2rem] bg-white">
                 {/* notch */}
                 <div className="absolute left-1/2 top-0 z-30 h-5 w-32 -translate-x-1/2 rounded-b-2xl bg-gray-900 dark:bg-gray-700" />
-                <div className="h-full overflow-y-auto">
+                {/* transform pins the template's position:fixed layers (preloader,
+                    side-drawer, item sheet) to THIS phone frame, not the admin page */}
+                <div className="h-full overflow-y-auto" style={{ transform: 'translateZ(0)' }}>
                   {previewData && previewTheme && PreviewTemplate ? (
                     hasMenuContent ? (
                       <PreviewTemplate

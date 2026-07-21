@@ -10,6 +10,7 @@ import Receipt from '@/components/Receipt';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/lib/format';
 import { useTenantStore } from '@/store/globalStore';
+import { useUiStore } from '@/store/uiStore';
 import { OrderIcon, BranchIcon, PaymentIcon } from '@/components/icons';
 import {
   ProductGrid,
@@ -122,11 +123,17 @@ export default function PosPage() {
 
   // Full-screen toggle (browser Fullscreen API) for a distraction-free counter.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const setSidebarCollapsed = useUiStore((s) => s.setSidebarCollapsed);
   useEffect(() => {
     const onChange = () => setIsFullscreen(typeof document !== 'undefined' && !!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
+  // Hide the sidebar while POS is full screen; restore it on exit / leaving POS.
+  useEffect(() => {
+    setSidebarCollapsed(isFullscreen);
+  }, [isFullscreen, setSidebarCollapsed]);
+  useEffect(() => () => setSidebarCollapsed(false), [setSidebarCollapsed]);
   const toggleFullscreen = useCallback(() => {
     if (typeof document === 'undefined') return;
     if (!document.fullscreenElement) {
@@ -146,6 +153,25 @@ export default function PosPage() {
   // Just-completed sale — used to offer a receipt print in the success modal.
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [successOpen, setSuccessOpen] = useState(false);
+  // Bank-transfer collection (Payment module): available when the branch has an
+  // active transfer method; `awaiting` drives the awaiting-payment modal.
+  const [hasTransfer, setHasTransfer] = useState(false);
+  // Awaiting bank-transfer payments keyed by sale tab, so other tabs keep
+  // working while one waits. A single background poller drives all of them.
+  const [awaitingByTab, setAwaitingByTab] = useState<
+    Record<
+      string,
+      {
+        txId: string;
+        account: any;
+        amount: number;
+        status: 'awaiting' | 'paid';
+        items?: Array<{ name: string; quantity: number; totalPrice?: number }>;
+        orderNumber?: string;
+      }
+    >
+  >({});
+  const [awaitingModalTab, setAwaitingModalTab] = useState<string | null>(null);
 
   /* ---------------------------------------------------------------- */
   /* Data loading                                                      */
@@ -195,11 +221,7 @@ export default function PosPage() {
       const res = await api.get<{ success: boolean; data: PosProduct[] }>(
         `/ims/inventory?forOrders=true&branchId=${branchId}`,
       );
-      if (res.success && Array.isArray(res.data)) {
-        setProducts(res.data);
-      } else {
-        setProducts([]);
-      }
+      setProducts(res.success && Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
       setProductsError(
         err?.response?.data?.message || err?.message || 'Failed to load products',
@@ -210,17 +232,160 @@ export default function PosPage() {
     }
   }, [branchId]);
 
-  // Reload products and reset the ticket whenever the branch changes — stock,
-  // prices and available items are all branch-scoped.
+  // On branch change (and refresh), restore this branch's parked sale tabs +
+  // awaiting payments from localStorage so nothing is lost on reload. Falls back
+  // to a single fresh sale when there's nothing saved.
   useEffect(() => {
-    // Branch change invalidates every open cart (stock & prices are branch-scoped).
-    setTabs([{ id: 'sale-1', lines: [], meta: EMPTY_META }]);
-    setActiveTabId('sale-1');
-    tabSeq.current = 1;
     setSearch('');
     setActiveCategory(ALL_CATEGORIES);
+    const fresh = () => {
+      setTabs([{ id: 'sale-1', lines: [], meta: EMPTY_META }]);
+      setActiveTabId('sale-1');
+      setAwaitingByTab({});
+      tabSeq.current = 1;
+    };
+    if (branchId) {
+      try {
+        const raw = localStorage.getItem(`kuza-pos-${branchId}`);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved?.tabs?.length) {
+          setTabs(saved.tabs);
+          setActiveTabId(
+            saved.activeTabId && saved.tabs.some((t: any) => t.id === saved.activeTabId)
+              ? saved.activeTabId
+              : saved.tabs[0].id,
+          );
+          setAwaitingByTab(saved.awaitingByTab || {});
+          tabSeq.current = saved.tabs.reduce(
+            (m: number, t: any) => Math.max(m, parseInt(String(t.id).replace('sale-', ''), 10) || 1),
+            1,
+          );
+        } else {
+          fresh();
+        }
+      } catch {
+        fresh();
+      }
+    } else {
+      fresh();
+    }
     loadProducts();
   }, [branchId, loadProducts]);
+
+  // Persist tabs + awaiting per branch so a refresh keeps them.
+  useEffect(() => {
+    if (!branchId) return;
+    try {
+      localStorage.setItem(
+        `kuza-pos-${branchId}`,
+        JSON.stringify({ tabs, activeTabId, awaitingByTab }),
+      );
+    } catch {
+      /* storage full / unavailable — non-fatal */
+    }
+  }, [tabs, activeTabId, awaitingByTab, branchId]);
+
+  // Does this branch have an active bank-transfer payment option?
+  useEffect(() => {
+    let active = true;
+    if (!branchId) {
+      setHasTransfer(false);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: any[] }>(
+          `/payments/methods?branchId=${branchId}`,
+        );
+        if (active) {
+          setHasTransfer(
+            !!res?.data?.some((m: any) => m.type === 'bank_transfer' && m.status === 'active'),
+          );
+        }
+      } catch {
+        if (active) setHasTransfer(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [branchId]);
+
+  const collectByTransfer = useCallback(async () => {
+    const order = lastOrder;
+    if (!order?.id) return;
+    try {
+      const res = await api.post<{ success: boolean; data: any }>('/payments/awaiting', {
+        branchId,
+        orderId: order.id,
+        amount: Number(order.totalAmount ?? order.total ?? 0),
+      });
+      if (res.success) {
+        const tabId = activeTabIdRef.current;
+        setSuccessOpen(false);
+        setAwaitingByTab((prev) => ({
+          ...prev,
+          [tabId]: {
+            txId: res.data.transaction.id,
+            account: res.data.account,
+            amount: Number(order.totalAmount ?? order.total ?? 0),
+            status: 'awaiting',
+            orderNumber: order.orderNumber,
+            items: (order.items || []).map((it: any) => ({
+              name: it.name,
+              quantity: Number(it.quantity) || 0,
+              totalPrice: Number(it.totalPrice ?? 0),
+            })),
+          },
+        }));
+        setAwaitingModalTab(tabId);
+      }
+    } catch (e: any) {
+      setToast({
+        message: e?.response?.data?.message || 'Could not start transfer collection',
+        type: 'error',
+      });
+    }
+  }, [branchId, lastOrder]);
+
+  // Background poller for ALL awaiting tabs — runs regardless of which tab is
+  // active or whether the awaiting modal is open, so a parked sale still gets
+  // marked paid while the cashier serves other customers.
+  useEffect(() => {
+    const pending = Object.entries(awaitingByTab).filter(([, a]) => a.status === 'awaiting');
+    if (pending.length === 0) return;
+    const poll = async () => {
+      for (const [tabId, a] of pending) {
+        try {
+          const res = await api.get<{ success: boolean; data: any }>(
+            `/payments/transactions/${a.txId}`,
+          );
+          if (res?.data?.status === 'paid') {
+            setAwaitingByTab((prev) =>
+              prev[tabId] ? { ...prev, [tabId]: { ...prev[tabId], status: 'paid' } } : prev,
+            );
+            setToast({ message: 'Payment received', type: 'success' });
+            setTimeout(() => {
+              setAwaitingByTab((prev) => {
+                const next = { ...prev };
+                delete next[tabId];
+                return next;
+              });
+              setAwaitingModalTab((cur) => (cur === tabId ? null : cur));
+              // Payment landed → clear that tab's cart (it may not be active).
+              setTabs((prev) =>
+                prev.map((t) => (t.id === tabId ? { ...t, lines: [], meta: EMPTY_META } : t)),
+              );
+            }, 1600);
+          }
+        } catch {
+          /* keep polling */
+        }
+      }
+    };
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, [awaitingByTab]);
 
   /* ---------------------------------------------------------------- */
   /* Cart mutations                                                    */
@@ -356,9 +521,10 @@ export default function PosPage() {
         };
         setLastOrder(receiptOrder);
         setSuccessOpen(true);
-        setLines([]);
-        setMeta(EMPTY_META);
         setCartOpen(false);
+        // NOTE: the cart is intentionally NOT cleared here — it's cleared on
+        // "Done" (cash) or when a bank transfer is confirmed paid, so a sale
+        // awaiting transfer keeps showing its items.
         // Stock changed — refresh availability for the next sale.
         loadProducts();
       }
@@ -455,13 +621,24 @@ export default function PosPage() {
             return (
               <div
                 key={t.id}
-                onClick={() => setActiveTabId(t.id)}
+                onClick={() => {
+                  setActiveTabId(t.id);
+                  if (awaitingByTab[t.id]) setAwaitingModalTab(t.id);
+                }}
                 className={`flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition ${
                   active
                     ? 'border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/30 dark:text-brand-300'
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
+                title={awaitingByTab[t.id] ? 'Awaiting transfer' : undefined}
               >
+                {awaitingByTab[t.id] && (
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      awaitingByTab[t.id].status === 'paid' ? 'bg-emerald-500' : 'animate-pulse bg-amber-500'
+                    }`}
+                  ></span>
+                )}
                 <span>Sale {i + 1}</span>
                 {count > 0 && (
                   <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-gradient px-1 text-[10px] font-bold text-white">
@@ -560,25 +737,120 @@ export default function PosPage() {
         onSave={(next) => setMeta(next)}
       />
 
+      {/* Awaiting transfer — non-blocking: close it and keep serving; the tab's
+          amber dot stays and the background poller flips it to paid. */}
+      {awaitingModalTab && awaitingByTab[awaitingModalTab] && (() => {
+        const a = awaitingByTab[awaitingModalTab];
+        const paid = a.status === 'paid';
+        return (
+          <Modal
+            isOpen
+            onClose={() => setAwaitingModalTab(null)}
+            title="Awaiting payment"
+            maxWidth="sm"
+            closeOnOutsideClick={false}
+            footer={
+              <button
+                type="button"
+                onClick={() => setAwaitingModalTab(null)}
+                className="h-9 whitespace-nowrap rounded-lg border border-gray-300 px-4 text-[13px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              >
+                {paid ? 'Done' : 'Keep serving others'}
+              </button>
+            }
+          >
+            {paid ? (
+              <div className="py-6 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <i className="bx bx-check text-3xl"></i>
+                </div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Payment received</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{formatNaira(a.amount)} confirmed.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {a.items && a.items.length > 0 && (
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-xs font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                      <span>{a.orderNumber || 'Order'}</span>
+                      <span>{a.items.reduce((s, it) => s + it.quantity, 0)} item(s)</span>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {a.items.map((it, idx) => (
+                        <div key={idx} className="flex items-center justify-between px-3 py-1.5 text-sm">
+                          <span className="truncate text-gray-700 dark:text-gray-300">
+                            <span className="text-gray-400">{it.quantity}×</span> {it.name}
+                          </span>
+                          <span className="tabular-nums text-gray-600 dark:text-gray-400">
+                            {formatNaira(it.totalPrice || 0)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Ask the customer to transfer{' '}
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNaira(a.amount)}</span> to:
+                </p>
+                {a.account ? (
+                  <div className="rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 px-4 py-4 text-white dark:from-gray-800 dark:to-gray-900">
+                    <p className="text-[11px] uppercase tracking-wide text-white/60">{a.account.bankName || 'Bank'}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-mono text-2xl font-semibold tabular-nums">{a.account.accountNumber}</p>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(a.account.accountNumber)}
+                        className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-medium hover:bg-white/20"
+                      >
+                        <i className="bx bx-copy"></i> Copy
+                      </button>
+                    </div>
+                    <p className="truncate text-xs text-white/70">{a.account.accountName}</p>
+                  </div>
+                ) : (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                    No virtual account is set up for this branch.
+                  </p>
+                )}
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
+                  Waiting for the transfer to land — you can keep serving other customers.
+                </div>
+              </div>
+            )}
+          </Modal>
+        );
+      })()}
+
       {/* Sale-completed: offer to print the receipt for the just-created order. */}
       <Modal
         isOpen={successOpen}
-        onClose={() => setSuccessOpen(false)}
+        onClose={() => { clearCart(); setMeta(EMPTY_META); setSuccessOpen(false); }}
         title="Sale completed"
-        maxWidth="sm"
+        maxWidth="md"
         footer={
           <>
             <button
               type="button"
-              onClick={() => setSuccessOpen(false)}
-              className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 h-9 inline-flex items-center text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+              onClick={() => { clearCart(); setMeta(EMPTY_META); setSuccessOpen(false); }}
+              className="h-9 whitespace-nowrap rounded-lg border border-gray-300 px-4 text-[13px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               Done
             </button>
+            {hasTransfer && (
+              <button
+                type="button"
+                onClick={collectByTransfer}
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-300 px-4 text-[13px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-500/10"
+              >
+                <i className="bx bx-transfer text-base" aria-hidden="true"></i>
+                Pay by transfer
+              </button>
+            )}
             <button
               type="button"
               onClick={() => window.print()}
-              className="rounded-lg bg-brand-gradient px-4 h-9 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white hover:opacity-90"
+              className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white hover:opacity-90"
             >
               <i className="bx bx-printer text-base" aria-hidden="true"></i>
               Print receipt

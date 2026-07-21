@@ -53,9 +53,13 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
         >
           {initials(product.name)}
         </span>
-        {soldOut ? (
+        {soldOut && !product.unlimited ? (
           <span className="rounded-full bg-danger-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">
             Sold out
+          </span>
+        ) : product.unlimited ? (
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            In stock
           </span>
         ) : (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">

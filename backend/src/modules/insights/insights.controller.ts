@@ -7,12 +7,12 @@ import {
   RequirePermissions,
   PermissionsGuard,
 } from '../../common/guards/permissions.guard';
-import { FeatureGateGuard, RequireApp } from '../billing/guards/feature-gate.guard';
 
 @ApiTags('Insights')
 @Controller('insights')
-@UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp('insights')
+// AI insights are available by default — no @RequireApp gate. Access is still
+// scoped per-endpoint by role permissions (e.g. accounting.view).
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class InsightsController {
   constructor(private readonly insightsService: InsightsService) {}

@@ -7,9 +7,10 @@ class OrderItemDto {
   @IsString()
   inventoryItemId: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  uomId: string;
+  uomId?: string;
 
   @ApiProperty()
   @IsNumber()

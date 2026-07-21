@@ -42,6 +42,14 @@ export class InventoryItem extends TenantEntity {
   isTrackable: boolean;
 
   /**
+   * Whether this item is offered for sale at the POS / on the menu. Ingredients
+   * (make-up components not sold directly) set this false; they still appear in
+   * the make-up picker and are tracked in inventory.
+   */
+  @Column({ default: true })
+  sellAtPos: boolean;
+
+  /**
    * Default physical row/rack ("bin") location for this item, e.g. 'A-03-2'
    * (Warehouse MS v1). Per-branch overrides live on BranchInventoryItem.
    */
@@ -53,6 +61,19 @@ export class InventoryItem extends TenantEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   additionalImages: string[];
+
+  // Audit: who created / last updated this item (name denormalized for display).
+  @Column({ type: 'uuid', nullable: true })
+  createdBy: string;
+
+  @Column({ nullable: true })
+  createdByName: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  updatedBy: string;
+
+  @Column({ nullable: true })
+  updatedByName: string;
 
   // In multi-tenant database setup, business relation is not needed
   // Each database belongs to a specific tenant/business

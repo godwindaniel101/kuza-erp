@@ -97,7 +97,7 @@ export default function Modal({
       {/* Modal Content */}
       <div
         ref={contentRef}
-        className={`relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-popover w-full ${maxWidthClasses[maxWidth]} transform transition-all duration-300 ease-out ${
+        className={`modal-panel relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-popover w-full ${maxWidthClasses[maxWidth]} transform transition-all duration-300 ease-out ${
           isAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         }`}
         onClick={(e) => e.stopPropagation()}

@@ -11,6 +11,7 @@ import { OrderItem } from "../entities/order-item.entity";
 import { OrderPayment } from "../entities/order-payment.entity";
 import { OrderItemInflowItem } from "../entities/order-item-inflow-item.entity";
 import { InventoryItem } from "../../ims/entities/inventory-item.entity";
+import { InventoryItemComponent } from "../../ims/entities/inventory-item-component.entity";
 import { InventoryInflowItem } from "../../ims/entities/inventory-inflow-item.entity";
 import { BranchInventoryItem } from "../../ims/entities/branch-inventory-item.entity";
 import {
@@ -27,6 +28,28 @@ import { UomConversionsService } from "../../ims/uom-conversions/uom-conversions
 import { Uom } from "../../ims/entities/uom.entity";
 import { PostingService } from "../../accounting/posting.service";
 
+/**
+ * A normalized order line ready to persist: the OrderItem plus the batch
+ * allocations (for OrderItemInflowItem rows) and the per-inventory-item stock
+ * deductions. A raw item has one deduction; a dish has one per ingredient.
+ */
+interface BuiltOrderLine {
+  item: OrderItem;
+  allocations: Array<{
+    inflowItemId: string;
+    quantityUsed: number;
+    costPerUnit: number;
+    totalCost: number;
+  }>;
+  deductions: Array<{
+    inventoryItemId: string;
+    baseQty: number;
+    costPrice: number;
+  }>;
+  totalPrice: number;
+  costTotal: number;
+}
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -40,6 +63,8 @@ export class OrdersService {
     private orderItemInflowItemRepository: Repository<OrderItemInflowItem>,
     @InjectRepository(InventoryItem)
     private inventoryItemRepository: Repository<InventoryItem>,
+    @InjectRepository(InventoryItemComponent)
+    private inventoryItemComponentRepository: Repository<InventoryItemComponent>,
     @InjectRepository(InventoryInflowItem)
     private inflowItemRepository: Repository<InventoryInflowItem>,
     @InjectRepository(BranchInventoryItem)
@@ -275,11 +300,153 @@ export class OrdersService {
   }
 
   /**
+   * Build one order line for a raw inventory item (retail-style: the thing you
+   * sell IS the thing you stocked). Deducts that item's own FIFO batches.
+   */
+  private async buildInventoryLine(
+    branchId: string,
+    line: { inventoryItemId?: string; uomId?: string; quantity: number },
+    allocationMethod: string,
+  ): Promise<BuiltOrderLine> {
+    const inventoryItem = await this.inventoryItemRepository.findOne({
+      where: { id: line.inventoryItemId },
+      relations: ["baseUom"],
+    });
+    if (!inventoryItem) {
+      throw new NotFoundException(
+        `Inventory item with ID ${line.inventoryItemId} not found`,
+      );
+    }
+
+    const uomId = line.uomId;
+    const baseUomId = inventoryItem.baseUomId;
+    const basePrice = Number(inventoryItem.salePrice) || 0;
+    const quantity = Number(line.quantity);
+
+    let unitPrice = basePrice;
+    let quantityBase = quantity;
+    if (uomId && uomId !== baseUomId) {
+      const multiplier = await this.uomConversionsService.getMultiplier(
+        uomId,
+        baseUomId,
+      );
+      if (multiplier !== null && multiplier > 0) {
+        unitPrice = basePrice * multiplier;
+        quantityBase = quantity * multiplier;
+      }
+    }
+
+    const totalPrice = unitPrice * quantity;
+
+    // The one selling rule:
+    //  1. item has make-up → deplete each component (each per its own trackable);
+    //  2. no make-up + trackable → deplete itself (1:1);
+    //  3. no make-up + not trackable → sell freely, no deduction (cost = manual).
+    const components = await this.inventoryItemComponentRepository.find({
+      where: { parentItemId: line.inventoryItemId },
+    });
+
+    const allocations: BuiltOrderLine["allocations"] = [];
+    const deductions: BuiltOrderLine["deductions"] = [];
+    let costTotal = 0;
+
+    if (components.length > 0) {
+      for (const comp of components) {
+        const compItem = await this.inventoryItemRepository.findOne({
+          where: { id: comp.componentItemId },
+          relations: ["baseUom"],
+        });
+        if (!compItem) {
+          throw new NotFoundException(
+            `Component item ${comp.componentItemId} not found`,
+          );
+        }
+        // Component quantity per one BASE unit of the parent, in the component's
+        // base UoM, scaled by how many base units of the parent are being sold.
+        let perParentBase = Number(comp.quantity) || 0;
+        if (comp.uomId && comp.uomId !== compItem.baseUomId) {
+          const m = await this.uomConversionsService.getMultiplier(
+            comp.uomId,
+            compItem.baseUomId,
+          );
+          if (m !== null && m > 0) perParentBase = Number(comp.quantity) * m;
+        }
+        const requiredBase = perParentBase * quantityBase;
+        if (requiredBase <= 0) continue;
+
+        if (compItem.isTrackable === false) {
+          // Untracked ingredient: never blocks, no stock movement; cost from its
+          // manual unit cost.
+          costTotal += (Number(compItem.unitCost) || 0) * requiredBase;
+          continue;
+        }
+        const alloc = await this.allocateInventory(
+          branchId,
+          comp.componentItemId,
+          requiredBase,
+          allocationMethod,
+        );
+        allocations.push(...alloc.allocations);
+        deductions.push({
+          inventoryItemId: comp.componentItemId,
+          baseQty: requiredBase,
+          costPrice: alloc.costPrice,
+        });
+        costTotal += alloc.costTotal;
+      }
+    } else if (inventoryItem.isTrackable !== false) {
+      const alloc = await this.allocateInventory(
+        branchId,
+        line.inventoryItemId!,
+        quantityBase,
+        allocationMethod,
+      );
+      allocations.push(...alloc.allocations);
+      deductions.push({
+        inventoryItemId: line.inventoryItemId!,
+        baseQty: quantityBase,
+        costPrice: alloc.costPrice,
+      });
+      costTotal += alloc.costTotal;
+    } else {
+      // Non-trackable simple item: sell freely; cost from its manual unit cost.
+      costTotal += (Number(inventoryItem.unitCost) || 0) * quantityBase;
+    }
+
+    costTotal = Math.round(costTotal * 100) / 100;
+    const costPrice =
+      quantityBase > 0 ? Math.round((costTotal / quantityBase) * 100) / 100 : 0;
+
+    return {
+      item: this.orderItemRepository.create({
+        inventoryItemId: line.inventoryItemId,
+        menuItemId: null,
+        name: inventoryItem.name,
+        quantity,
+        quantityBase,
+        unitPrice,
+        totalPrice,
+        costPrice,
+        costTotal,
+        uomId: uomId ?? null,
+      }),
+      allocations,
+      deductions,
+      totalPrice,
+      costTotal,
+    };
+  }
+
+  /**
    * Runs the whole order (order + items + allocations + stock deduction +
    * stock ledger movements) in one transaction (audit C-INV-3).
    */
   @Transactional()
-  async create(branchId: string, createOrderDto: CreateOrderDto) {
+  async create(
+    branchId: string,
+    createOrderDto: CreateOrderDto,
+    actor?: { id?: string; name?: string },
+  ) {
     console.log(
       `[OrderCreate] ===== STARTING ORDER CREATION =====`
     );
@@ -306,93 +473,21 @@ export class OrdersService {
       // Resolve the tenant's configured allocation method (FIFO/LIFO/FEFO).
       const allocationMethod = await this.getAllocationMethod();
 
-      // Calculate subtotal and allocate inventory
+      // Build each order line from its inventory item (1:1). Composed items
+      // (make-up / BOM) are layered onto buildInventoryLine in a later phase.
+      const orderItemsWithAllocations = await Promise.all(
+        createOrderDto.items.map((line) =>
+          this.buildInventoryLine(branchId, line, allocationMethod),
+        ),
+      );
+
+      // Order totals from the built lines.
       let subtotal = 0;
       let totalCost = 0;
-      const orderItemsWithAllocations = await Promise.all(
-        createOrderDto.items.map(async (item) => {
-          // Fetch inventory item to get price and name
-          const inventoryItem = await this.inventoryItemRepository.findOne({
-            where: { id: item.inventoryItemId },
-            relations: ["baseUom"],
-          });
-
-          if (!inventoryItem) {
-            throw new NotFoundException(
-              `Inventory item with ID ${item.inventoryItemId} not found`,
-            );
-          }
-
-          // Use the provided UOM ID
-          const uomId = item.uomId;
-          const baseUomId = inventoryItem.baseUomId;
-          const basePrice = Number(inventoryItem.salePrice) || 0;
-
-          // Calculate price based on UOM conversion
-          let unitPrice = basePrice;
-          if (uomId && uomId !== baseUomId) {
-            const multiplier = await this.uomConversionsService.getMultiplier(
-              uomId,
-              baseUomId,
-            );
-            if (multiplier !== null && multiplier > 0) {
-              unitPrice = basePrice * multiplier;
-            }
-          }
-
-          const quantity = Number(item.quantity);
-          const totalPrice = unitPrice * quantity;
-          subtotal += totalPrice;
-
-          // Calculate base quantity
-          let quantityBase = quantity;
-          if (uomId && uomId !== baseUomId) {
-            const multiplier = await this.uomConversionsService.getMultiplier(
-              uomId,
-              baseUomId,
-            );
-            if (multiplier !== null && multiplier > 0) {
-              quantityBase = quantity * multiplier;
-            }
-          }
-
-          // Allocate inventory and calculate cost
-          console.log(
-            `[OrderCreate] About to allocate inventory for item ${inventoryItem.name}: branchId=${branchId}, quantityBase=${quantityBase}`
-          );
-          
-          const allocation = await this.allocateInventory(
-            branchId,
-            item.inventoryItemId,
-            quantityBase,
-            allocationMethod,
-          );
-
-          console.log(
-            `[Allocation] Item: ${inventoryItem.name}, quantityBase: ${quantityBase}, costPrice: ${allocation.costPrice}, costTotal: ${allocation.costTotal}, allocations: ${allocation.allocations.length}`,
-          );
-          console.log(
-            `[Allocation] Allocation details:`,
-            allocation.allocations,
-          );
-          totalCost += allocation.costTotal;
-
-          return {
-            item: this.orderItemRepository.create({
-              inventoryItemId: item.inventoryItemId,
-              name: inventoryItem.name,
-              quantity,
-              quantityBase,
-              unitPrice,
-              totalPrice,
-              costPrice: allocation.costPrice,
-              costTotal: allocation.costTotal,
-              uomId,
-            }),
-            allocations: allocation.allocations,
-          };
-        }),
-      );
+      for (const built of orderItemsWithAllocations) {
+        subtotal += built.totalPrice;
+        totalCost += built.costTotal;
+      }
 
       // Calculate VAT if enabled
       const applyVat = createOrderDto.applyVat || false;
@@ -420,6 +515,10 @@ export class OrdersService {
         customerName: createOrderDto.customerName || null,
         customerPhone: createOrderDto.customerPhone || null,
         orderType: createOrderDto.type || "dine_in",
+        createdBy: actor?.id || null,
+        createdByName: actor?.name || null,
+        updatedBy: actor?.id || null,
+        updatedByName: actor?.name || null,
       });
 
       const savedOrder = await this.orderRepository.save(order);
@@ -427,27 +526,15 @@ export class OrdersService {
         `[OrderCreate] Saved order with ID: ${savedOrder.id}, totalCost: ${savedOrder.totalCost}`,
       );
 
-      // Save order items, create allocation tracking records, and update stock
-      for (const {
-        item: itemEntity,
-        allocations,
-      } of orderItemsWithAllocations) {
+      // Save order items, create allocation tracking records, and update stock.
+      for (const { item: itemEntity, allocations, deductions } of
+        orderItemsWithAllocations) {
         itemEntity.orderId = savedOrder.id;
-        console.log(
-          `[Save OrderItem] Saving item: ${itemEntity.name}, orderId: ${savedOrder.id}, allocations: ${allocations.length}`,
-        );
         const savedOrderItem = await this.orderItemRepository.save(itemEntity);
-        console.log(
-          `[Save OrderItem] Saved item with ID: ${savedOrderItem.id}, orderId: ${savedOrderItem.orderId}`,
-        );
 
-        // Create OrderItemInflowItem records to track which inflow items were used
-        if (allocations.length === 0) {
-          console.log(
-            `[Save OrderItemInflowItem] WARNING: No allocations found for item ${savedOrderItem.id}`,
-          );
-        }
-
+        // Track which inflow batches were consumed (across all ingredients for
+        // a dish line). The junction references inflow items, so a dish's rows
+        // may span several inventory items — that's expected.
         for (const allocation of allocations) {
           const orderItemInflowItem = this.orderItemInflowItemRepository.create(
             {
@@ -458,78 +545,75 @@ export class OrdersService {
               totalCost: allocation.totalCost,
             },
           );
-          console.log(
-            `[Save OrderItemInflowItem] Creating record: orderItemId=${savedOrderItem.id}, inflowItemId=${allocation.inflowItemId}, quantityUsed=${allocation.quantityUsed}, costPerUnit=${allocation.costPerUnit}, totalCost=${allocation.totalCost}`,
-          );
-          const savedInflowItem =
-            await this.orderItemInflowItemRepository.save(orderItemInflowItem);
-          console.log(
-            `[Save OrderItemInflowItem] Saved record with ID: ${savedInflowItem.id}`,
-          );
+          await this.orderItemInflowItemRepository.save(orderItemInflowItem);
         }
 
-        // Update stock (locked read; negative stock forbidden — C-INV-4)
-        const deduction = Number(itemEntity.quantityBase || 0);
-        const inventoryItem = await this.inventoryItemRepository
-          .createQueryBuilder("item")
-          .setLock("pessimistic_write")
-          .where("item.id = :id", { id: itemEntity.inventoryItemId })
-          .getOne();
+        // Deduct stock for every inventory item this line consumes: exactly one
+        // for a raw item, one per ingredient for a dish. Each deduction updates
+        // both counters (item + branch) under lock and writes a SALE movement.
+        for (const deduction of deductions) {
+          const deductQty = Number(deduction.baseQty || 0);
 
-        if (inventoryItem) {
-          const available = Number(inventoryItem.currentStock || 0);
-          if (available < deduction) {
-            throw new BadRequestException(
-              `Insufficient stock for ${itemEntity.name}. Available: ${available}, requested: ${deduction}`,
+          // Update item-level stock (locked read; negative stock forbidden — C-INV-4)
+          const inventoryItem = await this.inventoryItemRepository
+            .createQueryBuilder("item")
+            .setLock("pessimistic_write")
+            .where("item.id = :id", { id: deduction.inventoryItemId })
+            .getOne();
+
+          if (inventoryItem) {
+            const available = Number(inventoryItem.currentStock || 0);
+            if (available < deductQty) {
+              throw new BadRequestException(
+                `Insufficient stock for ${inventoryItem.name}. Available: ${available}, requested: ${deductQty}`,
+              );
+            }
+            inventoryItem.currentStock = available - deductQty;
+            await this.inventoryItemRepository.save(inventoryItem);
+          }
+
+          // Update branch inventory (locked read; negative stock forbidden)
+          const branchInventory = await this.branchInventoryRepository
+            .createQueryBuilder("branchItem")
+            .setLock("pessimistic_write")
+            .where(
+              "branchItem.branchId = :branchId AND branchItem.inventoryItemId = :itemId",
+              { branchId, itemId: deduction.inventoryItemId },
+            )
+            .getOne();
+
+          if (branchInventory) {
+            const branchAvailable = Number(branchInventory.currentStock || 0);
+            if (branchAvailable < deductQty) {
+              throw new BadRequestException(
+                `Insufficient stock for ${inventoryItem?.name || itemEntity.name} in this branch. Available: ${branchAvailable}, requested: ${deductQty}`,
+              );
+            }
+            branchInventory.currentStock = branchAvailable - deductQty;
+            await this.branchInventoryRepository.save(branchInventory);
+          }
+
+          // Immutable stock ledger entry (roadmap I1): one SALE movement per
+          // consumed inventory item, in the same transaction as the deduction.
+          if (inventoryItem) {
+            const stockMovementRepository =
+              this.dataSource.getRepository(StockMovement);
+            await stockMovementRepository.save(
+              stockMovementRepository.create({
+                itemId: deduction.inventoryItemId,
+                branchId,
+                movementType: StockMovementType.SALE,
+                quantity: -deductQty,
+                unitCost:
+                  deduction.costPrice != null
+                    ? Number(deduction.costPrice)
+                    : null,
+                sourceType: "order",
+                sourceId: savedOrder.id,
+                balanceAfter: Number(inventoryItem.currentStock),
+              }),
             );
           }
-          inventoryItem.currentStock = available - deduction;
-          await this.inventoryItemRepository.save(inventoryItem);
-        }
-
-        // Update branch inventory (locked read; negative stock forbidden)
-        let branchInventory = await this.branchInventoryRepository
-          .createQueryBuilder("branchItem")
-          .setLock("pessimistic_write")
-          .where(
-            "branchItem.branchId = :branchId AND branchItem.inventoryItemId = :itemId",
-            { branchId, itemId: itemEntity.inventoryItemId },
-          )
-          .getOne();
-
-        if (branchInventory) {
-          const branchAvailable = Number(branchInventory.currentStock || 0);
-          if (branchAvailable < deduction) {
-            throw new BadRequestException(
-              `Insufficient stock for ${itemEntity.name} in this branch. Available: ${branchAvailable}, requested: ${deduction}`,
-            );
-          }
-          branchInventory.currentStock = branchAvailable - deduction;
-          await this.branchInventoryRepository.save(branchInventory);
-        }
-
-        // Immutable stock ledger entry (roadmap I1): one SALE movement per
-        // order item, in the same transaction as the stock deduction. Uses
-        // dataSource.getRepository (patched by typeorm-transactional) so it
-        // joins the ambient transaction without extra module wiring.
-        if (inventoryItem) {
-          const stockMovementRepository =
-            this.dataSource.getRepository(StockMovement);
-          await stockMovementRepository.save(
-            stockMovementRepository.create({
-              itemId: itemEntity.inventoryItemId,
-              branchId,
-              movementType: StockMovementType.SALE,
-              quantity: -deduction,
-              unitCost:
-                itemEntity.costPrice != null
-                  ? Number(itemEntity.costPrice)
-                  : null,
-              sourceType: "order",
-              sourceId: savedOrder.id,
-              balanceAfter: Number(inventoryItem.currentStock),
-            }),
-          );
         }
       }
 

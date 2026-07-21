@@ -83,6 +83,8 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const hasLoadedRef = useRef(false);
   const isLoadingRef = useRef(false);
 
@@ -201,18 +203,25 @@ export default function Dashboard() {
     );
   }
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return t('goodMorning') !== 'goodMorning' ? t('goodMorning') : 'Good morning';
-    if (h < 17) return t('goodAfternoon') !== 'goodAfternoon' ? t('goodAfternoon') : 'Good afternoon';
-    return t('goodEvening') !== 'goodEvening' ? t('goodEvening') : 'Good evening';
-  })();
-  const todayLabel = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Greeting + today's date depend on the current clock/timezone, so they differ
+  // between the SSR render and the browser — compute them only after mount to
+  // avoid a hydration mismatch.
+  const greeting = mounted
+    ? (() => {
+        const h = new Date().getHours();
+        if (h < 12) return t('goodMorning') !== 'goodMorning' ? t('goodMorning') : 'Good morning';
+        if (h < 17) return t('goodAfternoon') !== 'goodAfternoon' ? t('goodAfternoon') : 'Good afternoon';
+        return t('goodEvening') !== 'goodEvening' ? t('goodEvening') : 'Good evening';
+      })()
+    : '';
+  const todayLabel = mounted
+    ? new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
   const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   const orderStatusVariant = (status?: string): StatusBadgeVariant => {

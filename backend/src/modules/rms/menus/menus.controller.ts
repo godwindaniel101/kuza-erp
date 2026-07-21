@@ -23,7 +23,7 @@ import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 @ApiTags('RMS - Menus')
 @Controller('rms/menus')
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp('menu')
+@RequireApp('rms')
 @ApiBearerAuth()
 export class MenusController {
   constructor(private readonly menusService: MenusService) {}

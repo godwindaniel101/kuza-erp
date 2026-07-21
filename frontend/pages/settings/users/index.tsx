@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Toast from '@/components/Toast';
 import Pagination from '@/components/Pagination';
 import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/Modal';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -215,35 +216,16 @@ export default function UsersPage() {
       )}
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('add')} {t('user')}</h3>
-            <div className="space-y-3">
-              <FormField
-                type="text"
-                name="newUserName"
-                value={newUser.name}
-                onChange={(value) => setNewUser({ ...newUser, name: value })}
-                placeholder={t('name')}
-              />
-              <FormField
-                type="email"
-                name="newUserEmail"
-                value={newUser.email}
-                onChange={(value) => setNewUser({ ...newUser, email: value })}
-                placeholder={t('email')}
-              />
-              <FormField
-                type="text"
-                name="newUserPassword"
-                value={newUser.password}
-                onChange={(value) => setNewUser({ ...newUser, password: value })}
-                placeholder={t('password')}
-                inputProps={{ type: 'password' }}
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => setShowCreate(false)}>{t('cancel')}</Button>
+        <Modal
+          isOpen
+          onClose={() => setShowCreate(false)}
+          title={`${t('add')} ${t('user')}`}
+          maxWidth="md"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setShowCreate(false)} disabled={saving}>
+                {t('cancel')}
+              </Button>
               <Button
                 variant="primary"
                 disabled={!newUser.name || !newUser.email || !newUser.password || saving}
@@ -267,9 +249,40 @@ export default function UsersPage() {
               >
                 {saving ? t('saving') || 'Saving...' : t('save')}
               </Button>
-            </div>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <FormField
+              type="text"
+              name="newUserName"
+              label={t('name')}
+              required
+              value={newUser.name}
+              onChange={(value) => setNewUser({ ...newUser, name: value })}
+              placeholder={t('fullName') || 'Full name'}
+            />
+            <FormField
+              type="email"
+              name="newUserEmail"
+              label={t('email')}
+              required
+              value={newUser.email}
+              onChange={(value) => setNewUser({ ...newUser, email: value })}
+              placeholder={t('emailAddress') || 'name@example.com'}
+            />
+            <FormField
+              type="text"
+              name="newUserPassword"
+              label={t('password')}
+              required
+              value={newUser.password}
+              onChange={(value) => setNewUser({ ...newUser, password: value })}
+              placeholder={t('password')}
+              inputProps={{ type: 'password' }}
+            />
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

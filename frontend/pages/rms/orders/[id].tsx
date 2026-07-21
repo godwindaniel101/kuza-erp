@@ -155,6 +155,13 @@ export default function OrderViewPage() {
                   <p className="text-gray-900 dark:text-gray-100 mt-1">{formatDate(order.createdAt)}</p>
                 </div>
 
+                {order.createdByName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('createdBy') || 'Created by'}</label>
+                    <p className="text-gray-900 dark:text-gray-100 mt-1">{order.createdByName}</p>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('status')}</label>
                   <p className="mt-1">

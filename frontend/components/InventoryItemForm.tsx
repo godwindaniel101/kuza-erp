@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
-import { resolveImageUrl } from '@/lib/format';
+import { resolveImageUrl, formatMoney, useCurrency } from '@/lib/format';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import Modal from '@/components/Modal';
@@ -18,6 +18,9 @@ interface InventoryItemFormProps {
 export default function InventoryItemForm({ itemId, initialData, onSuccess }: InventoryItemFormProps) {
   const { t } = useTranslation('common');
   const router = useRouter();
+  // Re-used under /rms/items (Restaurant → Items): navigate back within the same
+  // base so the workspace doesn't switch. API calls stay /ims/inventory.
+  const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
   const isEditMode = !!itemId;
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
@@ -51,9 +54,59 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     barcode: '',
     binLocation: '',
     isTrackable: true,
+    sellAtPos: true,
+    unitCost: 0,
     frontImage: '',
     additionalImages: [] as string[],
   });
+
+  // Make-up (bill of materials): items this item is assembled from. When present,
+  // selling this item deplete the ingredients instead of its own stock.
+  const [components, setComponents] = useState<
+    { componentItemId: string; quantity: number; uomId: string }[]
+  >([]);
+  const [ingredientOptions, setIngredientOptions] = useState<any[]>([]);
+  const currency = useCurrency();
+
+  const optionsById = useMemo(
+    () => new Map(ingredientOptions.map((o) => [o.id, o])),
+    [ingredientOptions],
+  );
+  const ingredientSelectOptions = useMemo(
+    () => ingredientOptions.map((o) => ({ value: o.id, label: o.name })),
+    [ingredientOptions],
+  );
+  const componentCost = (c: { componentItemId: string; quantity: number; uomId: string }) => {
+    const opt = optionsById.get(c.componentItemId);
+    if (!opt) return 0;
+    const uom =
+      opt.uoms.find((u: any) => u.id === c.uomId) ||
+      opt.uoms.find((u: any) => u.id === opt.baseUomId);
+    const factor = uom?.factorToBase ?? 1;
+    return (Number(c.quantity) || 0) * factor * (opt.costPerBaseUnit || 0);
+  };
+  const hasMakeUp = components.length > 0;
+  const foodCost = useMemo(
+    () => components.reduce((sum, c) => sum + componentCost(c), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [components, optionsById],
+  );
+  const effectiveCost = hasMakeUp ? foodCost : Number(formData.unitCost) || 0;
+  const profit = Number(formData.salePrice) - effectiveCost;
+  const marginPct = Number(formData.salePrice) > 0 ? (profit / Number(formData.salePrice)) * 100 : 0;
+
+  const addComponent = () =>
+    setComponents((p) => [...p, { componentItemId: '', quantity: 1, uomId: '' }]);
+  const removeComponent = (idx: number) =>
+    setComponents((p) => p.filter((_, i) => i !== idx));
+  const updateComponent = (
+    idx: number,
+    patch: Partial<{ componentItemId: string; quantity: number; uomId: string }>,
+  ) => setComponents((p) => p.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
+  const chooseComponent = (idx: number, itemId: string) => {
+    const opt = optionsById.get(itemId);
+    updateComponent(idx, { componentItemId: itemId, uomId: opt?.baseUomId || '' });
+  };
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null);
   const [frontImagePreview, setFrontImagePreview] = useState<string>('');
@@ -66,6 +119,20 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       loadItemData();
     }
   }, [isEditMode, initialData]);
+
+  // Ingredient options (raw items + UoMs + cost per base unit) for the make-up.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: any[] }>(
+          '/ims/inventory/ingredient-options',
+        );
+        if (res.success && Array.isArray(res.data)) setIngredientOptions(res.data);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (formData.baseUomId) {
@@ -100,9 +167,20 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       barcode: itemData.barcode || '',
       binLocation: itemData.binLocation || '',
       isTrackable: itemData.isTrackable !== false,
+      sellAtPos: itemData.sellAtPos !== false,
+      unitCost: Number(itemData.unitCost || 0),
       frontImage: itemData.frontImage || '',
       additionalImages: itemData.additionalImages || [],
     });
+    if (Array.isArray(itemData.components)) {
+      setComponents(
+        itemData.components.map((c: any) => ({
+          componentItemId: c.componentItemId,
+          quantity: Number(c.quantity) || 0,
+          uomId: c.uomId || '',
+        })),
+      );
+    }
 
     if (itemData.frontImage) {
       // Stored /uploads paths are served by the API origin, not the frontend.
@@ -478,6 +556,17 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         // simply ignores the field until then.
         binLocation: formData.binLocation.trim() || undefined,
         isTrackable: formData.isTrackable,
+        sellAtPos: formData.sellAtPos,
+        // Manual cost price — used for margin and as COGS for untracked items.
+        unitCost: Number(formData.unitCost) || 0,
+        // Make-up (recipe). Empty array clears it on edit.
+        components: components
+          .filter((c) => c.componentItemId)
+          .map((c) => ({
+            componentItemId: c.componentItemId,
+            quantity: Number(c.quantity) || 0,
+            uomId: c.uomId || undefined,
+          })),
         frontImage: formData.frontImage || undefined,
         additionalImages: formData.additionalImages.length > 0 ? formData.additionalImages : undefined,
       };
@@ -495,7 +584,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
       if (onSuccess) {
         onSuccess();
       } else {
-        setTimeout(() => router.push('/ims/inventory'), 500);
+        setTimeout(() => router.push(base), 500);
       }
     } catch (err: any) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} inventory item:`, err);
@@ -972,10 +1061,133 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
               </label>
             </div>
           </div>
+
+          {/* Sell at POS */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Sell at POS
+            </label>
+            <div className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.sellAtPos}
+                onChange={(e) => setFormData({ ...formData, sellAtPos: e.target.checked })}
+                className="h-4 w-4 text-brand-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+              />
+              <span className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                {formData.sellAtPos ? 'Sold to customers' : 'Ingredient only (hidden from POS)'}
+              </span>
+            </div>
+          </div>
+
+          {/* Cost price (manual / auto from make-up) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cost price {hasMakeUp && <span className="text-gray-400 text-xs">(from make-up)</span>}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={hasMakeUp ? Number(foodCost.toFixed(2)) : formData.unitCost}
+              onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) || 0 })}
+              disabled={hasMakeUp}
+              className="h-9 w-full px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent text-[13px] disabled:opacity-60"
+            />
+          </div>
         </div>
 
-        {/* Minimum and Maximum Stock - Only show if trackable */}
-        {formData.isTrackable && (
+        {/* Make-up (bill of materials) */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Make-up (recipe)</h3>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                If this item is assembled from others, list them here. Selling it deducts these ingredients instead of its own stock.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {components.map((c, idx) => {
+              const opt = optionsById.get(c.componentItemId);
+              const uoms = opt?.uoms ?? [];
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <SearchableSelect
+                      options={ingredientSelectOptions}
+                      value={c.componentItemId}
+                      onChange={(v) => chooseComponent(idx, v)}
+                      placeholder="Select ingredient…"
+                      searchPlaceholder="Search items…"
+                    />
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={c.quantity}
+                    onChange={(e) => updateComponent(idx, { quantity: Number(e.target.value) })}
+                    className="h-9 w-16 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                    aria-label="Quantity"
+                  />
+                  <select
+                    value={c.uomId}
+                    onChange={(e) => updateComponent(idx, { uomId: e.target.value })}
+                    disabled={!opt}
+                    className="h-9 w-24 shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:opacity-50"
+                    aria-label="Unit"
+                  >
+                    {uoms.length === 0 && <option value="">unit</option>}
+                    {uoms.map((u: any) => (
+                      <option key={u.id} value={u.id}>{u.abbreviation || u.name}</option>
+                    ))}
+                  </select>
+                  <span className="w-20 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                    {opt ? formatMoney(componentCost(c), currency) : '—'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeComponent(idx)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                    aria-label="Remove"
+                  >
+                    <i className="bx bx-trash text-lg"></i>
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={addComponent}
+              className="mt-1 flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              <i className="bx bx-plus"></i> Add ingredient
+            </button>
+          </div>
+
+          {/* Live economics */}
+          {(hasMakeUp || Number(formData.salePrice) > 0) && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-sm">
+              <span className="text-gray-500 dark:text-gray-400">
+                Cost <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(effectiveCost, currency)}</span>
+              </span>
+              <span className="text-gray-500 dark:text-gray-400">
+                Price <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(Number(formData.salePrice) || 0, currency)}</span>
+              </span>
+              <span className="text-gray-500 dark:text-gray-400">
+                Profit <span className={`font-medium tabular-nums ${profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatMoney(profit, currency)}</span>
+              </span>
+              <span className="text-gray-500 dark:text-gray-400">
+                Margin <span className={`font-semibold tabular-nums ${marginPct < 0 ? 'text-red-600 dark:text-red-400' : marginPct < 40 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{Number(formData.salePrice) > 0 ? `${marginPct.toFixed(0)}%` : '—'}</span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Minimum and Maximum Stock - Only show if trackable and not a make-up item */}
+        {formData.isTrackable && !hasMakeUp && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1090,7 +1302,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           <Button
             type="button"
             variant="secondary"
-            onClick={() => router.push('/ims/inventory')}
+            onClick={() => router.push(base)}
           >
             {t('cancel')}
           </Button>

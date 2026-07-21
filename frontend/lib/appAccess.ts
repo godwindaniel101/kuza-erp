@@ -7,8 +7,7 @@
  * have just by typing the URL — the sidebar already hides it; this blocks it.
  *
  * Keys match backend/src/common/apps/app-registry.ts:
- *   items, goods-in, pos, tables, menu, kuza-menu, customers, invoicing,
- *   books, insights, people, payroll, payments, audit
+ *   items, pos, tables, menu, customers, invoicing, books, people
  */
 
 interface RouteRule {
@@ -20,22 +19,24 @@ interface RouteRule {
 
 // Ordered most-specific first — the first matching prefix wins.
 const ROUTE_RULES: RouteRule[] = [
-  { prefix: '/rms/suppliers', keys: ['items', 'goods-in'] }, // purchasing lives in Inventory
-  { prefix: '/rms/menus', keys: ['menu', 'kuza-menu'] },
-  { prefix: '/menu-studio', keys: ['kuza-menu', 'menu'] },
-  { prefix: '/rms/tables', keys: ['tables', 'pos'] },
-  { prefix: '/rms/orders', keys: ['pos', 'tables'] },
-  { prefix: '/rms', keys: ['pos', 'tables', 'menu'] },
-  { prefix: '/hrms/payroll', keys: ['payroll', 'people'] },
-  { prefix: '/hrms', keys: ['people', 'payroll'] },
-  { prefix: '/pos', keys: ['items', 'pos'] }, // retail POS = Inventory (or POS)
-  { prefix: '/ims', keys: ['items', 'goods-in'] },
+  { prefix: '/rms/suppliers', keys: ['items'] }, // purchasing lives in Inventory
+  { prefix: '/rms/menus', keys: ['rms'] },
+  { prefix: '/rms/reservations', keys: ['rms'] },
+  { prefix: '/menu-studio', keys: ['rms'] },
+  { prefix: '/rms/tables', keys: ['rms'] },
+  { prefix: '/rms/orders', keys: ['rms', 'items'] },
+  { prefix: '/rms', keys: ['rms', 'items'] },
+  { prefix: '/hrms/payroll', keys: ['people'] },
+  { prefix: '/hrms', keys: ['people'] },
+  { prefix: '/payments', keys: ['payments'] },
+  { prefix: '/pos', keys: ['items', 'rms'] }, // retail POS = Inventory (or POS)
+  { prefix: '/ims', keys: ['items'] },
   { prefix: '/inventory', keys: ['items'] },
-  { prefix: '/sales', keys: ['customers', 'invoicing'] },
-  { prefix: '/accounting', keys: ['books', 'insights'] },
+  { prefix: '/sales', keys: ['invoicing'] },
+  { prefix: '/accounting', keys: ['books'] },
   { prefix: '/settings/categories', keys: ['items'] },
   { prefix: '/settings/uoms', keys: ['items'] },
-  { prefix: '/settings/allocation-method', keys: ['items', 'pos'] },
+  { prefix: '/settings/allocation-method', keys: ['items'] },
 ];
 
 /**

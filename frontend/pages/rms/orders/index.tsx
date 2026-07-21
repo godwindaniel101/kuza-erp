@@ -149,6 +149,7 @@ export default function OrdersPage() {
         t('itemsSold') || 'Items Sold',
         t('totalPaid') || 'Total Paid',
         t('createdDate') || 'Date/Time',
+        t('createdBy') || 'Created by',
         t('totalCost') || 'Total Cost',
         t('totalSale') || 'Total Sale',
         t('profit'),
@@ -162,6 +163,7 @@ export default function OrdersPage() {
           rowItemsSold(order),
           rowTotalPaid(order).toFixed(2),
           order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
+          order.createdByName || '',
           totalCost.toFixed(2),
           totalSale.toFixed(2),
           (totalSale - totalCost).toFixed(2),
@@ -209,6 +211,13 @@ export default function OrdersPage() {
           </span>
         );
       },
+    },
+    {
+      key: 'createdByName',
+      label: t('createdBy') || 'Created by',
+      render: (order) => (
+        <span className="text-gray-500 dark:text-gray-400">{order.createdByName || '—'}</span>
+      ),
     },
     {
       key: 'totalCost',

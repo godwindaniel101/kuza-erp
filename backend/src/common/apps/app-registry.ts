@@ -9,19 +9,11 @@
 
 export type AppKey =
   | 'items'
-  | 'goods-in'
-  | 'pos'
-  | 'tables'
-  | 'menu'
-  | 'kuza-menu'
-  | 'customers'
+  | 'rms'
   | 'invoicing'
   | 'books'
-  | 'insights'
   | 'people'
-  | 'payroll'
-  | 'payments'
-  | 'audit';
+  | 'payments';
 
 /**
  * Product editions offered at registration (founder direction, 2026-07):
@@ -87,9 +79,9 @@ export interface AppDefinition {
 export const APP_REGISTRY: readonly AppDefinition[] = [
   {
     key: 'items',
-    name: 'Items',
+    name: 'Inventory',
     description:
-      'Your catalog and stock, one source of truth across branches',
+      'Catalog, stock, receiving and valuation — one source of truth across branches',
     backendModules: [
       'ims/inventory',
       'ims/stock-movements',
@@ -98,70 +90,31 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
       'ims/categories',
       'ims/uoms',
       'ims/uom-conversions',
+      'ims/inflows',
+      'rms/suppliers',
     ],
     dependencies: [],
     defaultForBusinessTypes: ['hospitality', 'retail', 'warehouse'],
   },
   {
-    key: 'goods-in',
-    name: 'Goods In',
-    description:
-      'Receive stock and know exactly what arrived, from whom, at what cost',
-    backendModules: ['ims/inflows', 'rms/suppliers'],
-    dependencies: ['items'],
-    defaultForBusinessTypes: ['hospitality', 'retail', 'warehouse'],
-  },
-  {
-    key: 'pos',
-    name: 'Point of Sale',
-    description: 'Ring up sales; stock and books update themselves',
-    backendModules: ['rms/orders'],
-    dependencies: ['items'],
-    defaultForBusinessTypes: ['hospitality', 'retail'],
-  },
-  {
-    key: 'tables',
-    name: 'Tables',
-    description: 'Floor plan, table status, orders per table',
-    backendModules: ['rms/tables'],
-    dependencies: ['pos'],
-    defaultForBusinessTypes: ['hospitality'],
-  },
-  {
-    key: 'menu',
-    name: 'Menu',
-    description: 'Build and price menus from your items',
-    backendModules: ['rms/menus'],
+    key: 'rms',
+    name: 'Restaurant',
+    description: 'Sell, plus dine-in tables, menus and a free QR menu',
+    backendModules: ['rms/orders', 'rms/tables', 'rms/menus', 'rms/reservations', 'menu-sites'],
     dependencies: ['items'],
     defaultForBusinessTypes: ['hospitality'],
-  },
-  {
-    key: 'kuza-menu',
-    name: 'Kuza Menu',
-    description: 'Free QR menu website for your customers',
-    backendModules: ['menu-sites'],
-    dependencies: ['menu'],
-    defaultForBusinessTypes: ['hospitality'],
-  },
-  {
-    key: 'customers',
-    name: 'Customers',
-    description: 'Who buys from you and who owes you',
-    backendModules: ['customers'],
-    dependencies: [],
-    defaultForBusinessTypes: ['hospitality', 'accounts', 'retail'],
   },
   {
     key: 'invoicing',
     name: 'Invoicing',
-    description: 'Send invoices, get paid, AR tracked automatically',
-    backendModules: ['invoicing'],
-    dependencies: ['customers'],
+    description: 'Customers, invoices and getting paid — AR tracked automatically',
+    backendModules: ['invoicing', 'customers'],
+    dependencies: [],
     defaultForBusinessTypes: ['hospitality', 'accounts', 'retail'],
   },
   {
     key: 'books',
-    name: 'Books',
+    name: 'Accounting',
     description:
       'Double-entry accounting that writes itself — no accountant required',
     backendModules: ['accounting'],
@@ -169,24 +122,18 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
     defaultForBusinessTypes: ['accounts', 'retail'],
   },
   {
-    key: 'insights',
-    name: 'Insights',
+    key: 'payments',
+    name: 'Payments',
     description:
-      '"Did I make money today?" — plain-language daily answers',
-    backendModules: ['insights', 'dashboard'],
-    dependencies: ['books'],
-    defaultForBusinessTypes: [
-      'hospitality',
-      'accounts',
-      'retail',
-      'hr',
-      'warehouse',
-    ],
+      'Take payments (bank transfer, card, mobile money) and tie them to sales in real time',
+    backendModules: ['payments'],
+    dependencies: [],
+    defaultForBusinessTypes: ['hospitality', 'retail', 'accounts'],
   },
   {
     key: 'people',
     name: 'People',
-    description: 'Employees, attendance, leave in one place',
+    description: 'Employees, attendance, leave and payroll in one place',
     backendModules: [
       'hrms/employees',
       'hrms/attendance',
@@ -200,35 +147,10 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
       'hrms/learning',
       'hrms/benefits',
       'hrms/compensation',
+      'hrms/payroll',
     ],
     dependencies: [],
     defaultForBusinessTypes: ['hr'],
-  },
-  {
-    key: 'payroll',
-    name: 'Payroll',
-    description: "Run payroll with your country's taxes (per country pack)",
-    backendModules: ['hrms/payroll'],
-    dependencies: ['people'],
-    // D1: no preset enables payroll until country packs ship.
-    defaultForBusinessTypes: [],
-  },
-  {
-    key: 'payments',
-    name: 'Payments',
-    description:
-      'Paystack/Monnify collection links; auto-reconciled into your books',
-    backendModules: ['integrations'],
-    dependencies: ['books'],
-    defaultForBusinessTypes: ['accounts', 'retail'],
-  },
-  {
-    key: 'audit',
-    name: 'Audit Trail',
-    description: 'Every action, by whom, forever (Enterprise)',
-    backendModules: ['common/audit'],
-    dependencies: [],
-    defaultForBusinessTypes: ['warehouse'],
   },
 ];
 
@@ -247,12 +169,11 @@ export function getApp(key: string): AppDefinition | undefined {
  * seeds need no data migration (APPS-MODEL.md §1 notes).
  */
 export const LEGACY_PLAN_MODULE_TO_APPS: Record<string, AppKey[]> = {
-  ims: ['items', 'goods-in'],
-  rms: ['pos', 'tables', 'menu', 'kuza-menu'],
-  invoicing: ['invoicing', 'customers'],
-  accounting: ['books', 'insights', 'payments'],
-  hrms: ['people', 'payroll'],
-  audit: ['audit'],
+  ims: ['items'],
+  rms: ['rms'],
+  invoicing: ['invoicing'],
+  accounting: ['books'],
+  hrms: ['people'],
 };
 
 /**

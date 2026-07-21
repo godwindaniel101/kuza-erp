@@ -519,7 +519,7 @@ export default function InflowDetailsPage() {
             </div>
 
             {inflow.items && inflow.items.length > 0 ? (
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                     <tr>

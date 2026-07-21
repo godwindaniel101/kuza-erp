@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback, Fragment } from 'react';
-import { askCopilot, type CopilotChart } from '@/lib/insights';
+import { askCopilot, type CopilotChart, type CopilotTable } from '@/lib/insights';
+import { useKuzaStore } from '@/store/kuzaStore';
+import { useAuthStore } from '@/store/authStore';
 import {
   RevenueAreaChart,
   WeeklyBarChart,
@@ -14,6 +16,65 @@ interface ChatMessage {
   variant?: 'normal' | 'notice';
   /** Assistant-only: optional chart with real, backend-computed points. */
   chart?: CopilotChart;
+  /** Assistant-only: optional presentable table with real, backend-computed rows. */
+  table?: CopilotTable;
+  /** Epoch ms when the message was created (for the timestamp). */
+  ts?: number;
+}
+
+/** Short "3:45 PM" timestamp; client-only (chat isn't server-rendered). */
+function formatTs(ts?: number): string {
+  if (!ts) return '';
+  try {
+    return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+/** Render a copilot table inline under an answer — a clean, presentable grid. */
+function CopilotTableBlock({ table }: { table: CopilotTable }) {
+  return (
+    <div className="mt-2 w-full max-w-full overflow-x-auto rounded-2xl bg-gray-50 p-3 ring-1 ring-inset ring-gray-100 dark:bg-gray-800/60 dark:ring-gray-800">
+      <p className="mb-1.5 px-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+        {table.title}
+      </p>
+      <table className="w-full border-collapse text-[12px]">
+        <thead>
+          <tr>
+            {table.columns.map((c, i) => (
+              <th
+                key={i}
+                className={`border-b border-gray-200 px-2 py-1.5 font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300 ${
+                  i === 0 ? 'text-left' : 'text-right'
+                }`}
+              >
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, r) => (
+            <tr key={r} className="odd:bg-white/50 dark:odd:bg-gray-900/30">
+              {row.map((cell, c) => (
+                <td
+                  key={c}
+                  className={`border-b border-gray-100 px-2 py-1.5 dark:border-gray-800 ${
+                    c === 0
+                      ? 'text-left font-medium text-gray-900 dark:text-gray-100'
+                      : 'text-right tabular-nums text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {typeof cell === 'number' ? cell.toLocaleString() : cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 /**
@@ -91,7 +152,9 @@ function renderBold(line: string) {
 }
 
 export default function KuzaCopilot() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useKuzaStore();
+  const userId = useAuthStore((s) => s.user?.id) ?? 'anon';
+  const storageKey = `kuza-chat-${userId}`;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,6 +162,34 @@ export default function KuzaCopilot() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const persistReady = useRef(false);
+
+  // Restore this user's chat after mount (client-only, so no SSR mismatch).
+  // Blocks the next persist so the initial empty state can't clobber the save.
+  useEffect(() => {
+    persistReady.current = false;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const saved = raw ? JSON.parse(raw) : null;
+      setMessages(Array.isArray(saved) ? saved : []);
+    } catch {
+      setMessages([]);
+    }
+  }, [storageKey]);
+
+  // Persist on change (keep the last 40 turns). Skips the first run per key so
+  // the restore above lands before we write.
+  useEffect(() => {
+    if (!persistReady.current) {
+      persistReady.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages.slice(-40)));
+    } catch {
+      /* storage full / unavailable — non-fatal */
+    }
+  }, [messages, storageKey]);
 
   // Focus the input when the panel opens; restore focus to launcher on close.
   useEffect(() => {
@@ -138,6 +229,7 @@ export default function KuzaCopilot() {
         id: `u-${Date.now()}`,
         role: 'user',
         content: trimmed,
+        ts: Date.now(),
       };
       setMessages((prev) => [...prev, userMsg]);
       setInput('');
@@ -153,6 +245,8 @@ export default function KuzaCopilot() {
               content: result.answer ?? '',
               variant: 'normal',
               chart: result.chart,
+              table: result.table,
+              ts: Date.now(),
             }
           : {
               id: `a-${Date.now()}`,
@@ -161,6 +255,7 @@ export default function KuzaCopilot() {
                 result.message ??
                 'Kuza AI is unavailable right now. Please try again later.',
               variant: 'notice',
+              ts: Date.now(),
             };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -183,21 +278,9 @@ export default function KuzaCopilot() {
 
   return (
     <>
-      {/* Floating launcher — bottom-right, brand gradient */}
-      <button
-        ref={launcherRef}
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label="Open Kuza AI"
-        className={`fixed bottom-5 right-5 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-brand-gradient pl-3.5 pr-4 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-gradient-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950 motion-safe:transition-all motion-safe:duration-200 ${
-          open ? 'pointer-events-none scale-95 opacity-0' : 'opacity-100'
-        }`}
-      >
-        <SparklesIcon className="h-5 w-5 shrink-0" />
-        <span className="text-[13px] font-semibold">Kuza AI</span>
-      </button>
+      {/* The launcher lives in the top header (AppHeader) — a "Kuza AI" tag that
+          calls useKuzaStore().setOpen(true). This component renders only the
+          panel + backdrop. */}
 
       {/* Backdrop */}
       <div
@@ -232,14 +315,27 @@ export default function KuzaCopilot() {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close Kuza AI"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-          >
-            <i className="bx bx-x text-xl" aria-hidden="true"></i>
-          </button>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMessages([])}
+                aria-label="Clear chat"
+                title="Clear chat"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              >
+                <i className="bx bx-trash text-lg" aria-hidden="true"></i>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close Kuza AI"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            >
+              <i className="bx bx-x text-xl" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -264,10 +360,13 @@ export default function KuzaCopilot() {
 
           {messages.map((m) =>
             m.role === 'user' ? (
-              <div key={m.id} className="flex justify-end">
+              <div key={m.id} className="flex flex-col items-end">
                 <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-brand-gradient px-3.5 py-2 text-[13px] leading-relaxed text-white">
                   {m.content}
                 </div>
+                {m.ts && (
+                  <span className="mt-0.5 px-1 text-[10px] text-gray-400 dark:text-gray-500">{formatTs(m.ts)}</span>
+                )}
               </div>
             ) : (
               <div key={m.id} className="flex flex-col items-start">
@@ -281,6 +380,10 @@ export default function KuzaCopilot() {
                   {renderRichText(m.content)}
                 </div>
                 {m.chart && <CopilotChartBlock chart={m.chart} />}
+                {m.table && <CopilotTableBlock table={m.table} />}
+                {m.ts && (
+                  <span className="mt-0.5 px-1 text-[10px] text-gray-400 dark:text-gray-500">{formatTs(m.ts)}</span>
+                )}
               </div>
             ),
           )}
@@ -323,7 +426,7 @@ export default function KuzaCopilot() {
           onSubmit={handleSubmit}
           className="border-t border-gray-100 p-3 dark:border-gray-800"
         >
-          <div className="flex items-end gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-1.5 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
             <textarea
               ref={inputRef}
               rows={1}
@@ -331,7 +434,7 @@ export default function KuzaCopilot() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask Kuza AI…"
-              className="max-h-32 flex-1 resize-none bg-transparent text-[13px] text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-gray-100 dark:placeholder:text-gray-500"
+              className="max-h-32 min-h-[24px] !max-w-none flex-1 resize-none self-center bg-transparent py-1 text-[13px] leading-6 text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <button
               type="submit"

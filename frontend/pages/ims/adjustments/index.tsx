@@ -27,6 +27,7 @@ interface Adjustment {
   id: string;
   adjustmentNumber: string;
   branchId?: string;
+  branchName?: string | null;
   reason: AdjustmentReason;
   notes?: string;
   status: AdjustmentStatus;
@@ -105,6 +106,19 @@ export default function AdjustmentsPage() {
       render: (a) => <span className="font-medium text-gray-900 dark:text-white">{a.adjustmentNumber}</span>,
     },
     { key: 'createdAt', label: 'Date', render: (a) => formatDate(a.createdAt) },
+    {
+      key: 'branch',
+      label: 'Branch',
+      render: (a) =>
+        a.branchName ? (
+          <span className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300">
+            <i className="bx bx-store text-gray-400" aria-hidden="true" />
+            {a.branchName}
+          </span>
+        ) : (
+          <span className="text-gray-400 dark:text-gray-500">All branches</span>
+        ),
+    },
     {
       key: 'reason',
       label: 'Reason',

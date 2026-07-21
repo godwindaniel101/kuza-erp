@@ -4,6 +4,7 @@ import {
   IsIn,
   IsInt,
   IsOptional,
+  IsString,
   IsUUID,
   Max,
   Min,
@@ -15,8 +16,9 @@ export class QueryStockMovementsDto {
   @IsUUID()
   itemId?: string;
 
+  /** One or more branch ids, comma-separated (multi-select filter). */
   @IsOptional()
-  @IsUUID()
+  @IsString()
   branchId?: string;
 
   @IsOptional()

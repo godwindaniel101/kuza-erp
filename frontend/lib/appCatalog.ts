@@ -8,11 +8,22 @@ import { IconName } from '@/components/ui/Icon';
  * Restaurant (hospitality) and Shop (retail) are DISTINCT apps — a tenant sees one
  * or the other by vertical, never both.
  */
+/**
+ * The single source of truth for the product's coarse apps. Both the header
+ * launcher (via availableCoarseApps) and the AppSidebar consume THIS list — the
+ * sidebar extends each entry with its own runtime nav `groups`. Keep app-level
+ * metadata (name, icon, home, appKeys, businessTypes, blurb, moduleKeys) here
+ * only; do not re-declare it in the sidebar (that duplication had drifted).
+ */
 export interface CoarseApp {
   id: string;
   name: string;
   icon: IconName;
+  /** One-line description shown in the launcher grid. */
+  blurb: string;
   home: string;
+  /** Plan-module keys this app maps to (any-of). Absent = always available. */
+  moduleKeys?: string[];
   /** Any-of registry keys that enable this app. null = always available. */
   appKeys: string[] | null;
   /** Vertical gate: only show for these businessTypes (null businessType -> 'retail'). */
@@ -20,13 +31,13 @@ export interface CoarseApp {
 }
 
 export const COARSE_APPS: CoarseApp[] = [
-  { id: 'restaurant', name: 'Restaurant', icon: 'building-storefront', home: '/', appKeys: ['pos', 'tables', 'menu'], businessTypes: ['hospitality', 'restaurant'] },
-  { id: 'shop', name: 'Shop', icon: 'building-storefront', home: '/', appKeys: ['pos'], businessTypes: ['retail', 'general', 'accounts', 'services', 'warehouse'] },
-  { id: 'inventory', name: 'Inventory', icon: 'cube', home: '/ims', appKeys: ['items', 'goods-in'] },
-  { id: 'sales', name: 'Invoicing', icon: 'banknotes', home: '/sales', appKeys: ['customers', 'invoicing'] },
-  { id: 'accounting', name: 'Accounting', icon: 'calculator', home: '/accounting', appKeys: ['books', 'insights'] },
-  { id: 'hr', name: 'People', icon: 'users', home: '/hrms/dashboard', appKeys: ['people', 'payroll'] },
-  { id: 'settings', name: 'Settings', icon: 'cog', home: '/settings', appKeys: null },
+  { id: 'restaurant', name: 'Restaurant', icon: 'table-cells', blurb: 'Sell, dine-in tables, menus and QR menu', home: '/', moduleKeys: ['rms'], appKeys: ['rms'] },
+  { id: 'inventory', name: 'Inventory', icon: 'cube', blurb: 'Track stock, receive goods and value your inventory', home: '/ims', moduleKeys: ['ims'], appKeys: ['items'] },
+  { id: 'sales', name: 'Invoicing', icon: 'banknotes', blurb: 'Customers, invoices and getting paid', home: '/sales', moduleKeys: ['sales'], appKeys: ['invoicing'] },
+  { id: 'accounting', name: 'Accounting', icon: 'calculator', blurb: 'Double-entry books, ledger and financial reports', home: '/accounting', moduleKeys: ['accounting'], appKeys: ['books'] },
+  { id: 'hr', name: 'People', icon: 'users', blurb: 'Employees, attendance, leave and payroll', home: '/hrms/dashboard', moduleKeys: ['hrms'], appKeys: ['people'] },
+  { id: 'payments', name: 'Payments', icon: 'credit-card', blurb: 'Take payments and tie them to sales in real time', home: '/payments', moduleKeys: ['payments'], appKeys: ['payments'] },
+  { id: 'settings', name: 'Settings', icon: 'cog', blurb: 'Users, roles, branches and billing', home: '/settings', appKeys: null },
 ];
 
 export function appDisplayName(app: CoarseApp): string {

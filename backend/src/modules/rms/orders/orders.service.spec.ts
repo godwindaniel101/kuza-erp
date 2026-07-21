@@ -35,6 +35,7 @@ describe('OrdersService.allocateInventory', () => {
       createMockRepo() as any, // orderPaymentRepository
       orderItemInflowItemRepo as any, // orderItemInflowItemRepository
       createMockRepo() as any, // inventoryItemRepository
+      createMockRepo() as any, // inventoryItemComponentRepository
       inflowItemRepo as any, // inflowItemRepository
       createMockRepo() as any, // branchInventoryRepository
       businessRepo as any, // businessRepository
@@ -208,7 +209,8 @@ describe('OrdersService.getAllocationMethod', () => {
       createMockRepo() as any,
       createMockRepo() as any,
       createMockRepo() as any,
-      createMockRepo() as any,
+      createMockRepo() as any, // inventoryItemRepository
+      createMockRepo() as any, // inventoryItemComponentRepository
       createMockRepo() as any,
       createMockRepo() as any,
       businessRepo as any,

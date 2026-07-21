@@ -41,12 +41,20 @@ interface InventoryItem {
   costPrice?: number | string;
   batchCount?: number;
   batches?: unknown[];
+  /** Next upcoming batch expiry date (ISO) across this item's inflow batches. */
+  earliestExpiry?: string | null;
+  /** How many batches expire within 30 days. */
+  expiringSoonCount?: number;
 }
 
 export default function InventoryPage() {
   const { t } = useTranslation('common');
   const { businessType } = useTenantStore();
   const router = useRouter();
+  // This page is re-used under /rms/items (Restaurant → Items). Keep navigation
+  // on whichever base you entered from so the workspace doesn't switch. API
+  // paths stay /ims/inventory regardless.
+  const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,6 +253,29 @@ export default function InventoryPage() {
         return count != null ? String(count) : <span className="text-gray-400 dark:text-gray-500">—</span>;
       },
     },
+    expiring: {
+      key: 'expiring',
+      label: 'Expiring soon',
+      render: (item) => {
+        if (!item.earliestExpiry) return <span className="text-gray-400 dark:text-gray-500">—</span>;
+        const d = new Date(item.earliestExpiry);
+        const days = Math.ceil((d.getTime() - Date.now()) / 86400000);
+        const soon = days <= 30;
+        const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const count = Number(item.expiringSoonCount || 0);
+        return (
+          <span className={`inline-flex items-center gap-1.5 text-[13px] ${soon ? 'text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+            {soon && <i className="bx bxs-time-five text-amber-500" aria-hidden="true" />}
+            <span>{dateLabel}</span>
+            {count > 1 && (
+              <span className="rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                {count} batches
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
     unitCost: {
       key: 'unitCost',
       label: 'Unit cost',
@@ -289,9 +320,9 @@ export default function InventoryPage() {
   const COLUMN_PRESETS: Record<string, string[]> = {
     hospitality: ['name', 'unitCost', 'currentStock', 'uom', 'status'],
     restaurant: ['name', 'category', 'currentStock', 'uom', 'status'],
-    retail: ['name', 'barcode', 'salePrice', 'currentStock', 'status'],
-    warehouse: ['name', 'binLocation', 'currentStock', 'batches', 'status'],
-    general: ['name', 'category', 'subcategory', 'currentStock', 'salePrice', 'status'],
+    retail: ['name', 'barcode', 'salePrice', 'currentStock', 'expiring', 'status'],
+    warehouse: ['name', 'currentStock', 'batches', 'expiring', 'status'],
+    general: ['name', 'category', 'subcategory', 'currentStock', 'expiring', 'status'],
   };
   const presetKeys = COLUMN_PRESETS[businessType ?? 'general'] ?? COLUMN_PRESETS.general;
   const columns: DataTableColumn<InventoryItem>[] = presetKeys.map((k) => allColumns[k]).filter(Boolean);
@@ -318,7 +349,7 @@ export default function InventoryPage() {
       label: t('edit'),
       icon: 'bx-edit',
       iconColor: 'text-brand-600',
-      onClick: (item) => router.push(`/ims/inventory/edit/${item.id}`),
+      onClick: (item) => router.push(`${base}/edit/${item.id}`),
     },
     {
       label: t('delete'),
@@ -352,7 +383,7 @@ export default function InventoryPage() {
               {t('bulkUpload')}
             </Button>
             <PermissionGuard permission="inventory.create">
-              <Button href="/ims/inventory/create" variant="primary" size="sm">
+              <Button href={`${base}/create`} variant="primary" size="sm">
                 {term(businessType, 'addItem')}
               </Button>
             </PermissionGuard>
@@ -424,7 +455,7 @@ export default function InventoryPage() {
         loading={loading}
         sort={{ field: table.sortField, direction: table.sortDirection }}
         onSortChange={table.toggleSort}
-        onRowClick={(item) => router.push(`/ims/inventory/${item.id}`)}
+        onRowClick={(item) => router.push(`${base}/${item.id}`)}
         rowActions={rowActions}
         actionsLabel={t('moreActions') || 'More actions'}
         pagination={{
@@ -447,7 +478,7 @@ export default function InventoryPage() {
             actions={
               <>
                 <PermissionGuard permission="inventory.create">
-                  <Button href="/ims/inventory/create" variant="primary" size="sm">
+                  <Button href={`${base}/create`} variant="primary" size="sm">
                     {term(businessType, 'addItem')}
                   </Button>
                 </PermissionGuard>

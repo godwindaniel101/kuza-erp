@@ -7,18 +7,30 @@ import NoirTemplate from './NoirTemplate';
 import GalleryTemplate from './GalleryTemplate';
 import BistroTemplate from './BistroTemplate';
 import GrandTemplate from './GrandTemplate';
+import EscapeTemplate from './EscapeTemplate';
+import BotanicalTemplate from './BotanicalTemplate';
+import SakuraTemplate from './SakuraTemplate';
+import RoastTemplate from './RoastTemplate';
+import SpaceTemplate from './SpaceTemplate';
 
-export { ARCHETYPES, getArchetype, resolveTheme } from './themes';
-export type { ArchetypeMeta } from './themes';
+export { ARCHETYPES, ARCHETYPE_GROUPS, getArchetype, resolveTheme } from './themes';
+export type { ArchetypeMeta, ArchetypeGroup } from './themes';
 export type { MenuTheme, TemplateKey, TemplateProps } from './types';
 
-const COMPONENTS: Record<TemplateKey, ComponentType<TemplateProps>> = {
+// Partial: premium archetypes are added incrementally; any key without a
+// component yet falls back to MinimalTemplate in getTemplateComponent.
+const COMPONENTS: Partial<Record<TemplateKey, ComponentType<TemplateProps>>> = {
   elegant: ElegantTemplate,
   minimal: MinimalTemplate,
   noir: NoirTemplate,
   gallery: GalleryTemplate,
   bistro: BistroTemplate,
   grand: GrandTemplate,
+  escape: EscapeTemplate,
+  botanical: BotanicalTemplate,
+  sakura: SakuraTemplate,
+  roast: RoastTemplate,
+  space: SpaceTemplate,
 };
 
 export function getTemplateComponent(
@@ -37,6 +49,10 @@ export const SAMPLE_MENU_DATA: PublicMenuData = {
     phone: null,
     whatsapp: null,
     instagram: null,
+    facebook: null,
+    tiktok: null,
+    twitter: null,
+    feedbackUrl: null,
     wifiName: null,
     wifiPassword: null,
     currency: 'NGN',

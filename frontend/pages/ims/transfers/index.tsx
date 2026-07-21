@@ -233,7 +233,7 @@ export default function TransfersPage() {
                           )}
                           {transfer.status === 'in_transit' && (
                             <Link
-                              href={`/ims/transfers/${transfer.id}/receive`}
+                              href={`/ims/transfers/${transfer.id}`}
                               className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                               title={t('receive') || 'Receive'}
                             >

@@ -25,6 +25,8 @@ export interface PosProduct {
   price: number;
   /** Current stock, expressed in BASE units. */
   stock: number;
+  /** True when stock isn't tracked (sell freely) — don't show a count or cap. */
+  unlimited?: boolean;
   /** Base unit display name. */
   unit: string;
   defaultUomId: string;

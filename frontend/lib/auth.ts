@@ -144,8 +144,18 @@ class AuthService {
         this.setUser(normalizedUser as User);
         return normalizedUser as User;
       }
-    } catch (error) {
-      this.clearAuth();
+    } catch (error: any) {
+      // Only drop the session when the token is DEFINITIVELY rejected (401/403).
+      // Transient failures (network, timeout, 5xx, rate-limit) must NOT clear the
+      // shared auth cookie: with several tabs open, one flaky /auth/me on refresh
+      // would delete the cookie and log every tab out at once. Re-throw so the
+      // caller can leave the existing session in place and retry.
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        this.clearAuth();
+        return null;
+      }
+      throw error;
     }
     return null;
   }

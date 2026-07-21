@@ -50,6 +50,19 @@ export class MenuSite extends TenantEntity {
   instagram: string;
 
   @Column({ nullable: true })
+  facebook: string;
+
+  @Column({ nullable: true })
+  tiktok: string;
+
+  @Column({ nullable: true })
+  twitter: string;
+
+  /** Link the "Feedback" tile / action points at (review form, WhatsApp, etc.). */
+  @Column({ nullable: true })
+  feedbackUrl: string;
+
+  @Column({ nullable: true })
   wifiName: string;
 
   @Column({ nullable: true })

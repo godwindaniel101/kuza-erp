@@ -1,5 +1,32 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+  IsArray,
+  ValidateNested,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
+/** One make-up (bill-of-materials) line: component item + quantity + unit. */
+export class ItemComponentDto {
+  @ApiProperty()
+  @IsUUID()
+  componentItemId: string;
+
+  @ApiProperty({ example: 2 })
+  @IsNumber()
+  @Min(0)
+  quantity: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  uomId?: string;
+}
 
 export class CreateInventoryItemDto {
   @ApiProperty()
@@ -59,6 +86,11 @@ export class CreateInventoryItemDto {
   @IsBoolean()
   isTrackable: boolean;
 
+  @ApiProperty({ default: true, required: false, description: 'Offer this item for sale at POS/menu' })
+  @IsOptional()
+  @IsBoolean()
+  sellAtPos?: boolean;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -67,5 +99,12 @@ export class CreateInventoryItemDto {
   @ApiProperty({ required: false, type: [String] })
   @IsOptional()
   additionalImages?: string[];
+
+  @ApiProperty({ type: [ItemComponentDto], required: false, description: 'Make-up: items this item is assembled from' })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ItemComponentDto)
+  components?: ItemComponentDto[];
 }
 

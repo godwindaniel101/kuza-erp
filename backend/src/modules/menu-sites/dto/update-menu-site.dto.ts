@@ -17,6 +17,11 @@ export const TEMPLATE_KEYS = [
   'gallery',
   'bistro',
   'grand',
+  'escape',
+  'botanical',
+  'sakura',
+  'roast',
+  'space',
 ] as const;
 
 export class UpdateMenuSiteDto {
@@ -81,6 +86,26 @@ export class UpdateMenuSiteDto {
   @IsString()
   @MaxLength(80)
   instagram?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  facebook?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  tiktok?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  twitter?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  feedbackUrl?: string | null;
 
   @IsOptional()
   @IsString()

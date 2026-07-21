@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '@/store/authStore';
 import { useTenantStore } from '@/store/globalStore';
+import { useKuzaStore } from '@/store/kuzaStore';
+import { useUiStore } from '@/store/uiStore';
 import { getApp, presetFor } from '@/lib/apps';
 import { availableCoarseApps, appDisplayName, hasAppKey } from '@/lib/appCatalog';
 import { useTranslation } from 'next-i18next';
@@ -38,22 +40,20 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   // Launcher entries: the coarse apps the tenant can access — the same 7 the
   // sidebar uses (Restaurant/POS, Inventory, Sales, Accounting, People, Settings),
   // not granular registry keys.
-  const launcherApps = availableCoarseApps(effectiveApps, businessType);
+  // Settings is reached from the profile menu / gear, not the app launcher grid.
+  const launcherApps = availableCoarseApps(effectiveApps, businessType).filter(
+    (a) => a.id !== 'settings',
+  );
+  const openKuza = useKuzaStore((s) => s.setOpen);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
 
   /** App key -> candidate sidebar groups, in priority order (first effective wins). */
   const APP_GROUP_CANDIDATES: Record<string, string[]> = {
-    pos: ['restaurant'],
-    tables: ['restaurant'],
-    menu: ['restaurant', 'menu-studio'],
-    'kuza-menu': ['menu-studio'],
+    rms: ['restaurant', 'menu-studio'],
     items: ['inventory'],
-    'goods-in': ['inventory'],
-    customers: ['sales', 'money'],
     invoicing: ['sales', 'money'],
     books: ['accounting', 'money'],
-    insights: ['accounting', 'money'],
     people: ['hr'],
-    payroll: ['hr'],
   };
 
   // Launching an app also sets the workspace so sidebar and workspace stay coherent.
@@ -65,7 +65,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   // Quick-create ("+") menu: creators only for apps the tenant actually has.
   const quickCreateItems = (
     [
-      { label: 'New Sale', href: '/pos', icon: 'banknotes', key: 'pos' },
+      { label: 'New Sale', href: '/pos', icon: 'banknotes', key: 'items' },
       { label: 'New Invoice', href: '/sales/invoices/new', icon: 'document-text', key: 'invoicing' },
       { label: 'Add Item', href: '/ims/inventory', icon: 'cube', key: 'items' },
       { label: 'Add Employee', href: '/hrms/employees/create', icon: 'user', key: 'people' },
@@ -237,7 +237,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   return (
     <header className="dashboard-header sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur">
       <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6">
-        {/* Left: mobile menu + breadcrumb */}
+        {/* Left: menu toggles + breadcrumb */}
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -247,6 +247,16 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
             }}
             className={`lg:hidden ${iconButton}`}
             aria-label="Open menu"
+          >
+            <Icon name="bars-3" size={20} />
+          </button>
+          {/* Desktop: collapse / show the sidebar */}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className={`hidden lg:inline-flex ${iconButton}`}
+            aria-label="Toggle sidebar"
+            title="Toggle sidebar"
           >
             <Icon name="bars-3" size={20} />
           </button>
@@ -311,6 +321,17 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
             className={`md:hidden ${iconButton}`}
           >
             <Icon name="search" size={18} />
+          </button>
+
+          {/* Kuza AI — icon opens the copilot panel (shared open state) */}
+          <button
+            type="button"
+            onClick={() => openKuza(true)}
+            aria-label="Open Kuza AI"
+            title="Kuza AI"
+            className={iconButton}
+          >
+            <Icon name="sparkles" size={18} />
           </button>
 
           {/* Quick-create ("+") menu */}

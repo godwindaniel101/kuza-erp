@@ -12,6 +12,7 @@ import PageHeader from '@/components/ui/PageHeader';
 export default function EditInventoryItemPage() {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
   const { id } = router.query;
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<any>(null);
@@ -50,7 +51,7 @@ export default function EditInventoryItemPage() {
       <div className="p-6">
         <div className="text-center py-8">
           <p className="text-red-600 dark:text-red-400">{t('itemNotFound') || 'Item not found'}</p>
-          <Link href="/ims/inventory" className="text-brand-600 dark:text-brand-400 hover:underline mt-4 inline-block">
+          <Link href={base} className="text-brand-600 dark:text-brand-400 hover:underline mt-4 inline-block">
             {t('backToInventory') || 'Back to Inventory'}
           </Link>
         </div>
@@ -65,7 +66,7 @@ export default function EditInventoryItemPage() {
           title={<>{t('edit')} {t('item')}: {item.name}</>}
           subtitle="Update this item's details and pricing"
           breadcrumbs={[
-            { label: t('inventory') || 'Inventory', href: '/ims/inventory' },
+            { label: t('inventory') || 'Inventory', href: base },
             { label: item.name },
           ]}
         />

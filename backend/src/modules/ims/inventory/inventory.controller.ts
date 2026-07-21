@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   ParseUUIDPipe,
+  Request,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { I18n, I18nContext } from "nestjs-i18n";
@@ -36,8 +37,12 @@ export class InventoryController {
   async create(
     @Body() createDto: CreateInventoryItemDto,
     @I18n() i18n: I18nContext,
+    @Request() req: any,
   ) {
-    const item = await this.inventoryService.create(createDto);
+    const item = await this.inventoryService.create(createDto, {
+      id: req.user?.sub,
+      name: req.user?.name,
+    });
     return {
       success: true,
       data: item,
@@ -71,6 +76,16 @@ export class InventoryController {
     return {
       success: true,
       data: items,
+    };
+  }
+
+  @Get("ingredient-options")
+  @RequirePermissions("inventory.view")
+  @ApiOperation({ summary: "Items as recipe ingredients (UoMs + cost per base unit)" })
+  async ingredientOptions() {
+    return {
+      success: true,
+      data: await this.inventoryService.getIngredientOptions(),
     };
   }
 
@@ -124,8 +139,12 @@ export class InventoryController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateInventoryItemDto,
     @I18n() i18n: I18nContext,
+    @Request() req: any,
   ) {
-    const item = await this.inventoryService.update(id, updateDto);
+    const item = await this.inventoryService.update(id, updateDto, {
+      id: req.user?.sub,
+      name: req.user?.name,
+    });
     return {
       success: true,
       data: item,

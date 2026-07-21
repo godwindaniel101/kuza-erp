@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Request,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { I18n, I18nContext } from "nestjs-i18n";
@@ -25,7 +26,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("RMS - Orders")
 @Controller("rms/orders")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("pos")
+@RequireApp("items")
 @ApiBearerAuth()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -36,10 +37,12 @@ export class OrdersController {
   async create(
     @Body() createOrderDto: CreateOrderDto,
     @I18n() i18n: I18nContext,
+    @Request() req: any,
   ) {
     const order = await this.ordersService.create(
       createOrderDto.branchId,
       createOrderDto,
+      { id: req.user?.sub, name: req.user?.name },
     );
     return {
       success: true,

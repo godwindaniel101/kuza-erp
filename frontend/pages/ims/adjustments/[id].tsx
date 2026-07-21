@@ -29,6 +29,7 @@ interface Adjustment {
   id: string;
   adjustmentNumber: string;
   branchId?: string;
+  branchName?: string | null;
   reason: AdjustmentReason;
   notes?: string;
   status: AdjustmentStatus;
@@ -183,12 +184,24 @@ export default function AdjustmentDetailPage() {
               <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">{formatDate(adjustment.createdAt)}</p>
             </div>
             <div>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Branch</p>
+              <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                {adjustment.branchName ? (
+                  <span className="inline-flex items-center gap-1">
+                    <i className="bx bx-store text-gray-400" aria-hidden="true" /> {adjustment.branchName}
+                  </span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-500">All branches</span>
+                )}
+              </p>
+            </div>
+            <div>
               <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reason</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">
                 {REASON_LABELS[adjustment.reason] || adjustment.reason}
               </p>
             </div>
-            <div className="col-span-2">
+            <div className="col-span-2 sm:col-span-4">
               <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Notes</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">{adjustment.notes || '-'}</p>
             </div>

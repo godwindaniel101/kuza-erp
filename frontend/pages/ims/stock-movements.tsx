@@ -18,6 +18,7 @@ interface StockMovement {
   itemId: string;
   itemName?: string;
   branchId?: string;
+  branchName?: string;
   movementType: MovementType;
   quantity: number;
   unitCost?: number;
@@ -65,6 +66,7 @@ function TypeBadge({ type }: { type: MovementType }) {
 export default function StockMovementsPage() {
   const [tab, setTab] = useState<'ledger' | 'reconciliation'>('ledger');
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -74,22 +76,23 @@ export default function StockMovementsPage() {
   const [reconLoaded, setReconLoaded] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const [filters, setFilters] = useState<FilterValues>({ itemId: '', type: '' });
+  const [filters, setFilters] = useState<FilterValues>({ itemId: '', type: '', branchId: [] });
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const itemId = (filters.itemId as string) || '';
   const type = (filters.type as string) || '';
+  const branchIds = (filters.branchId as string[]) || [];
+  const branchKey = branchIds.join(',');
 
   useEffect(() => {
-    const loadItems = async () => {
-      try {
-        const res = await api.get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory');
-        if (res.success) setItems(res.data || []);
-      } catch (err) {
-        console.error('Failed to load items:', err);
-      }
-    };
-    loadItems();
+    api
+      .get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory')
+      .then((res) => res.success && setItems(res.data || []))
+      .catch((err) => console.error('Failed to load items:', err));
+    api
+      .get<{ success: boolean; data: { id: string; name: string }[] }>('/settings/branches')
+      .then((res) => res.success && setBranches(res.data || []))
+      .catch(() => undefined);
   }, []);
 
   const loadMovements = useCallback(async () => {
@@ -98,6 +101,7 @@ export default function StockMovementsPage() {
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
       if (itemId) params.set('itemId', itemId);
       if (type) params.set('type', type);
+      if (branchKey) params.set('branchId', branchKey);
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
       const res = await api.get<{ success: boolean; data: { items: StockMovement[]; total: number } }>(
@@ -113,7 +117,7 @@ export default function StockMovementsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, itemId, type, fromDate, toDate]);
+  }, [page, itemId, type, branchKey, fromDate, toDate]);
 
   useEffect(() => {
     loadMovements();
@@ -121,7 +125,7 @@ export default function StockMovementsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [itemId, type, fromDate, toDate]);
+  }, [itemId, type, branchKey, fromDate, toDate]);
 
   const loadReconciliation = useCallback(async () => {
     setReconLoading(true);
@@ -160,6 +164,19 @@ export default function StockMovementsPage() {
         </span>
       ),
     },
+    {
+      key: 'branchName',
+      label: 'Branch',
+      render: (m) =>
+        m.branchName ? (
+          <span className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300">
+            <i className="bx bx-store text-gray-400" aria-hidden="true" />
+            {m.branchName}
+          </span>
+        ) : (
+          <span className="text-gray-400 dark:text-gray-500">—</span>
+        ),
+    },
     { key: 'movementType', label: 'Type', render: (m) => <TypeBadge type={m.movementType} /> },
     {
       key: 'quantity',
@@ -195,10 +212,11 @@ export default function StockMovementsPage() {
     name || items.find((i) => i.id === id)?.name || id;
 
   const handleExportLedgerCsv = () => {
-    const headers = ['Date', 'Item', 'Type', 'Qty', 'Balance After', 'Source'];
+    const headers = ['Date', 'Item', 'Branch', 'Type', 'Qty', 'Balance After', 'Source'];
     const rows = movements.map((m) => [
       formatDate(m.createdAt),
       resolveItemName(m.itemId, m.itemName),
+      m.branchName || '',
       TYPE_TOKENS[m.movementType]?.label || m.movementType,
       Number(m.quantity || 0),
       Number(m.balanceAfter || 0),
@@ -220,7 +238,7 @@ export default function StockMovementsPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
-  const hasFilters = !!itemId || !!type || !!fromDate || !!toDate;
+  const hasFilters = !!itemId || !!type || branchIds.length > 0 || !!fromDate || !!toDate;
   const driftCount = reconRows.filter((r) => Number(r.drift) !== 0).length;
 
   const tabClass = (active: boolean) =>
@@ -285,6 +303,13 @@ export default function StockMovementsPage() {
                 ],
               },
               {
+                key: 'branchId',
+                type: 'multiselect',
+                placeholder: 'All branches',
+                className: 'w-full sm:w-56',
+                options: branches.map((b) => ({ value: b.id, label: b.name })),
+              },
+              {
                 key: 'type',
                 type: 'select',
                 placeholder: 'All types',
@@ -298,7 +323,7 @@ export default function StockMovementsPage() {
             values={filters}
             onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
             onClear={() => {
-              setFilters({ itemId: '', type: '' });
+              setFilters({ itemId: '', type: '', branchId: [] });
               setFromDate('');
               setToDate('');
             }}

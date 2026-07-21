@@ -195,8 +195,31 @@ export class InsightsService {
   async getSummary(): Promise<{
     insights: Array<{ title: string; body: string; tone: 'positive' | 'warning' | 'info'; metric?: string }>;
   }> {
-    const d = await this.getDigest();
+    const [d, biz] = await Promise.all([
+      this.getDigest(),
+      this.getBusinessContext(),
+    ]);
     const insights: Array<{ title: string; body: string; tone: 'positive' | 'warning' | 'info'; metric?: string }> = [];
+
+    // Branch-aware low stock: the most useful operational nudge.
+    if (biz.lowStockByBranch.length > 0) {
+      const top = biz.lowStockByBranch[0];
+      const more = biz.lowStockByBranch.length - 1;
+      insights.push({
+        title: 'Low stock by branch',
+        body:
+          `${top.item} is low at ${top.branch} (${top.stock} left, reorder at ${top.minimum})` +
+          (more > 0 ? ` — and ${more} more item(s) across your branches.` : '.'),
+        tone: 'warning',
+      });
+    } else if (biz.branchCount > 1) {
+      insights.push({
+        title: 'Branches',
+        body: `You run ${biz.branchCount} branches. Stock is healthy — nothing below its reorder point right now.`,
+        tone: 'positive',
+      });
+    }
+
     if (d.profitThisMonth) {
       insights.push({
         title: 'Profit this month',
@@ -204,27 +227,32 @@ export class InsightsService {
         tone: (d.profitThisMonth.profit ?? 0) >= 0 ? 'positive' : 'warning',
       });
     }
-    if (d.salesTrend) {
-      insights.push({
-        title: 'Sales trend',
-        body: d.salesTrend.headline,
-        tone: (d.salesTrend.changePct ?? 0) >= 0 ? 'positive' : 'info',
-      });
-    }
-    if (d.cashPosition) {
-      insights.push({ title: 'Cash position', body: d.cashPosition.headline, tone: 'info' });
+    // Sales trend + low stock + cash position, merged into one insight.
+    {
+      const low = Array.isArray(d.lowStock) ? d.lowStock : [];
+      const hasLow = low.length > 0;
+      if (d.salesTrend || hasLow || d.cashPosition) {
+        const parts: string[] = [];
+        if (d.salesTrend) parts.push(d.salesTrend.headline);
+        if (hasLow) {
+          parts.push(low[0]?.headline || `${low.length} item(s) running low`);
+        }
+        if (d.cashPosition) parts.push(d.cashPosition.headline);
+        insights.push({
+          title: 'Sales, stock & cash',
+          body: parts.join(' • '),
+          tone: hasLow
+            ? 'warning'
+            : (d.salesTrend?.changePct ?? 0) >= 0
+              ? 'positive'
+              : 'info',
+        });
+      }
     }
     if (d.overdueTotal && (d.overdueTotal.amount ?? 0) > 0) {
       insights.push({
         title: 'Money owed to you',
         body: (Array.isArray(d.topDebtors) && d.topDebtors[0]?.headline) || d.overdueTotal.headline,
-        tone: 'warning',
-      });
-    }
-    if (Array.isArray(d.lowStock) && d.lowStock.length > 0) {
-      insights.push({
-        title: 'Low stock',
-        body: d.lowStock[0]?.headline || `${d.lowStock.length} item(s) running low`,
         tone: 'warning',
       });
     }
@@ -659,13 +687,479 @@ export class InsightsService {
     return { type, title, points: chosen.points };
   }
 
+  /** Friendly names for the app keys stored on Business.enabledApps. */
+  private static readonly APP_NAMES: Record<string, string> = {
+    items: 'Inventory',
+    pos: 'Point of Sale',
+    rms: 'Restaurant (tables & menus)',
+    invoicing: 'Invoicing & Customers',
+    books: 'Accounting',
+    people: 'People (HR & payroll)',
+  };
+
   /**
-   * Kuza Copilot: answers a plain-language question using ONLY the digest
-   * data as context. Never throws — degraded states come back as
-   * { available: false, message } with HTTP 200.
+   * A broad, end-to-end snapshot of the business for the copilot: which apps are
+   * enabled, branches with per-branch stock, low stock by branch, inventory and
+   * restaurant totals. Combined with the financial digest this lets the AI
+   * answer real questions ("how many branches", "what's low in branch X",
+   * accounting, restaurant) and know when a feature's app is turned off.
+   */
+  private async getBusinessContext() {
+    const business = await this.safe(
+      () => this.businessRepository.findOne({ where: {} }),
+      null,
+    );
+    const enabledKeys = business?.enabledApps ?? null; // null = all enabled
+    const enabledApps = (enabledKeys ?? Object.keys(InsightsService.APP_NAMES)).map(
+      (k) => InsightsService.APP_NAMES[k] || k,
+    );
+
+    const [
+      branches,
+      lowStockByBranch,
+      itemTotals,
+      tableCount,
+      menuItemCount,
+      topProductRows,
+      topStaffRows,
+    ] = await Promise.all([
+        this.safe(
+          () =>
+            this.sql<any>(
+              `SELECT b.name AS branch,
+                      COUNT(bi.id) FILTER (WHERE bi.current_stock > 0) AS in_stock_items,
+                      COUNT(bi.id) FILTER (WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock) AS low_stock_items,
+                      COALESCE(SUM(bi.current_stock * COALESCE(ii.unit_cost, 0)), 0) AS stock_value
+               FROM branches b
+               LEFT JOIN branch_inventory_items bi ON bi.branch_id = b.id
+               LEFT JOIN inventory_items ii ON ii.id = bi.inventory_item_id
+               GROUP BY b.id, b.name
+               ORDER BY b.name`,
+            ),
+          [],
+        ),
+        this.safe(
+          () =>
+            this.sql<any>(
+              `SELECT ii.name AS item, b.name AS branch,
+                      bi.current_stock AS stock, bi.minimum_stock AS minimum
+               FROM branch_inventory_items bi
+               JOIN branches b ON b.id = bi.branch_id
+               JOIN inventory_items ii ON ii.id = bi.inventory_item_id
+               WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock
+               ORDER BY (bi.current_stock - bi.minimum_stock) ASC
+               LIMIT 50`,
+            ),
+          [],
+        ),
+        this.safe(
+          () =>
+            this.sql<any>(
+              `SELECT COUNT(*) AS total_items,
+                      COALESCE(SUM(current_stock * COALESCE(unit_cost, 0)), 0) AS stock_value
+               FROM inventory_items`,
+            ),
+          [{ total_items: '0', stock_value: '0' }],
+        ),
+        this.safe(() => this.sql<any>(`SELECT COUNT(*) AS c FROM tables`), [
+          { c: '0' },
+        ]),
+        this.safe(() => this.sql<any>(`SELECT COUNT(*) AS c FROM menu_items`), [
+          { c: '0' },
+        ]),
+        // Best-selling products from POS/order sales (restaurants sell via
+        // orders, not invoices — so this, not invoice-based topItems, is the
+        // real "best performing product").
+        this.safe(
+          () =>
+            this.sql<any>(
+              `SELECT ii.name AS product,
+                      COALESCE(SUM(oi.quantity_base), 0) AS units,
+                      COALESCE(SUM(oi.total_price), 0) AS revenue
+               FROM order_items oi
+               JOIN inventory_items ii ON ii.id = oi.inventory_item_id
+               GROUP BY ii.name
+               ORDER BY revenue DESC
+               LIMIT 10`,
+            ),
+          [],
+        ),
+        // Best-performing staff: the user who rang up the most sales (orders).
+        this.safe(
+          () =>
+            this.sql<any>(
+              `SELECT u.name AS staff,
+                      COALESCE(SUM(o.total_amount), 0) AS revenue,
+                      COUNT(*) AS orders
+               FROM orders o
+               JOIN users u ON u.id = o.user_id
+               GROUP BY u.name
+               ORDER BY revenue DESC
+               LIMIT 5`,
+            ),
+          [],
+        ),
+      ]);
+
+    return {
+      enabledApps,
+      allAppsEnabled: enabledKeys === null,
+      businessType: business?.businessType ?? null,
+      topProducts: (topProductRows as any[]).map((r) => ({
+        product: r.product,
+        units: Number(r.units || 0),
+        revenue: Number(r.revenue || 0),
+      })),
+      topStaff: (topStaffRows as any[]).map((r) => ({
+        name: r.staff,
+        revenue: Number(r.revenue || 0),
+        orders: Number(r.orders || 0),
+      })),
+      branchCount: branches.length,
+      branches: branches.map((b: any) => ({
+        name: b.branch,
+        itemsInStock: Number(b.in_stock_items || 0),
+        lowStockItems: Number(b.low_stock_items || 0),
+        stockValueAtCost: Number(b.stock_value || 0),
+      })),
+      lowStockByBranch: lowStockByBranch.map((r: any) => ({
+        item: r.item,
+        branch: r.branch,
+        stock: Number(r.stock || 0),
+        minimum: Number(r.minimum || 0),
+      })),
+      inventory: {
+        totalItems: Number(itemTotals?.[0]?.total_items || 0),
+        stockValueAtCost: Number(itemTotals?.[0]?.stock_value || 0),
+      },
+      restaurant: {
+        tables: Number(tableCount?.[0]?.c || 0),
+        menuItems: Number(menuItemCount?.[0]?.c || 0),
+      },
+    };
+  }
+
+  /**
+   * Precomputed data tables the copilot can present (product × branch matrices).
+   * The AI only chooses WHICH table to show (by key); the app supplies the real
+   * rows here — the model never fabricates table data.
+   */
+  private async buildTables(): Promise<
+    Record<
+      string,
+      { title: string; description: string; columns: string[]; rows: (string | number)[][] }
+    >
+  > {
+    const tables: Record<
+      string,
+      { title: string; description: string; columns: string[]; rows: (string | number)[][] }
+    > = {};
+    const round = (n: number) => Math.round(Number(n || 0) * 100) / 100;
+
+    // Sales per product per branch (units + revenue), pivoted into a matrix.
+    const salesRows = await this.safe(
+      () =>
+        this.sql<any>(
+          `SELECT ii.name AS product, b.name AS branch,
+                  COALESCE(SUM(oi.quantity_base), 0) AS units,
+                  COALESCE(SUM(oi.total_price), 0) AS revenue
+           FROM order_items oi
+           JOIN orders o ON o.id = oi.order_id
+           JOIN branches b ON b.id = o.branch_id
+           JOIN inventory_items ii ON ii.id = oi.inventory_item_id
+           GROUP BY ii.name, b.name`,
+        ),
+      [],
+    );
+    if (salesRows.length > 0) {
+      const branches = [...new Set(salesRows.map((r: any) => r.branch).filter(Boolean))].sort();
+      const products = [...new Set(salesRows.map((r: any) => r.product).filter(Boolean))];
+      const units = new Map<string, number>();
+      const revenue = new Map<string, number>();
+      for (const r of salesRows) {
+        units.set(`${r.product}||${r.branch}`, Number(r.units || 0));
+        revenue.set(`${r.product}||${r.branch}`, Number(r.revenue || 0));
+      }
+      tables.salesRevenueByProductBranch = {
+        title: 'Sales revenue by product and branch',
+        description: 'Revenue for each product across every branch, with a total column',
+        columns: ['Product', ...branches, 'Total'],
+        rows: products.map((p) => {
+          const cells = branches.map((b) => round(revenue.get(`${p}||${b}`) || 0));
+          return [p, ...cells, round(cells.reduce((s, v) => s + v, 0))];
+        }),
+      };
+      tables.salesUnitsByProductBranch = {
+        title: 'Units sold by product and branch',
+        description: 'Units sold for each product across every branch, with a total column',
+        columns: ['Product', ...branches, 'Total'],
+        rows: products.map((p) => {
+          const cells = branches.map((b) => units.get(`${p}||${b}`) || 0);
+          return [p, ...cells, cells.reduce((s, v) => s + v, 0)];
+        }),
+      };
+    }
+
+    // Current stock per product per branch.
+    const stockRows = await this.safe(
+      () =>
+        this.sql<any>(
+          `SELECT ii.name AS product, b.name AS branch, bi.current_stock AS stock
+           FROM branch_inventory_items bi
+           JOIN branches b ON b.id = bi.branch_id
+           JOIN inventory_items ii ON ii.id = bi.inventory_item_id`,
+        ),
+      [],
+    );
+    if (stockRows.length > 0) {
+      const branches = [...new Set(stockRows.map((r: any) => r.branch).filter(Boolean))].sort();
+      const products = [...new Set(stockRows.map((r: any) => r.product).filter(Boolean))];
+      const stock = new Map<string, number>();
+      for (const r of stockRows) stock.set(`${r.product}||${r.branch}`, Number(r.stock || 0));
+      tables.stockByProductBranch = {
+        title: 'Current stock by product and branch',
+        description: 'Current stock level for each product across every branch',
+        columns: ['Product', ...branches],
+        rows: products.map((p) => [p, ...branches.map((b) => stock.get(`${p}||${b}`) || 0)]),
+      };
+    }
+
+    return tables;
+  }
+
+  /**
+   * Deterministic answers for common, factual questions — computed from real
+   * data so they're always correct and crisp, regardless of how weak the
+   * underlying model is. Returns null to fall through to the LLM.
+   */
+  private quickAnswer(
+    question: string,
+    digest: Awaited<ReturnType<InsightsService['getDigest']>>,
+    biz: Awaited<ReturnType<InsightsService['getBusinessContext']>>,
+    tables: Awaited<ReturnType<InsightsService['buildTables']>>,
+  ): { answer: string; table?: any } | null {
+    const s = question.toLowerCase();
+    const money = (n: number) => this.formatMoney(Number(n || 0), digest.currency);
+    const revenueTable = tables.salesRevenueByProductBranch
+      ? {
+          title: 'Sales revenue by product and branch',
+          columns: tables.salesRevenueByProductBranch.columns,
+          rows: tables.salesRevenueByProductBranch.rows,
+        }
+      : undefined;
+
+    // How do I optimize / grow / improve my sales? — specific, data-driven.
+    if (
+      /(optimi[sz]e|improve|grow|boost|increase|maximi[sz]e|drive|more)\b[^?.]*\b(sales|revenue|sell)/.test(s) ||
+      /how (do|can|should) i sell more/.test(s)
+    ) {
+      const t = tables.salesRevenueByProductBranch;
+      if (!t || t.rows.length === 0) {
+        return {
+          answer:
+            "There are no sales yet to analyse. Once you start ringing up sales, I'll suggest specific ways to grow them.",
+        };
+      }
+      const branchCols = t.columns.slice(1, -1); // drop 'Product' and 'Total'
+      const totalIdx = t.columns.length - 1;
+      const products = t.rows.map((r) => ({
+        name: String(r[0]),
+        byBranch: branchCols.map((_, i) => Number(r[i + 1] || 0)),
+        total: Number(r[totalIdx] || 0),
+      }));
+      const branchTotals = branchCols.map((_, i) =>
+        products.reduce((sum, p) => sum + p.byBranch[i], 0),
+      );
+      const ranked = [...products].sort((a, b) => b.total - a.total);
+      const top = ranked[0];
+      const recs: string[] = [];
+
+      if (top && top.total > 0) {
+        const topIdx = top.byBranch.indexOf(Math.max(...top.byBranch));
+        const missing = branchCols.filter((_, i) => top.byBranch[i] === 0);
+        recs.push(
+          `**Lean into your winner.** ${top.name} is your top seller (${money(top.total)}), mostly at ${branchCols[topIdx] ?? 'your main branch'}.` +
+            (missing.length
+              ? ` It sells nothing at ${missing.join(', ')} — stock and promote it there to grow fast.`
+              : ''),
+        );
+      }
+
+      if (branchCols.length > 1) {
+        const gaps = products
+          .filter(
+            (p) => p !== top && Math.max(...p.byBranch) > 0 && p.byBranch.some((v) => v === 0),
+          )
+          .sort((a, b) => Math.max(...b.byBranch) - Math.max(...a.byBranch))
+          .slice(0, 2);
+        gaps.forEach((p) => {
+          const strong = branchCols[p.byBranch.indexOf(Math.max(...p.byBranch))];
+          const weak = branchCols.filter((_, i) => p.byBranch[i] === 0);
+          recs.push(
+            `**Close a branch gap.** ${p.name} does ${money(Math.max(...p.byBranch))} at ${strong} but nothing at ${weak.join(', ')} — try it there.`,
+          );
+        });
+
+        const bi = branchTotals.indexOf(Math.max(...branchTotals));
+        const wi = branchTotals.indexOf(Math.min(...branchTotals));
+        if (bi !== wi) {
+          recs.push(
+            `**Level up your weaker branch.** ${branchCols[bi]} (${money(branchTotals[bi])}) far outsells ${branchCols[wi]} (${money(branchTotals[wi])}). Copy what works at ${branchCols[bi]} — menu, pricing, upsells.`,
+          );
+        }
+      }
+
+      const slow = ranked.filter((p) => p.total > 0 && top && p.total < top.total * 0.05).slice(0, 3);
+      if (slow.length) {
+        recs.push(
+          `**Trim the tail.** Slow movers (${slow.map((p) => p.name).join(', ')}) barely sell — bundle, promote, or drop them to focus on what works.`,
+        );
+      }
+
+      if (recs.length === 0) {
+        recs.push('Keep ringing up sales — once there is more history I can spot clearer opportunities.');
+      }
+
+      return {
+        answer:
+          `Here's how to grow sales, based on your real numbers:\n\n` +
+          recs.map((r) => `• ${r}`).join('\n'),
+        table: revenueTable,
+      };
+    }
+
+    // Best / top performing STAFF (checked before product so "best performing
+    // staff" isn't mistaken for a product question).
+    if (/(best|top|highest)\b[^?.]*\b(staff|employee|cashier|waiter|team member|worker|salesperson|seller person)\b/.test(s)) {
+      const st = biz.topStaff?.[0];
+      if (!st || !st.revenue) {
+        return {
+          answer:
+            'No staff sales are recorded yet, so I can\'t rank staff performance. Make sure sales are rung up under each staff member\'s login, then I can show your best performer.',
+        };
+      }
+      return {
+        answer: `Your best-performing staff member is ${st.name} — ${money(st.revenue)} in sales across ${st.orders.toLocaleString()} order${st.orders === 1 ? '' : 's'}.`,
+      };
+    }
+
+    // Best / top performing BRANCH
+    if (/(best|top|highest)\b[^?.]*\bbranch(es)?\b/.test(s)) {
+      const t = tables.salesRevenueByProductBranch;
+      const branchCols = t ? t.columns.slice(1, -1) : [];
+      if (!t || branchCols.length === 0) {
+        return { answer: "There are no branch sales recorded yet to compare." };
+      }
+      const totals = branchCols.map((_, i) =>
+        t.rows.reduce((sum, r) => sum + Number(r[i + 1] || 0), 0),
+      );
+      const bi = totals.indexOf(Math.max(...totals));
+      return {
+        answer: `Your best-performing branch is ${branchCols[bi]} — ${money(totals[bi])} in sales.`,
+        table: revenueTable,
+      };
+    }
+
+    // Best / top / best-selling PRODUCT (requires a product noun — "performing"
+    // alone no longer triggers this, so staff/branch questions don't fall here).
+    if (
+      /(best|top|highest|most)\b[^?.]*\b(product|item|dish|sku|seller|selling|sold)\b/.test(s) ||
+      /\bwhat\b[^?.]*\b(sell|sold)\b[^?.]*\bmost\b/.test(s)
+    ) {
+      const tp = biz.topProducts?.[0];
+      if (!tp || !tp.revenue) {
+        return {
+          answer:
+            "You haven't recorded any sales yet, so there's no best-performing product. Once you ring up some sales, your top products will show here.",
+        };
+      }
+      return {
+        answer: `Your best-performing product is ${tp.product} — ${money(tp.revenue)} in sales${tp.units ? ` (${tp.units.toLocaleString()} sold)` : ''}.`,
+        table: revenueTable,
+      };
+    }
+
+    // How many branches
+    if (/how many branch|number of branches|branches do i have|branch(es)? do i/.test(s)) {
+      const names = biz.branches.map((b) => b.name).filter(Boolean);
+      return {
+        answer: `You have ${biz.branchCount} branch${biz.branchCount === 1 ? '' : 'es'}${
+          names.length ? `: ${names.join(', ')}.` : '.'
+        }`,
+      };
+    }
+
+    // Low stock / what needs restocking
+    if (/low stock|running low|restock|reorder|out of stock/.test(s)) {
+      if (!biz.lowStockByBranch.length) {
+        return {
+          answer:
+            'Nothing is below its reorder point right now — stock looks healthy across your branches.',
+        };
+      }
+      const top = biz.lowStockByBranch
+        .slice(0, 5)
+        .map((r) => `${r.item} at ${r.branch} (${r.stock} left, reorder at ${r.minimum})`)
+        .join('; ');
+      return {
+        answer: `${biz.lowStockByBranch.length} item(s) are low: ${top}${
+          biz.lowStockByBranch.length > 5 ? ', and more.' : '.'
+        }`,
+        table: tables.stockByProductBranch
+          ? {
+              title: 'Current stock by product and branch',
+              columns: tables.stockByProductBranch.columns,
+              rows: tables.stockByProductBranch.rows,
+            }
+          : undefined,
+      };
+    }
+
+    // Profit this month
+    if (/\bprofit\b|did i make money|make money this month|am i profitable/.test(s)) {
+      if (digest.profitThisMonth?.headline) {
+        return { answer: digest.profitThisMonth.headline };
+      }
+    }
+
+    return null;
+  }
+
+  /** Resolve the model's table choice to a real, code-computed table. */
+  private resolveTable(
+    raw: any,
+    tables: Record<string, { title: string; columns: string[]; rows: (string | number)[][] }>,
+  ): { title: string; columns: string[]; rows: (string | number)[][] } | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const key = typeof raw.tableKey === 'string' ? raw.tableKey : undefined;
+    const t = key ? tables[key] : undefined;
+    if (!t || t.rows.length === 0) return undefined;
+    const title =
+      typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : t.title;
+    return { title, columns: t.columns, rows: t.rows };
+  }
+
+  /**
+   * Kuza Copilot: answers a plain-language question using the full business
+   * snapshot (financial digest + branches, stock, apps) as context. Never
+   * throws — degraded states come back as { available: false, message }.
    */
   async ask(question: string) {
-    const digest = await this.getDigest();
+    const [digest, biz, tables] = await Promise.all([
+      this.getDigest(),
+      this.getBusinessContext(),
+      this.buildTables(),
+    ]);
+
+    // Deterministic, code-computed answers for common factual questions — always
+    // correct and crisp, independent of the model's reasoning ability.
+    const quick = this.quickAnswer(question, digest, biz, tables);
+    if (quick) {
+      const resp: any = { available: true, answer: quick.answer };
+      if (quick.table) resp.table = quick.table;
+      return resp;
+    }
+
     const series = await this.buildSeries(digest);
 
     const seriesKeys = Object.keys(series);
@@ -675,13 +1169,25 @@ export class InsightsService {
           .join('\n')}`
       : 'No chart series are available for this business right now — do not include a chart.';
 
+    const tableKeys = Object.keys(tables);
+    const tableBlock = tableKeys.length
+      ? `Available data tables (use one of these EXACT keys as tableKey — the app fills the real rows, so NEVER write rows yourself):\n${tableKeys
+          .map((k) => `- ${k}: ${tables[k].description}`)
+          .join('\n')}`
+      : 'No data tables are available right now — do not include a table.';
+
     const context = [
       `Business name: ${digest.businessName}`,
+      `Business type/edition: ${biz.businessType ?? 'unknown'}`,
       `Currency: ${digest.currency}`,
-      `Business data (JSON):`,
-      JSON.stringify(digest),
+      `Number of branches: ${biz.branchCount}`,
+      `Enabled apps (features currently turned ON): ${biz.enabledApps.join(', ')}${biz.allAppsEnabled ? ' (all apps)' : ''}`,
+      `Full business snapshot (JSON — financials, branches, per-branch stock, low stock, inventory, restaurant):`,
+      JSON.stringify({ ...digest, ...biz }),
       '',
       seriesBlock,
+      '',
+      tableBlock,
     ].join('\n');
 
     // Provider-agnostic: LlmService picks the backend from AI_PROVIDER and
@@ -689,20 +1195,37 @@ export class InsightsService {
     // as { available: false } and we degrade to the "not configured" shape.
     const result = await this.llm.chat({
       system:
-        'You are Kuza Copilot, a financial assistant for small businesses. ' +
-        'Answer ONLY from the provided business data. Speak plainly, in short ' +
-        'sentences a non-accountant understands — no accounting jargon. ' +
-        'If the data does not contain the answer, say so honestly and suggest ' +
-        'what the owner could check instead. Use the business currency when ' +
-        'talking about money.\n\n' +
+        'You are Kuza Copilot, the AI assistant inside Kuza ERP. You help the ' +
+        'owner across their WHOLE business: inventory & stock (including per ' +
+        'branch), sales, invoicing & customers, accounting/finance, restaurant ' +
+        '(tables & menus) and people/HR. ' +
+        'Answer ONLY from the provided business snapshot (JSON) — it contains the ' +
+        'real figures: branch list and counts, per-branch stock and low-stock ' +
+        'items, inventory totals, cash, profit, sales, debtors, and more. When ' +
+        'asked "how many branches", "what is low in branch X", or similar, read ' +
+        'the exact numbers from the snapshot and answer precisely. ' +
+        'The snapshot lists "enabledApps" — the features currently turned on. ' +
+        'ONLY suggest enabling an app if it is genuinely missing from that list; ' +
+        'if the relevant app is already enabled, never tell them to enable it. ' +
+        'Never invent app or feature names (there is no "Sales trend app"). ' +
+        'Never mention internal field, table, or series names, or JSON, in your ' +
+        'answer — speak only in plain business terms. Be concise: give a few ' +
+        'specific, non-repetitive points, not a long generic list. ' +
+        'Speak plainly, in short sentences a non-accountant understands. ' +
+        'If the snapshot genuinely lacks the answer, say so honestly and suggest ' +
+        'where to look. Use the business currency when talking about money.\n\n' +
         'Respond with STRICT JSON ONLY (no markdown, no prose outside the JSON) ' +
         'matching this shape:\n' +
-        '{"answer": string, "chart"?: {"type": "area"|"bar"|"line", "title": string, "seriesKey": string}}\n' +
+        '{"answer": string, "chart"?: {"type": "area"|"bar"|"line", "title": string, "seriesKey": string}, "table"?: {"title": string, "tableKey": string}}\n' +
         'Put your plain-language reply in "answer". Include "chart" ONLY when a ' +
         'visualisation genuinely helps AND a relevant series exists. "seriesKey" ' +
         'MUST be exactly one of the provided chart series keys — never invent a ' +
-        'key. You only choose the chart type and which series to show; you must ' +
-        'NEVER invent or include data points yourself.',
+        'key. Include "table" when the user asks for a breakdown, comparison or ' +
+        'list best shown as a table (e.g. "product performance across branches") ' +
+        'AND a relevant data table exists — set "tableKey" to EXACTLY one of the ' +
+        'provided table keys. You ONLY choose which chart/table to show and its ' +
+        'title; you must NEVER invent, include, or compute rows or data points ' +
+        'yourself — the app fills them from real figures.',
       messages: [
         {
           role: 'user',
@@ -736,9 +1259,16 @@ export class InsightsService {
     const parsed = this.extractJson(result.text);
     if (parsed && typeof parsed.answer === 'string' && parsed.answer.trim()) {
       const chart = this.resolveChart(parsed.chart, series);
-      return chart
-        ? { available: true, answer: parsed.answer.trim(), chart }
-        : { available: true, answer: parsed.answer.trim() };
+      const table = this.resolveTable(parsed.table, tables);
+      const response: {
+        available: true;
+        answer: string;
+        chart?: ReturnType<InsightsService['resolveChart']>;
+        table?: ReturnType<InsightsService['resolveTable']>;
+      } = { available: true, answer: parsed.answer.trim() };
+      if (chart) response.chart = chart;
+      if (table) response.table = table;
+      return response;
     }
 
     return { available: true, answer: result.text };

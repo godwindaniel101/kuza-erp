@@ -8,6 +8,7 @@ import { useTranslation } from 'next-i18next';
 import NavItem from './NavItem';
 import Icon, { IconName } from './ui/Icon';
 import { term } from '@/lib/terminology';
+import { COARSE_APPS, CoarseApp } from '@/lib/appCatalog';
 
 /**
  * App-isolated sidebar (Odoo-style). The product is a set of APPS. You are
@@ -38,26 +39,19 @@ interface NavGroup {
   items: NavLeaf[];
 }
 
-interface AppDef {
-  id: string;
-  name: string;
-  icon: IconName;
-  /** One-line description shown in the launcher. */
-  blurb: string;
-  /** Landing route for this app (its dashboard). */
-  home: string;
-  /** Plan-module keys this app maps to (any-of). Absent = always available. */
-  moduleKeys?: string[];
-  /** effective-apps registry keys that enable this app (any-of). Absent = not app-gated. */
-  appKeys?: string[];
-  /** Vertical gate: only show for these businessTypes (null businessType -> 'retail'). */
-  businessTypes?: string[];
+/**
+ * An app = its canonical metadata (from the shared COARSE_APPS catalog) plus
+ * this sidebar's runtime nav groups. App-level fields live in the catalog only.
+ */
+interface AppDef extends CoarseApp {
   groups: NavGroup[];
 }
 
 interface AppSidebarProps {
   mobile?: boolean;
   onNavigate?: () => void;
+  /** Desktop: slide the sidebar off-screen (animated) instead of unmounting. */
+  collapsed?: boolean;
 }
 
 /** Plan-module vocabulary is fuzzy across backends — match by alias substring. */
@@ -69,23 +63,13 @@ const MODULE_ALIASES: Record<string, string[]> = {
   hrms: ['hrms', 'hr', 'people', 'payroll'],
 };
 
-const EDITION_CHIPS: Record<string, string> = {
-  hospitality: 'Hospitality',
-  restaurant: 'Hospitality',
-  accounts: 'Digital Accounts',
-  retail: 'Retail',
-  hr: 'Human Resources',
-  warehouse: 'Warehouse',
-};
-
-export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
+export default function AppSidebar({ mobile = false, onNavigate, collapsed = false }: AppSidebarProps) {
   const router = useRouter();
   const { pathname } = router;
   const { t } = useTranslation('common');
   const { user } = useAuthStore();
   const {
     businessType,
-    businessName,
     planModules,
     planCode,
     subscriptionStatus,
@@ -98,7 +82,6 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
     return !v || v === key ? fallback : v;
   };
 
-  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     if (user) fetchTenantContext();
@@ -106,200 +89,266 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
 
   // ---- App catalog -----------------------------------------------------
 
+  // A tenant sells through ONE app: Restaurant (hospitality) or Inventory
+  // (everyone else). Selling links only appear in that app, so clicking Sell
+  // never cross-jumps between Inventory and Restaurant.
+  const sellsViaRestaurant = businessType === 'hospitality' || businessType === 'restaurant';
+
+  // Sidebar nav groups per app id. App-level metadata (name/icon/home/appKeys/
+  // businessTypes/blurb) lives in the shared COARSE_APPS catalog — see below.
+  const groupsByApp: Record<string, NavGroup[]> = {
+    // RESTAURANT — selling (POS + orders) plus dine-in (tables, menus, QR).
+    // Point of Sale is not a separate app; it's a section here and in Inventory.
+    restaurant: [
+      { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+      {
+        label: 'Sell',
+        items: [
+          { href: '/pos', label: 'POS', icon: 'building-storefront', permission: 'orders.create', exact: true },
+          { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+        ],
+      },
+      {
+        label: 'Dine-in',
+        items: [
+          { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
+        ],
+      },
+      {
+        label: 'Menu',
+        items: [
+          { href: '/rms/items', label: 'Items', icon: 'cube', permission: 'inventory.view' },
+          { href: '/rms/menus', label: 'Menus', icon: 'menu-book', permission: 'menus.view', also: ['/menu-studio'] },
+          { href: '/rms/reservations', label: tr('reservations', 'Reservations'), icon: 'calendar', permission: 'reservations.view' },
+        ],
+      },
+      {
+        label: 'Insights',
+        items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
+      },
+      {
+        // Same shared Setup workspace as Inventory — one entry, no duplication.
+        items: [
+          {
+            href: '/settings/branches',
+            label: tr('configuration', 'Configuration'),
+            icon: 'cog',
+            permission: 'branches.view',
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method'],
+          },
+        ],
+      },
+    ],
+    inventory: [
+      { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+      // Selling is a section in Inventory for retail; hidden for hospitality
+      // (they sell via Restaurant) so its links never jump to another workspace.
+      ...(sellsViaRestaurant
+        ? []
+        : [
+            {
+              label: 'Sell',
+              items: [
+                { href: '/pos', label: 'POS', icon: 'building-storefront' as IconName, permission: 'orders.create', exact: true },
+                { href: '/rms/orders', label: 'Sales', icon: 'receipt' as IconName, permission: 'orders.view', exclude: ['/rms/orders/create'] },
+              ],
+            },
+          ]),
+      {
+        label: 'Stock',
+        items: [
+          { href: '/ims/inflows', label: 'Receive Stock', icon: 'inbox-arrow', permission: 'inflows.view' },
+          { href: '/ims/branch-items', label: 'Branch Stock', icon: 'building-storefront' },
+          { href: '/ims/inventory', label: 'Stock Items', icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+          { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
+          { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
+          { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
+        ],
+      },
+      {
+        label: 'Purchasing',
+        items: [{ href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' }],
+      },
+      {
+        // Single entry into the shared Setup workspace (Branches, Categories,
+        // Units, Allocation live there behind their own left rail).
+        items: [
+          {
+            href: '/settings/branches',
+            label: tr('configuration', 'Configuration'),
+            icon: 'cog',
+            permission: 'branches.view',
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method'],
+          },
+        ],
+      },
+    ],
+    sales: [
+      { items: [{ href: '/sales', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+      {
+        items: [
+          { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', permission: 'sales.view', exclude: ['/sales/invoices/new'] },
+        ],
+      },
+      {
+        label: 'Setup',
+        items: [
+          { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view' },
+        ],
+      },
+    ],
+    accounting: [
+      {
+        items: [
+          { href: '/accounting', label: 'Overview', icon: 'home', exact: true },
+          { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open' },
+          { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square' },
+          { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar' },
+        ],
+      },
+    ],
+    hr: [
+      { items: [{ href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
+      {
+        label: 'People',
+        items: [
+          { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view' },
+          { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view' },
+          { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view' },
+          { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view' },
+        ],
+      },
+      {
+        label: 'Talent',
+        items: [
+          { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view' },
+          { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view' },
+          { href: '/hrms/learning', label: tr('learning', 'Learning'), icon: 'academic-cap', permission: 'learning.view' },
+        ],
+      },
+      {
+        label: 'Rewards',
+        items: [
+          { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view' },
+          { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view' },
+        ],
+      },
+      {
+        // Single entry into the People Configuration workspace (its own rail).
+        items: [
+          {
+            href: '/hrms/departments',
+            label: tr('configuration', 'Configuration'),
+            icon: 'cog',
+            permission: 'departments.view',
+            also: ['/hrms/positions', '/hrms/locations'],
+          },
+        ],
+      },
+    ],
+    // People configuration — its own left rail, entered from People → Configuration.
+    'hr-config': [
+      {
+        label: 'Organization',
+        items: [
+          { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view' },
+          { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view' },
+          { href: '/hrms/locations', label: tr('locations', 'Locations'), icon: 'map-pin', permission: 'locations.view' },
+        ],
+      },
+    ],
+    settings: [
+      {
+        items: [
+          { href: '/settings', label: 'General', icon: 'cog', exact: true },
+          { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
+          { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
+          { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
+          { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
+          { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
+        ],
+      },
+    ],
+    payments: [
+      { items: [{ href: '/payments', label: tr('paymentMethods', 'Payment methods'), icon: 'credit-card', exact: true }] },
+      { items: [{ href: '/payments/transactions', label: tr('transactions', 'Transactions'), icon: 'receipt' }] },
+      // Single entry into the Payments Configuration workspace (its own rail).
+      { items: [{ href: '/payments/settlement', label: tr('configuration', 'Configuration'), icon: 'cog', also: ['/payments/security', '/payments/setup'] }] },
+    ],
+    // Payments configuration — its own left rail, entered from Payments → Configuration.
+    'payments-config': [
+      {
+        label: 'Payments',
+        items: [
+          { href: '/payments/settlement', label: tr('settlementAccount', 'Settlement account'), icon: 'banknotes' },
+          { href: '/payments/security', label: tr('twoFactorAuth', 'Two-factor authentication'), icon: 'shield' },
+        ],
+      },
+    ],
+    // SETUP — shared configuration, reachable from both Inventory and Restaurant
+    // via a single "Setup" link. Its own left rail (this workspace's nav) means
+    // no config link is duplicated per app and entering it never cross-jumps.
+    setup: [
+      {
+        label: 'Locations',
+        items: [
+          { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
+        ],
+      },
+      {
+        label: 'Catalog',
+        items: [
+          { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
+          { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
+        ],
+      },
+      {
+        label: 'Stock rules',
+        items: [
+          { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
+        ],
+      },
+    ],
+  };
+
+  // Single source of truth: metadata from COARSE_APPS + this sidebar's groups.
+  // Inventory keeps its terminology-aware display name per business type.
   const apps: AppDef[] = [
+    ...COARSE_APPS.map((a) => ({
+      ...a,
+      name: a.id === 'inventory' ? term(businessType, 'inventorySection') || a.name : a.name,
+      groups: groupsByApp[a.id] ?? [],
+    })),
+    // Setup is not a launcher app — it's a shared config workspace entered from
+    // the "Setup" link in Inventory/Restaurant. Always available; kept out of
+    // the launcher (which is built from COARSE_APPS) and the business-apps grid.
     {
-      // RESTAURANT (hospitality) — dine-in: orders, tables, menus. Distinct from Shop.
-      id: 'restaurant',
-      name: 'Restaurant',
-      icon: 'building-storefront',
-      blurb: 'Dine-in orders, tables and menus',
-      home: '/',
-      moduleKeys: ['rms'],
-      appKeys: ['pos', 'tables', 'menu'],
-      businessTypes: ['hospitality', 'restaurant'],
-      groups: [
-        { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          label: 'Sell',
-          items: [
-            { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
-            { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
-          ],
-        },
-        {
-          label: 'Menu',
-          items: [
-            { href: '/rms/menus', label: 'Menus', icon: 'menu-book', permission: 'menus.view' },
-            { href: '/menu-studio', label: 'QR Menu', icon: 'sparkles' },
-          ],
-        },
-        {
-          label: 'Insights',
-          items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
-        },
-      ],
-    },
-    {
-      // SHOP (retail) — counter selling: checkout + sales. NO menu, NO tables.
-      id: 'shop',
-      name: 'Shop',
-      icon: 'building-storefront',
-      blurb: 'Ring up sales at the counter',
-      home: '/',
-      moduleKeys: ['rms'],
-      appKeys: ['pos'],
-      businessTypes: ['retail', 'general', 'accounts', 'services', 'warehouse'],
-      groups: [
-        { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          label: 'Sell',
-          items: [
-            { href: '/pos', label: 'POS', icon: 'building-storefront', permission: 'orders.create', exact: true },
-            { href: '/rms/orders', label: 'Sales', icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
-          ],
-        },
-        {
-          label: 'Insights',
-          items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
-        },
-      ],
-    },
-    {
-      id: 'inventory',
-      name: term(businessType, 'inventorySection') || 'Inventory',
-      icon: 'cube',
-      blurb: 'Track stock, receive goods and value your inventory',
-      home: '/ims',
-      moduleKeys: ['ims'],
-      appKeys: ['items', 'goods-in'],
-      groups: [
-        { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          label: 'Stock',
-          items: [
-            { href: '/ims/inventory', label: 'Stock Items', icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
-            { href: '/ims/inflows', label: 'Receive Stock', icon: 'inbox-arrow', permission: 'inflows.view' },
-            { href: '/ims/branch-items', label: 'Branch Stock', icon: 'building-storefront' },
-            { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
-            { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
-            { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
-          ],
-        },
-        {
-          label: 'Purchasing',
-          items: [{ href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' }],
-        },
-        {
-          label: 'Setup',
-          items: [
-            { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
-            { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
-            { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
-            { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'sales',
-      name: 'Invoicing',
-      icon: 'banknotes',
-      blurb: 'Customers, invoices and getting paid',
-      home: '/sales',
-      moduleKeys: ['sales'],
-      appKeys: ['customers', 'invoicing'],
-      groups: [
-        { items: [{ href: '/sales', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          items: [
-            { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view' },
-            { href: '/sales/invoices', label: tr('invoices', 'Invoices'), icon: 'document-text', permission: 'sales.view' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'accounting',
-      name: 'Accounting',
-      icon: 'calculator',
-      blurb: 'Double-entry books, ledger and financial reports',
-      home: '/accounting',
-      moduleKeys: ['accounting'],
-      appKeys: ['books'],
-      groups: [
-        {
-          items: [
-            { href: '/accounting', label: 'Overview', icon: 'home', exact: true },
-            { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open' },
-            { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square' },
-            { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'hr',
-      name: 'People',
-      icon: 'users',
-      blurb: 'Employees, attendance, leave and payroll',
-      home: '/hrms/dashboard',
-      moduleKeys: ['hrms'],
-      appKeys: ['people', 'payroll'],
-      groups: [
-        { items: [{ href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-        {
-          label: 'People',
-          items: [
-            { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view' },
-            { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view' },
-            { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view' },
-            { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view' },
-          ],
-        },
-        {
-          label: 'Talent',
-          items: [
-            { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view' },
-            { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view' },
-            { href: '/hrms/learning', label: tr('learning', 'Learning'), icon: 'academic-cap', permission: 'learning.view' },
-          ],
-        },
-        {
-          label: 'Rewards',
-          items: [
-            { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view' },
-            { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view' },
-          ],
-        },
-        {
-          label: 'Setup',
-          items: [
-            { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view' },
-            { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view' },
-            { href: '/hrms/locations', label: tr('locations', 'Locations'), icon: 'map-pin', permission: 'locations.view' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'settings',
-      name: 'Settings',
+      id: 'setup',
+      name: 'Configuration',
       icon: 'cog',
-      blurb: 'Users, roles, branches and billing',
-      home: '/settings',
-      groups: [
-        {
-          items: [
-            { href: '/settings', label: 'General', icon: 'cog', exact: true },
-            { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
-            { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
-            { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
-            { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
-            { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
-          ],
-        },
-      ],
-    },
+      blurb: 'Shared configuration',
+      home: '/settings/branches',
+      appKeys: null,
+      groups: groupsByApp.setup ?? [],
+    } as AppDef,
+    {
+      id: 'hr-config',
+      name: 'Configuration',
+      icon: 'cog',
+      blurb: 'People configuration',
+      home: '/hrms/departments',
+      appKeys: null,
+      groups: groupsByApp['hr-config'] ?? [],
+    } as AppDef,
+    {
+      id: 'payments-config',
+      name: 'Configuration',
+      icon: 'cog',
+      blurb: 'Payments configuration',
+      home: '/payments/setup',
+      appKeys: null,
+      groups: groupsByApp['payments-config'] ?? [],
+    } as AppDef,
   ];
 
   // ---- App availability (plan / effective-apps gating) -----------------
@@ -335,35 +384,60 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
   const availableApps = apps.filter(isAppAvailable);
   // Settings is always reachable via the launcher, but only listed among the
   // "business apps" grid separately.
-  const businessApps = availableApps.filter((a) => a.id !== 'settings');
+  const businessApps = availableApps.filter(
+    (a) =>
+      a.id !== 'settings' &&
+      a.id !== 'setup' &&
+      a.id !== 'hr-config' &&
+      a.id !== 'payments-config',
+  );
 
   // ---- Which app am I in? (route-driven) -------------------------------
 
   const appForPath = useCallback(
     (path: string): AppDef => {
-      // System-settings subpaths that belong to a *module* app, not Settings.
-      const inventorySetup = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method'];
-      if (inventorySetup.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'inventory')!;
+      // Shared-config subpaths live in the dedicated Setup workspace (its own
+      // left rail), not Settings or a module app — so it's reachable from both
+      // Inventory and Restaurant without cross-jumping into either.
+      const setupPaths = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method'];
+      if (setupPaths.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'setup')!;
 
+      if (
+        path.startsWith('/payments/settlement') ||
+        path.startsWith('/payments/security') ||
+        path.startsWith('/payments/setup')
+      )
+        return apps.find((a) => a.id === 'payments-config')!;
+      if (path.startsWith('/payments')) return apps.find((a) => a.id === 'payments')!;
+      if (
+        path.startsWith('/hrms/departments') ||
+        path.startsWith('/hrms/positions') ||
+        path.startsWith('/hrms/locations')
+      )
+        return apps.find((a) => a.id === 'hr-config')!;
       if (path.startsWith('/hrms')) return apps.find((a) => a.id === 'hr')!;
       if (path.startsWith('/ims') || path.startsWith('/inventory')) return apps.find((a) => a.id === 'inventory')!;
       if (path.startsWith('/sales')) return apps.find((a) => a.id === 'sales')!;
       if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
       if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
       if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
-      // Each tenant has exactly ONE selling app: Restaurant (hospitality) or Shop (retail).
-      const sellingAppId =
-        businessType === 'hospitality' || businessType === 'restaurant' ? 'restaurant' : 'shop';
-      // Restaurant-only surfaces (dine-in) always belong to Restaurant.
-      if (path.startsWith('/rms/tables') || path.startsWith('/rms/menus') || path.startsWith('/menu-studio'))
+      // Restaurant surfaces: items catalog, dine-in tables, menus, QR menu.
+      if (
+        path.startsWith('/rms/items') ||
+        path.startsWith('/rms/tables') ||
+        path.startsWith('/rms/menus') ||
+        path.startsWith('/rms/reservations') ||
+        path.startsWith('/menu-studio')
+      )
         return apps.find((a) => a.id === 'restaurant')!;
-      // Retail checkout belongs to Shop.
-      if (path.startsWith('/pos')) return apps.find((a) => a.id === 'shop')!;
-      // Shared selling surfaces (dashboard, orders/sales, analytics) resolve to the
-      // tenant's selling app — BUT only if that app is actually enabled. A tenant
-      // without a selling app (e.g. Payroll-only) must not be shown Shop/Sales;
-      // fall back to their first available app instead.
-      if (path === '/' || path.startsWith('/rms')) {
+      // Selling surfaces (dashboard, POS, orders) belong to the tenant's selling
+      // app — Restaurant for hospitality, Inventory otherwise (POS is no longer a
+      // separate app). Fall back to the first available app if neither is enabled.
+      if (path === '/' || path.startsWith('/pos') || path.startsWith('/rms')) {
+        const sellingAppId =
+          businessType === 'hospitality' || businessType === 'restaurant'
+            ? 'restaurant'
+            : 'inventory';
         const selling = businessApps.find((a) => a.id === sellingAppId);
         return selling ?? businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
       }
@@ -375,6 +449,22 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
   );
 
   const activeApp = appForPath(pathname);
+  // Secondary workspaces (Configuration, Settings) are entered from a business
+  // app, so give them a Back button that restores the previous app's nav.
+  const isSubApp =
+    activeApp.id === 'setup' ||
+    activeApp.id === 'settings' ||
+    activeApp.id === 'hr-config' ||
+    activeApp.id === 'payments-config';
+
+  // Remember the last business-app page so Back returns to that exact navbar
+  // position (not browser-history back, which just walks the sub-nav).
+  const lastBusinessPathRef = useRef<string>('/');
+  useEffect(() => {
+    if (!isSubApp) lastBusinessPathRef.current = router.asPath;
+  }, [router.asPath, isSubApp]);
+  const backPath = lastBusinessPathRef.current || '/';
+  const backApp = appForPath(backPath);
 
   const isItemActive = useCallback(
     (item: NavLeaf) => {
@@ -414,18 +504,21 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
     </div>
   );
 
-  const userRole = user?.roles?.[0]
-    ? user.roles[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-    : user?.email || '';
-
   return (
     <aside
       className={`${
-        mobile ? 'flex h-full w-full' : 'hidden lg:flex fixed left-0 top-0 h-full z-30'
+        mobile
+          ? 'flex h-full w-full'
+          : `hidden lg:flex fixed left-0 top-0 h-full z-30 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-in-out ${
+              collapsed ? '-translate-x-full' : 'translate-x-0'
+            }`
       } flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800`}
       style={mobile ? undefined : { width: 'var(--sidebar-width)' }}
+      aria-hidden={!mobile && collapsed}
     >
-      {/* Current app identity (static — switch apps from the top-bar launcher) */}
+      {/* Current app identity. On a secondary workspace (Configuration,
+          Settings) the subtitle becomes a Back link that restores the previous
+          business app's navbar (exact page), not browser-history back. */}
       <div className="shrink-0 px-2 pt-2.5 pb-2">
         <div className="flex w-full items-center gap-2.5 rounded-xl p-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white">
@@ -435,10 +528,19 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
             <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
               {activeApp.name}
             </span>
-            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-              {businessName || 'Kuza'}
-              {EDITION_CHIPS[businessType ?? ''] ? ` · ${EDITION_CHIPS[businessType ?? '']}` : ''}
-            </span>
+            {isSubApp && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (mobile) onNavigate?.();
+                  router.push(backPath);
+                }}
+                className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gray-500 transition-colors hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400"
+              >
+                <Icon name="arrow-left" size={12} />
+                <span className="truncate">{t('backTo') || 'Back to'} {backApp.name}</span>
+              </button>
+            )}
           </span>
         </div>
       </div>
@@ -470,81 +572,6 @@ export default function AppSidebar({ mobile = false, onNavigate }: AppSidebarPro
         </div>
       )}
 
-      {/* User block */}
-      <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 p-2">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setProfileOpen(!profileOpen)}
-            aria-haspopup="menu"
-            aria-expanded={profileOpen}
-            className="flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-[13px] font-semibold text-gray-700 dark:text-gray-200">
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                {user?.name || 'User'}
-              </span>
-              <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{userRole}</span>
-            </span>
-            <Icon
-              name="chevron-down"
-              size={14}
-              className={`text-gray-400 dark:text-gray-500 transition-transform duration-150 ${
-                profileOpen ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {profileOpen && (
-            <div
-              role="menu"
-              className="absolute bottom-full left-0 right-0 z-50 mb-1.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
-            >
-              <Link
-                href="/profile"
-                role="menuitem"
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
-                onClick={() => {
-                  setProfileOpen(false);
-                  onNavigate?.();
-                }}
-              >
-                <Icon name="user" size={16} className="text-gray-400 dark:text-gray-500" />
-                {t('profile')}
-              </Link>
-              <Link
-                href="/settings"
-                role="menuitem"
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-gray-700 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70"
-                onClick={() => {
-                  setProfileOpen(false);
-                  onNavigate?.();
-                }}
-              >
-                <Icon name="cog" size={16} className="text-gray-400 dark:text-gray-500" />
-                {t('settings')}
-              </Link>
-              <div className="my-1 border-t border-gray-200 dark:border-gray-800" />
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  const { logout } = useAuthStore.getState();
-                  logout();
-                  router.push('/login');
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-red-600 dark:text-red-400 transition-colors duration-150 hover:bg-red-50 dark:hover:bg-red-500/10"
-              >
-                <Icon name="logout" size={16} />
-                {t('signOut')}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
     </aside>
   );
 }

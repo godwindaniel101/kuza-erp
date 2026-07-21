@@ -7,9 +7,10 @@ import { MenuCategory } from '../entities/menu-category.entity';
 import { MenuItem } from '../entities/menu-item.entity';
 import { InventoryItem } from '../../ims/entities/inventory-item.entity';
 import { InventoryCategory } from '../../ims/entities/inventory-category.entity';
+import { InventorySubcategory } from '../../ims/entities/inventory-subcategory.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Menu, MenuCategory, MenuItem, InventoryItem, InventoryCategory])],
+  imports: [TypeOrmModule.forFeature([Menu, MenuCategory, MenuItem, InventoryItem, InventoryCategory, InventorySubcategory])],
   controllers: [MenusController],
   providers: [MenusService],
   exports: [MenusService],

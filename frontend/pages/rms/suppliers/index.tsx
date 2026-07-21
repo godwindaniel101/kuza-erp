@@ -136,7 +136,7 @@ export default function SuppliersPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {suppliers.map((supplier) => {
               const letter = (supplier.name || '').trim().charAt(0).toUpperCase();
               return (
@@ -216,30 +216,32 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('email')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
-                </label>
-                <input
-                  type="email"
-                  value={newSupplier.email}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
-                  placeholder={t('emailAddress') || 'email@example.com'}
-                  className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('email')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={newSupplier.email}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                    placeholder={t('emailAddress') || 'email@example.com'}
+                    className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('phone')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
-                </label>
-                <input
-                  type="tel"
-                  value={newSupplier.phone}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
-                  placeholder={t('phoneNumber') || '+1234567890'}
-                  className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                />
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('phone')} <span className="text-gray-400 dark:text-gray-500 text-xs">({t('optional')})</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={newSupplier.phone}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                    placeholder={t('phoneNumber') || '+1234567890'}
+                    className="h-9 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+                  />
+                </div>
               </div>
 
               <div>

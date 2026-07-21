@@ -7,6 +7,7 @@ import { OrderItem } from '../entities/order-item.entity';
 import { OrderPayment } from '../entities/order-payment.entity';
 import { OrderItemInflowItem } from '../entities/order-item-inflow-item.entity';
 import { InventoryItem } from '../../ims/entities/inventory-item.entity';
+import { InventoryItemComponent } from '../../ims/entities/inventory-item-component.entity';
 import { InventoryInflowItem } from '../../ims/entities/inventory-inflow-item.entity';
 import { BranchInventoryItem } from '../../ims/entities/branch-inventory-item.entity';
 import { Business } from '../../../common/entities/business.entity';
@@ -21,6 +22,7 @@ import { AccountingModule } from '../../accounting/accounting.module';
       OrderPayment,
       OrderItemInflowItem,
       InventoryItem,
+      InventoryItemComponent,
       InventoryInflowItem,
       BranchInventoryItem,
       Business,

@@ -20,12 +20,10 @@ import {
   RequirePermissions,
   PermissionsGuard,
 } from '../../common/guards/permissions.guard';
-import { FeatureGateGuard, RequireApp } from '../billing/guards/feature-gate.guard';
 
 @ApiTags('Integrations')
 @Controller('integrations')
-@UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp('payments')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class ConnectionsController {
   constructor(private readonly connectionsService: ConnectionsService) {}

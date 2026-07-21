@@ -29,9 +29,23 @@ async function bootstrap() {
   app.use(require('body-parser').json({ limit: '50mb' }));
   app.use(require('body-parser').urlencoded({ limit: '50mb', extended: true }));
 
-  // Enable CORS
+  // Enable CORS. FRONTEND_URL may be a comma-separated allow-list. In non-prod
+  // we also allow any localhost/127.0.0.1 port so a dev port change (e.g. 5001)
+  // never breaks the app with an opaque "Network Error".
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:4000')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:4000',
+    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin) return cb(null, true); // same-origin, curl, mobile apps
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
   });
 

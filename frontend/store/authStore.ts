@@ -79,33 +79,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (state.isLoading) {
       return Promise.resolve(); // Return resolved promise to prevent errors
     }
-    set({ isLoading: true });
     const token = authService.getToken();
-    if (token) {
-      try {
-        const user = await authService.fetchUser();
-        set({
-          user,
-          token,
-          isAuthenticated: !!user,
-          isLoading: false,
-        });
-        return Promise.resolve();
-      } catch (error) {
-        // If fetch fails, clear auth state
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-        return Promise.reject(error);
-      }
-    } else {
+    if (!token) {
       // No token - immediately set loading to false
       set({ isLoading: false, isAuthenticated: false });
       return Promise.resolve();
     }
+    set({ isLoading: true });
+    // authService.fetchUser() returns null (and has already cleared the cookie)
+    // only on a definitive 401/403. Transient failures throw — retry them so a
+    // single flaky /auth/me on refresh doesn't bounce an authenticated user.
+    let lastError: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const user = await authService.fetchUser();
+        set({ user, token, isAuthenticated: !!user, isLoading: false });
+        return Promise.resolve();
+      } catch (error) {
+        lastError = error;
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+    // Transient failures exhausted: leave the cookie/session intact so the next
+    // navigation or refresh retries. Do NOT mark logged-out or clear the token.
+    set({ isLoading: false });
+    return Promise.reject(lastError);
   },
 
   hasPermission: (permission: string) => {
