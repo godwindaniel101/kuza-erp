@@ -62,7 +62,7 @@ export default function SakuraTemplate({ data, theme }: TemplateProps) {
 
   return (
     <TemplateRoot theme={theme}>
-      <Preloader theme={theme} accent={accent} venue={venue} />
+      <Preloader theme={theme} accent={accent} venue={venue} title={menuName} />
       <div ref={topRef} />
 
       {/* Screen: cover */}

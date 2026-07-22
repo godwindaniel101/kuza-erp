@@ -55,7 +55,7 @@ function InsightCard({ insight }: { insight: InsightItem }) {
   const styles = toneStyles[tone] ?? toneStyles.info;
 
   return (
-    <div className="relative flex gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
+    <div className="relative flex h-full gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
       {/* Tone accent bar */}
       <span className={`absolute inset-y-0 left-0 w-1 ${styles.accent}`} aria-hidden="true" />
       <span
@@ -148,7 +148,10 @@ export default function AiInsights() {
         {status === 'loading'
           ? Array.from({ length: 3 }).map((_, i) => <InsightSkeleton key={i} />)
           : insights.map((insight, i) => (
-              <InsightCard key={`${insight.title}-${i}`} insight={insight} />
+              // First insight spans 2/3, second 1/3 (they fill the top row on lg).
+              <div key={`${insight.title}-${i}`} className={i === 0 ? 'lg:col-span-2' : ''}>
+                <InsightCard insight={insight} />
+              </div>
             ))}
       </div>
     </section>

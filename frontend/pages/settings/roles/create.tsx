@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
@@ -10,21 +10,12 @@ import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import Toast from '@/components/Toast';
 import Card from '@/components/Card';
-
-interface Permission {
-  id: string;
-  name: string;
-  displayName: string;
-  group: string;
-  description?: string;
-}
+import PermissionPicker from '@/components/access-control/PermissionPicker';
 
 export default function CreateRolePage() {
   const { t } = useTranslation('common');
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [formData, setFormData] = useState({
@@ -32,29 +23,6 @@ export default function CreateRolePage() {
     displayName: '',
     description: '',
   });
-
-  useEffect(() => {
-    loadPermissions();
-    // Reload permissions every 30 seconds to catch new additions
-    const interval = setInterval(() => {
-      loadPermissions();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadPermissions = async () => {
-    try {
-      const response = await api.get<{ success: boolean; data: Permission[] }>('/settings/permissions');
-      if (response.success) {
-        setPermissions(response.data);
-      }
-    } catch (err: any) {
-      console.error('Failed to load permissions:', err);
-      setToast({ message: err.response?.data?.message || t('loadFailed') || 'Failed to load permissions', type: 'error' });
-    } finally {
-      setLoadingPermissions(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,41 +46,6 @@ export default function CreateRolePage() {
       setLoading(false);
     }
   };
-
-  const togglePermission = (permissionId: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permissionId) ? prev.filter((id) => id !== permissionId) : [...prev, permissionId]
-    );
-  };
-
-  const toggleGroup = (group: string) => {
-    const groupPermissions = permissions.filter((p) => p.group === group).map((p) => p.id);
-    const allSelected = groupPermissions.every((id) => selectedPermissions.includes(id));
-
-    if (allSelected) {
-      // Deselect all in group
-      setSelectedPermissions((prev) => prev.filter((id) => !groupPermissions.includes(id)));
-    } else {
-      // Select all in group
-      setSelectedPermissions((prev) => {
-        const newSelection = [...prev];
-        groupPermissions.forEach((id) => {
-          if (!newSelection.includes(id)) {
-            newSelection.push(id);
-          }
-        });
-        return newSelection;
-      });
-    }
-  };
-
-  const groupedPermissions = permissions.reduce((acc, permission) => {
-    if (!acc[permission.group]) {
-      acc[permission.group] = [];
-    }
-    acc[permission.group].push(permission);
-    return acc;
-  }, {} as Record<string, Permission[]>);
 
   return (
     <PermissionGuard permission="roles.create">
@@ -141,7 +74,7 @@ export default function CreateRolePage() {
             <div className="lg:col-span-1">
               <Card>
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('basicInformation') || 'Basic Information'}</h2>
-                
+
                 <div className="space-y-4">
                   <FormField
                     type="text"
@@ -187,87 +120,7 @@ export default function CreateRolePage() {
                   </span>
                 </div>
 
-                {loadingPermissions ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-                  </div>
-                ) : permissions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">{t('noPermissionsFound') || 'No permissions found'}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-5 max-h-[600px] overflow-y-auto">
-                    {Object.entries(groupedPermissions).map(([group, groupPerms]) => {
-                      const allSelected = groupPerms.every((p) => selectedPermissions.includes(p.id));
-                      const someSelected = groupPerms.some((p) => selectedPermissions.includes(p.id));
-
-                      return (
-                        <div key={group} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => toggleGroup(group)}
-                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="checkbox"
-                                checked={allSelected}
-                                ref={(input) => {
-                                  if (input) {
-                                    input.indeterminate = someSelected && !allSelected;
-                                  }
-                                }}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  toggleGroup(group);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-4 w-4 text-blue-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
-                              />
-                              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{group}</h3>
-                            </div>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {groupPerms.filter((p) => selectedPermissions.includes(p.id)).length} / {groupPerms.length}
-                            </span>
-                          </button>
-
-                          <div className="p-4 space-y-2">
-                            {groupPerms.map((permission) => (
-                              <label
-                                key={permission.id}
-                                className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedPermissions.includes(permission.id)}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    togglePermission(permission.id);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="mt-1 h-4 w-4 text-blue-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
-                                />
-                                <div className="flex-1">
-                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    {permission.displayName}
-                                  </div>
-                                  {permission.description && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      {permission.description}
-                                    </div>
-                                  )}
-                                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
-                                    {permission.name}
-                                  </div>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <PermissionPicker value={selectedPermissions} onChange={setSelectedPermissions} />
               </Card>
             </div>
           </div>
@@ -301,4 +154,3 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
     },
   };
 };
-

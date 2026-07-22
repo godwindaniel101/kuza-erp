@@ -346,7 +346,7 @@ export default function SpaceTemplate({ data, theme }: TemplateProps) {
     <TemplateRoot theme={spaceTheme}>
       <div ref={topRef} />
       <CosmosBackground accent={accent} />
-      <Preloader theme={spaceTheme} accent={accent} venue={venue} />
+      <Preloader theme={spaceTheme} accent={accent} venue={venue} title={menuName} />
 
       <style>{`
         @keyframes space-pulse { 0%,100%{ transform:scale(1); filter:brightness(1);} 50%{ transform:scale(1.06); filter:brightness(1.25);} }

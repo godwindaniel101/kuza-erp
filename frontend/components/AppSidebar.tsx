@@ -213,6 +213,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         label: 'People',
         items: [
           { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view' },
+          { href: '/hrms/org-chart', label: tr('orgChart', 'Org chart'), icon: 'git-branch', permission: 'employees.view' },
           { href: '/hrms/attendance', label: tr('attendance', 'Attendance'), icon: 'clock', permission: 'attendance.view' },
           { href: '/hrms/leaves', label: tr('leaves', 'Leaves'), icon: 'calendar', permission: 'leaves.view' },
           { href: '/hrms/payroll', label: tr('payroll', 'Payroll'), icon: 'banknotes', permission: 'payroll.view' },
@@ -261,11 +262,17 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       {
         items: [
           { href: '/settings', label: 'General', icon: 'cog', exact: true },
-          { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
-          { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
           { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
           { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
           { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
+        ],
+      },
+      {
+        label: 'Access control',
+        items: [
+          { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
+          { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
+          { href: '/settings/permissions', label: tr('permissions', 'Permissions'), icon: 'lock', permission: 'roles.view' },
         ],
       },
     ],

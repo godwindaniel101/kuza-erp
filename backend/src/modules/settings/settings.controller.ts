@@ -61,7 +61,10 @@ export class SettingsController {
   @RequirePermissions('roles.view')
   @ApiOperation({ summary: 'Get all permissions' })
   async getPermissions(@Request() req) {
-    const permissions = await this.settingsService.getAllPermissions();
+    const permissions = await this.settingsService.getAllPermissions(
+      req.user?.tenantId,
+      req.tenant?.schemaName,
+    );
     return {
       success: true,
       data: permissions,

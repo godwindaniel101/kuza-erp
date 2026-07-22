@@ -48,7 +48,7 @@ export default function ElegantTemplate({ data, theme }: TemplateProps) {
   return (
     <TemplateRoot theme={theme}>
       <div ref={topRef} />
-      <Preloader theme={theme} accent={accent} venue={venue} />
+      <Preloader theme={theme} accent={accent} venue={venue} title={menuName} />
 
       {/* COVER — clean serif venue name + tagline + a thin hairline rule. */}
       {screen.name === 'cover' && (

@@ -22,6 +22,7 @@ export default function CreateEmployeePage() {
     departmentId: '',
     positionId: '',
     locationId: '',
+    managerId: '',
     hireDate: '',
     // Bank Account Information
     bankName: '',
@@ -36,6 +37,7 @@ export default function CreateEmployeePage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [managers, setManagers] = useState<any[]>([]);
 
   useEffect(() => {
     loadOptions();
@@ -43,15 +45,17 @@ export default function CreateEmployeePage() {
 
   const loadOptions = async () => {
     try {
-      const [deptsRes, posRes, locsRes] = await Promise.all([
+      const [deptsRes, posRes, locsRes, empsRes] = await Promise.all([
         api.get('/hrms/departments').catch(() => ({ success: false, data: [] })),
         api.get('/hrms/positions').catch(() => ({ success: false, data: [] })),
         api.get('/hrms/locations').catch(() => ({ success: false, data: [] })),
+        api.get('/hrms/employees').catch(() => ({ success: false, data: [] })),
       ]);
 
       if (deptsRes.success) setDepartments(deptsRes.data);
       if (posRes.success) setPositions(posRes.data);
       if (locsRes.success) setLocations(locsRes.data);
+      if (empsRes.success) setManagers(Array.isArray(empsRes.data) ? empsRes.data : []);
     } catch (err) {
       console.error('Failed to load options:', err);
     }
@@ -158,6 +162,22 @@ export default function CreateEmployeePage() {
               onChange={(value) => setFormData({ ...formData, locationId: value })}
               placeholder={t('selectLocation')}
               options={locations.map((loc) => ({ value: loc.id, label: loc.name }))}
+            />
+            <FormField
+              type="select"
+              name="managerId"
+              label={t('manager') || 'Manager'}
+              value={formData.managerId}
+              onChange={(value) => setFormData({ ...formData, managerId: value })}
+              placeholder={t('selectManager') || 'Select Manager'}
+              options={managers.map((emp) => ({
+                value: emp.id,
+                label:
+                  `${emp.firstName || ''} ${emp.lastName || ''}`.trim() ||
+                  emp.name ||
+                  emp.email ||
+                  '—',
+              }))}
             />
           </div>
 

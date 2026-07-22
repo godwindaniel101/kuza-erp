@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
+import { api } from '@/lib/api';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import BrandMark from '@/components/BrandMark';
@@ -18,20 +19,57 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // A management user is an admin/super-admin or someone with broad settings
+  // access. Everyone else who is linked to an employee record lands on the
+  // employee self-service dashboard. Read fully defensively — fields may be
+  // absent on older tokens.
+  const isManagementUser = (u: any): boolean => {
+    if (!u) return true; // fail open to the generic dashboard, never trap a user
+    const roles: string[] = Array.isArray(u.roles) ? u.roles : [];
+    if (roles.includes('admin') || roles.includes('super_admin')) return true;
+    if (u.isSuperAdmin) return true;
+    const perms: string[] = Array.isArray(u.permissions) ? u.permissions : [];
+    return perms.includes('settings.view') || perms.includes('settings.edit');
+  };
+
+  // Compute the default landing (no returnTo, no hrms service cookie). Employees
+  // without management access go to /employee/dashboard; everyone else to '/'.
+  // `employeeId` is dropped by the auth normalizer, so read it from raw /auth/me.
+  const resolveDefaultLanding = async (): Promise<string> => {
+    try {
+      const me = await api.get<any>('/auth/me');
+      const raw = me?.data ?? me;
+      const employeeId = raw?.employeeId ?? null;
+      const storeUser = useAuthStore.getState().user;
+      if (employeeId && !isManagementUser(storeUser)) {
+        return '/employee/dashboard';
+      }
+    } catch {
+      // Fall back to the generic dashboard on any failure.
+    }
+    return '/';
+  };
+
+  // Shared post-auth navigation: returnTo and the hrms service cookie keep
+  // priority; only the default landing is employee-aware.
+  const navigateAfterAuth = async () => {
+    const returnTo = router.query.returnTo as string;
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+    if (Cookies.get('service') === 'hrms') {
+      router.push('/hrms/dashboard');
+      return;
+    }
+    router.push(await resolveDefaultLanding());
+  };
+
   useEffect(() => {
     // Only redirect if authenticated AND we're actually on the login page
     // Don't redirect if user just landed here from a refresh
     if (isAuthenticated && router.pathname === '/login' && !router.query.from) {
-      const lastService = Cookies.get('service');
-      // Use router.asPath to preserve any query params, or go to previous page
-      const returnTo = router.query.returnTo as string;
-      if (returnTo) {
-        router.push(returnTo);
-      } else if (lastService === 'hrms') {
-        router.push('/hrms/dashboard');
-      } else {
-        router.push('/');
-      }
+      navigateAfterAuth();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]); // Only depend on isAuthenticated
@@ -43,15 +81,9 @@ export default function Login() {
 
     try {
       await login(email, password);
-      // Small delay to ensure state is set before redirect
-      setTimeout(() => {
-        const lastService = Cookies.get('service');
-        if (lastService === 'hrms') {
-          router.push('/hrms/dashboard');
-        } else {
-          router.push('/');
-        }
-      }, 100);
+      // login() has already set the auth store synchronously; resolve the
+      // employee-aware landing and navigate.
+      await navigateAfterAuth();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || t('loginFailed');
       setError(errorMessage);

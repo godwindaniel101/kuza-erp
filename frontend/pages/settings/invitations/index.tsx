@@ -39,12 +39,14 @@ const invitationVariant = (status?: string): StatusBadgeVariant => {
 export default function InvitationsPage() {
   const { t } = useTranslation('common');
   const [invitations, setInvitations] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ email: '', roleId: '' });
+  const [formData, setFormData] = useState({ email: '', name: '', roleId: '' });
 
   useEffect(() => {
     loadInvitations();
+    loadRoles();
   }, []);
 
   const loadInvitations = async () => {
@@ -64,12 +66,27 @@ export default function InvitationsPage() {
     }
   };
 
+  const loadRoles = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: any[] }>('/roles');
+      if (response.success) {
+        setRoles(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to load roles:', err);
+    }
+  };
+
   const sendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/invitations', formData);
+      await api.post('/invitations', {
+        email: formData.email,
+        ...(formData.name ? { name: formData.name } : {}),
+        ...(formData.roleId ? { roleId: formData.roleId } : {}),
+      });
       setShowForm(false);
-      setFormData({ email: '', roleId: '' });
+      setFormData({ email: '', name: '', roleId: '' });
       await loadInvitations();
     } catch (err) {
       console.error('Failed to send invitation:', err);
@@ -145,6 +162,24 @@ export default function InvitationsPage() {
               value={formData.email}
               onChange={(value) => setFormData({ ...formData, email: value })}
             />
+            <FormField
+              type="text"
+              name="name"
+              label={t('name')}
+              help={`(${t('optional') || 'optional'})`}
+              value={formData.name}
+              onChange={(value) => setFormData({ ...formData, name: value })}
+              placeholder={t('fullName') || 'Full name'}
+            />
+            <FormField
+              type="select"
+              name="roleId"
+              label={t('role')}
+              value={formData.roleId}
+              onChange={(value) => setFormData({ ...formData, roleId: value })}
+              placeholder={t('selectRole') || 'Select a role'}
+              options={roles.map((r) => ({ value: r.id, label: r.displayName || r.name }))}
+            />
             <div className="flex space-x-3">
               <Button type="submit" variant="primary">
                 {t('send')}
@@ -189,7 +224,9 @@ export default function InvitationsPage() {
                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{inv.email}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{inv.role?.name || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {inv.role?.displayName || inv.role?.name || roles.find((r) => r.id === inv.roleId)?.displayName || '-'}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <StatusBadge variant={invitationVariant(inv.status)} label={inv.status} size="sm" />
                     </td>

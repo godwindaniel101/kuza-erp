@@ -73,8 +73,13 @@ export function ReservationSheet({
     color: theme.text,
     border: `1px solid ${theme.border}`,
     borderRadius: theme.radius,
+    ['--tw-ring-color' as string]: accent,
   };
+  const inputCls =
+    'w-full !max-w-none h-11 px-3.5 text-[15px] outline-none transition-shadow focus-visible:ring-2';
   const labelStyle: React.CSSProperties = { color: theme.muted };
+  const labelCls =
+    'flex flex-col gap-1 text-[11px] font-semibold uppercase tracking-wider';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -133,20 +138,25 @@ export function ReservationSheet({
       <div
         className="menu-sheet w-full overflow-y-auto"
         style={{
-          maxWidth: '760px',
+          maxWidth: '520px',
           backgroundColor: theme.surface,
-          borderTopLeftRadius: '28px',
-          borderTopRightRadius: '28px',
-          maxHeight: '90vh',
+          borderTopLeftRadius: '24px',
+          borderTopRightRadius: '24px',
+          maxHeight: '92vh',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 p-6 pb-4">
+        {/* drag handle */}
+        <div className="flex justify-center pt-3">
+          <span className="h-1 w-10 rounded-full" style={{ backgroundColor: theme.border }} />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-3">
           <div className="min-w-0">
-            <h3 className="text-xl font-bold" style={{ color: theme.text, fontFamily: theme.headingFont }}>
+            <h3 className="text-lg font-bold leading-tight" style={{ color: theme.text, fontFamily: theme.headingFont }}>
               Reserve a table
             </h3>
-            <p className="mt-1 text-sm" style={{ color: theme.muted }}>
+            <p className="text-[13px]" style={{ color: theme.muted }}>
               at {venue.name}
             </p>
           </div>
@@ -154,37 +164,40 @@ export function ReservationSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl"
-            style={{ color: theme.bg, backgroundColor: accent }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg leading-none"
+            style={{ color: theme.text, backgroundColor: `${theme.border}66` }}
           >
             ×
           </button>
         </div>
 
         {done ? (
-          <div className="flex flex-col items-center gap-4 px-6 pb-10 pt-4 text-center">
+          <div className="flex flex-col items-center gap-4 px-6 pb-10 pt-6 text-center">
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-full text-2xl"
+              className="flex h-16 w-16 items-center justify-center rounded-full text-3xl"
               style={{ backgroundColor: `${accent}1F`, color: accent }}
               aria-hidden="true"
             >
               ✓
             </div>
             <p className="text-base font-semibold" style={{ color: theme.text }}>
-              Request received — the venue will confirm shortly.
+              Request received
+            </p>
+            <p className="-mt-2 text-sm" style={{ color: theme.muted }}>
+              {venue.name} will confirm your booking shortly.
             </p>
             <button
               type="button"
               onClick={onClose}
-              className="mt-2 px-6 py-3 text-sm font-bold uppercase tracking-wider transition-transform active:scale-95"
+              className="mt-1 w-full py-3 text-sm font-bold uppercase tracking-wider transition-transform active:scale-95"
               style={{ backgroundColor: accent, color: theme.bg, borderRadius: theme.radius }}
             >
               Done
             </button>
           </div>
         ) : (
-          <form className="flex flex-col gap-4 px-6 pb-8" onSubmit={handleSubmit}>
-            <label className="flex flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
+          <form className="flex flex-col gap-3.5 px-5 pb-6" onSubmit={handleSubmit}>
+            <label className={labelCls} style={labelStyle}>
               Name
               <input
                 type="text"
@@ -193,13 +206,13 @@ export function ReservationSheet({
                 required
                 autoComplete="name"
                 placeholder="Your name"
-                className="px-3.5 py-2.5 text-base outline-none"
+                className={inputCls}
                 style={inputStyle}
               />
             </label>
 
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <label className="flex flex-1 flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={labelCls} style={labelStyle}>
                 Phone
                 <input
                   type="tel"
@@ -207,28 +220,28 @@ export function ReservationSheet({
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   autoComplete="tel"
-                  placeholder="Phone number"
-                  className="px-3.5 py-2.5 text-base outline-none"
+                  placeholder="080…"
+                  className={inputCls}
                   style={inputStyle}
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
-                Email <span style={{ color: theme.muted }}>(optional)</span>
+              <label className={labelCls} style={labelStyle}>
+                Email
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
-                  placeholder="you@example.com"
-                  className="px-3.5 py-2.5 text-base outline-none"
+                  placeholder="Optional"
+                  className={inputCls}
                   style={inputStyle}
                 />
               </label>
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <label className="flex flex-col gap-1.5 text-sm font-medium sm:w-28" style={labelStyle}>
-                Party size
+            <div className="grid grid-cols-[5rem,1fr,1fr] gap-3">
+              <label className={labelCls} style={labelStyle}>
+                Guests
                 <input
                   type="number"
                   min={1}
@@ -236,11 +249,11 @@ export function ReservationSheet({
                   value={partySize}
                   onChange={(e) => setPartySize(e.target.value)}
                   required
-                  className="px-3.5 py-2.5 text-base outline-none"
+                  className={inputCls}
                   style={inputStyle}
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
+              <label className={labelCls} style={labelStyle}>
                 Date
                 <input
                   type="date"
@@ -248,41 +261,37 @@ export function ReservationSheet({
                   min={minDate}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  className="px-3.5 py-2.5 text-base outline-none"
+                  className={inputCls}
                   style={inputStyle}
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
+              <label className={labelCls} style={labelStyle}>
                 Time
                 <input
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   required
-                  className="px-3.5 py-2.5 text-base outline-none"
+                  className={inputCls}
                   style={inputStyle}
                 />
               </label>
             </div>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium" style={labelStyle}>
-              Notes <span style={{ color: theme.muted }}>(optional)</span>
+            <label className={labelCls} style={labelStyle}>
+              Notes
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                placeholder="Allergies, seating preferences, special occasion…"
-                className="resize-none px-3.5 py-2.5 text-base outline-none"
+                rows={2}
+                placeholder="Allergies, seating, occasion… (optional)"
+                className="w-full !max-w-none resize-none px-3.5 py-2.5 text-[15px] outline-none transition-shadow focus-visible:ring-2"
                 style={inputStyle}
               />
             </label>
 
             {error && (
-              <p
-                className="text-sm font-medium"
-                style={{ color: '#E14747' }}
-                role="alert"
-              >
+              <p className="text-[13px] font-medium" style={{ color: '#E14747' }} role="alert">
                 {error}
               </p>
             )}
@@ -290,7 +299,7 @@ export function ReservationSheet({
             <button
               type="submit"
               disabled={sending}
-              className="mt-1 inline-flex items-center justify-center px-8 py-3.5 text-sm font-bold uppercase tracking-wider transition-transform active:scale-95 disabled:opacity-60"
+              className="mt-1 w-full py-3.5 text-sm font-bold uppercase tracking-wider transition-transform active:scale-95 disabled:opacity-60"
               style={{ backgroundColor: accent, color: theme.bg, borderRadius: theme.radius }}
             >
               {sending ? 'Sending…' : 'Request table'}

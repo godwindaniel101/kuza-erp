@@ -59,7 +59,8 @@ export class NotificationsService {
   }
 
   async sendInvitation(invitation: any, lang: string = 'en') {
-    const acceptUrl = `${this.configService.get<string>('FRONTEND_URL')}/invitations/accept/${invitation.token}`;
+    // The accept URL is built once, in sendInvitationEmail, using the canonical
+    // query-string format: `${FRONTEND_URL}/invitations/accept?token=${token}`.
     return this.sendInvitationEmail(
       invitation.email,
       invitation.token,

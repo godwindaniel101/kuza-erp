@@ -96,11 +96,11 @@ export class InvitationsController {
   @Post('accept/:token')
   @ApiOperation({ summary: 'Accept invitation by token' })
   async acceptInvitation(
-    @Param('token') token: string, 
-    @Body() body: { password: string },
+    @Param('token') token: string,
+    @Body() body: { password: string; name?: string },
     @I18n() i18n: I18nContext
   ) {
-    const result = await this.invitationsService.accept(token, body.password);
+    const result = await this.invitationsService.accept(token, body.password, body.name);
     return {
       success: true,
       data: result,

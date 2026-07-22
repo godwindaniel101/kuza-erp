@@ -41,9 +41,10 @@ function Avatar({ name, i }: { name: string; i: number }) {
 export default function UsersPage() {
   const { t } = useTranslation('common');
   const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', roleId: '' });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,6 +52,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    loadRoles();
   }, []);
 
   const loadUsers = async () => {
@@ -63,6 +65,17 @@ export default function UsersPage() {
       console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: any[] }>('/roles');
+      if (response.success) {
+        setRoles(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to load roles:', err);
     }
   };
 
@@ -228,26 +241,30 @@ export default function UsersPage() {
               </Button>
               <Button
                 variant="primary"
-                disabled={!newUser.name || !newUser.email || !newUser.password || saving}
+                disabled={!newUser.name || !newUser.email || saving}
                 onClick={async () => {
                   setSaving(true);
                   try {
-                    const res = await api.post('/users', newUser);
+                    const res = await api.post('/users', {
+                      name: newUser.name,
+                      email: newUser.email,
+                      ...(newUser.roleId ? { roleId: newUser.roleId } : {}),
+                    });
                     if (res.success) {
                       setShowCreate(false);
-                      setNewUser({ name: '', email: '', password: '' });
+                      setNewUser({ name: '', email: '', roleId: '' });
                       await loadUsers();
-                      setToast({ message: t('userCreated') || 'User created successfully', type: 'success' });
+                      setToast({ message: t('invitationSent') || 'Invitation sent successfully', type: 'success' });
                     }
                   } catch (err) {
-                    console.error('Failed to create user:', err);
-                    setToast({ message: t('failedToCreateUser') || 'Failed to create user', type: 'error' });
+                    console.error('Failed to invite user:', err);
+                    setToast({ message: t('failedToCreateUser') || 'Failed to invite user', type: 'error' });
                   } finally {
                     setSaving(false);
                   }
                 }}
               >
-                {saving ? t('saving') || 'Saving...' : t('save')}
+                {saving ? t('saving') || 'Saving...' : t('send') || 'Send'}
               </Button>
             </>
           }
@@ -272,14 +289,14 @@ export default function UsersPage() {
               placeholder={t('emailAddress') || 'name@example.com'}
             />
             <FormField
-              type="text"
-              name="newUserPassword"
-              label={t('password')}
-              required
-              value={newUser.password}
-              onChange={(value) => setNewUser({ ...newUser, password: value })}
-              placeholder={t('password')}
-              inputProps={{ type: 'password' }}
+              type="select"
+              name="newUserRole"
+              label={t('role')}
+              value={newUser.roleId}
+              onChange={(value) => setNewUser({ ...newUser, roleId: value })}
+              placeholder={t('selectRole') || 'Select a role'}
+              options={roles.map((r) => ({ value: r.id, label: r.displayName || r.name }))}
+              help={t('inviteRoleHelp') || 'The user will be invited by email to join with this role.'}
             />
           </div>
         </Modal>

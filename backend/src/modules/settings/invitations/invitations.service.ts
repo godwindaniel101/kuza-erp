@@ -9,6 +9,7 @@ import { Repository } from "typeorm";
 import { Invitation } from "../../../common/entities/invitation.entity";
 import { User } from "../../../common/entities/user.entity";
 import { Role } from "../../../common/entities/role.entity";
+import { Employee } from "../../hrms/entities/employee.entity";
 import { CreateInvitationDto } from "./dto/create-invitation.dto";
 import { NotificationsService } from "../../notifications/notifications.service";
 import { LandlordService } from "../../../common/landlord/services/landlord.service";
@@ -24,6 +25,8 @@ export class InvitationsService {
     private userRepository: Repository<User>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(Employee)
+    private employeeRepository: Repository<Employee>,
     private notificationsService: NotificationsService,
     private landlordService: LandlordService,
     private tenantConnectionService: TenantConnectionService,
@@ -231,14 +234,20 @@ export class InvitationsService {
     await this.invitationRepository.remove(invitation);
   }
 
-  async accept(token: string, password: string) {
+  async accept(token: string, password: string, name?: string) {
     // Find invitation globally across all tenants
     const invitationWithTenant = await this.findByTokenGlobal(token);
-    
+
+    // Resolve the display name: prefer the name captured at acceptance,
+    // falling back to the local-part of the email so the user is never
+    // left with an empty name.
+    const resolvedName =
+      name?.trim() || invitationWithTenant.email?.split("@")[0] || "New User";
+
     try {
       // Step 1: Create landlord user first (for authentication)
       const landlordUser = await this.landlordService.createLandlordUserFromInvitation(
-        invitationWithTenant.email?.split("@")[0] || "New User",
+        resolvedName,
         invitationWithTenant.email,
         password,
         invitationWithTenant.tenantId,
@@ -260,7 +269,7 @@ export class InvitationsService {
       const bcrypt = await import("bcryptjs");
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = this.userRepository.create({
-        name: invitationWithTenant.email?.split("@")[0] || "New User",
+        name: resolvedName,
         email: invitationWithTenant.email,
         password: hashedPassword,
         landlordUserId: landlordUser.id, // Link to landlord user
@@ -279,7 +288,20 @@ export class InvitationsService {
         }
       }
 
-      // Step 5: Mark invitation as accepted
+      // Step 5: For employee invitations, link the new tenant user to the
+      // matching Employee record (by email) in the tenant schema. If no
+      // employee matches, or one is already linked, skip gracefully.
+      if (invitationWithTenant.type === "employee") {
+        const employee = await this.employeeRepository.findOne({
+          where: { email: invitationWithTenant.email },
+        });
+        if (employee && !employee.userId) {
+          employee.userId = savedUser.id;
+          await this.employeeRepository.save(employee);
+        }
+      }
+
+      // Step 6: Mark invitation as accepted
       const invitation = await this.invitationRepository.findOne({
         where: { token },
       });
@@ -288,8 +310,15 @@ export class InvitationsService {
         await this.invitationRepository.save(invitation);
       }
 
-      // Step 6: Reset schema before returning
+      // Step 7: Reset schema before returning
       await this.tenantConnectionService.resetSchema();
+
+      // Step 8: Send a welcome email (best-effort — never block onboarding).
+      // NotificationsService swallows its own send errors and returns a result.
+      await this.notificationsService.sendWelcomeEmail(
+        invitationWithTenant.email,
+        resolvedName,
+      );
 
       return {
         user: {

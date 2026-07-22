@@ -6,19 +6,10 @@ import { Permission } from '../../common/entities/permission.entity';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { BillingService } from '../billing/billing.service';
 import { normalizeBusinessType } from '../../common/apps/app-registry';
-
-/**
- * Catalog of permissions introduced by newer modules. Upserted lazily (by
- * unique name) when the permission list is read, so existing tenants gain
- * them without a migration — same pattern as the accounting chart seed.
- */
-const PERMISSION_CATALOG: Array<Pick<Permission, 'name' | 'displayName' | 'group'>> = [
-  { name: 'accounting.view', displayName: 'View accounting', group: 'Accounting' },
-  { name: 'accounting.manage', displayName: 'Manage accounting', group: 'Accounting' },
-  { name: 'sales.view', displayName: 'View customers & invoices', group: 'Sales' },
-  { name: 'sales.manage', displayName: 'Manage customers & invoices', group: 'Sales' },
-  { name: 'inventory.approve', displayName: 'Approve inventory changes', group: 'Inventory' },
-];
+import {
+  PERMISSION_CATALOG,
+  PERMISSION_APP_BY_NAME,
+} from '../../common/apps/permission-catalog';
 
 @Injectable()
 export class SettingsService {
@@ -89,11 +80,31 @@ export class SettingsService {
     return await this.businessRepository.save(business);
   }
 
-  async getAllPermissions() {
+  /**
+   * All permissions, each annotated with its owning app, scoped to the apps the
+   * tenant actually has enabled (plus always-on `admin` permissions). When no
+   * tenant context is passed, returns the full annotated catalog.
+   */
+  async getAllPermissions(tenantId?: string, schemaName?: string) {
     await this.ensureCatalogPermissions();
-    return await this.permissionRepository.find({
+    const rows = await this.permissionRepository.find({
       order: { group: 'ASC', displayName: 'ASC' },
     });
+
+    const effective =
+      tenantId && schemaName
+        ? await this.billingService.getEffectiveApps(tenantId, schemaName)
+        : null;
+    const allowed = effective
+      ? new Set<string>([...effective, 'admin'])
+      : null;
+
+    return rows
+      .map((p) => ({
+        ...p,
+        app: PERMISSION_APP_BY_NAME[p.name] ?? 'admin',
+      }))
+      .filter((p) => !allowed || allowed.has(p.app));
   }
 
   private async ensureCatalogPermissions() {
@@ -102,7 +113,14 @@ export class SettingsService {
     const missing = PERMISSION_CATALOG.filter((p) => !existingNames.has(p.name));
     if (missing.length > 0) {
       await this.permissionRepository.save(
-        missing.map((p) => this.permissionRepository.create(p)),
+        // Only persist real columns (the catalog's `app` is read-time metadata).
+        missing.map((p) =>
+          this.permissionRepository.create({
+            name: p.name,
+            displayName: p.displayName,
+            group: p.group,
+          }),
+        ),
       );
     }
   }

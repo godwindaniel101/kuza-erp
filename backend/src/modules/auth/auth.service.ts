@@ -457,12 +457,31 @@ export class AuthService {
       ),
     );
 
+    // Employee self-service (leaves/attendance controllers read
+    // req.user.employeeId). Surface the linked HRMS employee — the `employee`
+    // relation is eagerly loaded by every auth query below. Null-safe: users
+    // without an employee record (e.g. the tenant owner) still work.
+    const employee = user.employee
+      ? {
+          id: user.employee.id,
+          employeeNumber: (user.employee as any).employeeNumber ?? null,
+          firstName: (user.employee as any).firstName ?? null,
+          lastName: (user.employee as any).lastName ?? null,
+          // position/department are relations that aren't loaded here — expose
+          // the always-present scalar FKs instead of half-loaded objects.
+          positionId: (user.employee as any).positionId ?? null,
+          departmentId: (user.employee as any).departmentId ?? null,
+        }
+      : null;
+
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       roles,
       permissions,
+      employeeId: user.employee?.id ?? null,
+      employee,
     } as any;
   }
 

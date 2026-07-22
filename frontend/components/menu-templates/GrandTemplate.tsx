@@ -96,7 +96,7 @@ export default function GrandTemplate({ data, theme }: TemplateProps) {
   return (
     <TemplateRoot theme={theme}>
       <div ref={topRef} />
-      <Preloader theme={theme} accent={accent} venue={venue} />
+      <Preloader theme={theme} accent={accent} venue={venue} title={menuName} />
 
       {/* COVER */}
       {screen.name === 'cover' && (

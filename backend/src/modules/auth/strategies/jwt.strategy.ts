@@ -28,6 +28,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // Return user info including tenant information and authorization data.
       return {
         sub: payload.sub, // This is the landlord user ID
+        // Tenant-scoped user id (distinct from `sub`, the landlord user id).
+        // validateUser(...,true) maps this from the tenant user record.
+        id: (user as any).id,
         email: user.email,
         name: user.name,
         tenantId: user.tenantId,
@@ -35,6 +38,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         tenant: user.tenant,
         roles: (user as any).roles || [],
         permissions: (user as any).permissions || [],
+        // Employee self-service: leaves/attendance controllers read
+        // req.user.employeeId. Null-safe — null when the user has no linked
+        // HRMS employee record. `employee` is a minimal summary (or null).
+        employeeId: (user as any).employeeId ?? (user as any).employee?.id ?? null,
+        employee: (user as any).employee ?? null,
         // Platform super-admin flag comes from the signed JWT claim (source of
         // truth for SuperAdminGuard). Never trust anything client-supplied here.
         isSuperAdmin: payload.isSuperAdmin === true,

@@ -1,0 +1,12 @@
+{
+  "welcome": "Barka da zuwa",
+  "error": "Kuskure",
+  "success": "Nasara",
+  "not_found": "Ba a samu ba",
+  "unauthorized": "Ba a ba da izini ba",
+  "forbidden": "An hana",
+  "validation_error": "Kuskuren tantancewa",
+  "created": "An ƙirƙira cikin nasara",
+  "updated": "An sabunta cikin nasara",
+  "deleted": "An share cikin nasara"
+}

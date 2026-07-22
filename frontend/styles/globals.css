@@ -118,18 +118,20 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
-/* Product rule: no text input or select should stretch too wide by default.
-   Lives in @layer base so it's a low-priority DEFAULT — any Tailwind max-w-*
-   utility (e.g. max-w-none on the login inputs) overrides it normally. w-full
-   inputs stay capped (w-full sets width, not max-width). Excludes toggles/etc. */
+/* Consistency rule: text inputs / selects / textareas FILL their container by
+   default, so form layout (grid columns, max-w-* on the wrapper) controls width
+   uniformly across every form and on mobile. The old `max-width: 300px` cap made
+   fields look "60%" in wide cells in some contexts but not others (modals) — the
+   source of the inconsistency. Any Tailwind width utility (w-48, max-w-*, etc.)
+   still overrides this base default. Toggles/color/file/range are excluded. */
 @layer base {
   /* :where() keeps this at element-level specificity (0,0,1) so any Tailwind
-     max-w-* utility (max-w-none, max-w-[140px], max-w-sm …) cleanly overrides
-     it — without :where the 5 chained :not() made this beat those utilities. */
+     width/max-width utility cleanly overrides it. */
   input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"])),
   select,
   textarea {
-    max-width: 300px;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
@@ -246,9 +248,9 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   z-index: 10;
 }
 
-/* Selects fill their container but cap at the shared 300px input width. */
+/* Selects fill their container (width controlled by form layout, not a cap). */
 select {
-  max-width: 300px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

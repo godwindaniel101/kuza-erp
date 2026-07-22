@@ -52,7 +52,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
   return (
     <TemplateRoot theme={theme}>
       <div ref={topRef} />
-      <Preloader theme={theme} accent={accent} venue={venue} />
+      <Preloader theme={theme} accent={accent} venue={venue} title={menuName} />
 
       {/* COVER — soft, airy intro */}
       {screen.name === 'cover' && (

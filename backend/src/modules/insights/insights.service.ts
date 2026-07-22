@@ -220,14 +220,7 @@ export class InsightsService {
       });
     }
 
-    if (d.profitThisMonth) {
-      insights.push({
-        title: 'Profit this month',
-        body: d.profitThisMonth.headline,
-        tone: (d.profitThisMonth.profit ?? 0) >= 0 ? 'positive' : 'warning',
-      });
-    }
-    // Sales trend + low stock + cash position, merged into one insight.
+    // Sales trend + low stock + cash position, merged into one insight — first.
     {
       const low = Array.isArray(d.lowStock) ? d.lowStock : [];
       const hasLow = low.length > 0;
@@ -248,6 +241,13 @@ export class InsightsService {
               : 'info',
         });
       }
+    }
+    if (d.profitThisMonth) {
+      insights.push({
+        title: 'Profit this month',
+        body: d.profitThisMonth.headline,
+        tone: (d.profitThisMonth.profit ?? 0) >= 0 ? 'positive' : 'warning',
+      });
     }
     if (d.overdueTotal && (d.overdueTotal.amount ?? 0) > 0) {
       insights.push({

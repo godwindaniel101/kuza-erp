@@ -19,10 +19,6 @@ export function accentOf(data: PublicMenuData, theme: MenuTheme): string {
   return data.venue.accentColor || theme.accent;
 }
 
-export function sectionId(categoryId: string): string {
-  return `cat-${categoryId}`;
-}
-
 export interface SubGroup {
   name: string | null;
   items: PublicMenuItem[];
@@ -48,74 +44,6 @@ export function subGroups(items: PublicMenuItem[]): SubGroup[] {
   return order.map((name) => ({ name, items: byName.get(name)! }));
 }
 
-/** True when a category actually has named subcategories worth showing. */
-export function hasSubcategories(items: PublicMenuItem[]): boolean {
-  return items.some((i) => i.subcategory);
-}
-
-export interface NavSection {
-  id: string;
-  label: string;
-}
-
-export function navSections(data: PublicMenuData): NavSection[] {
-  const sections: NavSection[] = [];
-  for (const menu of data.menus) {
-    for (const category of menu.categories) {
-      sections.push({ id: sectionId(category.id), label: category.name });
-    }
-  }
-  return sections;
-}
-
-/**
- * Sticky horizontal category nav. Pure anchor links — with JS disabled the
- * jumps still work; `scroll-behavior: smooth` (set on the template root via
- * CSS) makes them glide when JS/CSS allows.
- */
-export function CategoryNav({
-  sections,
-  theme,
-  accent,
-}: {
-  sections: NavSection[];
-  theme: MenuTheme;
-  accent: string;
-}) {
-  if (sections.length < 2) return null;
-  return (
-    <nav
-      className="sticky top-0 z-20 -mx-4 px-4 py-2 overflow-x-auto whitespace-nowrap backdrop-blur"
-      style={{
-        backgroundColor: `${theme.bg}E6`,
-        borderBottom: `1px solid ${theme.border}`,
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-      }}
-      aria-label="Menu sections"
-    >
-      {sections.map((s) => (
-        <a
-          key={s.id}
-          href={`#${s.id}`}
-          className="inline-block text-sm font-medium mr-2 px-3 py-1.5 transition-colors"
-          style={{
-            color: theme.text,
-            border: `1px solid ${theme.border}`,
-            borderRadius: '999px',
-            backgroundColor: theme.surface,
-          }}
-        >
-          <span
-            className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
-            style={{ backgroundColor: accent }}
-          />
-          {s.label}
-        </a>
-      ))}
-    </nav>
-  );
-}
 
 function PhoneIcon({ color }: { color: string }) {
   return (
@@ -588,56 +516,6 @@ export function BackBar({
   );
 }
 
-/**
- * Hand-drawn food-doodle field (burgers, fries, pizza, hearts) — the signature
- * Escape background. Tiled low-contrast line art; purely ornamental.
- */
-export function DoodleField({
-  color,
-  opacity = 0.12,
-  className = '',
-}: {
-  color: string;
-  opacity?: number;
-  className?: string;
-}) {
-  const s = { fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  return (
-    <svg aria-hidden="true" className={className} width="100%" height="100%" style={{ opacity }}>
-      <defs>
-        <pattern id="doodles" width="200" height="200" patternUnits="userSpaceOnUse">
-          {/* heart */}
-          <path {...s} d="M30 42c-8-6-14-11-14-18a7 7 0 0 1 14-3 7 7 0 0 1 14 3c0 7-6 12-14 18Z" />
-          {/* fries */}
-          <g {...s}>
-            <path d="M150 30l6 34h20l6-34" />
-            <path d="M150 40h32" />
-            <path d="M158 30v-12M166 30v-16M174 30v-12" />
-          </g>
-          {/* burger */}
-          <g {...s}>
-            <path d="M60 150c0-8 9-14 20-14s20 6 20 14" />
-            <path d="M58 156h44" />
-            <path d="M60 164c2 6 8 8 20 8s18-2 20-8" />
-            <path d="M58 150h44" />
-          </g>
-          {/* pizza slice */}
-          <g {...s}>
-            <path d="M150 150l18 40 18-40Z" />
-            <circle cx="164" cy="166" r="2.4" />
-            <circle cx="172" cy="176" r="2.4" />
-          </g>
-          {/* I heart */}
-          <g {...s}>
-            <path d="M96 96v18M90 96h12M90 114h12" />
-            <path d="M116 100c-4-3-7 0-7 3 0 4 4 6 7 9 3-3 7-5 7-9 0-3-3-6-7-3Z" />
-          </g>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#doodles)" />
-    </svg>
-  );
-}
 
 /**
  * Brief full-screen preloader that fades out shortly after mount. Purely a
@@ -647,10 +525,13 @@ export function Preloader({
   theme,
   accent,
   venue,
+  title,
 }: {
   theme: MenuTheme;
   accent: string;
   venue: PublicVenue;
+  /** Shown as the loading label; defaults to the venue name. */
+  title?: string;
 }) {
   const [gone, setGone] = useState(false);
   const [fading, setFading] = useState(false);
@@ -680,7 +561,7 @@ export function Preloader({
           />
         )}
         <div className="text-sm font-black uppercase tracking-[0.35em]" style={{ color: accent }}>
-          {venue.name}
+          {title || venue.name}
         </div>
         <div className="flex gap-1.5">
           {[0, 0.15, 0.3].map((d) => (
@@ -799,7 +680,7 @@ function DrawerContact({
   }
   if (!rows.length && !children) return null;
   return (
-    <div className="mt-auto pt-8">
+    <div className="mt-12 pt-6">
       <div className="mb-4 text-xl font-bold" style={{ color: theme.text }}>
         Get in touch
       </div>
@@ -827,68 +708,65 @@ export function SideDrawer({
   accent: string;
   links?: { id: string; label: string; onClick: () => void }[];
 }) {
-  const [reserveOpen, setReserveOpen] = useState(false);
-  if (!open) return null;
+  // Lock body scroll while the drawer is open so it never introduces a
+  // scrollbar (its own or the page behind it) — a common mobile disfigurement.
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
-    <div className="fixed inset-0 z-[55] flex">
-      <div className="menu-scrim absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
-      <aside
-        className="menu-drawer relative flex h-full w-[84%] max-w-sm flex-col overflow-y-auto px-6 py-5"
-        style={{ backgroundColor: theme.bg, borderRight: `1px solid ${theme.border}` }}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-black uppercase tracking-[0.25em]" style={{ color: accent }}>
-            {venue.name}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close menu"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-xl"
-            style={{ color: accent }}
+    <>
+      {open && (
+        <div className="fixed inset-0 z-[55] flex overflow-hidden overscroll-contain">
+          <div className="menu-scrim absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+          <aside
+            className="menu-drawer relative flex h-full w-[84%] max-w-sm flex-col overflow-hidden px-6 py-5"
+            style={{ backgroundColor: theme.bg, borderRight: `1px solid ${theme.border}` }}
           >
-            ✕
-          </button>
-        </div>
-
-        {links && links.length > 0 && (
-          <nav className="mt-8 flex flex-col gap-1">
-            {links.map((l) => (
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-black uppercase tracking-[0.25em]" style={{ color: accent }}>
+                {venue.name}
+              </span>
               <button
-                key={l.id}
                 type="button"
-                onClick={() => {
-                  l.onClick();
-                  onClose();
-                }}
-                className="rounded-lg px-3 py-3 text-left text-lg font-semibold transition-colors"
-                style={{ color: theme.text }}
+                onClick={onClose}
+                aria-label="Close menu"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-xl"
+                style={{ color: accent }}
               >
-                {l.label}
+                ✕
               </button>
-            ))}
-          </nav>
-        )}
+            </div>
 
-        <DrawerContact venue={venue} theme={theme} accent={accent}>
-          <button
-            type="button"
-            onClick={() => setReserveOpen(true)}
-            className="mt-2 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold uppercase tracking-wider transition-transform active:scale-95"
-            style={{ backgroundColor: accent, color: theme.bg, borderRadius: theme.radius }}
-          >
-            Reserve a table
-          </button>
-        </DrawerContact>
-      </aside>
-      <ReservationSheet
-        open={reserveOpen}
-        onClose={() => setReserveOpen(false)}
-        venue={venue}
-        theme={theme}
-        accent={accent}
-      />
-    </div>
+            {links && links.length > 0 && (
+              <nav className="mt-8 flex flex-col gap-1">
+                {links.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => {
+                      l.onClick();
+                      onClose();
+                    }}
+                    className="rounded-lg px-3 py-3 text-left text-lg font-semibold transition-colors"
+                    style={{ color: theme.text }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </nav>
+            )}
+
+            <DrawerContact venue={venue} theme={theme} accent={accent} />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -62,6 +62,17 @@ export class EmployeesController {
     };
   }
 
+  @Get("org-chart")
+  @RequirePermissions("employees.view")
+  @ApiOperation({ summary: "Get the reporting hierarchy (organogram) as a nested tree" })
+  async getOrgChart() {
+    const roots = await this.employeesService.getOrgChart();
+    return {
+      success: true,
+      data: roots,
+    };
+  }
+
   @Get(":id")
   @RequirePermissions("employees.view")
   @ApiOperation({ summary: "Get employee by ID" })

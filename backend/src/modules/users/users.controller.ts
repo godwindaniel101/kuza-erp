@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../common/guards/permissions.guard';
 import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -61,6 +62,36 @@ export class UsersController {
     return {
       success: true,
       data: user,
+    };
+  }
+
+  @Patch(':id')
+  @RequirePermissions('users.edit')
+  @ApiOperation({ summary: 'Update user (name, active status, role assignments)' })
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateUserDto,
+    @Request() req,
+  ) {
+    const user = await this.usersService.update(id, req.user.businessId, body);
+    return {
+      success: true,
+      data: user,
+    };
+  }
+
+  @Delete(':id')
+  @RequirePermissions('users.delete')
+  @ApiOperation({ summary: 'Delete user (tenant record only; cannot delete self)' })
+  async remove(@Param('id') id: string, @Request() req) {
+    const result = await this.usersService.remove(
+      id,
+      req.user.businessId,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
     };
   }
 }
