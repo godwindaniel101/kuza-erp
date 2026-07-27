@@ -8,5 +8,68 @@
   "validation_error": "Kuskuren tantancewa",
   "created": "An ƙirƙira cikin nasara",
   "updated": "An sabunta cikin nasara",
-  "deleted": "An share cikin nasara"
+  "deleted": "An share cikin nasara",
+  "insights": {
+    "yourBusiness": "Kasuwancinka",
+    "cash": {
+      "positive": "Kana da {amount} a tsabar kuɗi da banki a yanzu",
+      "overdrawn": "Asusun kuɗinka ya wuce iyaka da {amount}",
+      "unavailable": "Bayanan tsabar kuɗi ba su samu ba"
+    },
+    "profit": {
+      "positive": "Ka samu riba {profit} har zuwa yanzu a wannan wata ({earned} an samu, {spent} an kashe)",
+      "negative": "Kana cikin hasara na {amount} a wannan wata ({earned} an samu, {spent} an kashe)",
+      "unavailable": "Bayanan riba ba su samu ba"
+    },
+    "debtor": {
+      "lateOne": "{name} yana bin ka {amount} — kwana {days} da wuce lokaci",
+      "lateOther": "{name} yana bin ka {amount} — kwanaki {days} da wuce lokaci",
+      "notDue": "{name} yana bin ka {amount} — bai kai lokaci ba tukuna"
+    },
+    "lowStock": {
+      "outOfStock": "{name} ya ƙare a ma'aji — mafi ƙaranci shine {minimum}",
+      "below": "{name} ya faɗi ƙasa da mafi ƙarancin ma'aji: {current} ya rage, mafi ƙaranci {minimum}",
+      "runningLow": "kaya {count} suna gab da ƙarewa"
+    },
+    "sales": {
+      "thisMonthOnly": "Tallace-tallace wannan wata: {amount} (babu tallace-tallace watan da ya gabata don kwatanta)",
+      "none": "Ba a yi rijistar tallace-tallace ba a wannan wata ko watan da ya gabata",
+      "up": "Tallace-tallace sun tashi da {pct}% — {current} wannan wata idan aka kwatanta da {previous} watan da ya gabata",
+      "down": "Tallace-tallace sun sauka da {pct}% — {current} wannan wata idan aka kwatanta da {previous} watan da ya gabata",
+      "unavailable": "Yanayin tallace-tallace bai samu ba"
+    },
+    "overdue": {
+      "someOne": "{amount} ya wuce lokaci a kan lissafin kuɗi {count} — lokaci ya yi na neman biyan kuɗi",
+      "someOther": "{amount} ya wuce lokaci a kan lissafin kuɗi {count} — lokaci ya yi na neman biyan kuɗi",
+      "none": "Babu lissafin kuɗi da ya wuce lokaci — madalla",
+      "noOverdue": "Babu lissafin kuɗi da ya wuce lokaci"
+    },
+    "topItem": {
+      "headline": "{name}: {revenue} daga {qty} da aka sayar a wannan wata"
+    },
+    "lowStockByBranch": {
+      "title": "Ƙarancin kaya bisa reshe",
+      "bodyOne": "{item} ya yi ƙaranci a {branch} ({stock} ya rage, sake oda a {minimum}).",
+      "bodyMore": "{item} ya yi ƙaranci a {branch} ({stock} ya rage, sake oda a {minimum}) — da ƙarin kaya {count} a cikin rassanka."
+    },
+    "branches": {
+      "title": "Rassa",
+      "body": "Kana gudanar da rassa {count}. Ma'aji yana da lafiya — babu abin da ke ƙasa da matakin sake odarsa a yanzu."
+    },
+    "salesStockCash": {
+      "title": "Tallace-tallace, ma'aji da tsabar kuɗi"
+    },
+    "profitThisMonth": {
+      "title": "Riba wannan wata"
+    },
+    "moneyOwed": {
+      "title": "Kuɗin da ake bin ka"
+    },
+    "profitStock": {
+      "title": "Riba da kaya"
+    },
+    "salesCash": {
+      "title": "Tallace-tallace da kuɗi"
+    }
+  }
 }

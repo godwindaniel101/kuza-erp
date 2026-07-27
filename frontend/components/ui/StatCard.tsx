@@ -1,6 +1,23 @@
 import { ReactNode } from 'react';
 import { Sparkline } from './charts';
 
+/**
+ * Render a stat value with any leading currency prefix (e.g. "₦", "$", "NGN")
+ * shown smaller than the number. Non-string / non-currency values pass through
+ * unchanged (counts, percentages like "45%", plain text).
+ */
+function renderStatValue(value: ReactNode): ReactNode {
+  if (typeof value !== 'string') return value;
+  const m = value.match(/^\s*(\D+?)\s*(\d.*)$/);
+  if (!m || !m[1].trim()) return value;
+  return (
+    <>
+      <span className="text-[0.6em] font-semibold mr-0.5">{m[1].trim()}</span>
+      {m[2]}
+    </>
+  );
+}
+
 export type StatCardTone = 'default' | 'success' | 'warning' | 'error' | 'info' | 'red' | 'blue';
 
 interface StatCardProps {
@@ -55,14 +72,14 @@ export default function StatCard({
     <div
       className={`bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 ${className}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{label}</p>
           {loading ? (
             <div className="mt-2 h-7 w-20 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
           ) : (
             <div className="mt-1.5 flex items-baseline gap-2">
-              <p className="text-[23px] leading-7 font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+              <p className="text-[23px] leading-7 font-bold tracking-tight text-gray-900 dark:text-white">{renderStatValue(value)}</p>
               {trend && (
                 <span
                   className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${trendClasses}`}
@@ -76,17 +93,18 @@ export default function StatCard({
           {caption && !loading && (
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{caption}</p>
           )}
-          {spark && spark.length > 1 && !loading && (
-            <div className="mt-2">
-              <Sparkline data={spark} />
-            </div>
-          )}
         </div>
-        {icon && (
+        {/* Right side of the card: the mini graph (sparkline) when present,
+            otherwise the tone icon. */}
+        {spark && spark.length > 1 && !loading ? (
+          <div className="w-24 shrink-0">
+            <Sparkline data={spark} />
+          </div>
+        ) : icon ? (
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${tones.halo}`}>
             <i className={`bx ${icon} text-xl ${tones.icon}`} aria-hidden="true"></i>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -111,7 +111,7 @@ export default function AllocationMethodSettingsPage() {
 
   return (
     <PermissionGuard permission="settings.view">
-      <div className="w-full max-w-3xl space-y-5">
+      <div className="w-full max-w-2xl space-y-5">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
@@ -126,9 +126,9 @@ export default function AllocationMethodSettingsPage() {
         <div className="flex items-start gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200">
           <i className="bx bx-info-circle mt-0.5 text-lg text-brand-600 dark:text-brand-400"></i>
           <p>
-            This decides which stock batch a sale draws from — directly affecting the{' '}
-            <span className="font-semibold">cost of goods sold</span> and{' '}
-            <span className="font-semibold">profit</span> on every outflow.
+            {t('settings.allocationImpactPre', 'This decides which stock batch a sale draws from — directly affecting the')}{' '}
+            <span className="font-semibold">{t('settings.costOfGoodsSold', 'cost of goods sold')}</span> {t('settings.and', 'and')}{' '}
+            <span className="font-semibold">{t('settings.profit', 'profit')}</span> {t('settings.allocationImpactPost', 'on every outflow.')}
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export default function AllocationMethodSettingsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-gray-900 dark:text-gray-100">{m.name}</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">· {m.full}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">· {t(`settings.method${m.value}Full`, m.full)}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         selected
@@ -176,13 +176,14 @@ export default function AllocationMethodSettingsPage() {
                           : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                       }`}
                     >
-                      {m.tag}
+                      {t(`settings.method${m.value}Tag`, m.tag)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{m.description}</p>
-                  <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
-                    <i className="bx bx-right-arrow-alt text-sm"></i>
-                    <span className="italic">{m.example}</span>
+                  <p className="mt-1 flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <i className="bx bx-right-arrow-alt mt-0.5 shrink-0 text-sm"></i>
+                    <span className="italic">
+                      {t(`settings.method${m.value}Description`, m.description)} {t(`settings.method${m.value}Example`, m.example)}
+                    </span>
                   </p>
                 </div>
 

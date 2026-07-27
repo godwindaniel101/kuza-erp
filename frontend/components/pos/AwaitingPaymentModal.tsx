@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import Modal from '@/components/Modal';
 import Button from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -30,6 +31,7 @@ export default function AwaitingPaymentModal({
   onPaid,
   onClose,
 }: AwaitingPaymentModalProps) {
+  const { t } = useTranslation('common');
   const [status, setStatus] = useState<'awaiting' | 'paid' | 'failed'>('awaiting');
   const paidRef = useRef(false);
 
@@ -67,12 +69,12 @@ export default function AwaitingPaymentModal({
     <Modal
       isOpen
       onClose={onClose}
-      title="Awaiting payment"
+      title={t('pos.awaitingPayment', 'Awaiting payment')}
       maxWidth="sm"
       closeOnOutsideClick={false}
       footer={
         <Button variant="secondary" onClick={onClose}>
-          {status === 'paid' ? 'Done' : 'Cancel'}
+          {status === 'paid' ? t('pos.done', 'Done') : t('pos.cancel', 'Cancel')}
         </Button>
       }
     >
@@ -81,38 +83,38 @@ export default function AwaitingPaymentModal({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
             <i className="bx bx-check text-3xl"></i>
           </div>
-          <p className="font-semibold text-gray-900 dark:text-gray-100">Payment received</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{formatNaira(amount)} confirmed.</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">{t('pos.paymentReceived', 'Payment received')}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('pos.amountConfirmed', '{{amount}} confirmed.', { amount: formatNaira(amount) })}</p>
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Ask the customer to transfer <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNaira(amount)}</span> to:
+            {t('pos.askCustomerTransfer', 'Ask the customer to transfer {{amount}} to:', { amount: formatNaira(amount) })}
           </p>
 
           {account ? (
             <div className="rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 px-4 py-4 text-white dark:from-gray-800 dark:to-gray-900">
-              <p className="text-[11px] uppercase tracking-wide text-white/60">{account.bankName || 'Bank'}</p>
+              <p className="text-[11px] uppercase tracking-wide text-white/60">{account.bankName || t('pos.bank', 'Bank')}</p>
               <div className="flex items-center justify-between">
                 <p className="font-mono text-2xl font-semibold tabular-nums">{account.accountNumber}</p>
                 <button
                   onClick={() => copy(account.accountNumber)}
                   className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-medium hover:bg-white/20"
                 >
-                  <i className="bx bx-copy"></i> Copy
+                  <i className="bx bx-copy"></i> {t('pos.copy', 'Copy')}
                 </button>
               </div>
               <p className="truncate text-xs text-white/70">{account.accountName}</p>
             </div>
           ) : (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-              No virtual account is set up for this branch.
+              {t('pos.noVirtualAccount', 'No virtual account is set up for this branch.')}
             </p>
           )}
 
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-            {status === 'failed' ? 'Payment failed — try again.' : 'Waiting for the transfer to land…'}
+            {status === 'failed' ? t('pos.paymentFailedTryAgain', 'Payment failed — try again.') : t('pos.waitingForTransferShort', 'Waiting for the transfer to land…')}
           </div>
         </div>
       )}

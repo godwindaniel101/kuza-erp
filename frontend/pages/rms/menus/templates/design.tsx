@@ -42,8 +42,8 @@ export default function TemplateDesignerPage() {
         const templates: { [key: string]: any } = {
           'modern': {
             id: 'modern',
-            name: 'Modern',
-            description: 'Clean and modern design with bold typography',
+            name: t('menu.tpl_modern', 'Modern'),
+            description: t('menu.tpl_modern_desc', 'Clean and modern design with bold typography'),
             theme_settings: {
               primaryColor: '#dc2626',
               fontFamily: 'Inter',
@@ -52,8 +52,8 @@ export default function TemplateDesignerPage() {
           },
           'classic': {
             id: 'classic',
-            name: 'Classic',
-            description: 'Traditional business menu style',
+            name: t('menu.tpl_classic', 'Classic'),
+            description: t('menu.tpl_classic_desc', 'Traditional business menu style'),
             theme_settings: {
               primaryColor: '#92400e',
               fontFamily: 'Times New Roman',
@@ -62,8 +62,8 @@ export default function TemplateDesignerPage() {
           },
           'minimal': {
             id: 'minimal',
-            name: 'Minimal',
-            description: 'Simple and elegant minimalist design',
+            name: t('menu.tpl_minimal', 'Minimal'),
+            description: t('menu.tpl_minimal_desc', 'Simple and elegant minimalist design'),
             theme_settings: {
               primaryColor: '#000000',
               fontFamily: 'Helvetica',

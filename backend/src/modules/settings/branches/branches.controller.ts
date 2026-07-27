@@ -7,7 +7,9 @@ import {
   Param,
   Delete,
   Query,
+  Request,
 } from "@nestjs/common";
+import { BranchScopeService } from "../../../common/branch-scope/branch-scope.service";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { I18n, I18nContext } from "nestjs-i18n";
 import { BranchesService } from "./branches.service";
@@ -25,7 +27,10 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class BranchesController {
-  constructor(private readonly branchesService: BranchesService) {}
+  constructor(
+    private readonly branchesService: BranchesService,
+    private readonly branchScopeService: BranchScopeService,
+  ) {}
 
   @Post()
   @RequirePermissions("branches.create")
@@ -42,9 +47,10 @@ export class BranchesController {
   @Get()
   @RequirePermissions("branches.view")
   @ApiOperation({ summary: "Get all branches" })
-  async findAll(@Query("includeStats") includeStats?: string) {
+  async findAll(@Request() req, @Query("includeStats") includeStats?: string) {
     const branches = await this.branchesService.findAll(
       includeStats === "true",
+      req.user,
     );
     return {
       success: true,
@@ -55,7 +61,9 @@ export class BranchesController {
   @Get(":id")
   @RequirePermissions("branches.view")
   @ApiOperation({ summary: "Get branch by ID" })
-  async findOne(@Param("id") id: string) {
+  async findOne(@Request() req, @Param("id") id: string) {
+    // Branch-scoped users can only open a branch they're assigned to (throws 403).
+    await this.branchScopeService.resolveBranchFilter(req.user, id);
     const branch = await this.branchesService.findOne(id);
     return {
       success: true,
@@ -106,16 +114,7 @@ export class BranchesController {
   @RequirePermissions("branches.create")
   @ApiOperation({ summary: "Bulk upload branches from CSV" })
   async bulkUpload(@Body() body: { csv: string }, @I18n() i18n: I18nContext) {
-    console.log(`[CONTROLLER] Branch CSV length: ${body.csv?.length || 0}`);
-
     const results = await this.branchesService.bulkUpload(body.csv);
-
-    console.log(`[CONTROLLER] Branch bulk upload results:`, {
-      success: results.success,
-      errors: results.errors,
-      skipped: results.skipped,
-      failedCount: results.failedUploads.length
-    });
 
     // Enhanced response with detailed error information
     const response = {
@@ -141,5 +140,60 @@ export class BranchesController {
     };
 
     return response;
+  }
+
+  // ---- Branch members (users assigned to a branch; manager flag) ----
+
+  @Get("assignable/users")
+  @RequirePermissions("branches.view")
+  @ApiOperation({ summary: "List tenant users assignable to a branch" })
+  async assignableUsers() {
+    const data = await this.branchesService.getAssignableUsers();
+    return { success: true, data };
+  }
+
+  @Get(":id/members")
+  @RequirePermissions("branches.view")
+  @ApiOperation({ summary: "List users assigned to a branch" })
+  async listMembers(@Param("id") id: string) {
+    const data = await this.branchesService.listMembers(id);
+    return { success: true, data };
+  }
+
+  @Post(":id/members")
+  @RequirePermissions("branches.edit")
+  @ApiOperation({ summary: "Assign a user to a branch" })
+  async addMember(
+    @Param("id") id: string,
+    @Body() body: { userId: string; isManager?: boolean },
+    @I18n() i18n: I18nContext,
+  ) {
+    const data = await this.branchesService.addMember(id, body.userId, !!body.isManager);
+    return { success: true, data, message: i18n.t("common.updated") };
+  }
+
+  @Patch(":id/members/:userId")
+  @RequirePermissions("branches.edit")
+  @ApiOperation({ summary: "Set a member's manager flag" })
+  async setMemberManager(
+    @Param("id") id: string,
+    @Param("userId") userId: string,
+    @Body() body: { isManager: boolean },
+    @I18n() i18n: I18nContext,
+  ) {
+    const data = await this.branchesService.setMemberManager(id, userId, !!body.isManager);
+    return { success: true, data, message: i18n.t("common.updated") };
+  }
+
+  @Delete(":id/members/:userId")
+  @RequirePermissions("branches.edit")
+  @ApiOperation({ summary: "Remove a user from a branch" })
+  async removeMember(
+    @Param("id") id: string,
+    @Param("userId") userId: string,
+    @I18n() i18n: I18nContext,
+  ) {
+    const data = await this.branchesService.removeMember(id, userId);
+    return { success: true, data, message: i18n.t("common.deleted") };
   }
 }

@@ -334,6 +334,12 @@ export class InventoryService {
         const result: any = {
           ...item,
           uoms,
+          // Always expose the resolved base UOM (the join may not load under the
+          // tenant search_path; fall back to the manually loaded map) so the UI
+          // isn't left showing "-" for the unit column.
+          baseUom: baseUom
+            ? { id: baseUom.id, name: baseUom.name, abbreviation: baseUom.abbreviation }
+            : null,
           category: category?.name || null,
           subcategory: subcategory?.name || null,
           categoryId: item.categoryId || null,
@@ -384,6 +390,114 @@ export class InventoryService {
       it.earliestExpiry = r?.next_expiry || null;
       it.expiringSoonCount = Number(r?.soon_count || 0);
     });
+  }
+
+  /**
+   * Batch-level list of stock expiring within `days` (default 30) for the
+   * "Expiring soon" tab on the Branch Stock page. One row per inflow batch
+   * (lot) with remaining stock (base_quantity > 0) and a non-null expiry
+   * between today and today+days, soonest first. Optionally scoped to one
+   * branch. Defensive: bad `days` falls back to 30; no rows -> [], never throws.
+   */
+  async findExpiringSoon(branchId?: string, days = 30): Promise<any[]> {
+    const parsed = Number(days);
+    const window =
+      Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 30;
+    const params: any[] = [window];
+    let branchFilter = "";
+    if (branchId) {
+      params.push(branchId);
+      branchFilter = "AND ii.branch_id = $2";
+    }
+    const rows = await this.branchInventoryRepository.manager.query(
+      `SELECT ii.id                AS "inflowItemId",
+              ii.inventory_item_id AS "inventoryItemId",
+              COALESCE(it.name, ii.original_item_name) AS "itemName",
+              ii.branch_id         AS "branchId",
+              b.name               AS "branchName",
+              ii.batch_number      AS "batchNumber",
+              ii.expiry_date       AS "expiryDate",
+              ii.base_quantity     AS "quantity"
+       FROM inventory_inflow_items ii
+       LEFT JOIN inventory_items it ON it.id = ii.inventory_item_id
+       LEFT JOIN branches b ON b.id = ii.branch_id
+       WHERE ii.base_quantity > 0
+         AND ii.expiry_date IS NOT NULL
+         AND ii.expiry_date >= CURRENT_DATE
+         AND ii.expiry_date <= CURRENT_DATE + ($1::text || ' days')::interval
+         ${branchFilter}
+       ORDER BY ii.expiry_date ASC`,
+      params,
+    );
+    return (rows || []).map((r: any) => ({
+      inflowItemId: r.inflowItemId,
+      inventoryItemId: r.inventoryItemId,
+      itemName: r.itemName || "",
+      branchId: r.branchId || null,
+      branchName: r.branchName || null,
+      batchNumber: r.batchNumber || null,
+      expiryDate: r.expiryDate || null,
+      quantity: Number(r.quantity || 0),
+    }));
+  }
+
+  /**
+   * Upsert the per-branch min/max stock config for a single branch+item on
+   * the `branch_inventory_items` row. Creates the row if it does not exist yet
+   * (e.g. the branch has never received this item). Only min/max are touched;
+   * currentStock / salePrice are left as-is. Purely a config write — does not
+   * mutate stock or FIFO batches.
+   */
+  async updateBranchStockConfig(
+    branchId: string,
+    inventoryItemId: string,
+    data: { minimumStock?: number; maximumStock?: number },
+  ): Promise<any> {
+    if (!branchId || !inventoryItemId) {
+      throw new BadRequestException(
+        "branchId and inventoryItemId are required",
+      );
+    }
+    const toNum = (v: any): number | undefined => {
+      if (v === undefined || v === null || v === "") return undefined;
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new BadRequestException("min/max stock must be a positive number");
+      }
+      return n;
+    };
+    const min = toNum(data.minimumStock);
+    const max = toNum(data.maximumStock);
+    if (min !== undefined && max !== undefined && max > 0 && max < min) {
+      throw new BadRequestException(
+        "maximumStock cannot be less than minimumStock",
+      );
+    }
+
+    let row = await this.branchInventoryRepository.findOne({
+      where: { branchId, inventoryItemId },
+    });
+    if (!row) {
+      row = this.branchInventoryRepository.create({
+        branchId,
+        inventoryItemId,
+        currentStock: 0,
+        salePrice: 0,
+        minimumStock: min ?? 0,
+        maximumStock: max ?? 0,
+      });
+    } else {
+      if (min !== undefined) row.minimumStock = min;
+      if (max !== undefined) row.maximumStock = max;
+    }
+    const saved = await this.branchInventoryRepository.save(row);
+    return {
+      id: saved.id,
+      branchId: saved.branchId,
+      inventoryItemId: saved.inventoryItemId,
+      minimumStock: Number(saved.minimumStock || 0),
+      maximumStock: Number(saved.maximumStock || 0),
+    };
   }
 
   async findAllWithBranchStock() {
@@ -553,6 +667,9 @@ export class InventoryService {
           subcategoryId: item.subcategoryId || null,
           unit: unitName,
           baseUomId: item.baseUomId || null,
+          baseUom: baseUom
+            ? { id: baseUom.id, name: baseUom.name, abbreviation: baseUom.abbreviation }
+            : null,
           isTrackable: item.isTrackable !== false,
           binLocation: item.binLocation || null,
           branchStocks,
@@ -700,6 +817,57 @@ export class InventoryService {
       ORDER BY inflow.received_date DESC NULLS LAST
       LIMIT 100`;
 
+    // Per-branch "expiring soon" for this item, mirroring the item-level
+    // aggregate in attachBatchAndExpiry (same table / same 30-day window).
+    // Grouped by branch so the branch tab can flag which branch holds stock
+    // about to expire. Defensive: any failure yields an empty map (zeros/null),
+    // never breaks the stats response.
+    const expiringByBranch = new Map<string, any>();
+    try {
+      const expiringRows = await em.query(
+        `SELECT branch_id AS branchid,
+                MIN(expiry_date) FILTER (WHERE expiry_date >= CURRENT_DATE) AS next_expiry,
+                COUNT(*) FILTER (
+                  WHERE expiry_date >= CURRENT_DATE
+                    AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+                    AND base_quantity > 0
+                ) AS soon_count,
+                COALESCE(SUM(base_quantity) FILTER (
+                  WHERE expiry_date >= CURRENT_DATE
+                    AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+                    AND base_quantity > 0
+                ), 0) AS soon_qty
+         FROM inventory_inflow_items
+         WHERE inventory_item_id = $1
+           AND branch_id IS NOT NULL
+         GROUP BY branch_id`,
+        [id],
+      );
+      (expiringRows || []).forEach((r: any) => {
+        expiringByBranch.set(r.branchid, {
+          nextExpiry: r.next_expiry || null,
+          expiringSoonCount: Number(r.soon_count || 0),
+          expiringQuantity: Number(r.soon_qty || 0),
+        });
+      });
+    } catch {
+      // Non-critical: per-branch expiring stock unavailable; continue.
+    }
+    const withExpiry = (bs: any) => {
+      const e = expiringByBranch.get(bs.branchId) || {};
+      return {
+        branchId: bs.branchId,
+        branchName: resolveBranchName(bs),
+        currentStock: Number(bs.currentStock || 0),
+        minimumStock: Number(bs.minimumStock || 0),
+        maximumStock: Number(bs.maximumStock || 0),
+        salePrice: Number(bs.salePrice || 0),
+        nextExpiry: e.nextExpiry ?? null,
+        expiringSoonCount: Number(e.expiringSoonCount || 0),
+        expiringQuantity: Number(e.expiringQuantity || 0),
+      };
+    };
+
     try {
       const [salesData, recentSales, salesByBranch, salesRows, inflowRows] =
         await Promise.all([
@@ -758,14 +926,7 @@ export class InventoryService {
 
       return {
         item,
-        branchStocks: branchStocks.map((bs) => ({
-          branchId: bs.branchId,
-          branchName: resolveBranchName(bs),
-          currentStock: Number(bs.currentStock || 0),
-          minimumStock: Number(bs.minimumStock || 0),
-          maximumStock: Number(bs.maximumStock || 0),
-          salePrice: Number(bs.salePrice || 0),
-        })),
+        branchStocks: branchStocks.map(withExpiry),
         sales: {
           orderCount: sales.orderCount,
           totalQuantity: sales.totalQuantitySold,
@@ -791,19 +952,11 @@ export class InventoryService {
         inflowHistory,
         salesHistory,
       };
-    } catch (error) {
-      console.error("Error getting item stats:", error);
+    } catch {
       // Return default stats if query fails
       return {
         item,
-        branchStocks: branchStocks.map((bs) => ({
-          branchId: bs.branchId,
-          branchName: resolveBranchName(bs),
-          currentStock: Number(bs.currentStock || 0),
-          minimumStock: Number(bs.minimumStock || 0),
-          maximumStock: Number(bs.maximumStock || 0),
-          salePrice: Number(bs.salePrice || 0),
-        })),
+        branchStocks: branchStocks.map(withExpiry),
         sales: {
           orderCount: 0,
           totalQuantity: 0,
@@ -1251,10 +1404,8 @@ export class InventoryService {
             if (imageUrl) {
               // Update the item with the processed image URL
               await this.inventoryItemRepository.update(createdItem.id, { frontImage: imageUrl });
-              console.log(`[BulkUpload] Successfully processed image for item: ${itemData.name}`);
             }
-          } catch (imageError: any) {
-            console.warn(`[BulkUpload] Failed to process image for item ${itemData.name}:`, imageError.message);
+          } catch {
             // Fallback: persist the original image URL directly so the item still
             // shows an image even when local download/resize fails. Only accept
             // http(s) URLs (the frontend can render an absolute URL as-is).
@@ -1262,9 +1413,8 @@ export class InventoryService {
             if (/^https?:\/\//i.test(rawLink)) {
               try {
                 await this.inventoryItemRepository.update(createdItem.id, { frontImage: rawLink });
-                console.log(`[BulkUpload] Persisted original image URL for item: ${itemData.name}`);
-              } catch (updateError: any) {
-                console.warn(`[BulkUpload] Failed to persist fallback image URL for item ${itemData.name}:`, updateError.message);
+              } catch {
+                // Non-critical: fallback image URL persist failed; continue.
               }
             }
             // Don't fail the entire import if image processing fails
@@ -1639,8 +1789,6 @@ export class InventoryService {
    */
   private async processItemImage(imageUrl: string, itemId: string, itemName: string): Promise<string | null> {
     try {
-      console.log(`[ImageProcessing] Processing image for item: ${itemName}`);
-      
       // Download image from URL
       const response = await fetch(imageUrl);
       if (!response.ok) {
@@ -1673,11 +1821,8 @@ export class InventoryService {
       
       // Return the relative path for storage in database
       const relativePath = `/uploads/inventory/${fileName}`;
-      console.log(`[ImageProcessing] Successfully processed image: ${relativePath}`);
-      
       return relativePath;
     } catch (error: any) {
-      console.error(`[ImageProcessing] Error processing image for ${itemName}:`, error.message);
       throw error;
     }
   }

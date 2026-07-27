@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import Button from '@/components/ui/Button';
@@ -64,6 +65,7 @@ function TypeBadge({ type }: { type: MovementType }) {
 }
 
 export default function StockMovementsPage() {
+  const { t } = useTranslation('common');
   const [tab, setTab] = useState<'ledger' | 'reconciliation'>('ledger');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
@@ -113,7 +115,7 @@ export default function StockMovementsPage() {
       }
     } catch (err: any) {
       console.error('Failed to load stock movements:', err);
-      setToast({ message: err.response?.data?.message || 'Failed to load stock movements', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('stock.failedLoadMovements', 'Failed to load stock movements'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -141,7 +143,7 @@ export default function StockMovementsPage() {
       setReconLoaded(true);
     } catch (err: any) {
       console.error('Failed to load reconciliation:', err);
-      setToast({ message: err.response?.data?.message || 'Failed to load reconciliation report', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('stock.failedLoadReconciliation', 'Failed to load reconciliation report'), type: 'error' });
     } finally {
       setReconLoading(false);
     }
@@ -154,10 +156,10 @@ export default function StockMovementsPage() {
   }, [tab, reconLoaded, loadReconciliation]);
 
   const columns: DataTableColumn<StockMovement>[] = [
-    { key: 'createdAt', label: 'Date', render: (m) => formatDate(m.createdAt) },
+    { key: 'createdAt', label: t('stock.date', 'Date'), render: (m) => formatDate(m.createdAt) },
     {
       key: 'itemName',
-      label: 'Item',
+      label: t('stock.item', 'Item'),
       render: (m) => (
         <span className="font-medium text-gray-900 dark:text-white">
           {m.itemName || items.find((i) => i.id === m.itemId)?.name || m.itemId}
@@ -166,7 +168,7 @@ export default function StockMovementsPage() {
     },
     {
       key: 'branchName',
-      label: 'Branch',
+      label: t('stock.branch', 'Branch'),
       render: (m) =>
         m.branchName ? (
           <span className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300">
@@ -177,10 +179,10 @@ export default function StockMovementsPage() {
           <span className="text-gray-400 dark:text-gray-500">—</span>
         ),
     },
-    { key: 'movementType', label: 'Type', render: (m) => <TypeBadge type={m.movementType} /> },
+    { key: 'movementType', label: t('stock.type', 'Type'), render: (m) => <TypeBadge type={m.movementType} /> },
     {
       key: 'quantity',
-      label: 'Qty',
+      label: t('stock.qty', 'Qty'),
       align: 'right',
       render: (m) => {
         const qty = Number(m.quantity || 0);
@@ -197,13 +199,13 @@ export default function StockMovementsPage() {
     },
     {
       key: 'balanceAfter',
-      label: 'Balance After',
+      label: t('stock.balanceAfter', 'Balance After'),
       align: 'right',
       render: (m) => formatNumber(m.balanceAfter),
     },
     {
       key: 'sourceType',
-      label: 'Source',
+      label: t('stock.source', 'Source'),
       render: (m) => (m.sourceType ? <span className="text-gray-500 dark:text-gray-400 text-xs">{m.sourceType}</span> : '-'),
     },
   ];
@@ -212,7 +214,15 @@ export default function StockMovementsPage() {
     name || items.find((i) => i.id === id)?.name || id;
 
   const handleExportLedgerCsv = () => {
-    const headers = ['Date', 'Item', 'Branch', 'Type', 'Qty', 'Balance After', 'Source'];
+    const headers = [
+      t('stock.date', 'Date'),
+      t('stock.item', 'Item'),
+      t('stock.branch', 'Branch'),
+      t('stock.type', 'Type'),
+      t('stock.qty', 'Qty'),
+      t('stock.balanceAfter', 'Balance After'),
+      t('stock.source', 'Source'),
+    ];
     const rows = movements.map((m) => [
       formatDate(m.createdAt),
       resolveItemName(m.itemId, m.itemName),
@@ -226,7 +236,12 @@ export default function StockMovementsPage() {
   };
 
   const handleExportReconCsv = () => {
-    const headers = ['Item', 'Current Stock', 'Ledger Balance', 'Drift'];
+    const headers = [
+      t('stock.item', 'Item'),
+      t('stock.currentStock', 'Current Stock'),
+      t('stock.ledgerBalance', 'Ledger Balance'),
+      t('stock.drift', 'Drift'),
+    ];
     const rows = reconRows.map((r) => [
       resolveItemName(r.itemId, r.itemName),
       Number(r.currentStock || 0),
@@ -251,21 +266,21 @@ export default function StockMovementsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Stock Ledger"
-        subtitle="Every stock movement, and reconciliation against current stock"
-        breadcrumbs={[{ label: 'IMS', href: '/ims/inventory' }, { label: 'Stock Ledger' }]}
+        title={t('stock.ledgerTitle', 'Stock Ledger')}
+        subtitle={t('stock.ledgerSubtitle', 'Every stock movement, and reconciliation against current stock')}
+        breadcrumbs={[{ label: t('stock.ims', 'IMS'), href: '/ims/inventory' }, { label: t('stock.ledgerTitle', 'Stock Ledger') }]}
         actions={
           tab === 'ledger' ? (
             movements.length > 0 ? (
               <Button size="sm" variant="secondary" onClick={handleExportLedgerCsv}>
                 <i className="bx bx-download"></i>
-                Export CSV
+                {t('stock.exportCsv', 'Export CSV')}
               </Button>
             ) : undefined
           ) : reconRows.length > 0 ? (
             <Button size="sm" variant="secondary" onClick={handleExportReconCsv}>
               <i className="bx bx-download"></i>
-              Export CSV
+              {t('stock.exportCsv', 'Export CSV')}
             </Button>
           ) : undefined
         }
@@ -275,11 +290,11 @@ export default function StockMovementsPage() {
       <div className="mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-3">
         <button type="button" onClick={() => setTab('ledger')} className={tabClass(tab === 'ledger')}>
           <i className="bx bx-list-ul mr-1" aria-hidden="true"></i>
-          Ledger
+          {t('stock.ledgerTab', 'Ledger')}
         </button>
         <button type="button" onClick={() => setTab('reconciliation')} className={tabClass(tab === 'reconciliation')}>
           <i className="bx bx-check-shield mr-1" aria-hidden="true"></i>
-          Reconciliation
+          {t('stock.reconciliationTab', 'Reconciliation')}
           {reconLoaded && driftCount > 0 && (
             <span className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-semibold text-red-700 dark:text-red-300">
               {driftCount}
@@ -295,27 +310,27 @@ export default function StockMovementsPage() {
               {
                 key: 'itemId',
                 type: 'select',
-                placeholder: 'All items',
+                placeholder: t('stock.allItems', 'All items'),
                 className: 'w-full sm:w-64',
                 options: [
-                  { value: '', label: 'All items' },
+                  { value: '', label: t('stock.allItems', 'All items') },
                   ...items.map((i) => ({ value: i.id, label: i.name || i.id })),
                 ],
               },
               {
                 key: 'branchId',
                 type: 'multiselect',
-                placeholder: 'All branches',
+                placeholder: t('stock.allBranches', 'All branches'),
                 className: 'w-full sm:w-56',
                 options: branches.map((b) => ({ value: b.id, label: b.name })),
               },
               {
                 key: 'type',
                 type: 'select',
-                placeholder: 'All types',
+                placeholder: t('stock.allTypes', 'All types'),
                 className: 'w-full sm:w-56',
                 options: [
-                  { value: '', label: 'All types' },
+                  { value: '', label: t('stock.allTypes', 'All types') },
                   ...Object.entries(TYPE_TOKENS).map(([value, t]) => ({ value, label: t.label })),
                 ],
               },
@@ -329,14 +344,14 @@ export default function StockMovementsPage() {
             }}
             actions={
               <div className="flex items-center gap-2">
-                <label className="text-[13px] text-gray-500 dark:text-gray-400">From</label>
+                <label className="text-[13px] text-gray-500 dark:text-gray-400">{t('stock.from', 'From')}</label>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                   className="h-9 px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                 />
-                <label className="text-[13px] text-gray-500 dark:text-gray-400">To</label>
+                <label className="text-[13px] text-gray-500 dark:text-gray-400">{t('stock.to', 'To')}</label>
                 <input
                   type="date"
                   value={toDate}
@@ -362,11 +377,11 @@ export default function StockMovementsPage() {
             emptyState={
               <EmptyState
                 icon="bx-transfer"
-                title={hasFilters ? 'No movements match your filters' : 'No stock movements yet'}
+                title={hasFilters ? t('stock.noMovementsMatch', 'No movements match your filters') : t('stock.noMovementsYet', 'No stock movements yet')}
                 description={
                   hasFilters
-                    ? 'Try adjusting the item, type or date filters'
-                    : 'Stock movements appear here as inventory changes'
+                    ? t('stock.tryAdjustingFilters', 'Try adjusting the item, type or date filters')
+                    : t('stock.movementsAppearHere', 'Stock movements appear here as inventory changes')
                 }
               />
             }
@@ -376,11 +391,11 @@ export default function StockMovementsPage() {
         <>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Compares current stock against the ledger balance for each item. Non-zero drift indicates a discrepancy.
+              {t('stock.reconciliationDescription', 'Compares current stock against the ledger balance for each item. Non-zero drift indicates a discrepancy.')}
             </p>
             <Button variant="secondary" size="sm" onClick={loadReconciliation} disabled={reconLoading} className="shrink-0">
               <i className={`bx bx-refresh ${reconLoading ? 'animate-spin' : ''}`} aria-hidden="true"></i>
-              Refresh
+              {t('stock.refresh', 'Refresh')}
             </Button>
           </div>
 
@@ -389,8 +404,8 @@ export default function StockMovementsPage() {
           ) : reconRows.length === 0 ? (
             <EmptyState
               icon="bx-check-shield"
-              title="Nothing to reconcile"
-              description="No items with stock activity were found"
+              title={t('stock.nothingToReconcile', 'Nothing to reconcile')}
+              description={t('stock.noItemsWithActivity', 'No items with stock activity were found')}
             />
           ) : (
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
@@ -398,10 +413,10 @@ export default function StockMovementsPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
-                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Current Stock</th>
-                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Ledger Balance</th>
-                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Drift</th>
+                      <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('stock.item', 'Item')}</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('stock.currentStock', 'Current Stock')}</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('stock.ledgerBalance', 'Ledger Balance')}</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('stock.drift', 'Drift')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

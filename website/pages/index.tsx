@@ -1,6 +1,7 @@
-import Head from 'next/head';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Seo from '../components/Seo';
+import { SITE_URL, SITE_NAME, absoluteUrl } from '../lib/site';
 
 const ArrowR = () => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -58,14 +59,43 @@ const MODS = [
   { title: 'Reports', desc: 'Live dashboards and tax-ready exports.', d: 'M4 19V5m0 14h16M8 15l3-4 3 2 4-6' },
 ];
 
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: SITE_NAME,
+  legalName: 'Kuza Technologies',
+  url: SITE_URL,
+  logo: absoluteUrl('/favicon.svg'),
+  description:
+    'The AI-powered ERP for African businesses — sales, stock, invoicing, accounting, payroll and payments in one platform.',
+};
+
+const softwareLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: SITE_NAME,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, iOS, Android',
+  url: SITE_URL,
+  description:
+    'Kuza is an all-in-one ERP for African SMBs: POS, inventory, invoicing, double-entry accounting, payroll and payment collection with reconciliation, plus Kuza AI.',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'NGN',
+    description: 'Free-forever plan — no card required.',
+  },
+};
+
 export default function Home() {
   return (
     <>
-      <Head>
-        <title>Kuza — The operating system for growing African businesses</title>
-        <meta name="description" content="Kuza is the AI-powered ERP for African businesses. It does your books and collects your money — no accountant required. Restaurant, retail, inventory, invoicing, accounting, payroll and payments in one platform." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title="Kuza — The operating system for growing African businesses"
+        description="Kuza is the AI-powered ERP for African businesses. It does your books and collects your money — no accountant required. POS, inventory, invoicing, accounting, payroll and payments in one platform."
+        path="/"
+        jsonLd={[organizationLd, softwareLd]}
+      />
 
       <Header />
 
@@ -87,7 +117,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="hero-visual reveal" data-delay="2" style={{ position: 'relative' }}>
+            <div className="hero-visual reveal px-4" data-delay="2" style={{ position: 'relative' }}>
               <div className="kx-photo tall">
                 <img src="/img/woman-selling.jpeg" alt="A Kuza retail owner using the app in her shop" />
               </div>

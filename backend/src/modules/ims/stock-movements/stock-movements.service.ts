@@ -61,7 +61,10 @@ export class StockMovementsService {
     return this.movementRepository.save(movement);
   }
 
-  async findAll(query: QueryStockMovementsDto) {
+  async findAll(
+    query: QueryStockMovementsDto,
+    allowedBranchIds?: string[] | null,
+  ) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
 
@@ -74,15 +77,34 @@ export class StockMovementsService {
     if (query.itemId) {
       qb.andWhere("movement.itemId = :itemId", { itemId: query.itemId });
     }
-    if (query.branchId) {
-      // Comma-separated list from the branch multi-select filter.
-      const branchIds = query.branchId
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (branchIds.length > 0) {
-        qb.andWhere("movement.branchId IN (:...branchIds)", { branchIds });
+    // Requested branch ids from the multi-select filter (comma-separated).
+    let filterBranchIds = query.branchId
+      ? query.branchId
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    // Branch scoping: a scoped user is limited to their allowed branches. When
+    // they also request specific branches, intersect the two; otherwise fall
+    // back to the full allowed set. Unscoped users (null) keep the requested
+    // list as-is (existing behavior).
+    if (Array.isArray(allowedBranchIds)) {
+      // Scoped user. Assigned to no branch → nothing at all.
+      if (allowedBranchIds.length === 0) {
+        return { items: [], total: 0, page, limit };
       }
+      filterBranchIds = filterBranchIds.length
+        ? filterBranchIds.filter((b) => allowedBranchIds.includes(b))
+        : [...allowedBranchIds];
+      // A scoped user whose selection is entirely out of scope sees nothing.
+      if (filterBranchIds.length === 0) {
+        return { items: [], total: 0, page, limit };
+      }
+    }
+    if (filterBranchIds.length > 0) {
+      qb.andWhere("movement.branchId IN (:...filterBranchIds)", {
+        filterBranchIds,
+      });
     }
     if (query.type) {
       qb.andWhere("movement.movementType = :type", { type: query.type });

@@ -319,7 +319,7 @@ export default function BranchesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {branches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((branch) => {
               const lowStock = Number(branch.stats?.lowStockCount || 0);
               return (
@@ -357,11 +357,6 @@ export default function BranchesPage() {
                     </PermissionGuard>
                   </div>
 
-                  <p className="mt-3 flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                    <i className="bx bx-map-pin mt-0.5 shrink-0 text-gray-400" aria-hidden="true"></i>
-                    <span className="line-clamp-2">{branch.address || t('noAddressSet') || 'No address set'}</span>
-                  </p>
-
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t('totalSales') || 'Total sales'}</p>
@@ -372,10 +367,6 @@ export default function BranchesPage() {
                       <p className={`text-sm font-semibold ${lowStock > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{lowStock}</p>
                     </div>
                   </div>
-
-                  <span className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-brand-600 dark:text-brand-400">
-                    {t('viewBranch') || 'View branch'} <i className="bx bx-right-arrow-alt transition group-hover:translate-x-0.5" aria-hidden="true"></i>
-                  </span>
                 </div>
               );
             })}

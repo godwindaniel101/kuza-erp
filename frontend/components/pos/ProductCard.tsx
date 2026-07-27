@@ -1,3 +1,4 @@
+import { useTranslation } from 'next-i18next';
 import type { PosProduct } from './types';
 import {
   availableInUom,
@@ -19,6 +20,7 @@ interface ProductCardProps {
  * ticket. Shows a colour-coded avatar, name, unit price and live availability.
  */
 export default function ProductCard({ product, inCart, onAdd }: ProductCardProps) {
+  const { t } = useTranslation('common');
   const accent = categoryAccent(product.category);
   const price = product.uomPrices?.[product.defaultUomId] ?? product.price ?? 0;
   const available = availableInUom(product.stock, product.uomToBase, product.defaultUomId);
@@ -29,7 +31,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       type="button"
       onClick={() => onAdd(product)}
       disabled={soldOut}
-      aria-label={`Add ${product.name} — ${formatNaira(price)}`}
+      aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
       className={`group relative flex h-full flex-col items-start gap-2 rounded-xl border p-3 text-left transition
         focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
         focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
@@ -55,11 +57,11 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
         </span>
         {soldOut && !product.unlimited ? (
           <span className="rounded-full bg-danger-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-danger-700 dark:bg-danger-900/40 dark:text-danger-300">
-            Sold out
+            {t('pos.soldOut', 'Sold out')}
           </span>
         ) : product.unlimited ? (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-            In stock
+            {t('pos.inStock', 'In stock')}
           </span>
         ) : (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-2xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">

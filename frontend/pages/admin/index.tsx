@@ -8,6 +8,7 @@ import DataTable, { DataTableColumn } from '@/components/ui/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import AdminGuard from '@/components/AdminGuard';
+import { usePageSearch } from '@/store/searchStore';
 import {
   adminApi,
   AdminTenant,
@@ -28,7 +29,7 @@ function AdminTenantsInner() {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [search, setSearch] = useState('');
+  const search = usePageSearch('Search businesses');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,21 +149,6 @@ function AdminTenantsInner() {
           </div>
         }
       />
-
-      <div className="relative max-w-sm">
-        <i
-          className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search businesses"
-          aria-label="Search businesses"
-          className="h-9 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-9 pr-3 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
-        />
-      </div>
 
       {loadError ? (
         <EmptyState

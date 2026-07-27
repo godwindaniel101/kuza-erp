@@ -14,6 +14,7 @@ import { InvitationsService } from './invitations.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { Public } from '../../../common/decorators/public.decorator';
 import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 
 @ApiTags('Settings - Invitations')
@@ -92,7 +93,9 @@ export class InvitationsController {
     };
   }
 
-  // Public endpoint for accepting invitations (no auth required)
+  // Public endpoint for accepting invitations (no auth/tenant context — the
+  // service resolves the tenant from the token via findByTokenGlobal).
+  @Public()
   @Post('accept/:token')
   @ApiOperation({ summary: 'Accept invitation by token' })
   async acceptInvitation(

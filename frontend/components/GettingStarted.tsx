@@ -118,6 +118,8 @@ export default function GettingStarted() {
 
   const pct = Math.round((doneCount / total) * 100);
   const firstName = user?.name ? user.name.split(' ')[0] : 'there';
+  // The one step we actively point the user at: the first that isn't done.
+  const currentIndex = steps.findIndex((s) => !s.done);
 
   const dismiss = () => {
     if (typeof window !== 'undefined') window.localStorage.setItem(DISMISS_KEY, '1');
@@ -129,8 +131,8 @@ export default function GettingStarted() {
       {/* Header band — brand gradient, calm */}
       <div className="flex items-start justify-between gap-4 bg-gradient-to-r from-brand-600 to-indigo-600 px-5 py-4 text-white sm:px-6">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-tight">Welcome, {firstName} — let's get you set up</h2>
-          <p className="mt-0.5 text-sm text-white/80">A few quick steps to your first sale. You can do these in any order.</p>
+          <h2 className="text-base font-semibold leading-tight">Welcome, {firstName} — let&apos;s get you set up</h2>
+          <p className="mt-0.5 text-sm text-white/80">Follow the steps in order — we&apos;ll walk you through to your first sale.</p>
         </div>
         <button
           onClick={dismiss}
@@ -141,58 +143,92 @@ export default function GettingStarted() {
         </button>
       </div>
 
-      {/* Progress */}
-      <div className="px-5 pt-4 sm:px-6">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {doneCount} of {total} complete
-          </p>
-          <p className="text-xs font-semibold text-brand-600 dark:text-brand-400">{pct}%</p>
-        </div>
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+      {/* Progress summary */}
+      <div className="flex items-center gap-3 px-5 pt-4 sm:px-6">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
           <div
             className="h-full rounded-full bg-gradient-to-r from-brand-500 to-indigo-500 transition-all duration-500"
             style={{ width: `${Math.max(pct, 4)}%` }}
           />
         </div>
+        <p className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {doneCount}<span className="text-gray-400 dark:text-gray-500">/{total}</span> done
+        </p>
       </div>
 
-      {/* Steps */}
-      <ul className="divide-y divide-gray-100 px-2 py-2 dark:divide-gray-800 sm:px-3">
-        {steps.map((s) => (
-          <li key={s.key}>
-            <Link
-              href={s.href}
-              className="group flex items-center gap-4 rounded-xl px-3 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800/60"
-            >
-              <span
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg ${
-                  s.done
-                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400'
-                    : 'bg-gray-100 text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-600 dark:bg-gray-800 dark:text-gray-400'
-                }`}
-              >
-                <i className={`bx ${s.done ? 'bx-check' : s.icon}`} />
-              </span>
-              <span className="min-w-0 flex-1">
+      {/* Guided timeline — a directed path, not a loose checklist */}
+      <ol className="px-5 py-4 sm:px-6">
+        {steps.map((s, i) => {
+          const isCurrent = i === currentIndex;
+          const isLast = i === total - 1;
+          const stepNo = i + 1;
+          return (
+            <li key={s.key} className="relative flex gap-4 pb-5 last:pb-0">
+              {/* Connector line to the next node */}
+              {!isLast && (
                 <span
-                  className={`block text-sm font-medium ${
+                  aria-hidden="true"
+                  className={`absolute left-[17px] top-9 -bottom-1 w-0.5 ${
+                    s.done ? 'bg-brand-400 dark:bg-brand-500/60' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                />
+              )}
+
+              {/* Node marker */}
+              <span className="relative z-10 shrink-0">
+                {isCurrent && (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-brand-400/40" aria-hidden="true" />
+                )}
+                <span
+                  className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
                     s.done
-                      ? 'text-gray-400 line-through dark:text-gray-500'
-                      : 'text-gray-900 dark:text-gray-100'
+                      ? 'bg-brand-600 text-white'
+                      : isCurrent
+                        ? 'bg-white text-brand-600 ring-2 ring-brand-500 dark:bg-gray-900 dark:text-brand-400'
+                        : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
                   }`}
                 >
-                  {s.label}
+                  {s.done ? <i className="bx bx-check text-lg" /> : stepNo}
                 </span>
-                {!s.done && <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{s.desc}</span>}
               </span>
-              {!s.done && (
-                <i className="bx bx-right-arrow-alt shrink-0 text-lg text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600 dark:text-gray-600" />
+
+              {/* Step content */}
+              {isCurrent ? (
+                <div className="min-w-0 flex-1 rounded-xl bg-brand-50 p-3 ring-1 ring-brand-100 dark:bg-brand-500/10 dark:ring-brand-500/20">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
+                    Step {stepNo} of {total} · Do this next
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{s.label}</p>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">{s.desc}</p>
+                  <Link
+                    href={s.href}
+                    className="group mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                  >
+                    <i className={`bx ${s.icon} text-base`} />
+                    Start now
+                    <i className="bx bx-right-arrow-alt text-base transition group-hover:translate-x-0.5" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="min-w-0 flex-1 self-center">
+                  <p
+                    className={`text-sm font-medium ${
+                      s.done
+                        ? 'text-gray-400 line-through dark:text-gray-500'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {s.label}
+                  </p>
+                  {s.done && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">Done</p>
+                  )}
+                </div>
               )}
-            </Link>
-          </li>
-        ))}
-      </ul>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

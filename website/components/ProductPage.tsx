@@ -1,6 +1,7 @@
-import Head from 'next/head';
 import Header from './Header';
 import Footer from './Footer';
+import Seo from './Seo';
+import { SITE_URL, SITE_NAME } from '../lib/site';
 
 const ArrowR = () => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -28,6 +29,10 @@ export interface Product {
   img: string;
   alt: string;
   bullets: string[];
+  /** Unique, keyword-rich <title> for the page. */
+  metaTitle: string;
+  /** Unique meta description for the page. */
+  metaDescription: string;
 }
 
 export const PRODUCTS: Record<string, Product> = {
@@ -38,6 +43,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling-with-kids.jpeg',
     alt: 'A family dining at a restaurant',
     bullets: ['Table & order management with a live kitchen display', 'QR menus customers scan and order from at the table', 'Every sale drops stock and posts to your books automatically'],
+    metaTitle: 'Restaurant POS & QR ordering for African eateries | Kuza',
+    metaDescription: 'Run your restaurant on Kuza: table & order management, kitchen display, QR menu ordering, and stock and accounting handled automatically. Built for African food businesses.',
   },
   shop: {
     eyebrow: 'Shop / POS',
@@ -46,6 +53,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling-cup.jpeg',
     alt: 'A shop owner checking stock',
     bullets: ['Barcode checkout, split payments and instant receipts', 'Live stock and takings across all your branches', 'Cash and card reconciled to your ledger automatically'],
+    metaTitle: 'Retail POS software for shops in Africa | Kuza',
+    metaDescription: 'Kuza Shop is a fast retail POS with barcode checkout, split payments, instant receipts and live multi-branch stock — takings reconciled to your books automatically.',
   },
   inventory: {
     eyebrow: 'Inventory',
@@ -54,6 +63,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling.jpeg',
     alt: 'A business owner reviewing stock on a tablet',
     bullets: ['Receiving, transfers and multi-branch stock levels', 'Valuation and low-stock alerts before you run out', 'A full movement ledger for every item'],
+    metaTitle: 'Multi-branch inventory management software | Kuza',
+    metaDescription: 'Track stock across every branch with Kuza: receiving, transfers, stock valuation, low-stock alerts and a full movement ledger for each item. No more stockouts or guesswork.',
   },
   invoicing: {
     eyebrow: 'Invoicing',
@@ -62,6 +73,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling-makeup.jpeg',
     alt: 'A business owner taking an order by phone',
     bullets: ['Branded invoices with a one-tap pay-by-link', 'Payments auto-match and mark invoices paid', 'See who owes you at a glance and nudge them'],
+    metaTitle: 'Online invoicing with pay-by-link for African SMBs | Kuza',
+    metaDescription: 'Send branded invoices with a one-tap pay-by-link. Kuza auto-matches payments, marks invoices paid and shows you exactly who owes you — get paid faster.',
   },
   accounting: {
     eyebrow: 'Accounting',
@@ -70,6 +83,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling.jpeg',
     alt: 'A business owner using the app',
     bullets: ['Double-entry books that post themselves', 'P&L, balance sheet and cash-flow, live', 'VAT and WHT tracked, ready for filing'],
+    metaTitle: 'Automated accounting software for African businesses | Kuza',
+    metaDescription: 'Kuza keeps clean double-entry books automatically — live P&L, balance sheet and cash-flow, with VAT and WHT tracked and ready for filing. No accountant required.',
   },
   people: {
     eyebrow: 'People & Payroll',
@@ -78,6 +93,8 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling-with-kids.jpeg',
     alt: 'A team at work',
     bullets: ['PAYE, pension and NHF computed automatically', 'Payslips your team can trust, net pay disbursed', 'Attendance and leave in the same place'],
+    metaTitle: 'Payroll & HR software with PAYE, pension & NHF | Kuza',
+    metaDescription: 'Manage staff, attendance and leave, and run payroll that computes PAYE, pension and NHF automatically — payslips out and net pay disbursed. Built for African teams.',
   },
   payments: {
     eyebrow: 'Payments',
@@ -86,19 +103,46 @@ export const PRODUCTS: Record<string, Product> = {
     img: '/img/woman-selling-makeup.jpeg',
     alt: 'A business owner getting paid',
     bullets: ['Paystack & Monnify pay-by-link and virtual accounts', 'Auto-matched across bank, card and cash', 'An unmatched worklist so nothing slips through'],
+    metaTitle: 'Payment collection & auto-reconciliation for SMBs | Kuza',
+    metaDescription: 'Collect payments by transfer, card or mobile money with Paystack & Monnify pay-by-link and virtual accounts. Kuza auto-reconciles every kobo to your books.',
   },
 };
 
 export default function ProductPage({ slug }: { slug: string }) {
   const p = PRODUCTS[slug];
   if (!p) return null;
+
+  const softwareLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: `${SITE_NAME} ${p.eyebrow}`,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, iOS, Android',
+    url: `${SITE_URL}/${slug}`,
+    description: p.blurb,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'NGN',
+      description: 'Free-forever plan — no card required.',
+    },
+    isPartOf: {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  };
+
   return (
     <>
-      <Head>
-        <title>{`Kuza — ${p.eyebrow}`}</title>
-        <meta name="description" content={p.blurb} />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title={p.metaTitle}
+        description={p.metaDescription}
+        path={`/${slug}`}
+        image={p.img}
+        ogType="product"
+        jsonLd={softwareLd}
+      />
 
       <Header />
 
@@ -119,7 +163,7 @@ export default function ProductPage({ slug }: { slug: string }) {
                 <a href="/#business" className="btn btn--ghost btn--lg">See how it works</a>
               </div>
             </div>
-            <div className="hero-visual reveal" data-delay="2">
+            <div className="hero-visual reveal px-4" data-delay="2">
               <div className="kx-photo tall">
                 <img src={p.img} alt={p.alt} />
               </div>

@@ -158,7 +158,7 @@ export default function CategoriesSettingsPage() {
 
       <PageHeader
         title={t('categories') || 'Categories'}
-        subtitle="How your items are grouped"
+        subtitle={t('settings.categoriesSubtitle', 'How your items are grouped')}
         count={loading ? undefined : categories.length}
         breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('categories') || 'Categories' }]}
         actions={

@@ -1,4 +1,4 @@
-import { IsString, IsArray, ValidateNested, IsOptional, IsNumber, IsBoolean, IsEnum } from 'class-validator';
+import { IsString, IsArray, ValidateNested, IsOptional, IsNumber, IsBoolean, IsEnum, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -12,8 +12,9 @@ class OrderItemDto {
   @IsString()
   uomId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ minimum: 0.0001 })
   @IsNumber()
+  @Min(0.0001) // quantity must be strictly positive — no zero/negative lines
   quantity: number;
 }
 
@@ -52,9 +53,11 @@ export class CreateOrderDto {
   @IsBoolean()
   applyVat?: boolean;
 
-  @ApiProperty({ required: false, default: 7.5 })
+  @ApiProperty({ required: false, default: 7.5, minimum: 0, maximum: 100 })
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(100) // VAT is a percentage — reject out-of-range values
   vatPercentage?: number;
 
   @ApiProperty({ type: [OrderItemDto] })

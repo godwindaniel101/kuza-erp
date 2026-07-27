@@ -100,9 +100,10 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/login' ||
       router.pathname === '/register' ||
       router.pathname === '/auth/callback' ||
+      router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/reserve/');
-    
+
     if (isAuthenticated && user) {
       if (!hasFetchedUserRef.current) {
         hasFetchedUserRef.current = true;
@@ -199,6 +200,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/login' ||
       router.pathname === '/register' ||
       router.pathname === '/auth/callback' ||
+      router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/reserve/');
     if (isAuthPage) return; // Don't redirect if already on auth page
@@ -231,6 +233,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     router.pathname === '/login' ||
     router.pathname === '/register' ||
     router.pathname === '/auth/callback' ||
+    router.pathname === '/invitations/accept' ||
     router.pathname.startsWith('/m/');
 
   if (isAuthPage) {

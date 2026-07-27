@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 import {
   fetchInsightsSummary,
   type InsightItem,
@@ -97,6 +98,7 @@ function InsightSkeleton() {
 }
 
 export default function AiInsights() {
+  const { t } = useTranslation('common');
   const [status, setStatus] = useState<AiStatus | 'loading'>('loading');
   const [insights, setInsights] = useState<InsightItem[]>([]);
 
@@ -133,12 +135,12 @@ export default function AiInsights() {
   }
 
   return (
-    <section aria-label="AI insights" className="space-y-3">
+    <section aria-label={t('dashboard.aiInsights', 'AI insights')} className="space-y-3">
       <div className="flex items-center gap-2">
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-gradient text-white">
           <SparklesIcon className="h-4 w-4" />
         </span>
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">AI insights</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.aiInsights', 'AI insights')}</h2>
         <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
           Kuza AI
         </span>

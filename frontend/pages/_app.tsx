@@ -114,7 +114,11 @@ function App({ Component, pageProps }: AppProps) {
         />
       </Head>
       <Layout>
-        <Component {...pageProps} />
+        {/* Elegant page transition: fades/slides in on real route changes,
+            keyed on the route (not query) so filters/tabs don't re-animate. */}
+        <div key={router.pathname} className="page-enter">
+          <Component {...pageProps} />
+        </div>
       </Layout>
     </>
   );

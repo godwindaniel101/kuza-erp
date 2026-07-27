@@ -22,6 +22,14 @@ export class Supplier extends TenantEntity {
   // In multi-tenant database setup, business relation is not needed
   // Each database belongs to a specific tenant/business
 
+  /**
+   * Kuza Network: when this supplier is a materialized reference to another
+   * tenant on the platform (via a trade partnership), this holds that
+   * tenant's landlord id. Null for ordinary, manually-created suppliers.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  linkedTenantId?: string;
+
   @OneToMany(() => InventoryBatch, (batch) => batch.supplier)
   batches: InventoryBatch[];
 }

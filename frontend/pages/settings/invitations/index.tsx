@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import Toast from '@/components/Toast';
 import { downloadCsv, formatDate } from '@/lib/format';
 
 const AVATAR_TONES = [
@@ -43,6 +44,7 @@ export default function InvitationsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ email: '', name: '', roleId: '' });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     loadInvitations();
@@ -88,8 +90,15 @@ export default function InvitationsPage() {
       setShowForm(false);
       setFormData({ email: '', name: '', roleId: '' });
       await loadInvitations();
-    } catch (err) {
+      setToast({ message: t('invitations.sent', 'Invitation sent'), type: 'success' });
+    } catch (err: any) {
       console.error('Failed to send invitation:', err);
+      setToast({
+        message:
+          err?.response?.data?.message ||
+          t('invitations.sendFailed', 'Failed to send invitation'),
+        type: 'error',
+      });
     }
   };
 
@@ -115,9 +124,10 @@ export default function InvitationsPage() {
 
   return (
     <div className="space-y-5">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <PageHeader
         title={t('invitations')}
-        subtitle="Pending invites to your workspace"
+        subtitle={t('settings.invitationsSubtitle', 'Pending invites to your workspace')}
         breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('invitations') }]}
         actions={
           <div className="flex items-center gap-2">

@@ -34,11 +34,11 @@ export default function TransferDetailPage() {
       const res = await api.get<{ success: boolean; data: any }>(`/ims/transfers/${id}`);
       if (res.success) setTransfer(res.data);
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to load transfer', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('transfers.loadFailed', 'Failed to load transfer'), type: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     load();
@@ -49,47 +49,55 @@ export default function TransferDetailPage() {
     try {
       const res = await api.post(`/ims/transfers/${id}/status`, { status });
       if (res.success) {
-        setToast({ message: 'Transfer updated', type: 'success' });
+        setToast({ message: t('transfers.updated', 'Transfer updated'), type: 'success' });
         await load();
       }
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to update transfer', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('transfers.updateFailed', 'Failed to update transfer'), type: 'error' });
     } finally {
       setBusy(false);
     }
   };
 
+  const statusLabels: Record<string, string> = {
+    pending: t('pending', 'Pending'),
+    in_transit: t('inTransit', 'In Transit'),
+    received: t('received', 'Received'),
+    cancelled: t('cancelled', 'Cancelled'),
+  };
+
   const status = transfer ? statusVariant[transfer.status] ?? statusVariant.pending : null;
+  const statusLabel = transfer ? statusLabels[transfer.status] || status?.label : undefined;
 
   return (
     <PermissionGuard permission="inventory.view">
       <div className="w-full max-w-4xl">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
-          title={transfer ? `Transfer ${transfer.transferNumber}` : 'Transfer'}
-          subtitle="Stock moved between branches"
+          title={transfer ? t('transfers.detailTitle', 'Transfer {{number}}', { number: transfer.transferNumber }) : t('transfers.transfer', 'Transfer')}
+          subtitle={t('transfers.subtitleDetail', 'Stock moved between branches')}
           breadcrumbs={[
-            { label: 'Inventory', href: '/ims' },
-            { label: 'Transfers', href: '/ims/transfers' },
-            { label: transfer?.transferNumber || 'Detail' },
+            { label: t('inventory', 'Inventory'), href: '/ims' },
+            { label: t('transfers', 'Transfers'), href: '/ims/transfers' },
+            { label: transfer?.transferNumber || t('transfers.detail', 'Detail') },
           ]}
           actions={
             transfer ? (
               <div className="flex items-center gap-2">
-                {status && <StatusBadge variant={status.variant} label={status.label} size="lg" />}
+                {status && <StatusBadge variant={status.variant} label={statusLabel || status.label} size="lg" />}
                 {transfer.status === 'pending' && (
                   <>
                     <Button size="sm" variant="secondary" onClick={() => setStatus('cancelled')} loading={busy}>
-                      Cancel
+                      {t('transfers.decline', 'Decline')}
                     </Button>
                     <Button size="sm" onClick={() => setStatus('in_transit')} loading={busy}>
-                      Mark in transit
+                      {t('transfers.approveSend', 'Approve & send')}
                     </Button>
                   </>
                 )}
                 {transfer.status === 'in_transit' && (
                   <Button size="sm" onClick={() => setStatus('received')} loading={busy}>
-                    Receive
+                    {t('receive', 'Receive')}
                   </Button>
                 )}
               </div>
@@ -98,12 +106,12 @@ export default function TransferDetailPage() {
         />
 
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-gray-400">{t('loading', 'Loading…')}</div>
         ) : !transfer ? (
           <div className="rounded-2xl bg-white p-8 text-center shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
-            <p className="text-red-600 dark:text-red-400">Transfer not found</p>
+            <p className="text-red-600 dark:text-red-400">{t('transfers.notFound', 'Transfer not found')}</p>
             <Link href="/ims/transfers" className="mt-3 inline-block text-brand-600 hover:underline">
-              Back to Transfers
+              {t('transfers.backToTransfers', 'Back to Transfers')}
             </Link>
           </div>
         ) : (
@@ -111,25 +119,25 @@ export default function TransferDetailPage() {
             {/* Summary */}
             <div className="mb-6 grid grid-cols-2 gap-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800 sm:grid-cols-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">From branch</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('transfers.fromBranchLabel', 'From branch')}</p>
                 <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white">
                   <i className="bx bx-store text-gray-400" aria-hidden="true" /> {transfer.fromBranch?.name || '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">To branch</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('transfers.toBranchLabel', 'To branch')}</p>
                 <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white">
                   <i className="bx bx-store text-gray-400" aria-hidden="true" /> {transfer.toBranch?.name || '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Date</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('date', 'Date')}</p>
                 <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
                   {transfer.transferDate ? formatDate(transfer.transferDate) : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Notes</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('notes', 'Notes')}</p>
                 <p className="mt-1 text-sm text-gray-900 dark:text-white">{transfer.notes || '—'}</p>
               </div>
             </div>
@@ -140,9 +148,9 @@ export default function TransferDetailPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Item</th>
-                      <th className="px-6 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Quantity</th>
-                      <th className="px-6 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Received</th>
+                      <th className="px-6 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('item', 'Item')}</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('quantity', 'Quantity')}</th>
+                      <th className="px-6 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('received', 'Received')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -162,7 +170,7 @@ export default function TransferDetailPage() {
                     {(transfer.items || []).length === 0 && (
                       <tr>
                         <td colSpan={3} className="px-6 py-8 text-center text-sm text-gray-400">
-                          No items on this transfer.
+                          {t('transfers.noItems', 'No items on this transfer.')}
                         </td>
                       </tr>
                     )}

@@ -100,7 +100,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Sign in · Kuza</title>
+        <title>{t('auth.signInTitle', 'Sign in · Kuza')}</title>
       </Head>
       <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
@@ -110,13 +110,13 @@ export default function Login() {
               <BrandMark size={40} className="rounded-xl shadow-card" />
               <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Good to see you again</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('auth.goodToSeeYou', 'Good to see you again')}</p>
           </div>
 
           {/* Login Card */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sign in</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Pick up where your business left off.</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('auth.signIn', 'Sign in')}</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{t('auth.pickUpWhereLeftOff', 'Pick up where your business left off.')}</p>
 
             {error && (
               <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg shadow-sm animate-fade-in">
@@ -125,7 +125,7 @@ export default function Login() {
                     <i className="bx bx-error-circle text-red-500 dark:text-red-400 text-xl"></i>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Login Failed</h3>
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">{t('auth.loginFailedTitle', 'Login Failed')}</h3>
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                   </div>
                   <div className="ml-4 flex-shrink-0">
@@ -144,7 +144,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email address <span className="text-red-500">*</span>
+                  {t('auth.emailAddress', 'Email address')} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <i className="bx bx-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -156,14 +156,14 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-10 w-full !max-w-none pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                    placeholder="Enter your email"
+                    placeholder={t('auth.enterYourEmail', 'Enter your email')}
                   />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password <span className="text-red-500">*</span>
+                  {t('password', 'Password')} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <i className="bx bx-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -175,7 +175,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-10 w-full !max-w-none pl-10 pr-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterYourPassword', 'Enter your password')}
                   />
                 </div>
               </div>
@@ -189,13 +189,13 @@ export default function Login() {
                     className="h-4 w-4 text-brand-600 focus-visible:ring-brand-500 border-gray-300 rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
-                    Remember me
+                    {t('auth.rememberMe', 'Remember me')}
                   </label>
                 </div>
 
                 <div className="text-sm">
                   <Link href="/forgot-password" className="font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors duration-150">
-                    Forgot password?
+                    {t('auth.forgotPassword', 'Forgot password?')}
                   </Link>
                 </div>
               </div>
@@ -228,11 +228,11 @@ export default function Login() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      <span>Signing in...</span>
+                      <span>{t('auth.signingIn', 'Signing in...')}</span>
                     </>
                   ) : (
                     <>
-                      <span>Sign in</span>
+                      <span>{t('auth.signIn', 'Sign in')}</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
                     </>
                   )}
@@ -246,7 +246,7 @@ export default function Login() {
                   <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
+                  <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">{t('auth.orContinueWith', 'Or continue with')}</span>
                 </div>
               </div>
 
@@ -273,15 +273,15 @@ export default function Login() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                <span>Sign in with Google</span>
+                <span>{t('auth.signInWithGoogle', 'Sign in with Google')}</span>
               </button>
             </div>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Don&apos;t have an account?
+                {t('auth.dontHaveAccount', "Don't have an account?")}
                 <Link href="/register" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium ml-1 transition-colors duration-150">
-                  Sign up
+                  {t('auth.signUp', 'Sign up')}
                 </Link>
               </p>
             </div>

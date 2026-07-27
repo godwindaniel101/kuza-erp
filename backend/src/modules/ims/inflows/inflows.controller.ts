@@ -16,6 +16,7 @@ import { InflowsService } from "./inflows.service";
 import { CreateInventoryInflowDto } from "./dto/create-inventory-inflow.dto";
 import { UpdateInventoryInflowDto } from "./dto/update-inventory-inflow.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { BranchScopeService } from "../../../common/branch-scope/branch-scope.service";
 import {
   RequirePermissions,
   PermissionsGuard,
@@ -29,7 +30,10 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @RequireApp("items")
 @ApiBearerAuth()
 export class InflowsController {
-  constructor(private readonly inflowsService: InflowsService) {}
+  constructor(
+    private readonly inflowsService: InflowsService,
+    private readonly branchScopeService: BranchScopeService,
+  ) {}
 
   @Post()
   @RequirePermissions("inflows.create")
@@ -62,10 +66,17 @@ export class InflowsController {
   @RequirePermissions("inflows.view")
   @ApiOperation({ summary: "Get all inventory inflows" })
   async findAll(
+    @Request() req,
     @Query("branchId") branchId?: string,
     @Query("batchId") batchId?: string,
   ) {
-    const inflows = await this.inflowsService.findAll(branchId, batchId);
+    // Branch-scoped users only see their branches' inflows; an out-of-scope
+    // branchId is rejected (403) by resolveBranchFilter.
+    const filter = await this.branchScopeService.resolveBranchFilter(
+      req.user,
+      branchId,
+    );
+    const inflows = await this.inflowsService.findAll(filter, batchId);
     return {
       success: true,
       data: inflows,
@@ -167,12 +178,6 @@ export class InflowsController {
     @I18n() i18n: I18nContext,
   ) {
     const results = await this.inflowsService.bulkUpload(body.csv);
-
-    console.log(`[InflowController] Bulk upload completed:`, {
-      successful: results.success,
-      failed: results.failedUploads?.length || 0,
-      skipped: results.duplicateSkipped
-    });
 
     // Return enhanced response with detailed error information
     return {

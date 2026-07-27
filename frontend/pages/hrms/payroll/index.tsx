@@ -8,6 +8,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
+import Modal from '@/components/Modal';
 import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
 import Link from 'next/link';
 
@@ -55,6 +56,7 @@ export default function PayrollPage() {
   const [payrolls, setPayrolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [payStub, setPayStub] = useState<any | null>(null);
 
   useEffect(() => {
     loadPayrolls();
@@ -231,11 +233,9 @@ export default function PayrollPage() {
                           <button
                             onClick={async () => {
                               try {
-                                const result = await api.get(`/hrms/payroll/${payroll.id}/pay-stub`);
+                                const result = await api.get<{ success: boolean; data: any }>(`/hrms/payroll/${payroll.id}/pay-stub`);
                                 if (result.success) {
-                                  // In a real app, this would open a PDF viewer or download
-                                  console.log('Pay Stub Data:', result.data);
-                                  alert(t('payStubGenerated') || 'Pay stub data available. Check console for details.');
+                                  setPayStub(result.data);
                                 }
                               } catch (err: any) {
                                 alert(err.response?.data?.message || err.message || t('errorLoading'));
@@ -283,6 +283,87 @@ export default function PayrollPage() {
           </div>
         )}
       </Card>
+
+      {payStub && (
+        <Modal
+          isOpen
+          onClose={() => setPayStub(null)}
+          title={t('payStub') || 'Pay stub'}
+          maxWidth="lg"
+          footer={
+            <>
+              <Button size="sm" variant="secondary" onClick={() => setPayStub(null)}>
+                {t('close') || 'Close'}
+              </Button>
+              <Button size="sm" onClick={() => (typeof window !== 'undefined' ? window.print() : undefined)}>
+                <i className="bx bx-printer"></i>
+                {t('print') || 'Print'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4 text-sm">
+            <div className="flex flex-wrap justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">{payStub.employee?.name}</div>
+                <div className="text-gray-500 dark:text-gray-400">{payStub.employee?.employeeNumber}</div>
+                {payStub.employee?.email && (
+                  <div className="text-gray-500 dark:text-gray-400">{payStub.employee.email}</div>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="text-gray-900 dark:text-gray-100">{payStub.payroll?.payPeriod}</div>
+                {payStub.payroll?.payDate && (
+                  <div className="text-gray-500 dark:text-gray-400">
+                    {t('payDate') || 'Pay date'}: {payStub.payroll.payDate}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                  {t('earnings') || 'Earnings'}
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-gray-600 dark:text-gray-400">{t('grossPay')}</span>
+                  <span className="tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(payStub.earnings?.grossPay, currency)}</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                  {t('deductions') || 'Deductions'}
+                </div>
+                {[
+                  ['Federal tax', payStub.deductions?.federalTax],
+                  ['State tax', payStub.deductions?.stateTax],
+                  ['Local tax', payStub.deductions?.localTax],
+                  ['Social security', payStub.deductions?.socialSecurityTax],
+                  ['Medicare', payStub.deductions?.medicareTax],
+                  ['Other', payStub.deductions?.otherDeductions],
+                ]
+                  .filter(([, v]) => v != null && Number(v) !== 0)
+                  .map(([label, v]) => (
+                    <div key={label as string} className="flex justify-between py-1">
+                      <span className="text-gray-600 dark:text-gray-400">{label as string}</span>
+                      <span className="tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(Number(v), currency)}</span>
+                    </div>
+                  ))}
+                <div className="flex justify-between py-1 border-t border-gray-100 dark:border-gray-800 mt-1 pt-2 font-medium">
+                  <span className="text-gray-700 dark:text-gray-300">{t('totalDeductions') || 'Total deductions'}</span>
+                  <span className="tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(payStub.deductions?.totalDeductions, currency)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/60 px-4 py-3">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{t('netPay')}</span>
+              <span className="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-100">{formatMoney(payStub.netPay, currency)}</span>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

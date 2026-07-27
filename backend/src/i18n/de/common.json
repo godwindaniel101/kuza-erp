@@ -8,5 +8,68 @@
   "validation_error": "Validierungsfehler",
   "created": "Erfolgreich erstellt",
   "updated": "Erfolgreich aktualisiert",
-  "deleted": "Erfolgreich gelöscht"
+  "deleted": "Erfolgreich gelöscht",
+  "insights": {
+    "yourBusiness": "Ihr Unternehmen",
+    "cash": {
+      "positive": "Sie haben derzeit {amount} in Kasse und Bank",
+      "overdrawn": "Ihre Geldkonten sind um {amount} überzogen",
+      "unavailable": "Kassenstand nicht verfügbar"
+    },
+    "profit": {
+      "positive": "Sie haben diesen Monat bisher {profit} Gewinn erzielt ({earned} eingenommen, {spent} ausgegeben)",
+      "negative": "Sie sind diesen Monat mit {amount} in den roten Zahlen ({earned} eingenommen, {spent} ausgegeben)",
+      "unavailable": "Gewinnzahlen nicht verfügbar"
+    },
+    "debtor": {
+      "lateOne": "{name} schuldet {amount} — {days} Tag überfällig",
+      "lateOther": "{name} schuldet {amount} — {days} Tage überfällig",
+      "notDue": "{name} schuldet {amount} — noch nicht fällig"
+    },
+    "lowStock": {
+      "outOfStock": "{name} ist ausverkauft — Mindestbestand ist {minimum}",
+      "below": "{name} liegt unter dem Mindestbestand: {current} übrig, Mindestbestand {minimum}",
+      "runningLow": "{count} Artikel gehen zur Neige"
+    },
+    "sales": {
+      "thisMonthOnly": "Umsatz diesen Monat: {amount} (kein Umsatz im Vormonat zum Vergleich)",
+      "none": "Kein Umsatz in diesem oder im letzten Monat erfasst",
+      "up": "Der Umsatz ist um {pct}% gestiegen — {current} diesen Monat gegenüber {previous} im Vormonat",
+      "down": "Der Umsatz ist um {pct}% gesunken — {current} diesen Monat gegenüber {previous} im Vormonat",
+      "unavailable": "Umsatztrend nicht verfügbar"
+    },
+    "overdue": {
+      "someOne": "{amount} ist über {count} Rechnung überfällig — Zeit, Zahlungen einzufordern",
+      "someOther": "{amount} ist über {count} Rechnungen überfällig — Zeit, Zahlungen einzufordern",
+      "none": "Keine überfälligen Rechnungen — gut gemacht",
+      "noOverdue": "Keine überfälligen Rechnungen"
+    },
+    "topItem": {
+      "headline": "{name}: {revenue} aus {qty} verkauft diesen Monat"
+    },
+    "lowStockByBranch": {
+      "title": "Niedriger Bestand nach Filiale",
+      "bodyOne": "{item} ist in {branch} niedrig ({stock} übrig, nachbestellen bei {minimum}).",
+      "bodyMore": "{item} ist in {branch} niedrig ({stock} übrig, nachbestellen bei {minimum}) — und {count} weitere(r) Artikel in Ihren Filialen."
+    },
+    "branches": {
+      "title": "Filialen",
+      "body": "Sie betreiben {count} Filialen. Der Bestand ist gesund — derzeit liegt nichts unter seinem Meldebestand."
+    },
+    "salesStockCash": {
+      "title": "Umsatz, Bestand & Kasse"
+    },
+    "profitThisMonth": {
+      "title": "Gewinn diesen Monat"
+    },
+    "moneyOwed": {
+      "title": "Ihnen geschuldetes Geld"
+    },
+    "profitStock": {
+      "title": "Gewinn & Bestand"
+    },
+    "salesCash": {
+      "title": "Umsatz & Kasse"
+    }
+  }
 }

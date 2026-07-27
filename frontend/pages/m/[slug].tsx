@@ -6,6 +6,66 @@ import { getTemplateComponent, resolveTheme } from '@/components/menu-templates'
 
 interface Props {
   data: PublicMenuData | null;
+  /** Absolute canonical URL for this menu, e.g. https://site/m/<slug>. */
+  canonicalUrl: string | null;
+}
+
+/**
+ * Build Restaurant + Menu JSON-LD from the public menu payload so each live
+ * venue is eligible for local/rich results. Prices are only emitted when the
+ * venue chooses to show them; unavailable items are dropped.
+ */
+function buildRestaurantJsonLd(
+  data: PublicMenuData,
+  canonicalUrl: string | null,
+): Record<string, unknown> {
+  const { venue, menus } = data;
+
+  const menuSchemas = menus.map((menu) => ({
+    '@type': 'Menu',
+    name: menu.name,
+    hasMenuSection: menu.categories.map((cat) => ({
+      '@type': 'MenuSection',
+      name: cat.name,
+      ...(cat.description ? { description: cat.description } : {}),
+      hasMenuItem: cat.items
+        .filter((item) => item.isAvailable)
+        .map((item) => ({
+          '@type': 'MenuItem',
+          name: item.name,
+          ...(item.description ? { description: item.description } : {}),
+          ...(item.imageUrl ? { image: item.imageUrl } : {}),
+          ...(venue.showPrices
+            ? {
+                offers: {
+                  '@type': 'Offer',
+                  price: item.price,
+                  priceCurrency: venue.currency,
+                },
+              }
+            : {}),
+        })),
+    })),
+  }));
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Restaurant',
+    name: venue.name,
+    ...(venue.tagline ? { description: venue.tagline } : {}),
+    ...(canonicalUrl ? { url: canonicalUrl } : {}),
+    ...(venue.logoUrl ? { image: venue.logoUrl } : {}),
+    ...(venue.phone ? { telephone: venue.phone } : {}),
+    ...(venue.address
+      ? {
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: venue.address,
+          },
+        }
+      : {}),
+    ...(menuSchemas.length ? { hasMenu: menuSchemas } : {}),
+  };
 }
 
 /**
@@ -19,7 +79,7 @@ interface Props {
  * (render bare children, like the auth pages) for this page to be publicly
  * reachable. This file is complete and self-contained either way.
  */
-export default function PublicMenuPage({ data }: Props) {
+export default function PublicMenuPage({ data, canonicalUrl }: Props) {
   if (!data) {
     return (
       <>
@@ -58,20 +118,38 @@ export default function PublicMenuPage({ data }: Props) {
   const title = venue.tagline
     ? `${venue.name} — ${venue.tagline}`
     : `${venue.name} — Menu`;
+  const description = `Menu for ${venue.name}. ${venue.tagline || ''}`.trim();
+  const restaurantLd = buildRestaurantJsonLd(data, canonicalUrl);
 
   return (
     <>
       <Head>
         <title>{title}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta
-          name="description"
-          content={`Menu for ${venue.name}. ${venue.tagline || ''}`.trim()}
-        />
+        <meta name="description" content={description} />
         <meta name="theme-color" content={theme.bg} />
+        {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+        {/* Open Graph */}
         <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
         <meta property="og:type" content="website" />
+        {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
         {venue.logoUrl && <meta property="og:image" content={venue.logoUrl} />}
+        {/* Twitter */}
+        <meta
+          name="twitter:card"
+          content={venue.logoUrl ? 'summary_large_image' : 'summary'}
+        />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        {venue.logoUrl && (
+          <meta name="twitter:image" content={venue.logoUrl} />
+        )}
+        {/* Restaurant + Menu structured data for local/rich results */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantLd) }}
+        />
       </Head>
       <Template data={data} theme={theme} />
     </>
@@ -81,6 +159,16 @@ export default function PublicMenuPage({ data }: Props) {
 export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const slug = typeof ctx.params?.slug === 'string' ? ctx.params.slug : '';
   const data = slug ? await fetchPublicMenu(slug) : null;
+
+  // Absolute canonical URL: prefer the configured public site origin, else
+  // fall back to the request's own host so live links stay correct anywhere.
+  const proto =
+    (ctx.req.headers['x-forwarded-proto'] as string)?.split(',')[0] || 'https';
+  const host = ctx.req.headers.host;
+  const base = (
+    process.env.NEXT_PUBLIC_SITE_URL || (host ? `${proto}://${host}` : '')
+  ).replace(/\/+$/, '');
+  const canonicalUrl = slug && base ? `${base}/m/${encodeURIComponent(slug)}` : null;
 
   if (data) {
     // Mirror the API's caching so CDN/proxy layers can serve repeat scans.
@@ -95,6 +183,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   return {
     props: {
       data,
+      canonicalUrl,
       // Layout (which currently wraps every page) calls useTranslation —
       // ship the common namespace so it never crashes on this route.
       ...(await serverSideTranslations(ctx.locale || 'en', ['common'])),

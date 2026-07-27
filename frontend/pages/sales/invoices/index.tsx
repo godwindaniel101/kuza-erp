@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
+import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
@@ -13,6 +14,7 @@ import InvoiceStatusBadge from '@/components/ui/InvoiceStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { formatMoney, formatDate, downloadCsv, useCurrency } from '@/lib/format';
+import { usePageSearch } from '@/store/searchStore';
 
 const AVATAR_TONES = [
   'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
@@ -69,6 +71,7 @@ interface CustomerOption {
 const PAGE_SIZE = 10;
 
 export default function InvoicesPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const currency = useCurrency();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -78,8 +81,8 @@ export default function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [filters, setFilters] = useState<FilterValues>({ search: '', status: '', customerId: '' });
-  const search = (filters.search as string) || '';
+  const [filters, setFilters] = useState<FilterValues>({ status: '', customerId: '' });
+  const search = usePageSearch(t('invoices.searchInvoices', 'Search invoices...'));
   const status = (filters.status as string) || '';
   const customerId = (filters.customerId as string) || '';
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -119,7 +122,7 @@ export default function InvoicesPage() {
       }
     } catch (err: any) {
       console.error('Failed to load invoices:', err);
-      setToast({ message: err.response?.data?.message || 'Failed to load invoices', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('invoices.failedToLoadInvoices', 'Failed to load invoices'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -136,12 +139,12 @@ export default function InvoicesPage() {
   const columns: DataTableColumn<Invoice>[] = [
     {
       key: 'invoiceNumber',
-      label: 'Invoice #',
+      label: t('invoices.invoiceNumber', 'Invoice #'),
       render: (inv) => <span className="font-medium text-gray-900 dark:text-white">{inv.invoiceNumber}</span>,
     },
     {
       key: 'customer',
-      label: 'Customer',
+      label: t('sales.customer', 'Customer'),
       render: (inv) =>
         inv.customer?.name ? (
           <div className="flex items-center gap-3">
@@ -152,10 +155,10 @@ export default function InvoicesPage() {
           '-'
         ),
     },
-    { key: 'issueDate', label: 'Issued', render: (inv) => formatDate(inv.issueDate) },
+    { key: 'issueDate', label: t('invoices.issued', 'Issued'), render: (inv) => formatDate(inv.issueDate) },
     {
       key: 'dueDate',
-      label: 'Due',
+      label: t('invoices.due', 'Due'),
       render: (inv) => (
         <span className={inv.status === 'OVERDUE' ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
           {formatDate(inv.dueDate)}
@@ -164,19 +167,19 @@ export default function InvoicesPage() {
     },
     {
       key: 'total',
-      label: 'Total',
+      label: t('invoices.total', 'Total'),
       align: 'right',
       render: (inv) => formatMoney(inv.total, currency),
     },
     {
       key: 'amountPaid',
-      label: 'Paid',
+      label: t('invoices.paid', 'Paid'),
       align: 'right',
       render: (inv) => formatMoney(inv.amountPaid, currency),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('status', 'Status'),
       render: (inv) => <InvoiceStatusBadge status={inv.status} size="sm" />,
     },
   ];
@@ -185,7 +188,16 @@ export default function InvoicesPage() {
     if (invoices.length === 0) return;
     downloadCsv(
       `invoices-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Invoice #', 'Customer', 'Issued', 'Due', 'Total', 'Paid', 'Balance', 'Status'],
+      [
+        t('invoices.invoiceNumber', 'Invoice #'),
+        t('sales.customer', 'Customer'),
+        t('invoices.issued', 'Issued'),
+        t('invoices.due', 'Due'),
+        t('invoices.total', 'Total'),
+        t('invoices.paid', 'Paid'),
+        t('invoices.balance', 'Balance'),
+        t('status', 'Status'),
+      ],
       invoices.map((inv) => [
         inv.invoiceNumber,
         inv.customer?.name || '',
@@ -206,19 +218,19 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Invoices"
+        title={t('invoices.invoices', 'Invoices')}
         count={loading ? undefined : total}
-        subtitle="Bill customers and track payments"
-        breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices' }]}
+        subtitle={t('invoices.subtitle', 'Bill customers and track payments')}
+        breadcrumbs={[{ label: t('sales.sales', 'Sales') }, { label: t('invoices.invoices', 'Invoices') }]}
         actions={
           <>
             <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || invoices.length === 0}>
               <i className="bx bx-download"></i>
-              Export CSV
+              {t('invoices.exportCsv', 'Export CSV')}
             </Button>
             <Button href="/sales/invoices/new" size="sm">
               <i className="bx bx-plus"></i>
-              New Invoice
+              {t('invoices.newInvoice', 'New Invoice')}
             </Button>
           </>
         }
@@ -231,19 +243,19 @@ export default function InvoicesPage() {
         ) : (
           <>
             <StatCard
-              label="Outstanding"
+              label={t('sales.outstanding', 'Outstanding')}
               value={formatMoney(summary?.totalOutstanding ?? 0, currency)}
               icon="bx-hourglass"
               tone="warning"
             />
             <StatCard
-              label="Overdue"
+              label={t('sales.overdue', 'Overdue')}
               value={formatMoney(summary?.totalOverdue ?? 0, currency)}
               icon="bx-time-five"
               tone="error"
             />
             <StatCard
-              label="Paid This Month"
+              label={t('invoices.paidThisMonth', 'Paid This Month')}
               value={formatMoney(summary?.paidThisMonth ?? 0, currency)}
               icon="bx-check-circle"
               tone="success"
@@ -254,33 +266,32 @@ export default function InvoicesPage() {
 
       <FilterBar
         filters={[
-          { key: 'search', type: 'text', placeholder: 'Search invoices...', className: 'flex-1 min-w-[220px]' },
           {
             key: 'status',
             type: 'select',
-            placeholder: 'All statuses',
+            placeholder: t('invoices.allStatuses', 'All statuses'),
             className: 'w-full sm:w-52',
             options: [
-              { value: '', label: 'All statuses' },
-              { value: 'DRAFT', label: 'Draft' },
-              { value: 'SENT', label: 'Sent' },
-              { value: 'PARTIALLY_PAID', label: 'Partially paid' },
-              { value: 'PAID', label: 'Paid' },
-              { value: 'OVERDUE', label: 'Overdue' },
-              { value: 'VOID', label: 'Void' },
+              { value: '', label: t('invoices.allStatuses', 'All statuses') },
+              { value: 'DRAFT', label: t('invoices.statusDraft', 'Draft') },
+              { value: 'SENT', label: t('invoices.statusSent', 'Sent') },
+              { value: 'PARTIALLY_PAID', label: t('invoices.statusPartiallyPaid', 'Partially paid') },
+              { value: 'PAID', label: t('invoices.statusPaid', 'Paid') },
+              { value: 'OVERDUE', label: t('invoices.statusOverdue', 'Overdue') },
+              { value: 'VOID', label: t('invoices.statusVoid', 'Void') },
             ],
           },
           {
             key: 'customerId',
             type: 'select',
-            placeholder: 'All customers',
+            placeholder: t('invoices.allCustomers', 'All customers'),
             className: 'w-full sm:w-64',
-            options: [{ value: '', label: 'All customers' }, ...customers.map((c) => ({ value: c.id, label: c.name }))],
+            options: [{ value: '', label: t('invoices.allCustomers', 'All customers') }, ...customers.map((c) => ({ value: c.id, label: c.name }))],
           },
         ]}
         values={filters}
         onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
-        onClear={() => setFilters({ search: '', status: '', customerId: '' })}
+        onClear={() => setFilters({ status: '', customerId: '' })}
       />
 
       <DataTable<Invoice>
@@ -299,11 +310,11 @@ export default function InvoicesPage() {
         emptyState={
           <EmptyState
             icon="bx-receipt"
-            title={hasFilters ? 'No invoices match your filters' : 'No invoices yet'}
-            description={hasFilters ? 'Try adjusting your filters' : 'Create your first invoice to start billing customers'}
+            title={hasFilters ? t('invoices.noInvoicesMatchFilters', 'No invoices match your filters') : t('invoices.noInvoicesYet', 'No invoices yet')}
+            description={hasFilters ? t('invoices.tryAdjustingFilters', 'Try adjusting your filters') : t('invoices.createFirstInvoice', 'Create your first invoice to start billing customers')}
             actions={
               <Button href="/sales/invoices/new" size="sm">
-                New Invoice
+                {t('invoices.newInvoice', 'New Invoice')}
               </Button>
             }
           />

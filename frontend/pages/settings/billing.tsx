@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import { useTenantStore } from '@/store/globalStore';
 import Toast from '@/components/Toast';
@@ -85,9 +86,11 @@ const statusVariant: Record<SubscriptionStatus, { variant: StatusBadgeVariant; l
   CANCELED: { variant: 'error', label: 'Canceled' },
 };
 
-const limitLabel = (value: number) => (value === -1 ? 'Unlimited' : formatNumber(value));
+const limitLabel = (value: number, t: (key: string, fallback: string) => string) =>
+  value === -1 ? t('settings.unlimited', 'Unlimited') : formatNumber(value);
 
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const { t } = useTranslation('common');
   const unlimited = limit === -1;
   const pct = unlimited || limit === 0 ? 0 : Math.min(100, Math.round((used / limit) * 100));
   const nearLimit = !unlimited && pct >= 90;
@@ -96,7 +99,7 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
       <div className="flex items-center justify-between text-sm mb-1">
         <span className="font-medium text-gray-700 dark:text-gray-300">{label}</span>
         <span className={`${nearLimit ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-          {formatNumber(used)} / {limitLabel(limit)}
+          {formatNumber(used)} / {limitLabel(limit, t)}
         </span>
       </div>
       <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
@@ -120,6 +123,7 @@ const moduleLabel = (module: string) =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function BillingPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const fetchTenantContext = useTenantStore((s) => s.fetchTenantContext);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -143,7 +147,7 @@ export default function BillingPage() {
     if (subRes.status === 'fulfilled' && subRes.value.success) setSubscription(subRes.value.data);
     if (usageRes.status === 'fulfilled' && usageRes.value.success) setUsage(usageRes.value.data);
     if ([plansRes, subRes, usageRes].some((r) => r.status === 'rejected')) {
-      setToast({ message: 'Some billing data failed to load', type: 'error' });
+      setToast({ message: t('settings.billingDataLoadFailed', 'Some billing data failed to load'), type: 'error' });
       if (subRes.status === 'rejected' && plansRes.status === 'rejected') setFailed(true);
     }
     setLoading(false);
@@ -161,11 +165,11 @@ export default function BillingPage() {
     const payment = router.query.payment;
     if (payment !== 'success' && payment !== 'cancelled') return;
     if (payment === 'success') {
-      setToast({ message: 'Payment received — your plan is being activated.', type: 'success' });
+      setToast({ message: t('settings.paymentReceived', 'Payment received — your plan is being activated.'), type: 'success' });
       fetchTenantContext(true);
       load();
     } else {
-      setToast({ message: 'Payment cancelled — your plan was not changed.', type: 'info' });
+      setToast({ message: t('settings.paymentCancelled', 'Payment cancelled — your plan was not changed.'), type: 'info' });
     }
     const { payment: _p, reference: _r, ...rest } = router.query;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
@@ -184,20 +188,20 @@ export default function BillingPage() {
           planCode: switchTarget.code,
         });
         const { authorizationUrl } = extractCheckout(res);
-        if (!authorizationUrl) throw new Error('Could not start checkout. Please try again.');
+        if (!authorizationUrl) throw new Error(t('settings.couldNotStartCheckout', 'Could not start checkout. Please try again.'));
         window.location.href = authorizationUrl;
         return; // navigating away — keep the switching state
       }
       // Free plan: instant change, no payment.
       await api.post('/billing/subscription/change', { planCode: switchTarget.code });
-      setToast({ message: `Switched to the ${switchTarget.name} plan`, type: 'success' });
+      setToast({ message: t('settings.switchedToPlan', 'Switched to the {{name}} plan', { name: switchTarget.name }), type: 'success' });
       setSwitchTarget(null);
       await fetchTenantContext(true);
       await load();
       setSwitching(false);
     } catch (err: any) {
       setToast({
-        message: err.response?.data?.message || err?.message || 'Failed to switch plan',
+        message: err.response?.data?.message || err?.message || t('settings.failedToSwitchPlan', 'Failed to switch plan'),
         type: 'error',
       });
       setSwitching(false);
@@ -213,12 +217,19 @@ export default function BillingPage() {
   const status = subscription ? statusVariant[subscription.status] ?? statusVariant.ACTIVE : null;
   const currentPlanCode = subscription?.plan?.code;
 
+  const statusLabels: Record<SubscriptionStatus, string> = {
+    TRIALING: t('settings.statusTrialing', 'Trialing'),
+    ACTIVE: t('active', 'Active'),
+    PAST_DUE: t('settings.statusPastDue', 'Past due'),
+    CANCELED: t('settings.statusCanceled', 'Canceled'),
+  };
+
   return (
     <div className="w-full max-w-5xl space-y-5">
       <PageHeader
-        title="Billing & Plans"
-        subtitle="Your subscription, usage and available plans"
-        breadcrumbs={[{ label: 'Settings', href: '/settings' }, { label: 'Billing' }]}
+        title={t('settings.billingTitle', 'Billing & Plans')}
+        subtitle={t('settings.billingSubtitle', 'Your subscription, usage and available plans')}
+        breadcrumbs={[{ label: t('settings', 'Settings'), href: '/settings' }, { label: t('settings.billing', 'Billing') }]}
       />
 
       {loading ? (
@@ -231,11 +242,11 @@ export default function BillingPage() {
       ) : failed ? (
         <EmptyState
           icon="bx-error-circle"
-          title="Could not load billing information"
-          description="Please try again"
+          title={t('settings.billingLoadError', 'Could not load billing information')}
+          description={t('settings.pleaseTryAgain', 'Please try again')}
           actions={
             <Button variant="primary" size="sm" onClick={load}>
-              Retry
+              {t('settings.retry', 'Retry')}
             </Button>
           }
         />
@@ -246,32 +257,32 @@ export default function BillingPage() {
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Plan</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('settings.currentPlanLabel', 'Current Plan')}</p>
                   <h2 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white mt-1">
-                    {subscription?.plan?.name || 'No plan'}
+                    {subscription?.plan?.name || t('settings.noPlan', 'No plan')}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {subscription?.plan
                       ? planPrice(subscription.plan).amount > 0
-                        ? `${planPrice(subscription.plan).text} / month`
-                        : 'Free'
+                        ? t('settings.pricePerMonth', '{{price}} / month', { price: planPrice(subscription.plan).text })
+                        : t('settings.free', 'Free')
                       : ''}
                   </p>
                 </div>
-                {status && <StatusBadge variant={status.variant} label={status.label} />}
+                {status && subscription && <StatusBadge variant={status.variant} label={statusLabels[subscription.status] ?? status.label} />}
               </div>
               {subscription?.status === 'TRIALING' && trialDaysLeft != null && (
                 <div className="mb-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
                   <i className="bx bx-time-five" aria-hidden="true"></i>
                   {trialDaysLeft === 0
-                    ? 'Your trial ends today'
-                    : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your trial`}
-                  {subscription.trialEndsAt && <span>(ends {formatDate(subscription.trialEndsAt)})</span>}
+                    ? t('settings.trialEndsToday', 'Your trial ends today')
+                    : t('settings.trialDaysLeft', '{{count}} day{{plural}} left in your trial', { count: trialDaysLeft, plural: trialDaysLeft === 1 ? '' : 's' })}
+                  {subscription.trialEndsAt && <span>{t('settings.trialEndsDate', '(ends {{date}})', { date: formatDate(subscription.trialEndsAt) })}</span>}
                 </div>
               )}
               {subscription?.currentPeriodStart && subscription?.currentPeriodEnd && (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Current period: {formatDate(subscription.currentPeriodStart)} – {formatDate(subscription.currentPeriodEnd)}
+                  {t('settings.currentPeriod', 'Current period: {{start}} – {{end}}', { start: formatDate(subscription.currentPeriodStart), end: formatDate(subscription.currentPeriodEnd) })}
                 </p>
               )}
               {subscription?.plan?.description && (
@@ -281,23 +292,23 @@ export default function BillingPage() {
 
             {/* Usage card */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Usage</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">{t('settings.usage', 'Usage')}</p>
               {usage ? (
                 <div className="space-y-4">
-                  <UsageBar label="Users" used={usage.usage.users} limit={usage.limits.maxUsers} />
-                  <UsageBar label="Branches" used={usage.usage.branches} limit={usage.limits.maxBranches} />
-                  <UsageBar label="Items" used={usage.usage.items} limit={usage.limits.maxItems} />
+                  <UsageBar label={t('settings.users', 'Users')} used={usage.usage.users} limit={usage.limits.maxUsers} />
+                  <UsageBar label={t('settings.branches', 'Branches')} used={usage.usage.branches} limit={usage.limits.maxBranches} />
+                  <UsageBar label={t('settings.items', 'Items')} used={usage.usage.items} limit={usage.limits.maxItems} />
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">Usage information is unavailable.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.usageUnavailable', 'Usage information is unavailable.')}</p>
               )}
             </div>
           </div>
 
           {/* Plan comparison grid */}
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">All Plans</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('settings.allPlans', 'All Plans')}</h2>
           {plans.length === 0 ? (
-            <EmptyState icon="bx-package" title="No plans available" description="Plans could not be loaded" />
+            <EmptyState icon="bx-package" title={t('settings.noPlansAvailable', 'No plans available')} description={t('settings.plansNotLoaded', 'Plans could not be loaded')} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {plans.map((plan) => {
@@ -316,7 +327,7 @@ export default function BillingPage() {
                       {isCurrent && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                           <i className="bx bx-check" aria-hidden="true"></i>
-                          Current
+                          {t('settings.current', 'Current')}
                         </span>
                       )}
                     </div>
@@ -324,10 +335,10 @@ export default function BillingPage() {
                       {planPrice(plan).amount > 0 ? (
                         <>
                           {planPrice(plan).text}
-                          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/mo</span>
+                          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t('settings.perMonthShort', '/mo')}</span>
                         </>
                       ) : (
-                        'Free'
+                        t('settings.free', 'Free')
                       )}
                     </p>
                     {plan.description && (
@@ -336,15 +347,15 @@ export default function BillingPage() {
                     <ul className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-300 flex-1">
                       <li className="flex items-center gap-2">
                         <i className="bx bx-user text-gray-400" aria-hidden="true"></i>
-                        {limitLabel(plan.limits.maxUsers)} users
+                        {t('settings.usersCount', '{{value}} users', { value: limitLabel(plan.limits.maxUsers, t) })}
                       </li>
                       <li className="flex items-center gap-2">
                         <i className="bx bx-git-branch text-gray-400" aria-hidden="true"></i>
-                        {limitLabel(plan.limits.maxBranches)} branches
+                        {t('settings.branchesCount', '{{value}} branches', { value: limitLabel(plan.limits.maxBranches, t) })}
                       </li>
                       <li className="flex items-center gap-2">
                         <i className="bx bx-box text-gray-400" aria-hidden="true"></i>
-                        {limitLabel(plan.limits.maxItems)} items
+                        {t('settings.itemsCount', '{{value}} items', { value: limitLabel(plan.limits.maxItems, t) })}
                       </li>
                       {(plan.limits.modules || []).map((module) => (
                         <li key={module} className="flex items-center gap-2">
@@ -359,7 +370,7 @@ export default function BillingPage() {
                       disabled={isCurrent}
                       className="mt-5 w-full"
                     >
-                      {isCurrent ? 'Current plan' : 'Switch plan'}
+                      {isCurrent ? t('settings.currentPlan', 'Current plan') : t('settings.switchPlan', 'Switch plan')}
                     </Button>
                   </div>
                 );
@@ -370,20 +381,20 @@ export default function BillingPage() {
       )}
 
       {/* Switch plan confirm */}
-      <Modal isOpen={!!switchTarget} onClose={() => setSwitchTarget(null)} title="Switch Plan" maxWidth="md">
+      <Modal isOpen={!!switchTarget} onClose={() => setSwitchTarget(null)} title={t('settings.switchPlanTitle', 'Switch Plan')} maxWidth="md">
         {switchTarget && (
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-400">
-              Switch from <strong className="text-gray-900 dark:text-gray-100">{subscription?.plan?.name || 'your current plan'}</strong>{' '}
-              to <strong className="text-gray-900 dark:text-gray-100">{switchTarget.name}</strong>
+              {t('settings.switchFrom', 'Switch from')} <strong className="text-gray-900 dark:text-gray-100">{subscription?.plan?.name || t('settings.yourCurrentPlan', 'your current plan')}</strong>{' '}
+              {t('settings.switchTo', 'to')} <strong className="text-gray-900 dark:text-gray-100">{switchTarget.name}</strong>
               {switchTarget.monthlyPriceUsd > 0
-                ? ` at $${formatNumber(switchTarget.monthlyPriceUsd, 2)}/month?`
-                : ' (free)?'}
+                ? t('settings.atPricePerMonth', ' at ${{price}}/month?', { price: formatNumber(switchTarget.monthlyPriceUsd, 2) })
+                : t('settings.freeQuestion', ' (free)?')}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               {switchTarget.monthlyPriceUsd > 0
-                ? "You'll be redirected to Paystack to complete payment. Your plan activates once payment is confirmed."
-                : "Plan limits apply immediately. Downgrading may restrict access to features above the new plan's limits."}
+                ? t('settings.paystackRedirectNote', "You'll be redirected to Paystack to complete payment. Your plan activates once payment is confirmed.")
+                : t('settings.downgradeNote', "Plan limits apply immediately. Downgrading may restrict access to features above the new plan's limits.")}
             </p>
             <div className="flex justify-end space-x-3 pt-2">
               <Button
@@ -392,7 +403,7 @@ export default function BillingPage() {
                 onClick={() => setSwitchTarget(null)}
                 disabled={switching}
               >
-                Cancel
+                {t('cancel', 'Cancel')}
               </Button>
               <Button
                 type="button"
@@ -402,11 +413,11 @@ export default function BillingPage() {
               >
                 {switching
                   ? switchTarget.monthlyPriceUsd > 0
-                    ? 'Redirecting...'
-                    : 'Switching...'
+                    ? t('settings.redirecting', 'Redirecting...')
+                    : t('settings.switching', 'Switching...')
                   : switchTarget.monthlyPriceUsd > 0
-                    ? 'Continue to payment'
-                    : 'Confirm Switch'}
+                    ? t('settings.continueToPayment', 'Continue to payment')
+                    : t('settings.confirmSwitch', 'Confirm Switch')}
               </Button>
             </div>
           </div>

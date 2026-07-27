@@ -20,9 +20,6 @@ export class Tenant extends BaseEntity {
   @Column({ nullable: true })
   schemaName: string; // PostgreSQL schema name for this tenant
 
-  @Column({ nullable: true })
-  databaseName: string; // Database name if using separate databases instead of schemas
-
   @Column({ default: true })
   isActive: boolean;
 

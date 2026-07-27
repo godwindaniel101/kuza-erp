@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -39,6 +40,7 @@ const REASONS = [
 ];
 
 export default function NewAdjustmentPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -56,7 +58,7 @@ export default function NewAdjustmentPage() {
         if (res.success) setItems(res.data || []);
       } catch (err: any) {
         console.error('Failed to load inventory items:', err);
-        setToast({ message: err.response?.data?.message || 'Failed to load inventory items', type: 'error' });
+        setToast({ message: err.response?.data?.message || t('adjustments.failedLoadItems', 'Failed to load inventory items'), type: 'error' });
       }
       try {
         const res = await api.get<{ success: boolean; data: Branch[] }>('/settings/branches');
@@ -100,7 +102,7 @@ export default function NewAdjustmentPage() {
         router.push('/ims/adjustments');
       }
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to create adjustment', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('adjustments.failedCreate', 'Failed to create adjustment'), type: 'error' });
       setSaving(false);
     }
   };
@@ -108,46 +110,46 @@ export default function NewAdjustmentPage() {
   return (
     <div className="w-full max-w-3xl space-y-5">
       <PageHeader
-        title="New Stock Adjustment"
-        subtitle="Use positive quantities to add stock, negative to remove"
+        title={t('adjustments.createTitle', 'New Stock Adjustment')}
+        subtitle={t('adjustments.createSubtitle', 'Use positive quantities to add stock, negative to remove')}
         breadcrumbs={[
-          { label: 'IMS', href: '/ims/inventory' },
-          { label: 'Adjustments', href: '/ims/adjustments' },
-          { label: 'New' },
+          { label: t('adjustments.ims', 'IMS'), href: '/ims/inventory' },
+          { label: t('adjustments.breadcrumb', 'Adjustments'), href: '/ims/adjustments' },
+          { label: t('adjustments.breadcrumbNew', 'New') },
         ]}
       />
 
       {/* Header fields */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormField
-          label="Reason"
+          label={t('adjustments.reason', 'Reason')}
           name="adjustment-reason"
           type="select"
           required
           value={reason}
           onChange={setReason}
-          placeholder="Select reason"
+          placeholder={t('adjustments.selectReason', 'Select reason')}
           options={REASONS}
         />
         {branches.length > 0 && (
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Branch</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('adjustments.branch', 'Branch')}</label>
             <SearchableSelect
               options={branches.map((b) => ({ value: b.id, label: b.name }))}
               value={branchId}
               onChange={setBranchId}
-              placeholder="Default branch"
+              placeholder={t('adjustments.defaultBranch', 'Default branch')}
               focusColor="red"
               size="sm"
             />
           </div>
         )}
         <FormField
-          label="Notes"
+          label={t('adjustments.notes', 'Notes')}
           name="adjustment-notes"
           value={notes}
           onChange={setNotes}
-          placeholder="Why is this adjustment needed?"
+          placeholder={t('adjustments.notesPlaceholder', 'Why is this adjustment needed?')}
           className={branches.length > 0 ? '' : 'sm:col-span-2'}
         />
       </div>
@@ -155,9 +157,9 @@ export default function NewAdjustmentPage() {
       {/* Item rows */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-visible mb-6">
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid grid-cols-12 gap-3 text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
-          <div className="col-span-5">Item</div>
-          <div className="col-span-2 text-right">Qty Change (+/-)</div>
-          <div className="col-span-4">Line Reason</div>
+          <div className="col-span-5">{t('adjustments.item', 'Item')}</div>
+          <div className="col-span-2 text-right">{t('adjustments.qtyChangePlusMinus', 'Qty Change (+/-)')}</div>
+          <div className="col-span-4">{t('adjustments.lineReason', 'Line Reason')}</div>
           <div className="col-span-1"></div>
         </div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -169,11 +171,11 @@ export default function NewAdjustmentPage() {
                   <SearchableSelect
                     options={items.map((i) => ({
                       value: i.id,
-                      label: `${i.name || i.id}${i.currentStock != null ? ` (stock: ${Math.floor(Number(i.currentStock))})` : ''}`,
+                      label: `${i.name || i.id}${i.currentStock != null ? ` ${t('adjustments.stockSuffix', '(stock: {{count}})', { count: Math.floor(Number(i.currentStock)) })}` : ''}`,
                     }))}
                     value={row.itemId}
                     onChange={(v) => updateRow(row.key, { itemId: v })}
-                    placeholder="Select item..."
+                    placeholder={t('adjustments.selectItem', 'Select item...')}
                     focusColor="red"
                     size="sm"
                   />
@@ -184,8 +186,8 @@ export default function NewAdjustmentPage() {
                     step={1}
                     value={row.quantityChange}
                     onChange={(e) => updateRow(row.key, { quantityChange: e.target.value })}
-                    placeholder="e.g. -5"
-                    aria-label="Quantity change"
+                    placeholder={t('adjustments.qtyPlaceholder', 'e.g. -5')}
+                    aria-label={t('adjustments.quantityChange', 'Quantity change')}
                     className={`h-9 w-full px-3 text-[13px] text-right border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:bg-gray-700 dark:text-gray-100 border-gray-300 dark:border-gray-600 ${
  qty > 0 ? 'text-green-600 dark:text-green-400' : qty < 0 ? 'text-red-600 dark:text-red-400' : ''
  }`}
@@ -196,7 +198,7 @@ export default function NewAdjustmentPage() {
                     type="text"
                     value={row.reason}
                     onChange={(e) => updateRow(row.key, { reason: e.target.value })}
-                    placeholder="Optional line-level reason"
+                    placeholder={t('adjustments.lineReasonPlaceholder', 'Optional line-level reason')}
                     className="h-9 w-full px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -205,7 +207,7 @@ export default function NewAdjustmentPage() {
                     type="button"
                     onClick={() => removeRow(row.key)}
                     disabled={rows.length <= 1}
-                    title="Remove row"
+                    title={t('adjustments.removeRow', 'Remove row')}
                     className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <i className="bx bx-trash" aria-hidden="true"></i>
@@ -222,17 +224,17 @@ export default function NewAdjustmentPage() {
             className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center"
           >
             <i className="bx bx-plus mr-1"></i>
-            Add item
+            {t('adjustments.addItem', 'Add item')}
           </button>
         </div>
       </div>
 
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={() => router.push('/ims/adjustments')}>
-          Cancel
+          {t('adjustments.cancel', 'Cancel')}
         </Button>
         <Button type="button" variant="primary" onClick={handleSave} disabled={!canSave}>
-          {saving ? 'Saving...' : 'Create Adjustment'}
+          {saving ? t('adjustments.saving', 'Saving...') : t('adjustments.createAdjustment', 'Create Adjustment')}
         </Button>
       </div>
 

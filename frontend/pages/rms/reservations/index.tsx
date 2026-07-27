@@ -108,14 +108,14 @@ const STATUS_ORDER: ReservationStatus[] = [
   'no_show',
 ];
 
-function StatusBadge({ status }: { status: ReservationStatus }) {
+function StatusBadge({ status, label }: { status: ReservationStatus; label: string }) {
   const meta = STATUS_META[status] ?? STATUS_META.pending;
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ring-1 ring-inset ${meta.pill}`}
     >
       <i className={`bx ${meta.icon}`} aria-hidden="true"></i>
-      {meta.label}
+      {label}
     </span>
   );
 }
@@ -186,8 +186,6 @@ function monthGridRangeISO(month: Date): { from: string; to: string } {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 const EMPTY_FORM: ReservationForm = {
   branchId: '',
   customerName: '',
@@ -207,6 +205,35 @@ const EMPTY_FORM: ReservationForm = {
 
 export default function ReservationsPage() {
   const { t } = useTranslation('common');
+
+  // Translated, display-only status labels (keys stay the API enum values).
+  const statusLabel = useCallback(
+    (s: ReservationStatus): string => {
+      const labels: Record<ReservationStatus, string> = {
+        pending: t('reservations.status_pending', 'Pending'),
+        confirmed: t('reservations.status_confirmed', 'Confirmed'),
+        seated: t('reservations.status_seated', 'Seated'),
+        completed: t('reservations.status_completed', 'Completed'),
+        cancelled: t('reservations.status_cancelled', 'Cancelled'),
+        no_show: t('reservations.status_no_show', 'No-show'),
+      };
+      return labels[s] ?? labels.pending;
+    },
+    [t],
+  );
+
+  const weekdayLabels = useMemo(
+    () => [
+      t('reservations.weekday_sun', 'Sun'),
+      t('reservations.weekday_mon', 'Mon'),
+      t('reservations.weekday_tue', 'Tue'),
+      t('reservations.weekday_wed', 'Wed'),
+      t('reservations.weekday_thu', 'Thu'),
+      t('reservations.weekday_fri', 'Fri'),
+      t('reservations.weekday_sat', 'Sat'),
+    ],
+    [t],
+  );
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -338,7 +365,7 @@ export default function ReservationsPage() {
       );
       if (res.success) {
         setToast({
-          message: res.message || `${t('reservation') || 'Reservation'} ${STATUS_META[status].label.toLowerCase()}`,
+          message: res.message || `${t('reservation') || 'Reservation'} ${statusLabel(status).toLowerCase()}`,
           type: 'success',
         });
         loadReservations();
@@ -541,7 +568,7 @@ export default function ReservationsPage() {
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {r.customerName}
               </span>
-              <StatusBadge status={r.status} />
+              <StatusBadge status={r.status} label={statusLabel(r.status)} />
               {r.source === 'online' && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-full bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/20">
                   <i className="bx bx-globe" aria-hidden="true"></i>
@@ -648,8 +675,8 @@ export default function ReservationsPage() {
         <PageHeader
           title={t('reservations') || 'Reservations'}
           count={loading ? undefined : sorted.length}
-          subtitle="Manage bookings, confirm requests and seat guests"
-          breadcrumbs={[{ label: 'Restaurant' }, { label: t('reservations') || 'Reservations' }]}
+          subtitle={t('reservations.subtitle', 'Manage bookings, confirm requests and seat guests')}
+          breadcrumbs={[{ label: t('restaurant', 'Restaurant') }, { label: t('reservations') || 'Reservations' }]}
           actions={
             <PermissionGuard permission="reservations.create">
               <Button size="sm" onClick={openCreate}>
@@ -745,7 +772,7 @@ export default function ReservationsPage() {
               <option value="all">{t('allStatuses') || 'All statuses'}</option>
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_META[s].label}
+                  {statusLabel(s)}
                 </option>
               ))}
             </select>
@@ -775,7 +802,7 @@ export default function ReservationsPage() {
           <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
             {/* Weekday headers */}
             <div className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-800">
-              {WEEKDAY_LABELS.map((w) => (
+              {weekdayLabels.map((w) => (
                 <div
                   key={w}
                   className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"

@@ -144,10 +144,14 @@ export class AdminService {
     }
   }
 
-  /** Change a tenant's plan, reusing BillingService.changePlan. */
+  /**
+   * Change a tenant's plan (super-admin only — controller is SuperAdminGuard-
+   * gated). allowPaid: a super-admin may assign a paid plan directly (manual
+   * billing / comping), unlike the tenant's own self-service switch.
+   */
   async changeTenantPlan(tenantId: string, planCode: string) {
     const tenant = await this.landlordService.findTenantById(tenantId);
-    return this.billingService.changePlan(tenant.id, planCode);
+    return this.billingService.changePlan(tenant.id, planCode, { allowPaid: true });
   }
 
   /**

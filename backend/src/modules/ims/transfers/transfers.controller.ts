@@ -85,9 +85,14 @@ export class TransfersController {
   ) {
     const transfer = await this.transfersService.updateStatus(
       id,
-
       req.user.sub,
       updateDto,
+      {
+        tenantUserId: req.user.id,
+        isAdmin: (req.user.roles || []).some(
+          (r: any) => (r?.name || r) === "admin",
+        ),
+      },
     );
     return {
       success: true,

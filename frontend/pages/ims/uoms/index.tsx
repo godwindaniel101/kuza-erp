@@ -64,7 +64,7 @@ export default function UomsPage() {
       )}
       <PageHeader
         title={t('uoms')}
-        subtitle="The units your stock is counted in"
+        subtitle={t('uoms.subtitle', 'The units your stock is counted in')}
         breadcrumbs={[{ label: t('inventory') || 'Inventory', href: '/ims/inventory' }, { label: t('uoms') }]}
         actions={
           <PermissionGuard permission="uoms.create">

@@ -483,6 +483,10 @@ p { margin: 0; }
 @keyframes kxrise { to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce){ .reveal { opacity: 1 !important; transform: none !important; animation: none !important; } }
 
+/* Minimal spacing utility — this site is hand-CSS'd (no Tailwind), so the
+   Tailwind-style `px-4` used in markup needs a real rule to take effect. */
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+
 /* Nav items are bare <li> inside <nav> — strip the default disc bullet. */
 .nav-links, .nav-links li { list-style: none; }
 

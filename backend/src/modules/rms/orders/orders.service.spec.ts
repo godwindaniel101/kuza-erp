@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { createMockRepo, MockRepo } from '../../../../test/repo-mock';
 
@@ -233,5 +233,159 @@ describe('OrdersService.getAllocationMethod', () => {
   it('falls back to FIFO for an unrecognised method', async () => {
     businessRepo.findOne.mockResolvedValue({ allocationMethod: 'bogus' });
     await expect((service as any).getAllocationMethod()).resolves.toBe('FIFO');
+  });
+});
+
+/**
+ * fulfil() debits stock and posts the sale. The row is locked FOR UPDATE and the
+ * 'pending' status re-checked under that lock so two concurrent fulfils cannot
+ * both pass the guard and double-debit stock. The two invariants exercised here:
+ *  - a non-'pending' order is a NO-OP: no allocation, no stock deduction, no post;
+ *  - a missing order row throws NotFound before any work.
+ */
+describe('OrdersService.fulfil', () => {
+  const ORDER_ID = 'order-1';
+  const BRANCH = 'branch-1';
+
+  let service: OrdersService;
+  let orderRepo: MockRepo;
+  let orderItemRepo: MockRepo;
+  let orderItemInflowItemRepo: MockRepo;
+  let inventoryItemRepo: MockRepo;
+  let branchInventoryRepo: MockRepo;
+  let inflowItemRepo: MockRepo;
+  let stockMovementRepo: MockRepo;
+  let posting: { postSale: jest.Mock };
+
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  beforeEach(() => {
+    orderRepo = createMockRepo();
+    orderItemRepo = createMockRepo();
+    orderItemInflowItemRepo = createMockRepo();
+    inventoryItemRepo = createMockRepo();
+    branchInventoryRepo = createMockRepo();
+    inflowItemRepo = createMockRepo();
+    stockMovementRepo = createMockRepo();
+    posting = { postSale: jest.fn() };
+
+    service = new OrdersService(
+      orderRepo as any, // orderRepository
+      orderItemRepo as any, // orderItemRepository
+      createMockRepo() as any, // orderPaymentRepository
+      orderItemInflowItemRepo as any, // orderItemInflowItemRepository
+      inventoryItemRepo as any, // inventoryItemRepository
+      createMockRepo() as any, // inventoryItemComponentRepository
+      inflowItemRepo as any, // inflowItemRepository
+      branchInventoryRepo as any, // branchInventoryRepository
+      createMockRepo() as any, // businessRepository
+      { getMultiplier: jest.fn() } as any, // uomConversionsService
+      { getRepository: jest.fn(() => stockMovementRepo) } as any, // dataSource
+      posting as any, // postingService
+    );
+  });
+
+  /**
+   * Make the pessimistic-lock query builder resolve to `order`. A self-referential
+   * chain is used so `.setLock().where().getOne()` returns our configured getOne
+   * (the shared repo-mock builder's chain returns its own internal getOne).
+   */
+  function wireLockedOrder(order: any) {
+    const qb: any = {};
+    qb.setLock = jest.fn(() => qb);
+    qb.where = jest.fn(() => qb);
+    qb.getOne = jest.fn().mockResolvedValue(order);
+    orderRepo.createQueryBuilder.mockReturnValue(qb);
+  }
+
+  it('idempotent NO-OP for a non-pending order: no allocate/deduct/post, returns via findOne', async () => {
+    // Arrange: the locked row is already completed.
+    const completed = { id: ORDER_ID, status: 'completed' };
+    wireLockedOrder(completed);
+    // findOne re-loads the order for the return value.
+    orderRepo.findOne.mockResolvedValue(completed);
+
+    // Act
+    const result = await service.fulfil(ORDER_ID, BRANCH);
+
+    // Assert: returned via findOne, and NOTHING stock-mutating ran.
+    expect(result).toBe(completed);
+    // Items are never even loaded — the guard returns before that.
+    expect(orderItemRepo.find).not.toHaveBeenCalled();
+    // No allocation probe against inflow lots.
+    expect(inflowItemRepo.query).not.toHaveBeenCalled();
+    expect(inflowItemRepo.find).not.toHaveBeenCalled();
+    // No stock deducted from either source of truth.
+    expect(inventoryItemRepo.save).not.toHaveBeenCalled();
+    expect(branchInventoryRepo.save).not.toHaveBeenCalled();
+    expect(orderItemInflowItemRepo.save).not.toHaveBeenCalled();
+    expect(stockMovementRepo.save).not.toHaveBeenCalled();
+    // No journal entry posted.
+    expect(posting.postSale).not.toHaveBeenCalled();
+    // The order row itself is not re-saved.
+    expect(orderRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFound when the locked order row does not exist', async () => {
+    // Arrange
+    wireLockedOrder(null);
+    // Act / Assert
+    await expect(service.fulfil(ORDER_ID, BRANCH)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    // Nothing was touched.
+    expect(orderItemRepo.find).not.toHaveBeenCalled();
+    expect(posting.postSale).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * cancelIfPending() declines a PENDING marketplace sale. No stock is moved for a
+ * pending sale, so it only flips status → 'cancelled', and is a no-op for a
+ * missing or already-progressed order (nothing to reverse).
+ */
+describe('OrdersService.cancelIfPending', () => {
+  let service: OrdersService;
+  let orderRepo: MockRepo;
+
+  beforeEach(() => {
+    orderRepo = createMockRepo();
+    service = new OrdersService(
+      orderRepo as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      createMockRepo() as any,
+      { getMultiplier: jest.fn() } as any,
+      { getRepository: jest.fn() } as any,
+      { postSale: jest.fn() } as any,
+    );
+  });
+
+  it('cancels a pending order (status → cancelled, persisted)', async () => {
+    const order: any = { id: 'o1', status: 'pending' };
+    orderRepo.findOne.mockResolvedValue(order);
+    await service.cancelIfPending('o1');
+    expect(order.status).toBe('cancelled');
+    expect(orderRepo.save).toHaveBeenCalledWith(order);
+  });
+
+  it('is a no-op for a non-pending order (nothing to reverse)', async () => {
+    orderRepo.findOne.mockResolvedValue({ id: 'o1', status: 'completed' });
+    await service.cancelIfPending('o1');
+    expect(orderRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when the order is missing', async () => {
+    orderRepo.findOne.mockResolvedValue(null);
+    await service.cancelIfPending('missing');
+    expect(orderRepo.save).not.toHaveBeenCalled();
   });
 });

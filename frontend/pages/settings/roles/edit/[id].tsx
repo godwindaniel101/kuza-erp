@@ -119,7 +119,7 @@ export default function EditRolePage() {
 
         <PageHeader
           title={<>{t('edit')} {t('role')}</>}
-          subtitle="Update what this role can see and do"
+          subtitle={t('settings.editRoleSubtitle', 'Update what this role can see and do')}
           breadcrumbs={[
             { label: t('settings') || 'Settings', href: '/settings' },
             { label: t('roles') || 'Roles', href: '/settings/roles' },
@@ -163,7 +163,7 @@ export default function EditRolePage() {
                       required
                       value={formData.name}
                       onChange={(value) => setFormData({ ...formData, name: value })}
-                      placeholder="e.g., manager"
+                      placeholder={t('settings.roleNameExample', 'e.g., manager')}
                     />
 
                     <FormField
@@ -173,7 +173,7 @@ export default function EditRolePage() {
                       required
                       value={formData.displayName}
                       onChange={(value) => setFormData({ ...formData, displayName: value })}
-                      placeholder="e.g., Manager"
+                      placeholder={t('settings.roleDisplayNameExample', 'e.g., Manager')}
                     />
 
                     <FormField

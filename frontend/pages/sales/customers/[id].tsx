@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
+import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
@@ -43,6 +44,7 @@ interface Invoice {
 
 export default function CustomerDetailPage() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { id } = router.query;
   const currency = useCurrency();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
@@ -62,7 +64,7 @@ export default function CustomerDetailPage() {
     } catch (err: any) {
       console.error('Failed to load customer:', err);
       setNotFound(true);
-      setToast({ message: err.response?.data?.message || 'Failed to load customer', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('customers.failedToLoadCustomer', 'Failed to load customer'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,7 @@ export default function CustomerDetailPage() {
       if (res.success) setInvoices(res.data.items || []);
     } catch (err: any) {
       console.error('Failed to load invoices:', err);
-      setToast({ message: err.response?.data?.message || 'Failed to load invoices', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('customers.failedToLoadInvoices', 'Failed to load invoices'), type: 'error' });
     } finally {
       setInvoicesLoading(false);
     }
@@ -86,18 +88,18 @@ export default function CustomerDetailPage() {
   return (
     <div className="w-full max-w-5xl space-y-5">
       <PageHeader
-        title={customer?.name || 'Customer'}
+        title={customer?.name || t('customers.customer', 'Customer')}
         subtitle={customer?.email || undefined}
         breadcrumbs={[
-          { label: 'Sales' },
-          { label: 'Customers', href: '/sales/customers' },
-          { label: customer?.name || 'Detail' },
+          { label: t('customers.sales', 'Sales') },
+          { label: t('customers.title', 'Customers'), href: '/sales/customers' },
+          { label: customer?.name || t('customers.detail', 'Detail') },
         ]}
         actions={
           customer ? (
             <StatusBadge
               variant={customer.isActive ? 'success' : 'error'}
-              label={customer.isActive ? 'Active' : 'Inactive'}
+              label={customer.isActive ? t('active', 'Active') : t('inactive', 'Inactive')}
               size="lg"
             />
           ) : undefined
@@ -114,11 +116,11 @@ export default function CustomerDetailPage() {
       ) : notFound || !customer ? (
         <EmptyState
           icon="bx-user-x"
-          title="Customer not found"
-          description="It may have been removed, or the link is invalid"
+          title={t('customers.notFound', 'Customer not found')}
+          description={t('customers.notFoundDescription', 'It may have been removed, or the link is invalid')}
           actions={
             <Button href="/sales/customers" size="sm">
-              Back to Customers
+              {t('customers.backToCustomers', 'Back to Customers')}
             </Button>
           }
         />
@@ -127,14 +129,14 @@ export default function CustomerDetailPage() {
           {/* Stat cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <StatCard
-              label="Total Invoiced"
+              label={t('customers.totalInvoiced', 'Total Invoiced')}
               value={formatMoney(customer.totalInvoiced, currency)}
               icon="bx-receipt"
               tone="info"
             />
-            <StatCard label="Total Paid" value={formatMoney(customer.totalPaid, currency)} icon="bx-check-circle" tone="success" />
+            <StatCard label={t('customers.totalPaid', 'Total Paid')} value={formatMoney(customer.totalPaid, currency)} icon="bx-check-circle" tone="success" />
             <StatCard
-              label="Outstanding Balance"
+              label={t('customers.outstandingBalance', 'Outstanding Balance')}
               value={formatMoney(customer.balance, currency)}
               icon="bx-wallet"
               tone={Number(customer.balance) > 0 ? 'warning' : 'default'}
@@ -143,32 +145,32 @@ export default function CustomerDetailPage() {
 
           {/* Profile */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Profile</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">{t('customers.profile', 'Profile')}</h2>
             <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Email</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('email', 'Email')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">{customer.email || '-'}</dd>
               </div>
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Phone</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('phone', 'Phone')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">{customer.phone || '-'}</dd>
               </div>
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Address</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('address', 'Address')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">{customer.address || '-'}</dd>
               </div>
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Tax ID</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.taxId', 'Tax ID')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">{customer.taxId || '-'}</dd>
               </div>
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Credit Limit</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.creditLimit', 'Credit Limit')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">
                   {customer.creditLimit != null ? formatMoney(customer.creditLimit, currency) : '-'}
                 </dd>
               </div>
               <div>
-                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">Notes</dt>
+                <dt className="text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.notes', 'Notes')}</dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">{customer.notes || '-'}</dd>
               </div>
             </dl>
@@ -176,13 +178,13 @@ export default function CustomerDetailPage() {
 
           {/* Invoices */}
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Invoices</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('customers.invoices', 'Invoices')}</h2>
             <Link
               href="/sales/invoices/new"
               className="text-sm text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
             >
               <i className="bx bx-plus" aria-hidden="true"></i>
-              New Invoice
+              {t('customers.newInvoice', 'New Invoice')}
             </Link>
           </div>
 
@@ -191,8 +193,8 @@ export default function CustomerDetailPage() {
           ) : invoices.length === 0 ? (
             <EmptyState
               icon="bx-receipt"
-              title="No invoices yet"
-              description="This customer has not been invoiced"
+              title={t('customers.noInvoicesYet', 'No invoices yet')}
+              description={t('customers.noInvoicesDescription', 'This customer has not been invoiced')}
             />
           ) : (
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-hidden">
@@ -200,12 +202,12 @@ export default function CustomerDetailPage() {
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Invoice #</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Issued</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Due</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Total</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Balance</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.invoiceNumber', 'Invoice #')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.issued', 'Issued')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.due', 'Due')}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.total', 'Total')}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('customers.balance', 'Balance')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('status', 'Status')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

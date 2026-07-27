@@ -101,7 +101,7 @@ export default function UsersPage() {
       )}
       <PageHeader
         title={t('users')}
-        subtitle="Who can sign in and what they can do"
+        subtitle={t('settings.usersSubtitle', 'Who can sign in and what they can do')}
         count={loading ? undefined : users.length}
         breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('users') }]}
         actions={

@@ -128,7 +128,7 @@ export class UsersService {
 
     // Best-effort: don't strip the last active admin of its privileges.
     if (isCurrentlyAdmin && (willDeactivate || losesAdmin)) {
-      const adminCount = await this.countActiveAdmins(businessId);
+      const adminCount = await this.countActiveAdmins();
       if (adminCount <= 1) {
         throw new BadRequestException(
           'Cannot remove admin role from or deactivate the last active admin',
@@ -170,7 +170,7 @@ export class UsersService {
       (r) => r.name === ADMIN_ROLE_NAME,
     );
     if (isAdmin) {
-      const adminCount = await this.countActiveAdmins(businessId);
+      const adminCount = await this.countActiveAdmins();
       if (adminCount <= 1) {
         throw new BadRequestException(
           'Cannot delete the last active admin of the business',
@@ -204,14 +204,19 @@ export class UsersService {
     return roles;
   }
 
-  private async countActiveAdmins(businessId: string): Promise<number> {
+  private async countActiveAdmins(): Promise<number> {
+    // Tenant users live in the tenant's own schema (search_path is set per
+    // request), so counting active admins here is already scoped to this
+    // business. Do NOT filter by user.businessId: it isn't reliably populated
+    // on tenant users (it's null in the schema-per-tenant model), and filtering
+    // by it matched zero rows — which made the "last active admin" guard fire
+    // even when several admins existed.
     return this.userRepository
       .createQueryBuilder('user')
       .innerJoin('user.roles', 'role', 'role.name = :roleName', {
         roleName: ADMIN_ROLE_NAME,
       })
-      .where('user.businessId = :businessId', { businessId })
-      .andWhere('user.isActive = :isActive', { isActive: true })
+      .where('user.isActive = :isActive', { isActive: true })
       .getCount();
   }
 }

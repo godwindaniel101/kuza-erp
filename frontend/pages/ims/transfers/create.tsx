@@ -59,7 +59,7 @@ export default function CreateTransferPage() {
       .then((res) => {
         if (res.success) setBranches(res.data || []);
       })
-      .catch(() => setToast({ message: 'Failed to load branches', type: 'error' }));
+      .catch(() => setToast({ message: t('transfers.loadBranchesFailed', 'Failed to load branches'), type: 'error' }));
   }, []);
 
   // Items are branch-scoped: only load them once a SOURCE branch is chosen, and
@@ -108,18 +108,18 @@ export default function CreateTransferPage() {
 
   const handleSubmit = async () => {
     if (!fromBranchId || !toBranchId) {
-      setToast({ message: 'Select both source and destination branches', type: 'error' });
+      setToast({ message: t('transfers.selectBothBranches', 'Select both source and destination branches'), type: 'error' });
       return;
     }
     if (fromBranchId === toBranchId) {
-      setToast({ message: 'Source and destination branches must be different', type: 'error' });
+      setToast({ message: t('transfers.branchesMustDiffer', 'Source and destination branches must be different'), type: 'error' });
       return;
     }
     const validLines = lines
       .filter((l) => l.inventoryItemId && Number(l.quantity) > 0 && l.uomId)
       .map((l) => ({ inventoryItemId: l.inventoryItemId, uomId: l.uomId, quantity: Number(l.quantity) }));
     if (validLines.length === 0) {
-      setToast({ message: 'Add at least one item with a quantity', type: 'error' });
+      setToast({ message: t('transfers.addAtLeastOneItem', 'Add at least one item with a quantity'), type: 'error' });
       return;
     }
     setSubmitting(true);
@@ -131,10 +131,10 @@ export default function CreateTransferPage() {
         items: validLines,
         ...(notes ? { notes } : {}),
       });
-      setToast({ message: 'Transfer created', type: 'success' });
+      setToast({ message: t('transfers.created', 'Transfer created'), type: 'success' });
       setTimeout(() => router.push('/ims/transfers'), 600);
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to create transfer', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('transfers.createFailed', 'Failed to create transfer'), type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +148,10 @@ export default function CreateTransferPage() {
     .filter((i) => Number(i.stock || 0) > 0)
     .map((i) => ({
       value: i.id,
-      label: `${i.name} · ${Number(i.stock || 0).toLocaleString()} in stock`,
+      label: t('transfers.inStockOption', '{{name}} · {{qty}} in stock', {
+        name: i.name,
+        qty: Number(i.stock || 0).toLocaleString(),
+      }),
       disabled: chosen.has(i.id),
     }));
 
@@ -157,12 +160,12 @@ export default function CreateTransferPage() {
     <div className="max-w-3xl space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <PageHeader
-        title="New Transfer"
-        subtitle="Move stock from one branch to another"
+        title={t('transfers.newTransfer', 'New Transfer')}
+        subtitle={t('transfers.moveStock', 'Move stock from one branch to another')}
         breadcrumbs={[
-          { label: 'Inventory', href: '/ims' },
-          { label: 'Transfers', href: '/ims/transfers' },
-          { label: 'New' },
+          { label: t('inventory', 'Inventory'), href: '/ims' },
+          { label: t('transfers', 'Transfers'), href: '/ims/transfers' },
+          { label: t('transfers.new', 'New') },
         ]}
       />
 
@@ -170,21 +173,21 @@ export default function CreateTransferPage() {
       <div className="rounded-2xl bg-white p-5 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">From branch</label>
-            <SearchableSelect options={branchOptions} value={fromBranchId} onChange={setFromBranchId} placeholder="Source branch" />
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">{t('transfers.fromBranchLabel', 'From branch')}</label>
+            <SearchableSelect options={branchOptions} value={fromBranchId} onChange={setFromBranchId} placeholder={t('transfers.sourceBranch', 'Source branch')} />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">To branch</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">{t('transfers.toBranchLabel', 'To branch')}</label>
             <SearchableSelect
               options={toBranchOptions}
               value={toBranchId}
               onChange={setToBranchId}
-              placeholder="Destination branch"
+              placeholder={t('transfers.destinationBranch', 'Destination branch')}
               disabled={!fromBranchId}
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">Transfer date</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">{t('transfers.transferDate', 'Transfer date')}</label>
             <input
               type="date"
               value={transferDate}
@@ -196,17 +199,17 @@ export default function CreateTransferPage() {
       </div>
 
       <div className="rounded-2xl bg-white p-5 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">Items</h3>
+        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{t('items', 'Items')}</h3>
 
         {!fromBranchId ? (
           <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
             <i className="bx bx-info-circle text-lg text-gray-400" />
-            Choose a source branch first — then pick items from that branch&apos;s stock.
+            {t('transfers.chooseSourceFirst', "Choose a source branch first — then pick items from that branch's stock.")}
           </div>
         ) : itemsLoading ? (
-          <div className="px-1 py-4 text-sm text-gray-400">Loading items…</div>
+          <div className="px-1 py-4 text-sm text-gray-400">{t('transfers.loadingItems', 'Loading items…')}</div>
         ) : itemOptions.length === 0 && chosen.size === 0 ? (
-          <div className="px-1 py-4 text-sm text-gray-400">No in-stock items at this branch.</div>
+          <div className="px-1 py-4 text-sm text-gray-400">{t('transfers.noInStockItems', 'No in-stock items at this branch.')}</div>
         ) : (
           <div className="space-y-2.5">
             {lines.map((line) => (
@@ -219,11 +222,14 @@ export default function CreateTransferPage() {
                     options={itemOptions}
                     value={line.inventoryItemId}
                     onChange={(v) => onPickItem(line.key, v)}
-                    placeholder="Select item"
+                    placeholder={t('transfers.selectItem', 'Select item')}
                   />
                   {line.inventoryItemId && (
                     <p className="mt-1 pl-0.5 text-xs text-gray-400">
-                      {line.available.toLocaleString()} {line.unit || 'units'} available
+                      {t('transfers.available', '{{qty}} {{unit}} available', {
+                        qty: line.available.toLocaleString(),
+                        unit: line.unit || t('units', 'units'),
+                      })}
                     </p>
                   )}
                 </div>
@@ -234,7 +240,7 @@ export default function CreateTransferPage() {
                       onClick={() => setQty(line, (Number(line.quantity) || 0) - 1)}
                       disabled={!line.inventoryItemId}
                       className="w-9 text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:hover:bg-gray-800"
-                      aria-label="Decrease quantity"
+                      aria-label={t('transfers.decreaseQuantity', 'Decrease quantity')}
                     >
                       <i className="bx bx-minus" />
                     </button>
@@ -253,7 +259,7 @@ export default function CreateTransferPage() {
                       onClick={() => setQty(line, (Number(line.quantity) || 0) + 1)}
                       disabled={!line.inventoryItemId}
                       className="w-9 text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:hover:bg-gray-800"
-                      aria-label="Increase quantity"
+                      aria-label={t('transfers.increaseQuantity', 'Increase quantity')}
                     >
                       <i className="bx bx-plus" />
                     </button>
@@ -262,7 +268,7 @@ export default function CreateTransferPage() {
                   <button
                     type="button"
                     onClick={() => removeLine(line.key)}
-                    aria-label="Remove line"
+                    aria-label={t('transfers.removeLine', 'Remove line')}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800"
                   >
                     <i className="bx bx-trash" />
@@ -271,7 +277,7 @@ export default function CreateTransferPage() {
               </div>
             ))}
             <Button variant="ghost" size="sm" onClick={addLine} disabled={itemOptions.length === 0}>
-              <i className="bx bx-plus" /> Add item
+              <i className="bx bx-plus" /> {t('transfers.addItem', 'Add item')}
             </Button>
           </div>
         )}
@@ -279,10 +285,10 @@ export default function CreateTransferPage() {
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="secondary" href="/ims/transfers">
-          Cancel
+          {t('cancel', 'Cancel')}
         </Button>
         <Button onClick={handleSubmit} loading={submitting} disabled={!fromBranchId}>
-          Create Transfer
+          {t('createTransfer', 'Create Transfer')}
         </Button>
       </div>
     </div>

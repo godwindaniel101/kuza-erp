@@ -7,6 +7,7 @@ import {
   deleteDataSourceByName,
 } from 'typeorm-transactional';
 import { I18nModule } from 'nestjs-i18n';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -28,12 +29,14 @@ import { BillingModule } from './modules/billing/billing.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { MenuSitesModule } from './modules/menu-sites/menu-sites.module';
+import { NetworkModule } from './modules/network/network.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReservationsModule } from './modules/rms/reservations/reservations.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CommonModule } from './common/common.module';
 import { LandlordModule } from './common/landlord/landlord.module';
 import { TenantModule } from './common/tenant/tenant.module';
+import { BranchScopeModule } from './common/branch-scope/branch-scope.module';
 import { TenantGuard } from './common/tenant/tenant.guard';
 import { TenantTransactionInterceptor } from './common/tenant/tenant-transaction.interceptor';
 import { AppController } from './app.controller';
@@ -65,8 +68,18 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       },
     }),
     I18nModule.forRoot(i18nConfig()),
+    // Global rate limit: 120 requests per 60s per IP. Generous enough that the
+    // public /health check and normal app traffic are never throttled, while
+    // still blunting brute-force / scraping bursts.
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
     LandlordModule,
     TenantModule,
+    BranchScopeModule,
     CommonModule,
     AuthModule,
     UsersModule,
@@ -84,13 +97,21 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     InsightsModule,
     IntegrationsModule,
     MenuSitesModule,
+    NetworkModule,
     PaymentsModule,
     ReservationsModule,
     AdminModule,
   ],
   controllers: [AppController],
   providers: [
-    // JWT Auth Guard runs first to authenticate users
+    // Rate limiter runs first — cheap IP-based check before any auth/DB work,
+    // and it short-circuits abusive bursts. It sits ahead of the JWT → Tenant →
+    // Permissions guard chain without altering it.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // JWT Auth Guard authenticates users
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
+import { BrevoEmailProvider } from './adapters/brevo.adapter';
+import { EMAIL_PROVIDER } from './email-provider.port';
+import { AppNotification } from './entities/app-notification.entity';
+import { AppNotificationsService } from './app-notifications.service';
+import { AppNotificationsController } from './app-notifications.controller';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -84,10 +90,16 @@ import { existsSync } from 'fs';
       },
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([AppNotification]),
   ],
-  controllers: [NotificationsController],
-  providers: [NotificationsService],
-  exports: [NotificationsService],
+  controllers: [NotificationsController, AppNotificationsController],
+  providers: [
+    NotificationsService,
+    AppNotificationsService,
+    BrevoEmailProvider,
+    { provide: EMAIL_PROVIDER, useExisting: BrevoEmailProvider },
+  ],
+  exports: [NotificationsService, AppNotificationsService],
 })
 export class NotificationsModule {}
 

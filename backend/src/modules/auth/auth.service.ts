@@ -65,9 +65,6 @@ export class AuthService {
         businessName,
         slug,
       );
-      console.log(
-        `✅ Created tenant: ${tenant.name} with schema: ${tenant.schemaName}`,
-      );
 
       // Step 2: Create landlord user for authentication
       const landlordUser = await this.landlordService.createLandlordUser(
@@ -76,19 +73,16 @@ export class AuthService {
         password,
         tenant.id,
       );
-      console.log(`✅ Created landlord user: ${landlordUser.email}`);
 
       // Step 3: Initialize tenant schema with tables
       await this.tenantMigrationService.initializeTenantSchema(
         tenant.schemaName,
       );
-      console.log(`✅ Initialized tenant schema: ${tenant.schemaName}`);
 
       // Step 4: Switch to tenant schema and create tenant-specific data
       await this.tenantConnectionService.switchToTenantSchema(
         tenant.schemaName,
       );
-      console.log(`✅ Switched to tenant schema: ${tenant.schemaName}`);
 
       // Normalize legacy businessType values ('restaurant', 'services',
       // 'general') to their canonical edition at write time — only the
@@ -115,9 +109,6 @@ export class AuthService {
         enabledApps,
       });
       const savedBusiness = await this.businessRepository.save(business);
-      console.log(
-        `✅ Created business in tenant schema: ${savedBusiness.name}`,
-      );
 
       // Create admin user in tenant database
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -128,7 +119,6 @@ export class AuthService {
         landlordUserId: landlordUser.id, // Link to landlord user
       });
       const savedUser = await this.userRepository.save(user);
-      console.log(`✅ Created tenant user: ${savedUser.email}`);
 
       // Create admin role with all permissions in tenant database
       let adminRole = await this.roleRepository.findOne({
@@ -143,7 +133,6 @@ export class AuthService {
           description: "Full system access",
         });
         adminRole = await this.roleRepository.save(adminRole);
-        console.log(`✅ Created admin role in tenant schema`);
       }
 
       // Assign admin role to user
@@ -154,11 +143,9 @@ export class AuthService {
       try {
         // Create default branch
         await this.createDefaultBranch(savedBusiness.id);
-        console.log(`✅ Created default branch for tenant`);
 
         // Initialize default UOMs and conversions
         await this.createDefaultUoms(savedBusiness.id);
-        console.log(`✅ Initialized default UOMs and conversions for tenant`);
       } catch (error) {
         console.warn(
           `⚠️  Warning: Failed to initialize some default data:`,
@@ -189,9 +176,6 @@ export class AuthService {
 
       // Step 9: Reset schema to default for future requests
       await this.tenantConnectionService.resetSchema();
-      console.log(
-        `✅ Registration completed successfully for tenant: ${tenant.name}`,
-      );
 
       return {
         user: {

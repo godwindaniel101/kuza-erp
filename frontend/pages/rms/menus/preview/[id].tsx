@@ -50,7 +50,7 @@ export default function MenuPreviewPage() {
         setCurrency(settingsRes.data.currency_code || settingsRes.data.currency || 'NGN');
       }
     } catch (err: any) {
-      setToast({ message: err?.response?.data?.message || 'Failed to load menu', type: 'error' });
+      setToast({ message: err?.response?.data?.message || t('menu.failedToLoadMenu', 'Failed to load menu'), type: 'error' });
       setTimeout(() => router.push('/rms/menus'), 1800);
     } finally {
       setLoading(false);
@@ -147,7 +147,7 @@ export default function MenuPreviewPage() {
 
         <PageHeader
           title={t('menuPreview') || 'Menu Preview'}
-          subtitle="How guests see this menu — switch template, theme and screen size"
+          subtitle={t('menu.previewSubtitle', 'How guests see this menu — switch template, theme and screen size')}
           breadcrumbs={[{ label: t('menus') || 'Menus', href: '/rms/menus' }, { label: t('menuPreview') || 'Preview' }]}
           actions={
             <Button href={`/rms/menus/edit/${id}`} variant="secondary">

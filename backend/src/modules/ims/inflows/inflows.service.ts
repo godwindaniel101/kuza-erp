@@ -210,10 +210,6 @@ export class InflowsService {
             }
 
             // Calculate base quantity: convert input quantity to base UOM
-            console.log(
-              `[InflowCreate] Item ${inventoryItem.name}: inputQuantity=${quantity}, inputUomId=${item.uomId}, baseUomId=${inventoryItem.baseUomId}`,
-            );
-
             if (item.uomId && item.uomId !== inventoryItem.baseUomId) {
               try {
                 const converted = await this.uomConversionsService.convert(
@@ -222,29 +218,17 @@ export class InflowsService {
                   quantity,
                 );
                 baseQuantity = Number(converted) || Number(quantity) || 0;
-                console.log(
-                  `[InflowCreate] UOM conversion: ${quantity} (${item.uomId}) -> ${baseQuantity} (${inventoryItem.baseUomId})`,
-                );
               } catch (error) {
-                console.error(`[InflowCreate] UOM conversion error:`, error);
                 throw new Error(
                   `Cannot convert ${quantity} from UOM ${item.uomId} to base UOM ${inventoryItem.baseUomId} for item ${inventoryItem.name}. Please ensure UOM conversion exists.`,
                 );
               }
-            } else {
-              console.log(
-                `[InflowCreate] Same UOM or no input UOM, baseQuantity = ${baseQuantity}`,
-              );
             }
 
             // Update stock using base quantity
             inventoryItem.currentStock =
               Number(inventoryItem.currentStock) + Number(baseQuantity);
             await this.inventoryItemRepository.save(inventoryItem);
-          } else {
-            console.log(
-              `[InflowCreate] No inventory item reference, baseQuantity = ${baseQuantity} (original quantity)`,
-            );
           }
 
           // Ensure baseQuantity is a valid number
@@ -253,15 +237,8 @@ export class InflowsService {
             baseQuantity == null ||
             baseQuantity === undefined
           ) {
-            console.log(
-              `[InflowCreate] WARNING: Invalid baseQuantity, falling back to input quantity`,
-            );
             baseQuantity = Number(quantity) || 0;
           }
-
-          console.log(
-            `[InflowCreate] Final baseQuantity for ${inventoryItem?.name || "unknown item"}: ${baseQuantity}`,
-          );
 
           // NOTE: item-level stock was already incremented once above (inside the
           // `if (item.inventoryItemId)` block). Do NOT increment again here — doing
@@ -414,10 +391,13 @@ export class InflowsService {
     return this.findOne(finalInflow.id);
   }
 
-  async findAll(branchId?: string, batchId?: string) {
+  async findAll(branchIds?: string[] | null, batchId?: string) {
     const where: any = {};
-    if (branchId) {
-      where.branchId = branchId;
+    if (Array.isArray(branchIds) && branchIds.length === 0) {
+      // Scoped to no branch (assigned to none) → match nothing.
+      where.branchId = "00000000-0000-0000-0000-000000000000";
+    } else if (branchIds && branchIds.length) {
+      where.branchId = branchIds.length === 1 ? branchIds[0] : In(branchIds);
     }
     if (batchId) {
       where.batchId = batchId;
@@ -428,8 +408,6 @@ export class InflowsService {
       relations: ["branch", "supplier"],
       order: { createdAt: "DESC" },
     });
-
-    console.log(`[Inflows] Found ${inflows.length} inflows`);
 
     // Load line items via a direct query and group them by inflow. The
     // inflow.items OneToMany relation does not hydrate here (the joined table
@@ -866,18 +844,9 @@ export class InflowsService {
               AND o.status != 'cancelled'
           `;
 
-          console.log(
-            `[InflowSalesData] Querying sales for inflow item: ${item.id}`,
-          );
-
           const salesData = await this.orderItemInflowItemRepository.query(
             salesQuery,
             [item.id],
-          );
-
-          console.log(
-            `[InflowSalesData] Raw query result for item ${item.id}:`,
-            JSON.stringify(salesData),
           );
 
           const sales =
@@ -890,20 +859,11 @@ export class InflowsService {
                   ordercount: "0",
                 };
 
-          console.log(
-            `[InflowSalesData] Sales data for item ${item.id}:`,
-            sales,
-          );
-
           const totalSold = Number(sales.totalsold || 0);
           // Use baseQuantity, but fall back to quantity if baseQuantity is 0 (data integrity issue)
           const baseQuantity =
             Number(item.baseQuantity || 0) || Number(item.quantity || 0);
           const remainingQuantity = Math.max(0, baseQuantity - totalSold);
-
-          console.log(
-            `[InflowSalesData] Final values for item ${item.id}: baseQuantity=${baseQuantity}, quantity=${item.quantity}, totalSold=${totalSold}, remainingQuantity=${remainingQuantity}`,
-          );
 
           return {
             ...item,
@@ -922,12 +882,7 @@ export class InflowsService {
               remainingQuantity: remainingQuantity,
             },
           };
-        } catch (error) {
-          console.error(
-            "Error getting sales data for inflow item:",
-            item.id,
-            error,
-          );
+        } catch {
           return {
             ...item,
             supplierId: item.supplierId || item.supplier?.id || null, // Preserve supplierId
@@ -1004,11 +959,26 @@ export class InflowsService {
     const batchId = uuidv4();
     const uploadSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    console.log(
-      `[BulkUpload] Starting inflow bulk upload with batch ID: ${batchId.substring(0, 8)}...`,
-    );
-
     const lines = csv.trim().split(/\r?\n/);
+
+    // Spreadsheet tools (notably Excel) can prepend a delimiter-hint line
+    // ("sep=,") and/or blank/title lines before the real header. Skip that
+    // noise so the header row is detected correctly — otherwise "sep=," is read
+    // as the header and every required column reads as missing. When the hint
+    // declares a delimiter, honour it (covers comma AND semicolon exports).
+    let sepHint = "";
+    const isPreHeaderNoise = (line: string): boolean => {
+      const t = line.trim().replace(/^"|"$/g, "").trim();
+      const m = t.match(/^sep=(.?)$/i);
+      if (m) {
+        sepHint = m[1];
+        return true;
+      }
+      return t === "";
+    };
+    while (lines.length > 0 && isPreHeaderNoise(lines[0])) {
+      lines.shift();
+    }
 
     if (lines.length < 2) {
       return {
@@ -1025,13 +995,14 @@ export class InflowsService {
         },
       };
     }
-    console.log(`[BulkUpload] Processing ${lines.length - 1} data rows`);
 
     // Parse header
     const header = lines[0];
-    // Detect the delimiter from the header. The template is TAB-delimited, but
-    // exports/edits commonly produce a comma-delimited CSV; support both (plus pipe).
-    const delimiter = header.includes("\t") ? "\t" : header.includes("|") ? "|" : ",";
+    // Detect the delimiter. Prefer an explicit "sep=" hint from the export; the
+    // template is TAB-delimited, but exports/edits commonly produce comma (or
+    // semicolon in some locales) — support tab/pipe/comma otherwise.
+    const delimiter =
+      sepHint || (header.includes("\t") ? "\t" : header.includes("|") ? "|" : ",");
 
     // Quote-aware line splitter: a field wrapped in double quotes may itself
     // contain the delimiter (e.g. the header hint "Received At (optional,
@@ -1269,40 +1240,12 @@ export class InflowsService {
       (f) => f.status === "skipped",
     ).length;
 
-    // Debug: Check the status of processed rows before filtering
-    console.log(
-      `[BulkUpload] Before final filtering: ${processedRows.length} processed rows`,
-    );
-    processedRows.forEach((row, index) => {
-      console.log(
-        `[BulkUpload] Row ${index + 1}: ${row.inventoryItemName} - baseQuantity: ${row.baseQuantity} (type: ${typeof row.baseQuantity})`,
-      );
-    });
-
     // Filter final valid rows
     const finalValidRows = processedRows.filter(
       (row) => row.baseQuantity !== undefined && row.baseQuantity !== null,
     );
 
-    console.log(
-      `[BulkUpload] After final filtering: ${finalValidRows.length} valid rows`,
-    );
-
     if (finalValidRows.length === 0) {
-      console.error(
-        `[BulkUpload] ERROR: No valid rows after filtering! Original processed rows: ${processedRows.length}`,
-      );
-      console.error(
-        `[BulkUpload] Failed uploads count: ${failedUploads.length}`,
-      );
-      console.error(
-        `[BulkUpload] Failed uploads details:`,
-        failedUploads.map((f) => ({
-          line: f.lineNumber,
-          errors: f.errors,
-          status: f.status,
-        })),
-      );
       return {
         success: 0,
         errors: ["No valid rows after UOM conversion and duplicate detection"],
@@ -1421,39 +1364,6 @@ export class InflowsService {
           : Promise.resolve([]),
       ]);
 
-    // Debug: Check for any missing entities with normalized names
-    const missingBranches = uniqueBranchNames.filter(
-      (name) =>
-        !allBranches.find(
-          (b) => normalizeString(b.name) === normalizeString(name),
-        ),
-    );
-    const missingItems = uniqueItemNames.filter(
-      (name) =>
-        !allInventoryItems.find(
-          (i) => normalizeString(i.name) === normalizeString(name),
-        ),
-    );
-    const missingUoms = uniqueUomNames.filter(
-      (name) =>
-        !allUoms.find((u) => normalizeString(u.name) === normalizeString(name)),
-    );
-
-    if (
-      missingBranches.length > 0 ||
-      missingItems.length > 0 ||
-      missingUoms.length > 0
-    ) {
-      console.log(`[BulkUpload] Entity validation summary:`, {
-        missingBranches: missingBranches.length,
-        missingItems: missingItems.length,
-        missingUoms: missingUoms.length,
-        foundBranches: allBranches.length,
-        foundItems: allInventoryItems.length,
-        foundUoms: allUoms.length,
-      });
-    }
-
     // Create lookup maps with proper typing - normalize names for better matching
     const branchMap = new Map<string, Branch>();
     allBranches.forEach((b) => branchMap.set(normalizeString(b.name), b));
@@ -1490,9 +1400,6 @@ export class InflowsService {
         // Store the item name for manual correction later, don't treat as hard error
         row.inventoryItemId = null;
         row.inventoryItem = null;
-        console.warn(
-          `[BulkUpload] Inventory item '${row.inventoryItemName}' not found, will be created with null reference`,
-        );
       }
 
       // Handle UOM - allow creation with null if not found (soft validation)
@@ -1504,9 +1411,6 @@ export class InflowsService {
         // Store the UOM name for manual correction later, don't treat as hard error
         row.uomId = null;
         row.uom = null;
-        console.warn(
-          `[BulkUpload] UOM '${row.uomName}' not found, will be created with null reference`,
-        );
       }
 
       if (row.supplierName) {
@@ -1621,14 +1525,8 @@ export class InflowsService {
                 row.quantity,
               );
               row.baseQuantity = baseQuantity;
-              console.log(
-                `[BulkUpload] UOM conversion: ${row.quantity} ${row.uomName} → ${baseQuantity} (base) for '${row.inventoryItemName}'`,
-              );
-            } catch (conversionError: any) {
+            } catch {
               // If UOM conversion fails, fall back to using original quantity as base quantity
-              console.warn(
-                `[BulkUpload] UOM conversion failed for '${row.inventoryItemName}', using original quantity: ${conversionError.message}`,
-              );
               row.baseQuantity = row.quantity;
             }
           }
@@ -1667,10 +1565,6 @@ export class InflowsService {
         });
       }
     }
-
-    console.log(
-      `[BulkUpload] Processing complete: ${processedRows.length} valid rows, ${failedUploads.length} failed/skipped`,
-    );
 
     return processedRows;
   }
@@ -1743,10 +1637,6 @@ export class InflowsService {
           };
         });
 
-        console.log(
-          `[BulkUpload] Creating inflow for branch '${branchName}' with ${items.length} items`,
-        );
-
         // Create inflow for this branch with ALL items
         const createDto: CreateInventoryInflowDto = {
           branchId: branchId,
@@ -1765,19 +1655,11 @@ export class InflowsService {
         savedInflow.type = "bulk";
         await this.inflowRepository.save(savedInflow);
 
-        console.log(
-          `[BulkUpload] Inflow created successfully for branch '${branchName}' with ${savedInflow.items?.length || 0} items`,
-        );
-
         // Count the line items imported, not the number of branch inflows, so the
         // "Imported" total reflects the rows the user actually uploaded.
         successCount += savedInflow.items?.length || branchRows.length;
       } catch (error: any) {
         const errorBranchName = branchRows[0].branchName;
-        console.error(
-          `[BulkUpload] Failed to create inflow for branch '${errorBranchName}':`,
-          error.message || "Unknown error",
-        );
 
         // Log the error for this branch
         const errorLogEntry = this.bulkUploadLogRepository.create({

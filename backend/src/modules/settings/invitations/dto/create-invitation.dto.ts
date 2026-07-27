@@ -9,6 +9,11 @@ export class CreateInvitationDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
+  name?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
   roleId?: string;
 
   @ApiProperty({ required: false, enum: ['user', 'employee'], default: 'user' })

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'next-i18next';
 import { SearchIcon, InventoryIcon } from '@/components/icons';
 import EmptyState from '@/components/ui/EmptyState';
 import ProductCard from './ProductCard';
@@ -38,6 +39,7 @@ export default function ProductGrid({
   onRetry,
   disabled = false,
 }: ProductGridProps) {
+  const { t } = useTranslation('common');
   const categories = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => {
@@ -69,7 +71,7 @@ export default function ProductGrid({
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           disabled={disabled}
-          placeholder="Search products…"
+          placeholder={t('pos.searchProducts', 'Search products…')}
           className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900 shadow-sm
             placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
             focus-visible:border-transparent disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
@@ -79,7 +81,7 @@ export default function ProductGrid({
       {/* Category chips */}
       {categories.length > 0 && (
         <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {[{ key: ALL, label: 'All' }, ...categories.map((c) => ({ key: c, label: c }))].map(
+          {[{ key: ALL, label: t('pos.all', 'All') }, ...categories.map((c) => ({ key: c, label: c }))].map(
             (chip) => {
               const active = activeCategory === chip.key;
               return (
@@ -117,7 +119,7 @@ export default function ProductGrid({
         ) : error ? (
           <EmptyState
             icon="bx-error-circle"
-            title="Couldn't load products"
+            title={t('pos.couldntLoadProducts', "Couldn't load products")}
             description={error}
             actions={
               <button
@@ -125,24 +127,24 @@ export default function ProductGrid({
                 onClick={onRetry}
                 className="h-9 rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-white hover:bg-brand-700"
               >
-                Try again
+                {t('pos.tryAgain', 'Try again')}
               </button>
             }
           />
         ) : disabled ? (
           <EmptyState
             icon="bx-store"
-            title="Select a branch"
-            description="Choose a branch to load its products and start selling."
+            title={t('pos.selectABranch', 'Select a branch')}
+            description={t('pos.selectBranchDescription', 'Choose a branch to load its products and start selling.')}
           />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={search ? 'bx-search' : 'bx-box'}
-            title={search ? 'No matches' : 'No products in stock'}
+            title={search ? t('pos.noMatches', 'No matches') : t('pos.noProductsInStock', 'No products in stock')}
             description={
               search
-                ? `Nothing matches “${search}”. Try a different term.`
-                : 'This branch has no items with available stock yet.'
+                ? t('pos.noMatchesDescription', 'Nothing matches “{{query}}”. Try a different term.', { query: search })
+                : t('pos.noStockDescription', 'This branch has no items with available stock yet.')
             }
           />
         ) : (
@@ -163,7 +165,7 @@ export default function ProductGrid({
       {!loading && !error && !disabled && filtered.length > 0 && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
           <InventoryIcon size={14} />
-          {filtered.length} {filtered.length === 1 ? 'product' : 'products'}
+          {filtered.length} {filtered.length === 1 ? t('pos.product', 'product') : t('pos.products', 'products')}
         </p>
       )}
     </div>

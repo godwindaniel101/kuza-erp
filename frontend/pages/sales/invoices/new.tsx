@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
+import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
@@ -45,6 +46,7 @@ const newLine = (): LineDraft => ({
 const CURRENCIES = ['NGN', 'USD', 'EUR', 'GBP', 'KES'];
 
 export default function NewInvoicePage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const defaultCurrency = useCurrency();
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -71,7 +73,7 @@ export default function NewInvoicePage() {
         if (itemsRes.success) setItems(itemsRes.data || []);
       } catch (err: any) {
         console.error('Failed to load form data:', err);
-        setToast({ message: err.response?.data?.message || 'Failed to load customers or items', type: 'error' });
+        setToast({ message: err.response?.data?.message || t('invoices.failedToLoadCustomersOrItems', 'Failed to load customers or items'), type: 'error' });
       }
     };
     load();
@@ -141,7 +143,7 @@ export default function NewInvoicePage() {
         router.push('/sales/invoices');
       }
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || 'Failed to create invoice', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('invoices.failedToCreateInvoice', 'Failed to create invoice'), type: 'error' });
       setSaving(false);
     }
   };
@@ -149,41 +151,41 @@ export default function NewInvoicePage() {
   return (
     <div className="w-full max-w-3xl space-y-5">
       <PageHeader
-        title="New Invoice"
-        subtitle="Pick items from inventory or add free-text lines"
-        breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices', href: '/sales/invoices' }, { label: 'New' }]}
+        title={t('invoices.newInvoice', 'New Invoice')}
+        subtitle={t('invoices.newSubtitle', 'Pick items from inventory or add free-text lines')}
+        breadcrumbs={[{ label: t('sales.sales', 'Sales') }, { label: t('invoices.invoices', 'Invoices'), href: '/sales/invoices' }, { label: t('invoices.new', 'New') }]}
       />
 
       {/* Header fields */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-1.5">
           <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300">
-            Customer<span className="text-red-500 ml-0.5">*</span>
+            {t('sales.customer', 'Customer')}<span className="text-red-500 ml-0.5">*</span>
           </label>
           <SearchableSelect
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
             value={customerId}
             onChange={setCustomerId}
-            placeholder="Select customer..."
+            placeholder={t('invoices.selectCustomer', 'Select customer...')}
             focusColor="red"
             size="sm"
           />
         </div>
-        <FormField label="Issue Date" name="invoice-issue" type="date" required value={issueDate} onChange={setIssueDate} />
-        <FormField label="Due Date" name="invoice-due" type="date" required value={dueDate} onChange={setDueDate} />
+        <FormField label={t('invoices.issueDate', 'Issue Date')} name="invoice-issue" type="date" required value={issueDate} onChange={setIssueDate} />
+        <FormField label={t('invoices.dueDate', 'Due Date')} name="invoice-due" type="date" required value={dueDate} onChange={setDueDate} />
         {/* Single-currency: invoices use the business currency (Settings > General). */}
       </div>
 
       {/* Line editor */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 overflow-visible mb-6">
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid grid-cols-12 gap-3 text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase">
-          <div className="col-span-2">Item</div>
-          <div className="col-span-3">Description</div>
-          <div className="col-span-1 text-right">Qty</div>
-          <div className="col-span-2 text-right">Unit Price</div>
-          <div className="col-span-1 text-right">Tax %</div>
-          <div className="col-span-1 text-right">Discount</div>
-          <div className="col-span-1 text-right">Total</div>
+          <div className="col-span-2">{t('invoices.item', 'Item')}</div>
+          <div className="col-span-3">{t('description', 'Description')}</div>
+          <div className="col-span-1 text-right">{t('invoices.qty', 'Qty')}</div>
+          <div className="col-span-2 text-right">{t('invoices.unitPrice', 'Unit Price')}</div>
+          <div className="col-span-1 text-right">{t('invoices.taxPercent', 'Tax %')}</div>
+          <div className="col-span-1 text-right">{t('invoices.discount', 'Discount')}</div>
+          <div className="col-span-1 text-right">{t('invoices.total', 'Total')}</div>
           <div className="col-span-1"></div>
         </div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -193,10 +195,10 @@ export default function NewInvoicePage() {
               <div key={line.key} className="px-6 py-3 grid grid-cols-12 gap-3 items-center">
                 <div className="col-span-2">
                   <SearchableSelect
-                    options={[{ value: '', label: 'Free text' }, ...items.map((i) => ({ value: i.id, label: i.name || i.id }))]}
+                    options={[{ value: '', label: t('invoices.freeText', 'Free text') }, ...items.map((i) => ({ value: i.id, label: i.name || i.id }))]}
                     value={line.itemId}
                     onChange={(v) => pickItem(line.key, v)}
-                    placeholder="Item..."
+                    placeholder={t('invoices.itemPlaceholder', 'Item...')}
                     focusColor="red"
                     size="sm"
                   />
@@ -206,7 +208,7 @@ export default function NewInvoicePage() {
                     type="text"
                     value={line.description}
                     onChange={(e) => updateLine(line.key, { description: e.target.value })}
-                    placeholder="Line description"
+                    placeholder={t('invoices.lineDescription', 'Line description')}
                     className="h-9 w-full px-3 text-[13px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -217,7 +219,7 @@ export default function NewInvoicePage() {
                     step={1}
                     value={line.quantity}
                     onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
-                    aria-label="Quantity"
+                    aria-label={t('invoices.quantity', 'Quantity')}
                     className="h-9 w-full px-2 text-[13px] text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -229,7 +231,7 @@ export default function NewInvoicePage() {
                     value={line.unitPrice}
                     onChange={(e) => updateLine(line.key, { unitPrice: e.target.value })}
                     placeholder="0.00"
-                    aria-label="Unit price"
+                    aria-label={t('invoices.unitPrice', 'Unit Price')}
                     className="h-9 w-full px-3 text-[13px] text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -241,7 +243,7 @@ export default function NewInvoicePage() {
                     value={line.taxRate}
                     onChange={(e) => updateLine(line.key, { taxRate: e.target.value })}
                     placeholder="0"
-                    aria-label="Tax rate"
+                    aria-label={t('invoices.taxRate', 'Tax rate')}
                     className="h-9 w-full px-2 text-[13px] text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -253,7 +255,7 @@ export default function NewInvoicePage() {
                     value={line.discount}
                     onChange={(e) => updateLine(line.key, { discount: e.target.value })}
                     placeholder="0.00"
-                    aria-label="Discount"
+                    aria-label={t('invoices.discount', 'Discount')}
                     className="h-9 w-full px-2 text-[13px] text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                   />
                 </div>
@@ -265,7 +267,7 @@ export default function NewInvoicePage() {
                     type="button"
                     onClick={() => removeLine(line.key)}
                     disabled={lines.length <= 1}
-                    title="Remove line"
+                    title={t('invoices.removeLine', 'Remove line')}
                     className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <i className="bx bx-trash" aria-hidden="true"></i>
@@ -278,24 +280,24 @@ export default function NewInvoicePage() {
         <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-start justify-between flex-wrap gap-4">
           <Button variant="ghost" size="sm" type="button" onClick={() => setLines((prev) => [...prev, newLine()])}>
             <i className="bx bx-plus"></i>
-            Add line
+            {t('invoices.addLine', 'Add line')}
           </Button>
           {/* Totals footer */}
           <div className="text-sm space-y-1 min-w-[240px]">
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Subtotal</span>
+              <span>{t('invoices.subtotal', 'Subtotal')}</span>
               <span>{formatMoney(subtotal, effectiveCurrency)}</span>
             </div>
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Tax</span>
+              <span>{t('invoices.tax', 'Tax')}</span>
               <span>{formatMoney(taxTotal, effectiveCurrency)}</span>
             </div>
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Discount</span>
+              <span>{t('invoices.discount', 'Discount')}</span>
               <span>-{formatMoney(discountTotal, effectiveCurrency)}</span>
             </div>
             <div className="flex justify-between font-semibold text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700 pt-1">
-              <span>Total</span>
+              <span>{t('invoices.total', 'Total')}</span>
               <span>{formatMoney(grandTotal, effectiveCurrency)}</span>
             </div>
           </div>
@@ -304,21 +306,21 @@ export default function NewInvoicePage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6">
         <FormField
-          label="Notes"
+          label={t('invoices.notes', 'Notes')}
           name="invoice-notes"
           type="textarea"
           value={notes}
           onChange={setNotes}
-          placeholder="Payment terms, thank-you note, etc."
+          placeholder={t('invoices.notesPlaceholder', 'Payment terms, thank-you note, etc.')}
         />
       </div>
 
       <div className="flex justify-end gap-3">
         <Button variant="secondary" type="button" onClick={() => router.push('/sales/invoices')}>
-          Cancel
+          {t('cancel', 'Cancel')}
         </Button>
         <Button type="button" onClick={handleSave} disabled={!canSave}>
-          {saving ? 'Creating...' : 'Create Invoice'}
+          {saving ? t('invoices.creating', 'Creating...') : t('invoices.createInvoice', 'Create Invoice')}
         </Button>
       </div>
 

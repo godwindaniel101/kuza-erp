@@ -100,7 +100,7 @@ export default function BatchSummaryPage() {
         title={t('purchaseBatch') || 'Purchase Batch'}
         subtitle={typeof batchId === 'string' ? batchId : undefined}
         breadcrumbs={[
-          { label: 'IMS', href: '/ims' },
+          { label: t('ims', 'IMS'), href: '/ims' },
           { label: t('inventoryInflow') || 'Inflows', href: '/ims/inflows' },
           { label: t('batch') || 'Batch' },
         ]}
@@ -154,7 +154,7 @@ export default function BatchSummaryPage() {
 
           {/* Tabs: By branch · Items · Inflows */}
           <div className="border-b border-gray-200 dark:border-gray-800">
-            <nav className="-mb-px flex gap-6" aria-label="Batch sections">
+            <nav className="-mb-px flex gap-6" aria-label={t('inflows.batchSections', 'Batch sections')}>
               {([
                 { k: 'branch', label: t('byBranch') || 'By branch' },
                 { k: 'items', label: `${t('items') || 'Items'} (${summary.items.length})` },

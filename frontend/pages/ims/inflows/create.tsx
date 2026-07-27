@@ -23,6 +23,9 @@ interface InflowItem {
   uomId?: string;
   name?: string;
   expiryDate?: string;
+  // Supplier's free-text line from a marketplace PO, kept as a mapping hint
+  // until the user maps this row to one of their inventory items.
+  description?: string;
 }
 
 export default function CreateInflowPage() {
@@ -78,10 +81,86 @@ export default function CreateInflowPage() {
     contactPerson: "",
     address: "",
   });
+  // Set when receiving a marketplace purchase order (?orderId=…).
+  const [receivingOrder, setReceivingOrder] = useState<any>(null);
+  const [prefilling, setPrefilling] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Once the base lists are loaded and the router is ready, prefill from a PO.
+  useEffect(() => {
+    if (!router.isReady || loading) return;
+    const orderId = router.query.orderId;
+    if (!orderId || typeof orderId !== "string") return;
+    if (receivingOrder || prefilling) return;
+    prefillFromOrder(orderId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.orderId, loading]);
+
+  const prefillFromOrder = async (orderId: string) => {
+    setPrefilling(true);
+    try {
+      const res = await api.get<{ success: boolean; data: any }>(
+        `/network/orders/${orderId}`
+      );
+      if (res.success && res.data) {
+        const order = res.data;
+        setReceivingOrder(order);
+
+        // Map the PO supplier to a loaded supplier by name (best-effort).
+        const match = suppliers.find(
+          (s) =>
+            (s.name || "").trim().toLowerCase() ===
+            (order.supplierName || "").trim().toLowerCase()
+        );
+        setFormData((prev) => ({
+          ...prev,
+          supplierId: match ? match.id : prev.supplierId,
+          invoiceNumber: prev.invoiceNumber || order.orderNumber || "",
+        }));
+
+        // Pre-add every PO line as a receive row with qty + unit cost prefilled.
+        // The inventory item + uom stay unmapped for the user to fill in.
+        const lines: InflowItem[] = (order.items || []).map((it: any) => ({
+          inventoryItemId: "",
+          quantity: Number(it.quantity) || 1,
+          unitCost: Number(it.unitPrice) || 0,
+          uomId: "",
+          name: "",
+          description: it.description || "",
+        }));
+        setInflowItems(lines);
+      }
+    } catch (err) {
+      console.error("Failed to load purchase order:", err);
+      setToast({
+        message: t("purchases.orderLoadFailed", "Failed to load purchase order"),
+        type: "error",
+      });
+    } finally {
+      setPrefilling(false);
+    }
+  };
+
+  // Map a pre-added (PO) row to one of the buyer's inventory items.
+  const assignRowItem = (index: number, itemId: string) => {
+    const item = inventoryItems.find((i) => i.id === itemId);
+    const updated = [...inflowItems];
+    if (item) {
+      const uoms = (item as any).uoms || [];
+      updated[index] = {
+        ...updated[index],
+        inventoryItemId: item.id,
+        name: item.name,
+        uomId: item.baseUomId || uoms[0]?.id || "",
+      };
+    } else {
+      updated[index] = { ...updated[index], inventoryItemId: "", name: "" };
+    }
+    setInflowItems(updated);
+  };
 
   const formatCurrency = (amount: number): string => formatMoney(amount, currency);
 
@@ -352,13 +431,28 @@ export default function CreateInflowPage() {
       return;
     }
 
+    // PO-prefilled rows start unmapped — every row must be mapped to an item.
+    if (itemsToSubmit.some((item) => !item.inventoryItemId)) {
+      setToast({
+        message: t(
+          "purchases.mapAllItems",
+          "Map every line to an inventory item before saving"
+        ),
+        type: "error",
+      });
+      return;
+    }
+
+    const orderId =
+      typeof router.query.orderId === "string" ? router.query.orderId : undefined;
+
     setSaving(true);
     try {
       // Ensure date is in ISO format (YYYY-MM-DD)
       const receivedDate =
         formData.receivedDate || new Date().toISOString().split("T")[0];
 
-      const response = await api.post("/ims/inflows", {
+      const response = await api.post<{ success: boolean; data: { id: string } }>("/ims/inflows", {
         branchId: formData.branchId,
         supplierId: formData.supplierId || undefined,
         invoiceNumber: formData.invoiceNumber || undefined,
@@ -374,6 +468,21 @@ export default function CreateInflowPage() {
       });
 
       if (response.success) {
+        // Receiving a marketplace PO: link the receipt to the order (best-effort)
+        // and return to the unified Purchases list.
+        if (orderId) {
+          const inflowId = response.data?.id;
+          if (inflowId) {
+            try {
+              await api.post(`/network/orders/${orderId}/receive`, { inflowId });
+            } catch (linkErr) {
+              console.error("Failed to link receipt to purchase order:", linkErr);
+            }
+          }
+          router.push("/ims/inflows");
+          return;
+        }
+
         setToast({
           message: t("inflowCreated") || "Inflow created successfully",
           type: "success",
@@ -433,6 +542,28 @@ export default function CreateInflowPage() {
           ]}
         />
       </div>
+
+      {receivingOrder && (
+        <div className="w-full max-w-5xl flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
+          <i className="bx bx-cart text-base mt-0.5" aria-hidden="true" />
+          <div>
+            {t(
+              "purchases.receivingBanner",
+              "Receiving purchase order {{orderNumber}} from {{supplierName}}",
+              {
+                orderNumber: receivingOrder.orderNumber,
+                supplierName: receivingOrder.supplierName,
+              }
+            )}
+            <span className="block text-2xs text-indigo-500 dark:text-indigo-400/80 mt-0.5">
+              {t(
+                "purchases.receivingHint",
+                "Map each line to one of your inventory items, then save."
+              )}
+            </span>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="w-full max-w-5xl space-y-5">
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
@@ -717,9 +848,39 @@ export default function CreateInflowPage() {
                       className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_auto] gap-4"
                     >
                       <div>
-                        <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
-                          {item.name}
-                        </div>
+                        {item.inventoryItemId ? (
+                          <div className="px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 min-h-[48px] flex items-center">
+                            {item.name}
+                          </div>
+                        ) : (
+                          <div>
+                            <SearchableSelect
+                              options={inventoryItems
+                                .filter(
+                                  (invItem) =>
+                                    !inflowItems.some(
+                                      (r, ri) =>
+                                        ri !== index &&
+                                        r.inventoryItemId === invItem.id
+                                    )
+                                )
+                                .map((invItem) => ({
+                                  value: invItem.id,
+                                  label: invItem.name,
+                                }))}
+                              value={item.inventoryItemId || ""}
+                              onChange={(value) => assignRowItem(index, value)}
+                              placeholder={t("selectItem") || "Select Item"}
+                              searchPlaceholder={t("searchItem") || "Search item..."}
+                              focusColor="red"
+                            />
+                            {item.description && (
+                              <p className="mt-1 text-2xs text-gray-400 dark:text-gray-500">
+                                {t("purchases.fromPo", "From PO")}: {item.description}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <input

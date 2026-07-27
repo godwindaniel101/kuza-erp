@@ -111,6 +111,48 @@ export class InventoryController {
     };
   }
 
+  @Get("expiring")
+  @RequirePermissions("inventory.view")
+  @ApiOperation({ summary: "Get inflow batches expiring soon (branch stock)" })
+  async getExpiring(
+    @Query("branchId") branchId?: string,
+    @Query("days") days?: string,
+  ) {
+    const rows = await this.inventoryService.findExpiringSoon(
+      branchId,
+      days ? Number(days) : 30,
+    );
+    return {
+      success: true,
+      data: rows,
+    };
+  }
+
+  @Patch("branch-stock")
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "Update per-branch min/max stock config" })
+  async updateBranchStock(
+    @Body()
+    body: {
+      branchId: string;
+      inventoryItemId: string;
+      minimumStock?: number;
+      maximumStock?: number;
+    },
+    @I18n() i18n: I18nContext,
+  ) {
+    const data = await this.inventoryService.updateBranchStockConfig(
+      body.branchId,
+      body.inventoryItemId,
+      { minimumStock: body.minimumStock, maximumStock: body.maximumStock },
+    );
+    return {
+      success: true,
+      data,
+      message: i18n.t("common.updated"),
+    };
+  }
+
   @Get(":id")
   @RequirePermissions("inventory.view")
   @ApiOperation({ summary: "Get inventory item by ID" })

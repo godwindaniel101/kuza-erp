@@ -1,6 +1,5 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { TenantEntity } from '../../../common/entities/base.entity';
-import { Business } from '../../../common/entities/business.entity';
 import { Branch } from '../../../common/entities/branch.entity';
 import { Table } from './table.entity';
 import { OrderItem } from './order-item.entity';
@@ -50,6 +49,14 @@ export class Order extends TenantEntity {
   @Column({ default: 'dine_in' })
   orderType: string;
 
+  /** Channel this sale came through: 'pos' (direct) | 'marketplace' (materialized from a network order). */
+  @Column({ default: 'pos' })
+  source: string;
+
+  /** SALES bridge: the landlord network_orders id this sale was materialized from (null for POS/direct). */
+  @Column({ type: 'uuid', nullable: true })
+  networkOrderId: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   userId: string;
 
@@ -66,10 +73,6 @@ export class Order extends TenantEntity {
 
   @Column({ nullable: true })
   updatedByName: string;
-
-  @ManyToOne(() => Business, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'businessId' })
-  business: Business;
 
   @ManyToOne(() => Branch, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'branchId' })

@@ -16,6 +16,7 @@ import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto } from "./dto/update-order.dto";
 import { MarkPaidDto } from "./dto/mark-paid.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { BranchScopeService } from "../../../common/branch-scope/branch-scope.service";
 import {
   RequirePermissions,
   PermissionsGuard,
@@ -29,7 +30,10 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @RequireApp("items")
 @ApiBearerAuth()
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly branchScopeService: BranchScopeService,
+  ) {}
 
   @Post()
   @RequirePermissions("orders.create")
@@ -54,8 +58,11 @@ export class OrdersController {
   @Get()
   @RequirePermissions("orders.view")
   @ApiOperation({ summary: "Get all orders" })
-  async findAll(@Query("branchId") branchId?: string) {
-    const orders = await this.ordersService.findAll(branchId);
+  async findAll(@Request() req: any, @Query("branchId") branchId?: string) {
+    // Branch-scoped users only see their branches' orders; an out-of-scope
+    // branchId is rejected (403) by resolveBranchFilter.
+    const filter = await this.branchScopeService.resolveBranchFilter(req.user, branchId);
+    const orders = await this.ordersService.findAll(filter);
     return {
       success: true,
       data: orders,
@@ -102,6 +109,28 @@ export class OrdersController {
       success: true,
       data: order,
       message: i18n.t("paymentProcessed") || "Payment processed successfully",
+    };
+  }
+
+  @Post(":id/fulfil")
+  @RequirePermissions("orders.edit")
+  @ApiOperation({
+    summary: "Fulfil a pending marketplace sale by debiting stock from a chosen branch",
+  })
+  async fulfil(
+    @Param("id") id: string,
+    @Body() body: { branchId: string },
+    @I18n() i18n: I18nContext,
+    @Request() req: any,
+  ) {
+    const order = await this.ordersService.fulfil(id, body.branchId, {
+      id: req.user?.sub,
+      name: req.user?.name,
+    });
+    return {
+      success: true,
+      data: order,
+      message: i18n.t("common.updated"),
     };
   }
 

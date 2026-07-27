@@ -76,7 +76,7 @@ export default function CreateBranchPage() {
       )}
       <PageHeader
         title={<>{t('create')} {t('branch')}</>}
-        subtitle="Add a new business location"
+        subtitle={t('settings.createBranchSubtitle', 'Add a new business location')}
         breadcrumbs={[
           { label: t('settings') || 'Settings', href: '/settings' },
           { label: t('branches') || 'Branches', href: '/settings/branches' },

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
@@ -60,6 +61,7 @@ const MOVE_TONE: Record<string, string> = {
 };
 
 export default function InventoryDashboardPage() {
+  const { t } = useTranslation('common');
   const currency = useCurrency();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
@@ -96,7 +98,7 @@ export default function InventoryDashboardPage() {
               rows.push({
                 key: `${it.id}:${bid}`,
                 itemName: it.name,
-                branchName: branchMap.get(bid) || 'Branch',
+                branchName: branchMap.get(bid) || t('inventory.branchFallback', 'Branch'),
                 stock,
                 min,
                 unit: it.unit,
@@ -155,7 +157,7 @@ export default function InventoryDashboardPage() {
       });
     });
     return Array.from(map.entries())
-      .map(([bid, value]) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value, bid }))
+      .map(([bid, value]) => ({ label: branchList.find((b) => b.id === bid)?.name || t('inventory.branchFallback', 'Branch'), value, bid }))
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
@@ -163,7 +165,7 @@ export default function InventoryDashboardPage() {
 
   // Top products by stock value (top 6).
   const topProducts = items
-    .map((i) => ({ label: (i.name as string) || 'Item', value: num(i.totalStock) * num(i.salePrice), id: i.id as string }))
+    .map((i) => ({ label: (i.name as string) || t('inventory.itemFallback', 'Item'), value: num(i.totalStock) * num(i.salePrice), id: i.id as string }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
@@ -175,11 +177,11 @@ export default function InventoryDashboardPage() {
     const b = stockByBranch[i];
     if (!b) return;
     const rows = items
-      .map((it) => ({ label: (it.name as string) || 'Item', value: num(it.branchStocks?.[b.bid]?.stock) * num(it.salePrice) }))
+      .map((it) => ({ label: (it.name as string) || t('inventory.itemFallback', 'Item'), value: num(it.branchStocks?.[b.bid]?.stock) * num(it.salePrice) }))
       .filter((r) => r.value > 0)
       .sort((x, y) => y.value - x.value)
       .slice(0, 12);
-    setDrill({ title: `${b.label} · stock value by item`, rows });
+    setDrill({ title: t('inventory.drillByItem', '{{branch}} · stock value by item', { branch: b.label }), rows });
   };
   const openProductDrill = (i: number) => {
     const p = topProducts[i];
@@ -187,10 +189,10 @@ export default function InventoryDashboardPage() {
     const it = items.find((x) => x.id === p.id);
     const bs = it?.branchStocks || {};
     const rows = Object.keys(bs)
-      .map((bid) => ({ label: branchList.find((b) => b.id === bid)?.name || 'Branch', value: num(bs[bid]?.stock) * num(it?.salePrice) }))
+      .map((bid) => ({ label: branchList.find((b) => b.id === bid)?.name || t('inventory.branchFallback', 'Branch'), value: num(bs[bid]?.stock) * num(it?.salePrice) }))
       .filter((r) => r.value > 0)
       .sort((x, y) => y.value - x.value);
-    setDrill({ title: `${p.label} · value by branch`, rows, href: `/ims/inventory/${p.id}` });
+    setDrill({ title: t('inventory.drillByBranch', '{{product}} · value by branch', { product: p.label }), rows, href: `/ims/inventory/${p.id}` });
   };
 
   // Items with a batch expiring within 60 days, soonest first (dashboard widget).
@@ -207,15 +209,15 @@ export default function InventoryDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Inventory"
-        subtitle="Stock health, receiving and valuation at a glance"
+        title={t('inventory.dashboardTitle', 'Inventory')}
+        subtitle={t('inventory.dashboardSubtitle', 'Stock health, receiving and valuation at a glance')}
         actions={
           <div className="flex gap-2">
             <Button href="/ims/inflows" variant="secondary" size="md">
-              <i className="bx bx-log-in" /> Receive Stock
+              <i className="bx bx-log-in" /> {t('inventory.receiveStock', 'Receive Stock')}
             </Button>
             <Button href="/ims/inventory" size="md">
-              <i className="bx bx-plus" /> Add Item
+              <i className="bx bx-plus" /> {t('inventory.addItem', 'Add Item')}
             </Button>
           </div>
         }
@@ -229,34 +231,34 @@ export default function InventoryDashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Stock Items" value={totalItems} icon="bx-box" tone="info" />
-          <StatCard label="Low Stock" value={lowStockItems.length} icon="bx-error" tone="warning" caption="at or below reorder point" />
-          <StatCard label="Out of Stock" value={outOfStock} icon="bx-x-circle" tone="error" />
-          <StatCard label="Stock Value" value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" caption="at sale price" />
+          <StatCard label={t('inventory.stockItems', 'Stock Items')} value={totalItems} icon="bx-box" tone="info" />
+          <StatCard label={t('inventory.lowStock', 'Low Stock')} value={lowStockItems.length} icon="bx-error" tone="warning" />
+          <StatCard label={t('inventory.outOfStock', 'Out of Stock')} value={outOfStock} icon="bx-x-circle" tone="error" />
+          <StatCard label={t('inventory.stockValue', 'Stock Value')} value={formatMoney(stockValue, currency)} icon="bx-wallet" tone="success" />
         </div>
       )}
 
       {/* Three scoped charts: by branch · by product · sales & revenue */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card title="Stock value by branch">
+        <Card title={t('inventory.stockValueByBranch', 'Stock value by branch')}>
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No branch stock yet" onBarClick={openBranchDrill} />
+            <WeeklyBarChart data={stockByBranch} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage={t('inventory.noBranchStock', 'No branch stock yet')} onBarClick={openBranchDrill} />
           )}
         </Card>
-        <Card title="Top products by value">
+        <Card title={t('inventory.topProductsByValue', 'Top products by value')}>
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No valued stock yet" onBarClick={openProductDrill} />
+            <WeeklyBarChart data={topProducts} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage={t('inventory.noValuedStock', 'No valued stock yet')} onBarClick={openProductDrill} />
           )}
         </Card>
-        <Card title="Sales & revenue" subtitle="Last 14 days">
+        <Card title={t('inventory.salesAndRevenue', 'Sales & revenue')} subtitle={t('inventory.last14Days', 'Last 14 days')}>
           {loading ? (
             <div className="h-[150px] animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
-            <RevenueAreaChart data={revenueSeries} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage="No sales yet" />
+            <RevenueAreaChart data={revenueSeries} height={150} formatValue={(v) => formatMoney(v, currency)} emptyMessage={t('inventory.noSales', 'No sales yet')} />
           )}
         </Card>
       </div>
@@ -267,8 +269,8 @@ export default function InventoryDashboardPage() {
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 pt-2">
             <div className="flex gap-4">
               {([
-                { key: 'restock', label: 'Needs restocking', count: lowStockRows.length },
-                { key: 'expiring', label: 'Expiring soon', count: expiringItems.length },
+                { key: 'restock', label: t('inventory.needsRestocking', 'Needs restocking'), count: lowStockRows.length },
+                { key: 'expiring', label: t('inventory.expiringSoon', 'Expiring soon'), count: expiringItems.length },
               ] as const).map((tab) => (
                 <button
                   key={tab.key}
@@ -285,18 +287,18 @@ export default function InventoryDashboardPage() {
               ))}
             </div>
             <Link href="/ims/inventory" className="text-[13px] font-medium text-brand-600 hover:underline">
-              View all
+              {t('inventory.viewAll', 'View all')}
             </Link>
           </div>
 
           {loading ? (
-            <div className="p-5 text-sm text-gray-400">Loading…</div>
+            <div className="p-5 text-sm text-gray-400">{t('inventory.loading', 'Loading…')}</div>
           ) : worklistTab === 'restock' ? (
             lowStockRows.length === 0 ? (
               <div className="flex flex-col items-center gap-1 p-8 text-center">
                 <i className="bx bx-check-circle text-3xl text-emerald-500" />
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Everything&apos;s well stocked</p>
-                <p className="text-xs text-gray-500">No items at or below their reorder point.</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('inventory.wellStocked', "Everything's well stocked")}</p>
+                <p className="text-xs text-gray-500">{t('inventory.noItemsBelowReorder', 'No items at or below their reorder point.')}</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -306,7 +308,7 @@ export default function InventoryDashboardPage() {
                       <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{r.itemName}</p>
                       <p className="truncate text-xs text-gray-500">
                         <span className="inline-flex items-center gap-1"><i className="bx bx-store text-gray-400" />{r.branchName}</span>
-                        {' · '}{r.stock} {r.unit || 'units'} left · reorder at {r.min}
+                        {' · '}{t('inventory.stockLeftReorder', '{{stock}} {{unit}} left · reorder at {{min}}', { stock: r.stock, unit: r.unit || t('inventory.units', 'units'), min: r.min })}
                       </p>
                     </div>
                     <span
@@ -314,7 +316,7 @@ export default function InventoryDashboardPage() {
                         r.stock <= 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'
                       }`}
                     >
-                      {r.stock <= 0 ? 'Out' : 'Low'}
+                      {r.stock <= 0 ? t('inventory.out', 'Out') : t('inventory.low', 'Low')}
                     </span>
                   </div>
                 ))}
@@ -323,8 +325,8 @@ export default function InventoryDashboardPage() {
           ) : expiringItems.length === 0 ? (
             <div className="flex flex-col items-center gap-1 p-8 text-center">
               <i className="bx bx-check-circle text-3xl text-emerald-500" />
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Nothing expiring soon</p>
-              <p className="text-xs text-gray-500">No batches expire within the next 60 days.</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('inventory.nothingExpiring', 'Nothing expiring soon')}</p>
+              <p className="text-xs text-gray-500">{t('inventory.noBatchesExpiring', 'No batches expire within the next 60 days.')}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -337,8 +339,8 @@ export default function InventoryDashboardPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{x.name}</p>
                     <p className="truncate text-xs text-gray-500">
-                      Expires {x.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {x.count > 1 && ` · ${x.count} batches`}
+                      {t('inventory.expires', 'Expires')} {x.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {x.count > 1 && ` · ${t('inventory.batchesCount', '{{count}} batches', { count: x.count })}`}
                     </p>
                   </div>
                   <span
@@ -350,7 +352,7 @@ export default function InventoryDashboardPage() {
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
                     }`}
                   >
-                    {x.days <= 0 ? 'Expired' : `${x.days}d`}
+                    {x.days <= 0 ? t('inventory.expired', 'Expired') : t('inventory.daysShort', '{{days}}d', { days: x.days })}
                   </span>
                 </Link>
               ))}
@@ -361,28 +363,28 @@ export default function InventoryDashboardPage() {
         {/* Recent stock movements — activity feed */}
         <Card padding={false}>
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent movements</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('inventory.recentMovements', 'Recent movements')}</h3>
             <Link href="/ims/stock-movements" className="text-[13px] font-medium text-brand-600 hover:underline">
-              Stock ledger
+              {t('inventory.stockLedger', 'Stock ledger')}
             </Link>
           </div>
           {loading ? (
-            <div className="p-5 text-sm text-gray-400">Loading…</div>
+            <div className="p-5 text-sm text-gray-400">{t('inventory.loading', 'Loading…')}</div>
           ) : movements.length === 0 ? (
             <div className="flex flex-col items-center gap-1 p-8 text-center">
               <i className="bx bx-transfer-alt text-3xl text-gray-300" />
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No movements yet</p>
-              <p className="text-xs text-gray-500">Receive stock or make a sale to see activity here.</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('inventory.noMovements', 'No movements yet')}</p>
+              <p className="text-xs text-gray-500">{t('inventory.noMovementsHint', 'Receive stock or make a sale to see activity here.')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-left text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:border-gray-800">
-                    <th className="px-5 py-2 font-medium">Item</th>
-                    <th className="px-3 py-2 font-medium">Type</th>
-                    <th className="px-3 py-2 text-right font-medium">Qty</th>
-                    <th className="px-5 py-2 text-right font-medium">Date</th>
+                    <th className="px-5 py-2 font-medium">{t('inventory.item', 'Item')}</th>
+                    <th className="px-3 py-2 font-medium">{t('inventory.type', 'Type')}</th>
+                    <th className="px-3 py-2 text-right font-medium">{t('inventory.qty', 'Qty')}</th>
+                    <th className="px-5 py-2 text-right font-medium">{t('inventory.date', 'Date')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -425,7 +427,7 @@ export default function InventoryDashboardPage() {
               href={drill.href}
               className="inline-flex h-9 items-center rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white hover:opacity-90"
             >
-              View item
+              {t('inventory.viewItem', 'View item')}
             </Link>
           ) : undefined
         }
@@ -441,7 +443,7 @@ export default function InventoryDashboardPage() {
               </div>
             ))
           ) : (
-            <p className="py-4 text-sm text-gray-400">No details.</p>
+            <p className="py-4 text-sm text-gray-400">{t('inventory.noDetails', 'No details.')}</p>
           )}
         </div>
       </Modal>

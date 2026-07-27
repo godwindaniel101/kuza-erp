@@ -88,7 +88,14 @@ export default function TransfersPage() {
   );
 
   const handleExportCsv = () => {
-    const headers = ['Transfer #', 'From', 'To', 'Date', 'Items', 'Status'];
+    const headers = [
+      t('transferNumber', 'Transfer #'),
+      t('fromBranch', 'From'),
+      t('toBranch', 'To'),
+      t('date', 'Date'),
+      t('items', 'Items'),
+      t('status', 'Status'),
+    ];
     const rows = transfers.map((tr) => [
       tr.transferNumber || '',
       tr.fromBranch?.name || '',

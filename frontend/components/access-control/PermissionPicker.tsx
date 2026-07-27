@@ -48,6 +48,16 @@ export default function PermissionPicker({ value, onChange, readOnly = false }: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // App sections collapsed by default; a search auto-expands everything.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(APP_ORDER));
+  const searching = search.trim().length > 0;
+  const isOpen = (app: string) => searching || !collapsed.has(app);
+  const toggleApp = (app: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(app) ? next.delete(app) : next.add(app);
+      return next;
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -158,16 +168,31 @@ export default function PermissionPicker({ value, onChange, readOnly = false }: 
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('searchPermissions') || 'Search permissions...'}
-          className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none"
-        />
+      {/* Search + expand/collapse all */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchPermissions') || 'Search permissions...'}
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none"
+          />
+        </div>
+        {!searching && byApp.length > 0 && (
+          <button
+            type="button"
+            onClick={() =>
+              setCollapsed((prev) =>
+                prev.size === 0 ? new Set(byApp.map((a) => a.app)) : new Set(),
+              )
+            }
+            className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            {collapsed.size === 0 ? t('collapseAll') || 'Collapse all' : t('expandAll') || 'Expand all'}
+          </button>
+        )}
       </div>
 
       {byApp.length === 0 ? (
@@ -175,92 +200,110 @@ export default function PermissionPicker({ value, onChange, readOnly = false }: 
           <p className="text-gray-500 dark:text-gray-400">{t('noResults') || 'No matching permissions'}</p>
         </div>
       ) : (
-        <div className="space-y-6 max-h-[600px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
           {byApp.map(({ app, groups }) => {
             const appPerms = groups.flatMap(([, perms]) => perms);
+            const appIds = appPerms.map((p) => p.id);
             const appSelectedCount = appPerms.filter((p) => selectedSet.has(p.id)).length;
+            const appAll = appSelectedCount === appPerms.length && appPerms.length > 0;
+            const appSome = appSelectedCount > 0 && !appAll;
+            const open = isOpen(app);
             return (
-              <section key={app} className="space-y-3">
-                {/* App section header */}
-                <div className="flex items-center gap-2 sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur py-1">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
-                    <i className={`bx ${appIcon(app)} text-base`} aria-hidden="true"></i>
-                  </span>
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                    {appLabel(app)}
-                  </h3>
-                  <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                    {appSelectedCount} / {appPerms.length}
-                  </span>
+              <section
+                key={app}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+              >
+                {/* Collapsible app header */}
+                <div className="flex items-center bg-gray-50 dark:bg-gray-800/60">
+                  <button
+                    type="button"
+                    onClick={() => toggleApp(app)}
+                    className="flex flex-1 items-center gap-2 px-3 py-2.5 text-left"
+                    aria-expanded={open}
+                  >
+                    <i
+                      className={`bx bx-chevron-right text-lg text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}
+                      aria-hidden="true"
+                    ></i>
+                    <i className={`bx ${appIcon(app)} text-base text-brand-600 dark:text-brand-400`} aria-hidden="true"></i>
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">{appLabel(app)}</h3>
+                    <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                      {appSelectedCount}/{appPerms.length}
+                    </span>
+                  </button>
+                  {!readOnly && (
+                    <label className="px-3 py-2.5" title={t('selectAll') || 'Select all'}>
+                      <input
+                        type="checkbox"
+                        checked={appAll}
+                        ref={(input) => {
+                          if (input) input.indeterminate = appSome;
+                        }}
+                        onChange={(e) => toggleMany(appIds, e.target.checked)}
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand-600 focus-visible:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
+                      />
+                    </label>
+                  )}
                 </div>
 
-                {/* Groups within the app */}
-                {groups.map(([group, groupPerms]) => {
-                  const ids = groupPerms.map((p) => p.id);
-                  const selectedInGroup = groupPerms.filter((p) => selectedSet.has(p.id)).length;
-                  const allSelected = selectedInGroup === groupPerms.length && groupPerms.length > 0;
-                  const someSelected = selectedInGroup > 0 && !allSelected;
-
-                  return (
-                    <div
-                      key={`${app}-${group}`}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                    >
-                      <div className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {!readOnly && (
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              ref={(input) => {
-                                if (input) input.indeterminate = someSelected;
-                              }}
-                              onChange={(e) => toggleMany(ids, e.target.checked)}
-                              className="h-4 w-4 text-brand-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
-                            />
-                          )}
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{group}</h4>
-                        </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                          {selectedInGroup} / {groupPerms.length}
-                        </span>
-                      </div>
-
-                      <div className="p-3 space-y-1">
-                        {groupPerms.map((permission) => (
-                          <label
-                            key={permission.id}
-                            className={`flex items-start gap-3 p-2.5 rounded-lg transition-colors ${
-                              readOnly ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
-                            }`}
-                          >
+                {/* Body */}
+                {open && (
+                  <div className="space-y-3 p-3">
+                    {groups.map(([group, groupPerms]) => {
+                      const ids = groupPerms.map((p) => p.id);
+                      const selectedInGroup = groupPerms.filter((p) => selectedSet.has(p.id)).length;
+                      const allSelected = selectedInGroup === groupPerms.length && groupPerms.length > 0;
+                      const someSelected = selectedInGroup > 0 && !allSelected;
+                      return (
+                        <div key={`${app}-${group}`}>
+                          <div className="mb-1 flex items-center gap-2">
                             {!readOnly && (
                               <input
                                 type="checkbox"
-                                checked={selectedSet.has(permission.id)}
-                                onChange={() => toggleOne(permission.id)}
-                                className="mt-0.5 h-4 w-4 text-brand-600 focus-visible:ring-brand-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+                                checked={allSelected}
+                                ref={(input) => {
+                                  if (input) input.indeterminate = someSelected;
+                                }}
+                                onChange={(e) => toggleMany(ids, e.target.checked)}
+                                className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 text-brand-600 focus-visible:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                               />
                             )}
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {permission.displayName}
-                              </div>
-                              {permission.description && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                  {permission.description}
-                                </div>
-                              )}
-                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">
-                                {permission.name}
-                              </div>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                              {group}
+                            </span>
+                            <span className="ml-auto text-[11px] text-gray-400 tabular-nums">
+                              {selectedInGroup}/{groupPerms.length}
+                            </span>
+                          </div>
+                          {/* Dense 2-col permission list */}
+                          <div className="grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-3">
+                            {groupPerms.map((permission) => (
+                              <label
+                                key={permission.id}
+                                title={permission.name + (permission.description ? ` — ${permission.description}` : '')}
+                                className={`flex items-center gap-2 rounded px-1.5 py-1 ${
+                                  readOnly ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                              >
+                                {!readOnly && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedSet.has(permission.id)}
+                                    onChange={() => toggleOne(permission.id)}
+                                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-brand-600 focus-visible:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
+                                  />
+                                )}
+                                <span className="truncate text-[13px] text-gray-800 dark:text-gray-200">
+                                  {permission.displayName}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             );
           })}

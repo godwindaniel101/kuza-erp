@@ -1,3 +1,4 @@
+import { useTranslation } from 'next-i18next';
 import { DeleteIcon } from '@/components/icons';
 import QtyStepper from './QtyStepper';
 import type { CartLine as CartLineType } from './types';
@@ -15,6 +16,7 @@ interface CartLineProps {
  * bounded by available stock, and a remove control.
  */
 export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps) {
+  const { t } = useTranslation('common');
   const accent = categoryAccent(line.category);
   const max = availableInUom(line.stockBase, line.uomToBase, line.uomId);
   const lineTotal = line.unitPrice * line.quantity;
@@ -38,7 +40,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
           <button
             type="button"
             onClick={() => onRemove(line.productId)}
-            aria-label={`Remove ${line.name}`}
+            aria-label={t('pos.removeItem', 'Remove {{name}}', { name: line.name })}
             className="-mr-1 -mt-0.5 rounded-md p-1 text-gray-400 transition hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-900/30 dark:hover:text-danger-400"
           >
             <DeleteIcon size={16} />
@@ -53,7 +55,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
             <select
               value={line.uomId}
               onChange={(e) => onUom(line.productId, e.target.value)}
-              aria-label="Unit"
+              aria-label={t('pos.unit', 'Unit')}
               className="h-6 rounded-md border border-gray-300 bg-white px-1.5 text-xs text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
             >
               {line.uoms.map((uom) => (

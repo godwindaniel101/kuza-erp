@@ -10,6 +10,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import StatusBadge, { StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import { downloadCsv, formatDate } from '@/lib/format';
+import { usePageSearch } from '@/store/searchStore';
 
 const AVATAR_TONES = [
   'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
@@ -55,7 +56,7 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const search = usePageSearch(`${t('search')} ${t('employees').toLowerCase()}...`);
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -145,13 +146,6 @@ export default function EmployeesPage() {
         {/* Filters */}
         <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-3">
           <form className="flex flex-wrap gap-3" onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={`${t('search')} ${t('employees').toLowerCase()}...`}
-              className="h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:border-transparent dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 text-sm flex-1 min-w-[220px]"
-            />
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}

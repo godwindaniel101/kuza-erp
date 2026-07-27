@@ -180,7 +180,10 @@ export default function InflowDetailsPage() {
 
         <PageHeader
           title={t("inflowDetails") || "Inflow Details"}
-          subtitle="What came in, from whom, and at what cost"
+          subtitle={t(
+            "inflows.detailsSubtitle",
+            "What came in, from whom, and at what cost"
+          )}
           breadcrumbs={[
             { label: t("inflows") || "Inflows", href: "/ims/inflows" },
             {
@@ -194,7 +197,10 @@ export default function InflowDetailsPage() {
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 mb-6">
           <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <nav
+              className="flex space-x-8 px-6"
+              aria-label={t("inflows.tabsAriaLabel", "Tabs")}
+            >
               <button
                 onClick={() => setActiveTab("details")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -565,7 +571,9 @@ export default function InflowDetailsPage() {
                           item.name ||
                           item.originalItemName ||
                           inventoryItem?.name ||
-                          `Item ${index + 1}`;
+                          t("inflows.itemNumber", "Item {{number}}", {
+                            number: index + 1,
+                          });
                         const unitName =
                           uom?.abbreviation ||
                           uom?.name ||
@@ -574,12 +582,13 @@ export default function InflowDetailsPage() {
                           item.originalUomName ||
                           inventoryItem?.baseUom?.abbreviation ||
                           inventoryItem?.baseUom?.name ||
-                          "N/A";
+                          t("inventory.notAvailable", "N/A");
                         const supplierName =
                           itemSupplier?.name ||
                           (item.supplierId
-                            ? "Unknown Supplier"
-                            : inflow.supplier?.name || "N/A");
+                            ? t("inflows.unknownSupplier", "Unknown Supplier")
+                            : inflow.supplier?.name ||
+                              t("inventory.notAvailable", "N/A"));
 
                         const salesData = item.salesData || {
                           totalSold: 0,
@@ -627,7 +636,8 @@ export default function InflowDetailsPage() {
                                   )}
                                   {item.batchNumber && (
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      Batch: {item.batchNumber}
+                                      {t("inflows.batch", "Batch")}:{" "}
+                                      {item.batchNumber}
                                     </div>
                                   )}
                                 </div>
@@ -662,8 +672,10 @@ export default function InflowDetailsPage() {
                               </div>
                               {salesData.orderCount > 0 && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                  {salesData.orderCount} order
-                                  {salesData.orderCount !== 1 ? "s" : ""}
+                                  {salesData.orderCount}{" "}
+                                  {salesData.orderCount !== 1
+                                    ? t("inflows.orders", "orders")
+                                    : t("inflows.order", "order")}
                                 </div>
                               )}
                             </td>
@@ -679,7 +691,7 @@ export default function InflowDetailsPage() {
                               </span>
                               {remainingQuantity === 0 && baseQuantity > 0 && (
                                 <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                                  Fully sold
+                                  {t("inflows.fullySold", "Fully sold")}
                                 </div>
                               )}
                             </td>
@@ -692,7 +704,8 @@ export default function InflowDetailsPage() {
                               </span>
                               {item.expiryDate && (
                                 <div className="text-xs text-red-500 dark:text-red-400 mt-1">
-                                  Expires: {formatDate(item.expiryDate)}
+                                  {t("inflows.expires", "Expires")}:{" "}
+                                  {formatDate(item.expiryDate)}
                                 </div>
                               )}
                             </td>

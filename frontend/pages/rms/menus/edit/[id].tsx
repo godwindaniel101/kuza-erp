@@ -263,7 +263,7 @@ export default function EditMenuPage() {
                   required
                   value={formData.name}
                   onChange={(value) => setFormData({ ...formData, name: value })}
-                  placeholder={t('e.g. Lunch Menu') || 'e.g., Lunch Menu, Drinks Menu'}
+                  placeholder={t('menu.menuNamePlaceholder', 'e.g., Lunch Menu, Drinks Menu')}
                   className="mb-5"
                 />
 

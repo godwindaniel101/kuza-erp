@@ -176,7 +176,7 @@ export default function UomsSettingsPage() {
       )}
       <PageHeader
         title={t('uoms')}
-        subtitle="The units your stock is counted in"
+        subtitle={t('settings.uomsSubtitle', 'The units your stock is counted in')}
         breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('uoms') }]}
       />
 

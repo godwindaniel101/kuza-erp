@@ -1,6 +1,7 @@
-import Head from 'next/head';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Seo from '../components/Seo';
+import { SITE_URL, SITE_NAME } from '../lib/site';
 
 const ArrowR = () => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -9,14 +10,33 @@ const Check = () => (
   <svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 
+const menuAppLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: `${SITE_NAME} Free QR Menu`,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  url: `${SITE_URL}/menu`,
+  description:
+    'A free digital QR menu for restaurants and cafes — customers scan a QR code and browse your menu with photos, prices and categories. Upgrade to full POS when ready.',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'NGN',
+    description: 'Free forever — no card required.',
+  },
+};
+
 export default function Menu() {
   return (
     <>
-      <Head>
-        <title>Kuza — Free QR Menu</title>
-        <meta name="description" content="A free, beautiful QR menu your customers scan at the table — and your on-ramp to running the whole business on Kuza." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
+      <Seo
+        title="Free QR menu for restaurants & cafes | Kuza"
+        description="Create a free, beautiful QR menu your customers scan at the table — photos, prices and categories, no app to download. Your on-ramp to running the whole business on Kuza."
+        path="/menu"
+        image="/img/woman-selling-with-kids.jpeg"
+        jsonLd={menuAppLd}
+      />
 
       <Header />
 
@@ -37,7 +57,7 @@ export default function Menu() {
                 <a href="/restaurant" className="btn btn--ghost btn--lg">See Restaurant</a>
               </div>
             </div>
-            <div className="hero-visual reveal" data-delay="2">
+            <div className="hero-visual reveal px-4" data-delay="2">
               <div className="kx-photo tall">
                 <img src="/img/woman-selling-with-kids.jpeg" alt="Guests at a restaurant table" />
               </div>

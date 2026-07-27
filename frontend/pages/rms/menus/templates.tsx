@@ -48,20 +48,20 @@ export default function MenuTemplatesPage() {
       setTemplates([
         {
           id: 'modern',
-          name: 'Modern',
-          description: 'Clean and modern design with bold typography',
+          name: t('menu.tpl_modern', 'Modern'),
+          description: t('menu.tpl_modern_desc', 'Clean and modern design with bold typography'),
           preview: '/images/templates/modern-preview.png',
         },
         {
           id: 'classic',
-          name: 'Classic',
-          description: 'Traditional business menu style',
+          name: t('menu.tpl_classic', 'Classic'),
+          description: t('menu.tpl_classic_desc', 'Traditional business menu style'),
           preview: '/images/templates/classic-preview.png',
         },
         {
           id: 'minimal',
-          name: 'Minimal',
-          description: 'Simple and elegant minimalist design',
+          name: t('menu.tpl_minimal', 'Minimal'),
+          description: t('menu.tpl_minimal_desc', 'Simple and elegant minimalist design'),
           preview: '/images/templates/minimal-preview.png',
         },
       ]);

@@ -1,8 +1,9 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query, Request } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { StockMovementsService } from "./stock-movements.service";
 import { QueryStockMovementsDto } from "./dto/query-stock-movements.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { BranchScopeService } from "../../../common/branch-scope/branch-scope.service";
 import {
   RequirePermissions,
   PermissionsGuard,
@@ -21,13 +22,19 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @RequireApp("items")
 @ApiBearerAuth()
 export class StockMovementsController {
-  constructor(private readonly stockMovementsService: StockMovementsService) {}
+  constructor(
+    private readonly stockMovementsService: StockMovementsService,
+    private readonly branchScopeService: BranchScopeService,
+  ) {}
 
   @Get()
   @RequirePermissions("inventory.view")
   @ApiOperation({ summary: "List stock movements (paginated, filterable)" })
-  async findAll(@Query() query: QueryStockMovementsDto) {
-    const data = await this.stockMovementsService.findAll(query);
+  async findAll(@Request() req: any, @Query() query: QueryStockMovementsDto) {
+    // Branch-scoped users only see movements for their allowed branches; the
+    // requested branch filter is intersected with that set in the service.
+    const allowed = await this.branchScopeService.allowedBranchIds(req.user);
+    const data = await this.stockMovementsService.findAll(query, allowed);
     return { success: true, data };
   }
 

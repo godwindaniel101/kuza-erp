@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
+import { BranchUser } from "../../../common/entities/branch-user.entity";
+import { AppNotificationsService } from "../../notifications/app-notifications.service";
 import { Transactional } from "typeorm-transactional";
 import { InventoryTransfer } from "../entities/inventory-transfer.entity";
 import { InventoryTransferItem } from "../entities/inventory-transfer-item.entity";
@@ -39,9 +42,20 @@ export class TransfersService {
     private inflowRepository: Repository<InventoryInflow>,
     @InjectRepository(InventoryInflowItem)
     private inflowItemRepository: Repository<InventoryInflowItem>,
+    @InjectRepository(BranchUser)
+    private branchUserRepository: Repository<BranchUser>,
     private uomConversionsService: UomConversionsService,
     private stockMovementsService: StockMovementsService,
+    private appNotifications: AppNotificationsService,
   ) {}
+
+  /** Tenant user ids of the managers assigned to a branch. */
+  private async getBranchManagerUserIds(branchId: string): Promise<string[]> {
+    const rows = await this.branchUserRepository.find({
+      where: { branchId, isManager: true },
+    });
+    return rows.map((r) => r.userId);
+  }
 
   /** Locked read of an inventory item row (pessimistic write lock). */
   private lockInventoryItem(id: string) {
@@ -240,6 +254,19 @@ export class TransfersService {
       await this.transferItemRepository.save(transferItem);
     }
 
+    // Notify the DESTINATION branch's manager(s): an incoming transfer request
+    // awaits their approval before stock moves. Best-effort, same tenant.
+    const managerIds = await this.getBranchManagerUserIds(savedTransfer.toBranchId);
+    for (const managerUserId of managerIds) {
+      void this.appNotifications.create({
+        userId: managerUserId,
+        title: `Transfer request ${savedTransfer.transferNumber}`,
+        body: `A stock transfer into your branch is awaiting your approval.`,
+        type: "transfer",
+        link: `/ims/transfers/${savedTransfer.id}`,
+      });
+    }
+
     return await this.findOne(savedTransfer.id);
   }
 
@@ -375,6 +402,7 @@ export class TransfersService {
     id: string,
     userId: string,
     updateDto: UpdateTransferStatusDto,
+    actor?: { tenantUserId?: string; isAdmin?: boolean },
   ) {
     const transfer = await this.findOne(id);
 
@@ -397,6 +425,21 @@ export class TransfersService {
     }
 
     if (updateDto.status === "in_transit") {
+      // Destination-manager approval gate: a transfer only moves stock once a
+      // MANAGER of the destination branch approves it. If the destination branch
+      // has no managers assigned, fall back to the existing permission-based
+      // behavior so branches without managers aren't blocked. Admins bypass.
+      const destManagerIds = await this.getBranchManagerUserIds(transfer.toBranchId);
+      if (
+        destManagerIds.length > 0 &&
+        !actor?.isAdmin &&
+        !(actor?.tenantUserId && destManagerIds.includes(actor.tenantUserId))
+      ) {
+        throw new ForbiddenException(
+          "Only a manager of the destination branch can approve this transfer.",
+        );
+      }
+
       // Deduct stock from source branch (locked reads; negative stock is
       // forbidden — audit C-INV-3/4).
       for (const item of transfer.items) {

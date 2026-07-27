@@ -122,7 +122,7 @@ export class PayrollController {
 
   @Get(":id/pay-stub")
   @RequirePermissions("payroll.view")
-  @ApiOperation({ summary: "Generate pay stub PDF" })
+  @ApiOperation({ summary: "Get pay stub data" })
   async generatePayStub(@Param("id") id: string) {
     const payStub = await this.payrollService.generatePayStub(id);
     return {

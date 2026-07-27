@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9">
+  <url><loc>https://kuza.africa/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://kuza.africa/restaurant</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/shop</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/inventory</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/invoicing</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/accounting</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/people</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/payments</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuza.africa/menu</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+</urlset>

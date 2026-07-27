@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
@@ -52,6 +53,7 @@ const statusVariant: Record<AdjustmentStatus, { variant: StatusBadgeVariant; lab
 };
 
 export default function AdjustmentDetailPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const { id } = router.query;
   const currency = useCurrency();
@@ -72,7 +74,7 @@ export default function AdjustmentDetailPage() {
     } catch (err: any) {
       console.error('Failed to load adjustment:', err);
       setNotFound(true);
-      setToast({ message: err.response?.data?.message || 'Failed to load adjustment', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('adjustments.failedLoadOne', 'Failed to load adjustment'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -107,13 +109,13 @@ export default function AdjustmentDetailPage() {
     try {
       await api.post(`/ims/adjustments/${adjustment.id}/${confirmAction}`);
       setToast({
-        message: confirmAction === 'approve' ? 'Adjustment approved — stock updated' : 'Adjustment rejected',
+        message: confirmAction === 'approve' ? t('adjustments.approvedToast', 'Adjustment approved — stock updated') : t('adjustments.rejectedToast', 'Adjustment rejected'),
         type: 'success',
       });
       setConfirmAction(null);
       await load();
     } catch (err: any) {
-      setToast({ message: err.response?.data?.message || `Failed to ${confirmAction} adjustment`, type: 'error' });
+      setToast({ message: err.response?.data?.message || t('adjustments.failedAction', 'Failed to {{action}} adjustment', { action: confirmAction }), type: 'error' });
     } finally {
       setActing(false);
     }
@@ -125,12 +127,12 @@ export default function AdjustmentDetailPage() {
   return (
     <div className="w-full max-w-5xl space-y-5">
       <PageHeader
-        title={adjustment ? `Adjustment ${adjustment.adjustmentNumber}` : 'Stock Adjustment'}
+        title={adjustment ? t('adjustments.detailTitle', 'Adjustment {{number}}', { number: adjustment.adjustmentNumber }) : t('adjustments.detailFallbackTitle', 'Stock Adjustment')}
         subtitle={adjustment ? REASON_LABELS[adjustment.reason] || adjustment.reason : undefined}
         breadcrumbs={[
-          { label: 'IMS', href: '/ims/inventory' },
-          { label: 'Adjustments', href: '/ims/adjustments' },
-          { label: adjustment?.adjustmentNumber || 'Detail' },
+          { label: t('adjustments.ims', 'IMS'), href: '/ims/inventory' },
+          { label: t('adjustments.breadcrumb', 'Adjustments'), href: '/ims/adjustments' },
+          { label: adjustment?.adjustmentNumber || t('adjustments.detailBreadcrumb', 'Detail') },
         ]}
         actions={
           adjustment ? (
@@ -140,14 +142,14 @@ export default function AdjustmentDetailPage() {
                 <>
                   <Button variant="danger" size="sm" onClick={() => setConfirmAction('approve')}>
                     <i className="bx bx-check"></i>
-                    Approve
+                    {t('adjustments.approve', 'Approve')}
                   </Button>
                   <button
                     onClick={() => setConfirmAction('reject')}
                     className="h-8 px-3 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg text-[13px] font-medium hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
                   >
                     <i className="bx bx-x mr-2"></i>
-                    Reject
+                    {t('adjustments.reject', 'Reject')}
                   </button>
                 </>
               )}
@@ -164,14 +166,14 @@ export default function AdjustmentDetailPage() {
       ) : notFound || !adjustment ? (
         <EmptyState
           icon="bx-error-circle"
-          title="Adjustment not found"
-          description="It may have been removed, or the link is invalid"
+          title={t('adjustments.notFound', 'Adjustment not found')}
+          description={t('adjustments.notFoundDesc', 'It may have been removed, or the link is invalid')}
           actions={
             <Link
               href="/ims/adjustments"
               className="h-8 px-3 bg-red-600 dark:bg-red-700 text-white rounded-lg text-[13px] font-medium hover:bg-red-700 dark:hover:bg-red-600"
             >
-              Back to Adjustments
+              {t('adjustments.backToAdjustments', 'Back to Adjustments')}
             </Link>
           }
         />
@@ -180,29 +182,29 @@ export default function AdjustmentDetailPage() {
           {/* Meta */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5 mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Created</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.created', 'Created')}</p>
               <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">{formatDate(adjustment.createdAt)}</p>
             </div>
             <div>
-              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Branch</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.branch', 'Branch')}</p>
               <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
                 {adjustment.branchName ? (
                   <span className="inline-flex items-center gap-1">
                     <i className="bx bx-store text-gray-400" aria-hidden="true" /> {adjustment.branchName}
                   </span>
                 ) : (
-                  <span className="text-gray-400 dark:text-gray-500">All branches</span>
+                  <span className="text-gray-400 dark:text-gray-500">{t('adjustments.allBranches', 'All branches')}</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Reason</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.reason', 'Reason')}</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">
                 {REASON_LABELS[adjustment.reason] || adjustment.reason}
               </p>
             </div>
             <div className="col-span-2 sm:col-span-4">
-              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Notes</p>
+              <p className="text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.notes', 'Notes')}</p>
               <p className="mt-1 text-sm text-gray-900 dark:text-white">{adjustment.notes || '-'}</p>
             </div>
           </div>
@@ -213,10 +215,10 @@ export default function AdjustmentDetailPage() {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Item</th>
-                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Qty Change</th>
-                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Unit Cost</th>
-                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">Line Reason</th>
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.item', 'Item')}</th>
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.qtyChange', 'Qty Change')}</th>
+                    <th className="px-6 py-2.5 text-right text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.unitCost', 'Unit Cost')}</th>
+                    <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">{t('adjustments.lineReason', 'Line Reason')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -256,32 +258,31 @@ export default function AdjustmentDetailPage() {
       <Modal
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction === 'approve' ? 'Approve Adjustment' : 'Reject Adjustment'}
+        title={confirmAction === 'approve' ? t('adjustments.approveTitle', 'Approve Adjustment') : t('adjustments.rejectTitle', 'Reject Adjustment')}
         maxWidth="md"
       >
         <div className="space-y-4">
           {confirmAction === 'approve' ? (
             <>
-              <p className="text-gray-600 dark:text-gray-400">Approve this adjustment?</p>
+              <p className="text-gray-600 dark:text-gray-400">{t('adjustments.approveConfirm', 'Approve this adjustment?')}</p>
               <div className="px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
                 <i className="bx bx-error mt-0.5" aria-hidden="true"></i>
                 <span>
-                  Approving will immediately change stock levels for all items in this adjustment. This cannot be
-                  undone.
+                  {t('adjustments.approveWarning', 'Approving will immediately change stock levels for all items in this adjustment. This cannot be undone.')}
                 </span>
               </div>
             </>
           ) : (
             <p className="text-gray-600 dark:text-gray-400">
-              Reject this adjustment? Stock levels will not be changed.
+              {t('adjustments.rejectConfirm', 'Reject this adjustment? Stock levels will not be changed.')}
             </p>
           )}
           <div className="flex justify-end space-x-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setConfirmAction(null)} disabled={acting}>
-              Cancel
+              {t('adjustments.cancel', 'Cancel')}
             </Button>
             <Button type="button" variant="danger" onClick={handleConfirm} disabled={acting}>
-              {acting ? 'Working...' : confirmAction === 'approve' ? 'Approve' : 'Reject'}
+              {acting ? t('adjustments.working', 'Working...') : confirmAction === 'approve' ? t('adjustments.approve', 'Approve') : t('adjustments.reject', 'Reject')}
             </Button>
           </div>
         </div>

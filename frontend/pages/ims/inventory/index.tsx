@@ -11,12 +11,14 @@ import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FilterBar, { type FilterValues } from '@/components/ui/FilterBar';
+import { usePageSearch } from '@/store/searchStore';
 import DataTable, { type DataTableColumn, type RowAction } from '@/components/ui/DataTable';
 import { useTenantStore } from '@/store/globalStore';
 import { term } from '@/lib/terminology';
 import StockStatusBadge from '@/components/ui/StockStatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import BulkUploadWizard from '@/components/ui/BulkUploadWizard';
+import CatalogListingModal, { type CatalogListing } from '@/components/network/CatalogListingModal';
 import { useTableState } from '@/hooks/useTableState';
 import { downloadCsv, itemImageSrc, onItemImageError } from '@/lib/format';
 
@@ -59,6 +61,10 @@ export default function InventoryPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  // Marketplace listing: which item is being listed/edited, and a map of
+  // inventoryItemId -> existing listing so rows can show "On market".
+  const [listingModalItem, setListingModalItem] = useState<InventoryItem | null>(null);
+  const [listingByItem, setListingByItem] = useState<Map<string, CatalogListing>>(new Map());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currency, setCurrency] = useState<string>('NGN');
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; itemId: string | null; itemName: string }>({
@@ -68,9 +74,10 @@ export default function InventoryPage() {
   });
   const [deleting, setDeleting] = useState(false);
 
-  // Filter state (config-driven via FilterBar)
-  const [filters, setFilters] = useState<FilterValues>({ search: '', category: '', location: '' });
-  const searchQuery = (filters.search as string) || '';
+  // Filter state (config-driven via FilterBar). Text search now comes from the
+  // top-nav search box (usePageSearch); category/location stay as page filters.
+  const [filters, setFilters] = useState<FilterValues>({ category: '', location: '' });
+  const searchQuery = usePageSearch(t('searchItems') || 'Search items…');
   const selectedCategoryId = (filters.category as string) || '';
   const locationQuery = (filters.location as string) || '';
   const isWarehouse = businessType === 'warehouse';
@@ -79,7 +86,25 @@ export default function InventoryPage() {
     loadItems();
     loadCurrency();
     loadCategories();
+    loadListings();
   }, []);
+
+  // Load this tenant's own marketplace listings, keyed by source inventory item,
+  // so the table can show "On market" and the modal can edit an existing listing.
+  const loadListings = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: CatalogListing[] }>('/network/catalog');
+      if (res.success) {
+        const map = new Map<string, CatalogListing>();
+        (res.data || []).forEach((l) => {
+          if (l.sourceInventoryItemId) map.set(l.sourceInventoryItemId, l);
+        });
+        setListingByItem(map);
+      }
+    } catch {
+      // Non-fatal — the network module may be unavailable; rows just won't show "On market".
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -220,6 +245,11 @@ export default function InventoryPage() {
             className="h-9 w-9 flex-shrink-0 rounded-md bg-gray-50 object-cover ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
           />
           <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
+          {listingByItem.has(item.id) && (
+            <span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              {t('inventory.onMarket', 'On market')}
+            </span>
+          )}
         </div>
       ),
     },
@@ -229,6 +259,7 @@ export default function InventoryPage() {
     uom: {
       key: 'uom',
       label: t('uoms') === 'uoms' ? 'UOM' : t('uoms'),
+      align: 'center',
       render: (item) => item.baseUom?.abbreviation || item.baseUom?.name || item.uom?.abbreviation || item.uom?.name || '-',
     },
     currentStock: { key: 'currentStock', label: t('currentStock'), sortable: true, align: 'right', cellClassName: 'tabular-nums', render: (item) => formatStock(item) },
@@ -301,6 +332,7 @@ export default function InventoryPage() {
     status: {
       key: 'status',
       label: t('status'),
+      align: 'center',
       render: (item) => (
         <StockStatusBadge
           currentStock={Number(item.currentStock || 0)}
@@ -352,6 +384,12 @@ export default function InventoryPage() {
       onClick: (item) => router.push(`${base}/edit/${item.id}`),
     },
     {
+      label: t('inventory.listOnMarket', 'List on market'),
+      icon: 'bx-store',
+      iconColor: 'text-emerald-600',
+      onClick: (item) => setListingModalItem(item),
+    },
+    {
       label: t('delete'),
       icon: 'bx-trash',
       iconColor: 'text-red-600',
@@ -396,7 +434,6 @@ export default function InventoryPage() {
       {!loading && items.length > 0 && (
         <FilterBar
           filters={[
-            { key: 'search', type: 'text', placeholder: t('searchItems') || 'Search items...', className: 'flex-1 min-w-[240px]' },
             ...(isWarehouse
               ? [
                   {
@@ -420,7 +457,7 @@ export default function InventoryPage() {
           ]}
           values={filters}
           onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
-          onClear={() => setFilters({ search: '', category: '', location: '' })}
+          onClear={() => setFilters({ category: '', location: '' })}
         />
       )}
 
@@ -448,6 +485,32 @@ export default function InventoryPage() {
         }}
       />
 
+      {/* List on market / edit an existing marketplace listing for an item */}
+      {listingModalItem && (
+        <CatalogListingModal
+          item={{
+            id: listingModalItem.id,
+            name: listingModalItem.name || '',
+            unit:
+              listingModalItem.baseUom?.abbreviation ||
+              listingModalItem.baseUom?.name ||
+              listingModalItem.uom?.abbreviation ||
+              listingModalItem.uom?.name,
+            currency,
+            salePrice: listingModalItem.salePrice,
+            imageUrl: listingModalItem.frontImage,
+          }}
+          existing={listingByItem.get(listingModalItem.id) ?? null}
+          onClose={() => setListingModalItem(null)}
+          onSaved={() => {
+            setListingModalItem(null);
+            loadListings();
+            setToast({ message: t('catalog.listingSaved', 'Market listing updated'), type: 'success' });
+          }}
+          onError={(m) => setToast({ message: m, type: 'error' })}
+        />
+      )}
+
       {/* Table / empty state */}
       <DataTable<InventoryItem>
         columns={columns}
@@ -457,6 +520,7 @@ export default function InventoryPage() {
         onSortChange={table.toggleSort}
         onRowClick={(item) => router.push(`${base}/${item.id}`)}
         rowActions={rowActions}
+        actionsAlign="center"
         actionsLabel={t('moreActions') || 'More actions'}
         pagination={{
           page: table.page,

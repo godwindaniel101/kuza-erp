@@ -9,6 +9,7 @@
  * transparent. Text/grid always wear text tokens (gray), never series colors.
  */
 import { useId, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'next-i18next';
 
 export const SERIES_1 = '#2e56d3';
 export const SERIES_2 = '#d97706';
@@ -85,7 +86,7 @@ export function RevenueAreaChart({
   data,
   height = 180,
   formatValue = fmtCompact,
-  emptyMessage = 'No revenue recorded yet',
+  emptyMessage,
   onPointClick,
 }: {
   data: AreaPoint[];
@@ -95,6 +96,8 @@ export function RevenueAreaChart({
   /** When set, clicking the chart drills into the nearest point (pointer cursor). */
   onPointClick?: (index: number) => void;
 }) {
+  const { t } = useTranslation('common');
+  const resolvedEmptyMessage = emptyMessage ?? t('charts.noRevenueYet', 'No revenue recorded yet');
   const [hover, setHover] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientId = useId();
@@ -119,7 +122,7 @@ export function RevenueAreaChart({
   if (!data || data.length === 0 || data.every((d) => d.value === 0)) {
     return (
       <div className="flex h-40 items-center justify-center text-[13px] text-gray-400 dark:text-gray-500">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
@@ -149,7 +152,7 @@ export function RevenueAreaChart({
         viewBox={`0 0 ${width} ${height}`}
         className="block w-full"
         role="img"
-        aria-label="Revenue, last 14 days"
+        aria-label={t('charts.revenueLast14Days', 'Revenue, last 14 days')}
         style={onPointClick ? { cursor: 'pointer' } : undefined}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
@@ -244,7 +247,7 @@ export function WeeklyBarChart({
   data,
   height = 160,
   formatValue = fmtCompact,
-  emptyMessage = 'No activity yet',
+  emptyMessage,
   onBarClick,
 }: {
   data: SimpleBarPoint[];
@@ -254,6 +257,8 @@ export function WeeklyBarChart({
   /** When set, bars become clickable (drill-down) and show a pointer cursor. */
   onBarClick?: (index: number) => void;
 }) {
+  const { t } = useTranslation('common');
+  const resolvedEmptyMessage = emptyMessage ?? t('charts.noActivityYet', 'No activity yet');
   const gradientId = useId();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -270,7 +275,7 @@ export function WeeklyBarChart({
   if (!data || data.length === 0 || data.every((d) => d.value === 0)) {
     return (
       <div className="flex h-32 items-center justify-center text-[13px] text-gray-400 dark:text-gray-500">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
@@ -284,7 +289,7 @@ export function WeeklyBarChart({
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" role="img" aria-label="Weekly totals">
+      <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" role="img" aria-label={t('charts.weeklyTotals', 'Weekly totals')}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#34d399" />
@@ -322,7 +327,7 @@ export function WeeklyBarChart({
                 onMouseLeave={() => setHover(null)}
                 onClick={onBarClick ? () => onBarClick(i) : undefined}
               >
-                <title>{onBarClick ? `${d.label}: ${formatValue(d.value)} — click for details` : `${d.label}: ${formatValue(d.value)}`}</title>
+                <title>{onBarClick ? t('charts.barTooltipClickable', '{{label}}: {{value}} — click for details', { label: d.label, value: formatValue(d.value) }) : t('charts.barTooltip', '{{label}}: {{value}}', { label: d.label, value: formatValue(d.value) })}</title>
               </path>
               <text x={x + barW / 2} y={height - 5} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500 text-[9px]">
                 {d.label.length > 9 ? `${d.label.slice(0, 8)}…` : d.label}
@@ -337,11 +342,11 @@ export function WeeklyBarChart({
 
 export function GroupedBarChart({
   data,
-  seriesA = 'Income',
-  seriesB = 'Expenses',
+  seriesA,
+  seriesB,
   height = 200,
   formatValue = fmtCompact,
-  emptyMessage = 'No accounting activity yet',
+  emptyMessage,
 }: {
   data: GroupedBarPoint[];
   seriesA?: string;
@@ -350,6 +355,10 @@ export function GroupedBarChart({
   formatValue?: (v: number) => string;
   emptyMessage?: string;
 }) {
+  const { t } = useTranslation('common');
+  const resolvedSeriesA = seriesA ?? t('charts.income', 'Income');
+  const resolvedSeriesB = seriesB ?? t('charts.expenses', 'Expenses');
+  const resolvedEmptyMessage = emptyMessage ?? t('charts.noAccountingActivityYet', 'No accounting activity yet');
   const [hover, setHover] = useState<{ g: number; s: 'a' | 'b' } | null>(null);
 
   const width = 720;
@@ -365,7 +374,7 @@ export function GroupedBarChart({
   if (!data || data.length === 0 || data.every((d) => d.a === 0 && d.b === 0)) {
     return (
       <div className="flex h-40 items-center justify-center text-[13px] text-gray-400 dark:text-gray-500">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
@@ -382,16 +391,16 @@ export function GroupedBarChart({
       <div className="mb-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SERIES_1 }} />
-          {seriesA}
+          {resolvedSeriesA}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SERIES_2 }} />
-          {seriesB}
+          {resolvedSeriesB}
         </span>
       </div>
 
       <div className="relative">
-        <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" role="img" aria-label={`${seriesA} vs ${seriesB} by month`}>
+        <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" role="img" aria-label={t('charts.seriesVsByMonth', '{{a}} vs {{b}} by month', { a: resolvedSeriesA, b: resolvedSeriesB })}>
           {ticks.map((tv) => {
             const ty = m.top + ih * (1 - tv / max);
             return (
@@ -408,8 +417,8 @@ export function GroupedBarChart({
           {data.map((d, i) => {
             const cx = m.left + groupW * i + groupW / 2;
             const bars: Array<{ s: 'a' | 'b'; v: number; x: number; color: string; name: string }> = [
-              { s: 'a', v: d.a, x: cx - barW - gap / 2, color: SERIES_1, name: seriesA },
-              { s: 'b', v: d.b, x: cx + gap / 2, color: SERIES_2, name: seriesB },
+              { s: 'a', v: d.a, x: cx - barW - gap / 2, color: SERIES_1, name: resolvedSeriesA },
+              { s: 'b', v: d.b, x: cx + gap / 2, color: SERIES_2, name: resolvedSeriesB },
             ];
             return (
               <g key={d.label}>
@@ -427,7 +436,7 @@ export function GroupedBarChart({
                         onMouseEnter={() => setHover({ g: i, s: bar.s })}
                         onMouseLeave={() => setHover(null)}
                       >
-                        <title>{`${d.label} · ${bar.name}: ${formatValue(bar.v)}`}</title>
+                        <title>{t('charts.groupedBarTooltip', '{{label}} · {{name}}: {{value}}', { label: d.label, name: bar.name, value: formatValue(bar.v) })}</title>
                       </path>
                     </g>
                   );

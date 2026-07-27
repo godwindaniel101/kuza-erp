@@ -22,6 +22,12 @@ export default function OrderViewPage() {
   const [order, setOrder] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  // Process controls for an incoming (pending) marketplace sale.
+  const [branches, setBranches] = useState<any[]>([]);
+  const [fulfilBranchId, setFulfilBranchId] = useState<string>('');
+  const [processing, setProcessing] = useState(false);
+
+  const isPendingMarket = order?.source === 'marketplace' && order?.status === 'pending';
 
   useEffect(() => {
     if (id) {
@@ -50,6 +56,60 @@ export default function OrderViewPage() {
       setToast({ message: err.response?.data?.message || t('failedToLoadOrder') || 'Failed to load order', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load fulfilment branches once we know this is a pending marketplace sale.
+  useEffect(() => {
+    if (!isPendingMarket) return;
+    (async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: any[] }>('/settings/branches');
+        const list = (res.data || []).filter((b: any) => b.isActive !== false);
+        setBranches(list);
+        const def = list.find((b: any) => b.isDefault) || list[0];
+        if (def) setFulfilBranchId(def.id);
+      } catch {
+        /* best-effort — the panel shows a "no branch" hint if empty */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPendingMarket]);
+
+  // Accept & fulfil: the seller picks a branch; the network endpoint debits
+  // FIFO stock (in the seller's context) and flips this sale to completed.
+  const handleFulfil = async () => {
+    if (!order?.networkOrderId) {
+      setToast({ message: t('orders.noLinkedOrder', 'This sale has no linked order to fulfil'), type: 'error' });
+      return;
+    }
+    if (!fulfilBranchId) {
+      setToast({ message: t('orders.pickBranchFirst', 'Pick a branch to fulfil from'), type: 'error' });
+      return;
+    }
+    setProcessing(true);
+    try {
+      await api.post(`/network/orders/${order.networkOrderId}/accept`, { branchId: fulfilBranchId });
+      setToast({ message: t('orders.fulfilled', 'Order fulfilled'), type: 'success' });
+      await loadOrder();
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || t('orders.fulfilFailed', 'Failed to fulfil order'), type: 'error' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Decline: drop the pending sale (no stock moved) and reject the request.
+  const handleDecline = async () => {
+    if (!order?.networkOrderId) return;
+    setProcessing(true);
+    try {
+      await api.post(`/network/orders/${order.networkOrderId}/reject`, {});
+      setToast({ message: t('orders.declined', 'Order declined'), type: 'success' });
+      setTimeout(() => router.push('/rms/orders'), 700);
+    } catch (err: any) {
+      setToast({ message: err.response?.data?.message || t('orders.declineFailed', 'Failed to decline order'), type: 'error' });
+      setProcessing(false);
     }
   };
 
@@ -115,9 +175,9 @@ export default function OrderViewPage() {
 
         <PageHeader
           title={t('salesDetails') || 'Sales Details'}
-          subtitle="Full breakdown of this order — items, payments and profit"
+          subtitle={t('orders.salesDetailsSubtitle', 'Full breakdown of this order — items, payments and profit')}
           breadcrumbs={[
-            { label: t('orders') || 'Orders', href: '/rms/orders' },
+            { label: t('nav.sales', 'Sales'), href: '/rms/orders' },
             { label: order.orderNumber },
           ]}
           actions={
@@ -132,38 +192,94 @@ export default function OrderViewPage() {
           }
         />
 
+        {/* Incoming marketplace order — seller processes it here (one record, one URL) */}
+        {isPendingMarket && (
+          <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-5">
+            <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+              <i className="bx bx-store" aria-hidden="true"></i>
+              {t('orders.incomingMarketplace', 'Incoming marketplace order')}
+            </h3>
+            <p className="text-[13px] text-amber-800/80 dark:text-amber-200/80 mt-1">
+              {t('orders.processHint', 'Choose the branch to move stock from, then fulfil to complete the sale — or decline.')}
+            </p>
+            <div className="flex flex-wrap items-end gap-2 mt-4">
+              <div>
+                <label className="block text-xs font-medium text-amber-900 dark:text-amber-100 mb-1">
+                  {t('orders.fulfilFrom', 'Fulfil from')}
+                </label>
+                <select
+                  value={fulfilBranchId}
+                  onChange={(e) => setFulfilBranchId(e.target.value)}
+                  className="h-9 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 px-3 text-[13px] text-gray-900 dark:text-gray-100 focus-ring"
+                >
+                  {branches.length === 0 && <option value="">{t('orders.noBranchOption', 'No branch available')}</option>}
+                  {branches.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                      {b.isDefault ? ` (${t('default', 'default')})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                disabled={processing || !fulfilBranchId}
+                onClick={handleFulfil}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 px-4 h-9 text-[13px] font-medium text-white focus-ring"
+              >
+                <i className="bx bx-check text-base" aria-hidden="true"></i>
+                {processing ? t('processing', 'Processing…') : t('orders.acceptFulfil', 'Accept & fulfil')}
+              </button>
+              <button
+                type="button"
+                disabled={processing}
+                onClick={handleDecline}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 px-4 h-9 text-[13px] font-medium focus-ring"
+              >
+                <i className="bx bx-x text-base" aria-hidden="true"></i>
+                {t('orders.decline', 'Decline')}
+              </button>
+            </div>
+            {branches.length === 0 && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                {t('orders.noBranch', 'No active branch found — create a branch to fulfil this order.')}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Hidden on screen; only this prints (see .receipt-print / @media print) */}
         <Receipt order={order} currency={currency} businessName={businessName || undefined} />
 
         {/* First Row: Order Information and Payment History */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
           {/* Order Information - 2/3 Width */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('orderInformation') || 'Order Information'}</h2>
+          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-5 flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('orderInformation') || 'Order Information'}</h2>
             
             <div className="flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('orderNumber')}</label>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('orderNumber')}</label>
                   <p className="text-sm text-gray-900 dark:text-gray-100 mt-1 font-mono">
                     {order.orderNumber.length > 20 ? order.orderNumber.substring(0, 20) + '...' : order.orderNumber}
                   </p>
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('date')}</label>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('date')}</label>
                   <p className="text-gray-900 dark:text-gray-100 mt-1">{formatDate(order.createdAt)}</p>
                 </div>
 
                 {order.createdByName && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('createdBy') || 'Created by'}</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('createdBy') || 'Created by'}</label>
                     <p className="text-gray-900 dark:text-gray-100 mt-1">{order.createdByName}</p>
                   </div>
                 )}
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('status')}</label>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('status')}</label>
                   <p className="mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -181,73 +297,73 @@ export default function OrderViewPage() {
 
                 {order.orderType && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('orderType')}</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('orderType')}</label>
                     <p className="text-gray-900 dark:text-gray-100 mt-1 capitalize">{order.orderType.replace('_', ' ')}</p>
                   </div>
                 )}
               </div>
 
               {(order.branch || order.table || order.customerName || order.customerPhone) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   {order.branch && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('branch')}</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('branch')}</label>
                       <p className="text-gray-900 dark:text-gray-100 mt-1">{order.branch.name || '-'}</p>
                     </div>
                   )}
                   
                   {order.table && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('table')}</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('table')}</label>
                       <p className="text-gray-900 dark:text-gray-100 mt-1">{order.table.name || order.table.number || '-'}</p>
                     </div>
                   )}
                   
                   {order.customerName && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customerName')}</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('customerName')}</label>
                       <p className="text-gray-900 dark:text-gray-100 mt-1">{order.customerName}</p>
                     </div>
                   )}
 
                   {order.customerPhone && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('customerPhone')}</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('customerPhone')}</label>
                       <p className="text-gray-900 dark:text-gray-100 mt-1">{order.customerPhone}</p>
                     </div>
                   )}
                 </div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('cost')}</label>
-                  <p className="text-xl font-bold text-gray-700 dark:text-gray-300 mt-1">{formatCurrency(totalCost)}</p>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('cost')}</label>
+                  <p className="text-lg font-bold text-gray-700 dark:text-gray-300 mt-1">{formatCurrency(totalCost)}</p>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('sales')}</label>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(totalSale)}</p>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('sales')}</label>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(totalSale)}</p>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('profit')}</label>
-                  <p className={`text-xl font-bold mt-1 ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('profit')}</label>
+                  <p className={`text-lg font-bold mt-1 ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
                   </p>
                 </div>
 
                 {order.allocationMethod && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('allocationMethod')}</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('allocationMethod')}</label>
                     <p className="text-gray-900 dark:text-gray-100 mt-1">{order.allocationMethod}</p>
                   </div>
                 )}
               </div>
 
               {order.notes && (
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('notes')}</label>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('notes')}</label>
                   <p className="text-gray-900 dark:text-gray-100 mt-1">{order.notes}</p>
                 </div>
               )}
@@ -255,36 +371,36 @@ export default function OrderViewPage() {
           </div>
 
           {/* Payment History - 1/3 Width */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('paymentHistory') || 'Payment History'}</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 border border-gray-200 dark:border-gray-700 p-5 flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('paymentHistory') || 'Payment History'}</h2>
             
             {/* Payment Summary - At the top */}
-            <div className="space-y-3 mb-4">
+            <div className="space-y-2.5 mb-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('orderTotal') || 'Order Total'}</label>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(Number(order.totalAmount || 0))}</p>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('orderTotal') || 'Order Total'}</label>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(Number(order.totalAmount || 0))}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('totalPaid') || 'Total Paid'}</label>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('totalPaid') || 'Total Paid'}</label>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-1">
                     {formatCurrency((order.payments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0))}
                   </p>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('remainingBalance') || 'Remaining Balance'}</label>
-                <p className="text-xl font-bold text-red-600 dark:text-red-400 mt-1">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('remainingBalance') || 'Remaining Balance'}</label>
+                <p className="text-lg font-bold text-red-600 dark:text-red-400 mt-1">
                   {formatCurrency(Number(order.totalAmount || 0) - (order.payments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0))}
                 </p>
               </div>
             </div>
 
             {/* Payment Log - Scrollable */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex-1 flex flex-col min-h-0">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex-1 flex flex-col min-h-0">
               {order.payments && order.payments.length > 0 ? (
                 <div className="flex-1 overflow-y-auto">
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {order.payments.map((payment: any, index: number) => (
                       <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 last:pb-0">
                         <div className="flex justify-between items-start mb-1">
@@ -365,7 +481,7 @@ export default function OrderViewPage() {
                                   )}
                                   <div>
                                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                      {item.name || item.inventoryItem?.name || 'Unknown Item'}
+                                      {item.name || item.inventoryItem?.name || t('orders.unknownItem', 'Unknown Item')}
                                     </div>
                                   </div>
                                 </div>
@@ -430,7 +546,7 @@ export default function OrderViewPage() {
                                                 <tr key={batchIdx} className="border-b border-gray-100 dark:border-gray-800">
                                                   <td className="py-2 px-3">
                                                     <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 rounded font-medium">
-                                                      {batch.supplier?.name || 'Unknown Supplier'}
+                                                      {batch.supplier?.name || t('orders.unknownSupplier', 'Unknown Supplier')}
                                                     </span>
                                                   </td>
                                                   <td className="py-2 px-3 text-gray-700 dark:text-gray-200">

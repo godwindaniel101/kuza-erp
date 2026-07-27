@@ -1,24 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Kuza ERP — isolated dev stack (db + backend + frontend only).
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Self-contained on purpose: its own `_dev` containers, its own
+# `postgres_data_dev` volume, and frontend on :4000 — so it never collides
+# with, or overwrites the data of, the full stack in docker-compose.yml.
+# The marketing website + Ollama are omitted from this lightweight app loop;
+# use the full docker-compose.yml when you need them.
+# ─────────────────────────────────────────────────────────────────────────
+name: kuza-dev
 
 services:
   postgres:
     image: postgres:15-alpine
     container_name: erp_postgres_dev
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: erp_db
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-erp_db}
     ports:
-      - "4433:5432"
+      - "${DB_PORT:-4433}:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
       - ./docker/postgres/init-landlord.sql:/docker-entrypoint-initdb.d/01-init-landlord.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - erp_network
+    restart: unless-stopped
 
   backend:
     build:
@@ -30,22 +43,46 @@ services:
       PORT: 4001
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: erp_db
-      DB_LANDLORD_NAME: erp_landlord
-      JWT_SECRET: dev-secret-key
-      JWT_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:4000
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-erp_db}
+      DB_LANDLORD_NAME: ${DB_LANDLORD_NAME:-erp_landlord}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
+      # Optional integrations — passed through when set in your .env, else blank.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Kuza ERP}
+      # AI / LLM provider — defaults to the local Docker Model Runner.
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://model-runner.docker.internal/engines/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-ai/llama3.2:latest}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-30000}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
     ports:
-      - "4001:4001"
+      - "${BACKEND_PORT:-4001}:4001"
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
-      - ./backend/src/i18n:/app/src/i18n
-      - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
+      - backend_uploads_dev:/app/uploads
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:4001/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - erp_network
     command: npm run start:dev
@@ -58,12 +95,13 @@ services:
     container_name: erp_frontend_dev
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:4001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
       NEXT_TELEMETRY_DISABLED: 1
     ports:
-      - "4000:3000"
+      - "${FRONTEND_PORT:-4000}:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -75,8 +113,8 @@ services:
 
 volumes:
   postgres_data_dev:
+  backend_uploads_dev:
 
 networks:
   erp_network:
     driver: bridge
-

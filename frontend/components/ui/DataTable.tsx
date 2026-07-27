@@ -52,6 +52,8 @@ interface DataTableProps<T extends { id: string }> {
   rowActions?: RowAction<T>[];
   /** Aria label for the actions trigger. */
   actionsLabel?: string;
+  /** Alignment of the actions column (default 'right'). */
+  actionsAlign?: 'center' | 'right';
 
   // Selection (optional)
   selectable?: boolean;
@@ -91,6 +93,7 @@ export default function DataTable<T extends { id: string }>({
   onSortChange,
   rowActions,
   actionsLabel = 'More actions',
+  actionsAlign = 'right',
   selectable = false,
   selectedIds = [],
   onSelectionChange,
@@ -204,7 +207,7 @@ export default function DataTable<T extends { id: string }>({
                   );
                 })}
                 {hasActions && (
-                  <th className="px-6 py-2.5 text-right text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase w-20">
+                  <th className={`px-6 py-2.5 ${actionsAlign === 'center' ? 'text-center' : 'text-right'} text-2xs font-semibold tracking-wider text-gray-500 dark:text-gray-400 uppercase w-20`}>
                     Actions
                   </th>
                 )}
@@ -249,7 +252,7 @@ export default function DataTable<T extends { id: string }>({
                       );
                     })}
                     {hasActions && (
-                      <td className="px-6 py-1.5 whitespace-nowrap text-right text-[13px]" onClick={(e) => e.stopPropagation()}>
+                      <td className={`px-6 py-1.5 whitespace-nowrap ${actionsAlign === 'center' ? 'text-center' : 'text-right'} text-[13px]`} onClick={(e) => e.stopPropagation()}>
                         <RowActionsMenu
                           row={row}
                           actions={rowActions!}
@@ -317,13 +320,28 @@ function RowActionsMenu<T extends { id: string }>({
   label: string;
 }) {
   const visible = actions.filter((a) => !a.hidden?.(row));
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropUp, setDropUp] = useState(false);
   if (visible.length === 0) return null;
+
+  // Open upward when there isn't room below the trigger — otherwise the menu
+  // extends past the table card's `overflow-hidden` edge and gets clipped
+  // ("buried") on the last rows.
+  const handleToggle = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const estMenuHeight = visible.length * 40 + 16;
+      setDropUp(window.innerHeight - rect.bottom < estMenuHeight + 24);
+    }
+    onToggle();
+  };
 
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={onToggle}
+        onClick={handleToggle}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -334,7 +352,9 @@ function RowActionsMenu<T extends { id: string }>({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-popover border border-gray-200 dark:border-gray-800"
+          className={`absolute right-0 z-50 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-popover border border-gray-200 dark:border-gray-800 ${
+            dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
         >
           <div className="py-1">
             {visible.map((action) => (

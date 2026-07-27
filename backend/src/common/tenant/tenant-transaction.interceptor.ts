@@ -48,6 +48,14 @@ export class TenantTransactionInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    // Defense in depth: schemaName is interpolated into SET LOCAL search_path
+    // below. It comes from our own landlord table (never user input), but we
+    // still validate its shape to guarantee no malformed value can ever be
+    // spliced into raw SQL. Mirrors MenuSiteTenantGuard's validation.
+    if (!/^[A-Za-z0-9_]+$/.test(schemaName)) {
+      return next.handle();
+    }
+
     return from(
       runInTransaction(async () => {
         // SET LOCAL keeps the search_path scoped to this transaction's

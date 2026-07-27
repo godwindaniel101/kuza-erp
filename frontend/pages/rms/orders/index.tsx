@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
+import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
-import Link from 'next/link';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
@@ -12,15 +12,110 @@ import EmptyState from '@/components/ui/EmptyState';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import OrderStatusBadge, { type OrderStatus } from '@/components/network/OrderStatusBadge';
 import { downloadCsv, formatMoney, useCurrency } from '@/lib/format';
 
 const PAGE_SIZE = 20;
 
-export default function OrdersPage() {
+// ---- Unified sales row model ---------------------------------------------
+// One outbound list = private POS/direct sales + incoming marketplace orders
+// (where I'm the supplier). Both sources are normalized to this shape, merged
+// and sorted by date desc; status tabs filter across the merged list.
+type StatusBucket = 'in_progress' | 'completed' | 'rejected';
+type PaymentStatus = 'unpaid' | 'paid' | 'claimed';
+type SaleKind = 'pos' | 'marketplace';
+
+interface SaleRow {
+  /** Unique React key across both sources (rawId can theoretically collide). */
+  id: string;
+  rawId: string;
+  kind: SaleKind;
+  ref: string;
+  party: string;
+  statusBucket: StatusBucket;
+  /** For marketplace we render OrderStatusBadge; this label is the fallback/POS text. */
+  statusLabel: string;
+  /** Raw marketplace status, used to drive OrderStatusBadge (shipped -> "In transit"). */
+  marketplaceStatus?: OrderStatus;
+  total: number;
+  currency: string;
+  date: string;
+  paymentStatus: PaymentStatus;
+  /** Supplier-side: id of the REAL sale materialized on accept (opens POS detail). */
+  salesOrderId?: string | null;
+  raw: any;
+}
+
+type TabKey = 'all' | StatusBucket;
+
+const totalPaidOf = (order: any) =>
+  (order.payments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+
+// POS status values seen in the backend: 'pending' (default) and 'completed'
+// (set together with paidAt on full payment). No rejected/cancelled state
+// exists for POS, so those never fall into the Rejected bucket.
+function bucketPos(order: any): StatusBucket {
+  if (order.status === 'cancelled' || order.status === 'rejected') return 'rejected';
+  const paid = totalPaidOf(order) >= Number(order.totalAmount || 0) && Number(order.totalAmount || 0) > 0;
+  if (order.status === 'completed' || order.paidAt || paid) return 'completed';
+  return 'in_progress';
+}
+
+function bucketMarketplace(order: any): StatusBucket {
+  if (order.status === 'received' || order.paymentStatus === 'paid') return 'completed';
+  if (order.status === 'rejected' || order.status === 'cancelled') return 'rejected';
+  // requested | accepted | shipped (and anything else in flight)
+  return 'in_progress';
+}
+
+function normalizePos(order: any, currency: string): SaleRow {
+  const paid = totalPaidOf(order) >= Number(order.totalAmount || 0) && Number(order.totalAmount || 0) > 0;
+  // A marketplace-sourced RMS order IS the seller's one canonical sale record
+  // (created pending at checkout, fulfilled in place). Tag it so the Source chip
+  // reads "Market"; it still opens at /rms/orders/:id like any other sale.
+  const isMarket = order.source === 'marketplace';
+  return {
+    id: `pos:${order.id}`,
+    rawId: order.id,
+    kind: isMarket ? 'marketplace' : 'pos',
+    ref: order.orderNumber || '—',
+    party: order.customerName || '—',
+    statusBucket: bucketPos(order),
+    statusLabel: order.status || 'pending',
+    total: Number(order.totalAmount || 0),
+    currency,
+    date: order.paidAt || order.createdAt || '',
+    paymentStatus: paid || order.status === 'completed' ? 'paid' : 'unpaid',
+    raw: order,
+  };
+}
+
+function normalizeMarketplace(order: any): SaleRow {
+  return {
+    id: `mkt:${order.id}`,
+    rawId: order.id,
+    kind: 'marketplace',
+    ref: order.orderNumber || '—',
+    party: order.buyerName || order.counterpartyName || order.buyer?.name || '—',
+    statusBucket: bucketMarketplace(order),
+    statusLabel: order.status || '—',
+    marketplaceStatus: order.status as OrderStatus,
+    total: Number(order.total || 0),
+    currency: order.currency || 'NGN',
+    date: order.createdAt || '',
+    paymentStatus: (order.paymentStatus as PaymentStatus) || 'unpaid',
+    salesOrderId: order.salesOrderId ?? null,
+    raw: order,
+  };
+}
+
+export default function SalesPage() {
   const { t } = useTranslation('common');
+  const router = useRouter();
   const currency = useCurrency();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [rows, setRows] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabKey>('all');
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -33,27 +128,50 @@ export default function OrdersPage() {
   });
   const [processingPayment, setProcessingPayment] = useState(false);
 
+
   useEffect(() => {
     loadOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency]);
 
   const loadOrders = async () => {
-    try {
-      const response = await api.get<{ success: boolean; data: any[] }>('/rms/orders');
-      if (response.success) {
-        setOrders(response.data);
-      }
-    } catch (err) {
-      console.error('Failed to load orders:', err);
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    // Fetch both sources in parallel; a failure in one source must not blank
+    // the whole list. Marketplace is optional (tenant may have no network).
+    const [posRes, mktRes] = await Promise.allSettled([
+      api.get<{ success: boolean; data: any[] }>('/rms/orders'),
+      api.get<{ success: boolean; data: any[] }>('/network/orders?role=supplier'),
+    ]);
+
+    const merged: SaleRow[] = [];
+    if (posRes.status === 'fulfilled' && posRes.value.success) {
+      merged.push(...(posRes.value.data || []).map((o) => normalizePos(o, currency)));
+    } else if (posRes.status === 'rejected') {
+      console.error('Failed to load POS sales:', posRes.reason);
     }
+    if (mktRes.status === 'fulfilled' && mktRes.value.success) {
+      // Dedupe: any network order that already has a materialized sale
+      // (salesOrderId) is represented by its RMS row above — skip it so each
+      // order shows exactly once. Only truly network-only orders (off-catalog /
+      // no branch at checkout) surface here.
+      merged.push(
+        ...(mktRes.value.data || [])
+          .filter((o) => !o.salesOrderId)
+          .map(normalizeMarketplace),
+      );
+    } else if (mktRes.status === 'rejected') {
+      console.error('Failed to load marketplace orders:', mktRes.reason);
+    }
+
+    merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setRows(merged);
+    setLoading(false);
   };
 
-  const formatCurrency = (amount: number) => formatMoney(amount, currency);
+  const formatCurrency = (amount: number, cur?: string) => formatMoney(amount, cur || currency);
 
+  // ---- Mark as Paid (POS only) — unchanged behavior --------------------
   const handleMarkAsPaid = (order: any) => {
-    // Calculate total paid from existing payments
     const existingPayments = order.payments || [];
     const totalPaid = existingPayments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
     const remainingBalance = Number(order.totalAmount || 0) - totalPaid;
@@ -110,160 +228,193 @@ export default function OrdersPage() {
     }
   };
 
-  // ---- Derived row helpers (same math as before, per row) ----
-  // COGS is computed server-side from FIFO inflow allocations and attached as
-  // `order.totalCost` (order items themselves carry no cost). Prefer it; fall
-  // back to summing per-item cost only if the API didn't provide it.
-  const rowTotalCost = (order: any) => {
-    if (order.totalCost !== undefined && order.totalCost !== null) {
-      return Number(order.totalCost);
+  // ---- Status tabs -----------------------------------------------------
+  const counts = useMemo(() => {
+    const c: Record<TabKey, number> = { all: rows.length, in_progress: 0, completed: 0, rejected: 0 };
+    for (const r of rows) c[r.statusBucket] += 1;
+    return c;
+  }, [rows]);
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'all', label: t('all', 'All') },
+    { key: 'in_progress', label: t('sales.tabInProgress', 'In progress') },
+    { key: 'completed', label: t('sales.tabCompleted', 'Completed') },
+    { key: 'rejected', label: t('sales.tabRejected', 'Rejected') },
+  ];
+
+  const filtered = useMemo(
+    () => (tab === 'all' ? rows : rows.filter((r) => r.statusBucket === tab)),
+    [rows, tab],
+  );
+
+  // Reset to the first page whenever the active tab changes.
+  useEffect(() => setPage(1), [tab]);
+
+  // Row click / navigation. A marketplace order that has been accepted opens the
+  // REAL sale (full POS detail); one still 'requested' opens the Accept panel.
+  // The user never navigates to /network for the seller flow.
+  const goToDetail = (row: SaleRow) => {
+    // RMS rows (id `pos:…`) are the canonical one-record sale — POS *and*
+    // marketplace sales materialized on the seller's table. Always /rms/orders/:id.
+    if (row.id.startsWith('pos:')) {
+      router.push(`/rms/orders/${row.rawId}`);
+      return;
     }
-    return (
-      order.items?.reduce((sum: number, item: any) => {
-        let itemCost = Number(item.costTotal || 0);
-        if (itemCost === 0) {
-          const unitCost = Number(item.unitCost || item.cost || item.costPrice || 0);
-          const quantity = Number(item.quantity || 0);
-          itemCost = unitCost * quantity;
-        }
-        return sum + itemCost;
-      }, 0) || 0
-    );
+    // Network-only fallback (no materialized sale): a materialized one would have
+    // been deduped away above, so this only fires for off-catalog orders.
+    if (row.salesOrderId) {
+      router.push(`/rms/orders/${row.salesOrderId}`);
+      return;
+    }
+    router.push(`/purchases/orders/${row.rawId}`);
   };
-
-  const rowTotalSale = (order: any) => Number(order.subtotal || order.totalAmount || 0);
-
-  const rowItemsSold = (order: any) =>
-    order.items?.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0) ||
-    Number(order.itemsSold || 0) ||
-    0;
-
-  const rowTotalPaid = (order: any) =>
-    (order.payments || []).reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
 
   const handleExport = () => {
     downloadCsv(
-      'orders.csv',
+      'sales.csv',
       [
         t('orderNumber'),
-        t('itemsSold') || 'Items Sold',
-        t('totalPaid') || 'Total Paid',
-        t('createdDate') || 'Date/Time',
-        t('createdBy') || 'Created by',
-        t('totalCost') || 'Total Cost',
-        t('totalSale') || 'Total Sale',
-        t('profit'),
+        t('sales.source', 'Source'),
+        t('sales.party', 'Customer / Buyer'),
         t('status'),
+        t('sales.paymentStatus', 'Payment'),
+        t('totalSale') || 'Total',
+        t('createdDate') || 'Date/Time',
       ],
-      orders.map((order) => {
-        const totalSale = rowTotalSale(order);
-        const totalCost = rowTotalCost(order);
-        return [
-          order.orderNumber,
-          rowItemsSold(order),
-          rowTotalPaid(order).toFixed(2),
-          order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
-          order.createdByName || '',
-          totalCost.toFixed(2),
-          totalSale.toFixed(2),
-          (totalSale - totalCost).toFixed(2),
-          order.status,
-        ];
-      }),
+      filtered.map((r) => [
+        r.ref,
+        r.kind === 'pos' ? 'POS' : 'Marketplace',
+        r.party,
+        r.statusLabel,
+        r.paymentStatus,
+        r.total.toFixed(2),
+        r.date ? new Date(r.date).toLocaleString() : '',
+      ]),
     );
   };
 
-  const columns: DataTableColumn<any>[] = [
+  const KindChip = ({ kind }: { kind: SaleKind }) => (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${
+        kind === 'pos'
+          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+      }`}
+    >
+      <i className={`bx ${kind === 'pos' ? 'bx-store' : 'bx-globe'} text-xs`} aria-hidden="true" />
+      {kind === 'pos' ? t('sales.kindPos', 'POS') : t('sales.kindMarketplace', 'Marketplace')}
+    </span>
+  );
+
+  const PaymentPill = ({ status }: { status: PaymentStatus }) => (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${
+        status === 'paid'
+          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+          : status === 'claimed'
+          ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+      }`}
+    >
+      <i
+        className={`bx ${status === 'paid' ? 'bx-check' : status === 'claimed' ? 'bx-hourglass' : 'bx-time-five'} text-xs`}
+        aria-hidden="true"
+      />
+      {status === 'paid'
+        ? t('orders.paid', 'Paid')
+        : status === 'claimed'
+        ? t('orders.claimed', 'Claimed')
+        : t('orders.unpaid', 'Unpaid')}
+    </span>
+  );
+
+  const columns: DataTableColumn<SaleRow>[] = [
     {
-      key: 'orderNumber',
+      key: 'ref',
       label: t('orderNumber'),
-      render: (order) => (
-        <Link
-          href={`/rms/orders/${order.id}`}
-          className="font-medium text-brand-600 dark:text-brand-400 hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {order.orderNumber}
-        </Link>
+      render: (row) => (
+        <span className="font-medium text-brand-600 dark:text-brand-400">{row.ref}</span>
       ),
     },
     {
-      key: 'itemsSold',
-      label: t('itemsSold') || 'Items Sold',
-      render: (order) => <span className="text-gray-500 dark:text-gray-400">{rowItemsSold(order)}</span>,
+      key: 'kind',
+      label: t('sales.source', 'Source'),
+      render: (row) => <KindChip kind={row.kind} />,
     },
     {
-      key: 'totalPaid',
-      label: t('totalPaid') || 'Total Paid',
-      align: 'right',
-      render: (order) => <span className="text-gray-500 dark:text-gray-400">{formatCurrency(rowTotalPaid(order))}</span>,
-    },
-    {
-      key: 'createdAt',
-      label: t('createdDate') || 'Date/Time',
-      render: (order) => {
-        const createdAt = order.createdAt ? new Date(order.createdAt) : null;
-        return (
-          <span className="text-gray-500 dark:text-gray-400">
-            {createdAt
-              ? `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : '-'}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'createdByName',
-      label: t('createdBy') || 'Created by',
-      render: (order) => (
-        <span className="text-gray-500 dark:text-gray-400">{order.createdByName || '—'}</span>
-      ),
-    },
-    {
-      key: 'totalCost',
-      label: t('totalCost') || 'Total Cost',
-      align: 'right',
-      render: (order) => <span className="text-gray-500 dark:text-gray-400">{formatCurrency(rowTotalCost(order))}</span>,
-    },
-    {
-      key: 'totalSale',
-      label: t('totalSale') || 'Total Sale',
-      align: 'right',
-      render: (order) => (
-        <span className="text-gray-900 dark:text-gray-100">{formatCurrency(rowTotalSale(order))}</span>
-      ),
-    },
-    {
-      key: 'profit',
-      label: t('profit'),
-      align: 'right',
-      render: (order) => {
-        const profit = rowTotalSale(order) - rowTotalCost(order);
-        return (
-          <span
-            className={`font-semibold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
-          >
-            {profit >= 0 ? '+' : ''}
-            {formatCurrency(profit)}
-          </span>
-        );
-      },
+      key: 'party',
+      label: t('sales.party', 'Customer / Buyer'),
+      render: (row) => <span className="text-gray-700 dark:text-gray-300">{row.party}</span>,
     },
     {
       key: 'status',
       label: t('status'),
-      render: (order) => (
-        <StatusBadge
-          variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'pending' : 'info'}
-          label={order.status}
-        />
+      render: (row) => (
+        <div className="flex items-center gap-1.5">
+          {/* Unified terminal status across channels: a concluded sale reads
+              "Completed" whether it came from POS or the marketplace (a received
+              marketplace order IS a completed sale). Marketplace keeps its
+              intermediate stages (In transit, etc.) via OrderStatusBadge. */}
+          {row.statusBucket === 'completed' ? (
+            <StatusBadge variant="success" label={t('sales.statusCompleted', 'Completed')} />
+          ) : row.kind === 'marketplace' && row.marketplaceStatus ? (
+            <OrderStatusBadge status={row.marketplaceStatus} />
+          ) : (
+            <StatusBadge variant="pending" label={row.statusLabel} />
+          )}
+          <PaymentPill status={row.paymentStatus} />
+        </div>
       ),
+    },
+    {
+      key: 'total',
+      label: t('totalSale') || 'Total',
+      align: 'right',
+      render: (row) => (
+        <span className="text-gray-900 dark:text-gray-100">{formatCurrency(row.total, row.currency)}</span>
+      ),
+    },
+    {
+      key: 'date',
+      label: t('createdDate') || 'Date/Time',
+      render: (row) => {
+        const d = row.date ? new Date(row.date) : null;
+        return (
+          <span className="text-gray-500 dark:text-gray-400">
+            {d ? `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'}
+          </span>
+        );
+      },
     },
     {
       key: 'actions',
       label: t('actions'),
-      render: (order) => {
-        const isFullyPaid = rowTotalPaid(order) >= Number(order.totalAmount || 0);
+      render: (row) => {
+        // Marketplace: a still-'requested' order gets a Review action that opens
+        // the in-place Accept panel (approve/decline). Accepted/other rows just
+        // route (to the real sale) via the row click — show a chevron.
+        if (row.kind !== 'pos') {
+          if (!row.salesOrderId && row.raw?.status === 'requested') {
+            return (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/purchases/orders/${row.rawId}`);
+                }}
+                className="font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+              >
+                {t('sales.review', 'Review')}
+              </button>
+            );
+          }
+          return (
+            <span className="inline-flex items-center gap-1 text-gray-400 dark:text-gray-500">
+              <i className="bx bx-chevron-right" aria-hidden="true" />
+            </span>
+          );
+        }
+        const order = row.raw;
+        const isFullyPaid = totalPaidOf(order) >= Number(order.totalAmount || 0);
         if (isFullyPaid) return <span className="text-gray-400 dark:text-gray-500">—</span>;
         return (
           <button
@@ -280,22 +431,22 @@ export default function OrdersPage() {
     },
   ];
 
-  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
-  const pageOrders = orders.slice(startIndex, startIndex + PAGE_SIZE);
+  const pageRows = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <div className="space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <PageHeader
-        title={t('orders') || 'Orders'}
-        count={loading ? undefined : orders.length}
-        subtitle="Every sale rung up, paid and settled"
-        breadcrumbs={[{ label: 'Restaurant' }, { label: t('orders') || 'Orders' }]}
+        title={t('nav.sales', 'Sales')}
+        count={loading ? undefined : rows.length}
+        subtitle={t('sales.subtitle', 'Every outbound sale — over the counter and from your network — in one place')}
+        breadcrumbs={[{ label: t('orders.restaurant', 'Restaurant') }, { label: t('nav.sales', 'Sales') }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || orders.length === 0}>
+            <Button variant="secondary" size="sm" onClick={handleExport} disabled={loading || filtered.length === 0}>
               <i className="bx bx-download" aria-hidden="true"></i>
               {t('export') || 'Export'} CSV
             </Button>
@@ -307,22 +458,48 @@ export default function OrdersPage() {
         }
       />
 
-      <DataTable<any>
+      {/* Status tabs — source-agnostic filter pills */}
+      <div className="inline-flex flex-wrap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-0.5">
+        {tabs.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setTab(f.key)}
+            className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              tab === f.key
+                ? 'bg-brand-600 text-white'
+                : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            {f.label}
+            <span
+              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-2xs ${
+                tab === f.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+              }`}
+            >
+              {counts[f.key]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <DataTable<SaleRow>
         columns={columns}
-        data={pageOrders}
+        data={pageRows}
         loading={loading}
+        onRowClick={goToDetail}
         pagination={{
           page,
           totalPages,
           startIndex,
-          endIndex: Math.min(startIndex + pageOrders.length, orders.length),
-          totalItems: orders.length,
+          endIndex: Math.min(startIndex + pageRows.length, filtered.length),
+          totalItems: filtered.length,
           onPageChange: setPage,
         }}
         emptyState={
           <EmptyState
             icon="bx-receipt"
-            title={t('noOrdersYet') || 'No orders yet'}
+            title={t('noOrdersYet') || 'No sales yet'}
             description={t('createYourFirstOrder') || 'Create your first order to get started'}
             actions={
               <Button href="/rms/orders/create" variant="primary" size="sm">
@@ -333,7 +510,7 @@ export default function OrdersPage() {
         }
       />
 
-      {/* Mark as Paid Modal */}
+      {/* Mark as Paid Modal (POS) */}
       <Modal
         isOpen={showPaymentModal}
         onClose={() => {
@@ -449,6 +626,7 @@ export default function OrdersPage() {
           </form>
         )}
       </Modal>
+
     </div>
   );
 }

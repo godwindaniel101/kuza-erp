@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GetServerSideProps } from 'next';
+import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
@@ -53,8 +54,9 @@ function Avatar({ name, i }: { name: string; i: number }) {
 }
 
 export default function SalesDashboardPage() {
+  const { t } = useTranslation('common');
   const currency = useCurrency();
-  const [greeting, setGreeting] = useState('Welcome back');
+  const [greeting, setGreeting] = useState(t('sales.welcomeBack', 'Welcome back'));
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<InvoiceSummary>({ totalOutstanding: 0, totalOverdue: 0, paidThisMonth: 0 });
   const [invoiceCount, setInvoiceCount] = useState(0);
@@ -63,7 +65,13 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     const h = new Date().getHours();
-    setGreeting(h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening');
+    setGreeting(
+      h < 12
+        ? t('sales.goodMorning', 'Good morning')
+        : h < 18
+        ? t('sales.goodAfternoon', 'Good afternoon')
+        : t('sales.goodEvening', 'Good evening'),
+    );
     (async () => {
       try {
         const [inv, cust, recentInv] = await Promise.allSettled([
@@ -113,7 +121,7 @@ export default function SalesDashboardPage() {
   const topCustomers = useMemo(() => {
     const map: Record<string, { name: string; owed: number; total: number; count: number }> = {};
     recent.forEach((inv) => {
-      const name = inv.customer?.name || 'Unknown customer';
+      const name = inv.customer?.name || t('sales.unknownCustomer', 'Unknown customer');
       if (!map[name]) map[name] = { name, owed: 0, total: 0, count: 0 };
       map[name].owed += Number(inv.balance) || 0;
       map[name].total += Number(inv.total) || 0;
@@ -132,24 +140,30 @@ export default function SalesDashboardPage() {
 
   const statusLine =
     summary.totalOverdue > 0
-      ? `You have ${formatMoney(summary.totalOverdue, currency)} overdue — chase these payments`
+      ? t('sales.statusOverdue', 'You have {{amount}} overdue — chase these payments', {
+          amount: formatMoney(summary.totalOverdue, currency),
+        })
       : summary.totalOutstanding > 0
-      ? `${formatMoney(summary.totalOutstanding, currency)} outstanding across ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'}`
-      : 'You are all caught up — no money owed to you';
+      ? t('sales.statusOutstanding', '{{amount}} outstanding across {{count}} invoice{{s}}', {
+          amount: formatMoney(summary.totalOutstanding, currency),
+          count: invoiceCount,
+          s: invoiceCount === 1 ? '' : 's',
+        })
+      : t('sales.statusCaughtUp', 'You are all caught up — no money owed to you');
 
   return (
     <div className="space-y-5">
       <PageHeader
         title={`${greeting} 👋`}
         subtitle={statusLine}
-        breadcrumbs={[{ label: 'Sales' }, { label: 'Overview' }]}
+        breadcrumbs={[{ label: t('sales.sales', 'Sales') }, { label: t('sales.overview', 'Overview') }]}
         actions={
           <div className="flex gap-2">
             <Button href="/sales/customers" variant="secondary" size="md">
-              <i className="bx bx-user-plus" /> New Customer
+              <i className="bx bx-user-plus" /> {t('sales.newCustomer', 'New Customer')}
             </Button>
             <Button href="/sales/invoices/new" size="md">
-              <i className="bx bx-plus" /> New Invoice
+              <i className="bx bx-plus" /> {t('invoices.newInvoice', 'New Invoice')}
             </Button>
           </div>
         }
@@ -165,39 +179,39 @@ export default function SalesDashboardPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
-            label="Outstanding"
+            label={t('sales.outstanding', 'Outstanding')}
             value={formatMoney(summary.totalOutstanding, currency)}
             icon="bx-hourglass"
             tone="warning"
-            caption="awaiting payment"
+            caption={t('sales.awaitingPayment', 'awaiting payment')}
           />
           <StatCard
-            label="Overdue"
+            label={t('sales.overdue', 'Overdue')}
             value={formatMoney(summary.totalOverdue, currency)}
             icon="bx-error-circle"
             tone="error"
-            caption={summary.totalOverdue > 0 ? 'needs chasing' : 'nothing overdue'}
+            caption={summary.totalOverdue > 0 ? t('sales.needsChasing', 'needs chasing') : t('sales.nothingOverdue', 'nothing overdue')}
           />
           <StatCard
-            label="Paid this month"
+            label={t('sales.paidThisMonth', 'Paid this month')}
             value={formatMoney(summary.paidThisMonth, currency)}
             icon="bx-check-circle"
             tone="success"
-            caption="collected"
+            caption={t('sales.collected', 'collected')}
           />
           <StatCard
-            label="Customers"
+            label={t('sales.customers', 'Customers')}
             value={customerCount}
             icon="bx-group"
             tone="info"
-            caption={`${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'}`}
+            caption={t('sales.invoiceCount', '{{count}} invoice{{s}}', { count: invoiceCount, s: invoiceCount === 1 ? '' : 's' })}
           />
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Invoiced trend */}
-        <Card title="Invoiced, last 14 days" subtitle="Total billed per day" className="lg:col-span-2">
+        <Card title={t('sales.invoicedLast14Days', 'Invoiced, last 14 days')} subtitle={t('sales.totalBilledPerDay', 'Total billed per day')} className="lg:col-span-2">
           {loading ? (
             <div className="h-40 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ) : (
@@ -205,18 +219,18 @@ export default function SalesDashboardPage() {
               <RevenueAreaChart
                 data={chartData}
                 formatValue={(v) => formatMoney(v, currency)}
-                emptyMessage="No invoices billed recently"
+                emptyMessage={t('sales.noInvoicesBilledRecently', 'No invoices billed recently')}
               />
             </div>
           )}
         </Card>
 
         {/* Cash position */}
-        <Card title="Cash position">
+        <Card title={t('sales.cashPosition', 'Cash position')}>
           <div className="space-y-4 pt-1">
             <div>
               <div className="mb-1 flex items-center justify-between text-[13px]">
-                <span className="text-gray-700 dark:text-gray-300">Collected this month</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('sales.collectedThisMonth', 'Collected this month')}</span>
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">
                   {formatMoney(collected, currency)}
                 </span>
@@ -227,7 +241,7 @@ export default function SalesDashboardPage() {
             </div>
             <div>
               <div className="mb-1 flex items-center justify-between text-[13px]">
-                <span className="text-gray-700 dark:text-gray-300">Outstanding</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('sales.outstanding', 'Outstanding')}</span>
                 <span className="font-medium text-amber-600 dark:text-amber-400">{formatMoney(owed, currency)}</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
@@ -237,11 +251,11 @@ export default function SalesDashboardPage() {
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="rounded-xl bg-red-50 p-3 dark:bg-red-500/10">
                 <p className="text-lg font-bold text-red-600 dark:text-red-400">{formatMoney(summary.totalOverdue, currency)}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Overdue</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('sales.overdue', 'Overdue')}</p>
               </div>
               <div className="rounded-xl bg-sky-50 p-3 dark:bg-sky-500/10">
                 <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{invoiceCount}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Invoices</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('invoices.invoices', 'Invoices')}</p>
               </div>
             </div>
           </div>
@@ -252,19 +266,19 @@ export default function SalesDashboardPage() {
         {/* Recent invoices */}
         <Card padding={false}>
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent invoices</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('sales.recentInvoices', 'Recent invoices')}</h3>
             <Button href="/sales/invoices" variant="ghost" size="sm">
-              View all
+              {t('sales.viewAll', 'View all')}
             </Button>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <p className="p-5 text-sm text-gray-400">Loading…</p>
+              <p className="p-5 text-sm text-gray-400">{t('sales.loading', 'Loading…')}</p>
             ) : recentInvoices.length === 0 ? (
-              <p className="p-5 text-sm text-gray-400">No invoices yet.</p>
+              <p className="p-5 text-sm text-gray-400">{t('sales.noInvoicesYet', 'No invoices yet.')}</p>
             ) : (
               recentInvoices.map((inv, i) => {
-                const name = inv.customer?.name || 'Customer';
+                const name = inv.customer?.name || t('sales.customer', 'Customer');
                 return (
                   <div key={inv.id || i} className="flex items-center gap-3 px-5 py-3">
                     <Avatar name={name} i={i} />
@@ -290,16 +304,16 @@ export default function SalesDashboardPage() {
         {/* Top customers */}
         <Card padding={false}>
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Top customers</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('sales.topCustomers', 'Top customers')}</h3>
             <Button href="/sales/customers" variant="ghost" size="sm">
-              View all
+              {t('sales.viewAll', 'View all')}
             </Button>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <p className="p-5 text-sm text-gray-400">Loading…</p>
+              <p className="p-5 text-sm text-gray-400">{t('sales.loading', 'Loading…')}</p>
             ) : topCustomers.length === 0 ? (
-              <p className="p-5 text-sm text-gray-400">No customer activity yet.</p>
+              <p className="p-5 text-sm text-gray-400">{t('sales.noCustomerActivityYet', 'No customer activity yet.')}</p>
             ) : (
               topCustomers.map((c, i) => (
                 <div key={c.name} className="flex items-center gap-3 px-5 py-3">
@@ -307,14 +321,18 @@ export default function SalesDashboardPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{c.name}</p>
                     <p className="truncate text-xs text-gray-500">
-                      {c.count} invoice{c.count === 1 ? '' : 's'} · {formatMoney(c.total, currency)} billed
+                      {t('sales.invoicesBilled', '{{count}} invoice{{s}} · {{amount}} billed', {
+                        count: c.count,
+                        s: c.count === 1 ? '' : 's',
+                        amount: formatMoney(c.total, currency),
+                      })}
                     </p>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className={`text-sm font-semibold ${c.owed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {formatMoney(c.owed, currency)}
                     </span>
-                    <span className="text-xs text-gray-500">{c.owed > 0 ? 'owed' : 'settled'}</span>
+                    <span className="text-xs text-gray-500">{c.owed > 0 ? t('sales.owed', 'owed') : t('sales.settled', 'settled')}</span>
                   </div>
                 </div>
               ))

@@ -77,14 +77,14 @@ export default function Register() {
   const validateStep = (step: number): boolean => {
     if (step === 1) {
       if (!formData.businessType) {
-        setStepErrors((prev) => ({ ...prev, 1: 'Please select your business type' }));
+        setStepErrors((prev) => ({ ...prev, 1: t('auth.selectBusinessTypeError', 'Please select your business type') }));
         return false;
       }
       return true;
     }
     if (step === 2) {
       if (!formData.country) {
-        setStepErrors((prev) => ({ ...prev, 2: 'Please select a country' }));
+        setStepErrors((prev) => ({ ...prev, 2: t('auth.selectCountryError', 'Please select a country') }));
         return false;
       }
       return true;
@@ -135,7 +135,7 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>Create your account · Kuza</title>
+        <title>{t('auth.createAccountTitle', 'Create your account · Kuza')}</title>
       </Head>
       <div className="min-h-screen bg-canvas dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
@@ -147,21 +147,21 @@ export default function Register() {
               </span>
               <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Let&apos;s get your business set up</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('auth.getBusinessSetUp', "Let's get your business set up")}</p>
           </div>
 
           {/* Register Card */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Get started</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">A few quick steps and you&apos;re in.</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('auth.getStarted', 'Get started')}</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{t('auth.fewQuickSteps', "A few quick steps and you're in.")}</p>
 
             {/* Progress Steps */}
             <div className="mb-6">
               <div className="flex items-center justify-between">
                 {[
-                  { n: 1, label: 'Business' },
-                  { n: 2, label: 'Country' },
-                  { n: 3, label: 'Details' },
+                  { n: 1, label: t('auth.stepBusiness', 'Business') },
+                  { n: 2, label: t('auth.stepCountry', 'Country') },
+                  { n: 3, label: t('auth.stepDetails', 'Details') },
                 ].map((step, i) => (
                   <div key={step.n} className="flex items-center min-w-0 flex-1 last:flex-none">
                     {i > 0 && (
@@ -201,7 +201,7 @@ export default function Register() {
                     <i className="bx bx-error-circle text-red-500 dark:text-red-400 text-xl"></i>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Registration Failed</h3>
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">{t('auth.registrationFailedTitle', 'Registration Failed')}</h3>
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                   </div>
                   <div className="ml-4 flex-shrink-0">
@@ -223,7 +223,7 @@ export default function Register() {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      What kind of business? <span className="text-red-500">*</span>
+                      {t('auth.whatKindOfBusiness', 'What kind of business?')} <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {BUSINESS_TYPES.map((bt) => {
@@ -250,9 +250,9 @@ export default function Register() {
                               <Icon name={bt.icon} size={18} />
                             </span>
                             <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 leading-tight">
-                              {bt.label}
+                              {t(`auth.businessType.${bt.type}.label`, bt.label)}
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{bt.description}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{t(`auth.businessType.${bt.type}.description`, bt.description)}</span>
                           </button>
                         );
                       })}
@@ -261,7 +261,7 @@ export default function Register() {
 
                   {formData.businessType && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Includes: {joinNames(presetFor(formData.businessType))}. You can change apps any time in Settings.
+                      {t('auth.includesApps', 'Includes: {{apps}}. You can change apps any time in Settings.', { apps: joinNames(presetFor(formData.businessType)) })}
                     </p>
                   )}
 
@@ -278,7 +278,7 @@ export default function Register() {
                       onClick={nextStep}
                       className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
-                      <span>Continue to Country</span>
+                      <span>{t('auth.continueToCountry', 'Continue to Country')}</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
                     </button>
                   </div>
@@ -290,7 +290,7 @@ export default function Register() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Select Your Country <span className="text-red-500">*</span>
+                      {t('auth.selectYourCountry', 'Select Your Country')} <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-3 gap-3">
                       {featuredCountries.map((country) => (
@@ -311,7 +311,7 @@ export default function Register() {
                             className="text-red-600 border-gray-300 dark:border-gray-600 focus-visible:ring-brand-500"
                           />
                           <span className="text-xl">{country.flag}</span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">{country.name}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">{t(`auth.country.${country.code}`, country.name)}</span>
                         </label>
                       ))}
                     </div>
@@ -322,7 +322,7 @@ export default function Register() {
                       </p>
                     )}
                     <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                      Your country sets your currency — plans and prices are shown in it.
+                      {t('auth.countryCurrencyNote', 'Your country sets your currency — plans and prices are shown in it.')}
                     </p>
                   </div>
 
@@ -333,14 +333,14 @@ export default function Register() {
                       className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
                       <i className="bx bx-left-arrow-alt mr-1"></i>
-                      <span>Back</span>
+                      <span>{t('auth.back', 'Back')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={nextStep}
                       className="bg-brand-gradient hover:bg-brand-gradient-hover text-white h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
-                      <span>Continue</span>
+                      <span>{t('auth.continue', 'Continue')}</span>
                       <i className="bx bx-right-arrow-alt ml-2"></i>
                     </button>
                   </div>
@@ -352,7 +352,7 @@ export default function Register() {
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Business Name <span className="text-red-500">*</span>
+                      {t('auth.businessName', 'Business Name')} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <i className="bx bx-buildings absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -370,7 +370,7 @@ export default function Register() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Full Name <span className="text-red-500">*</span>
+                        {t('auth.fullName', 'Full Name')} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <i className="bx bx-user absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -387,7 +387,7 @@ export default function Register() {
 
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Email address <span className="text-red-500">*</span>
+                        {t('auth.emailAddress', 'Email address')} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <i className="bx bx-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -406,7 +406,7 @@ export default function Register() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Password <span className="text-red-500">*</span>
+                        {t('password', 'Password')} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <i className="bx bx-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -423,7 +423,7 @@ export default function Register() {
 
                     <div>
                       <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Confirm Password <span className="text-red-500">*</span>
+                        {t('auth.confirmPassword', 'Confirm Password')} <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <i className="bx bx-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
@@ -446,7 +446,7 @@ export default function Register() {
                       className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center"
                     >
                       <i className="bx bx-left-arrow-alt mr-1"></i>
-                      <span>Back</span>
+                      <span>{t('auth.back', 'Back')}</span>
                     </button>
                     <button
                       type="submit"
@@ -475,11 +475,11 @@ export default function Register() {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          <span>Creating account...</span>
+                          <span>{t('auth.creatingAccount', 'Creating account...')}</span>
                         </>
                       ) : (
                         <>
-                          <span>Create account</span>
+                          <span>{t('auth.createAccount', 'Create account')}</span>
                           <i className="bx bx-right-arrow-alt ml-2"></i>
                         </>
                       )}
@@ -497,7 +497,7 @@ export default function Register() {
                     <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
+                    <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">{t('auth.orContinueWith', 'Or continue with')}</span>
                   </div>
                 </div>
 
@@ -524,16 +524,16 @@ export default function Register() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span>Sign up with Google</span>
+                  <span>{t('auth.signUpWithGoogle', 'Sign up with Google')}</span>
                 </button>
               </div>
             )}
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Already have an account?
+                {t('auth.alreadyHaveAccount', 'Already have an account?')}
                 <Link href="/login" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium ml-1 transition-colors duration-150">
-                  Sign in
+                  {t('auth.signIn', 'Sign in')}
                 </Link>
               </p>
             </div>

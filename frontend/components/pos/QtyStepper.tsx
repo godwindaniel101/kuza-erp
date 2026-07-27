@@ -1,3 +1,4 @@
+import { useTranslation } from 'next-i18next';
 import { AddIcon } from '@/components/icons';
 
 interface QtyStepperProps {
@@ -40,6 +41,7 @@ export default function QtyStepper({
   size = 'md',
   disabled = false,
 }: QtyStepperProps) {
+  const { t } = useTranslation('common');
   const btn =
     size === 'sm'
       ? 'h-8 w-8'
@@ -61,7 +63,7 @@ export default function QtyStepper({
         type="button"
         onClick={() => onChange(clamp(value - 1))}
         disabled={disabled || value <= min}
-        aria-label="Decrease quantity"
+        aria-label={t('pos.decreaseQuantity', 'Decrease quantity')}
         className={`${btn} flex items-center justify-center rounded-l-lg text-gray-600 transition
           hover:bg-gray-100 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800`}
       >
@@ -74,7 +76,7 @@ export default function QtyStepper({
         onChange={(e) => onChange(clamp(Number(e.target.value)))}
         onFocus={(e) => e.currentTarget.select()}
         disabled={disabled}
-        aria-label="Quantity"
+        aria-label={t('pos.quantity', 'Quantity')}
         className={`${field} border-x border-gray-300 bg-transparent text-center font-mono font-semibold
           text-gray-900 focus:outline-none dark:border-gray-700 dark:text-gray-100
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
@@ -83,7 +85,7 @@ export default function QtyStepper({
         type="button"
         onClick={() => onChange(clamp(value + 1))}
         disabled={disabled || atMax}
-        aria-label="Increase quantity"
+        aria-label={t('pos.increaseQuantity', 'Increase quantity')}
         className={`${btn} flex items-center justify-center rounded-r-lg text-gray-600 transition
           hover:bg-gray-100 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800`}
       >

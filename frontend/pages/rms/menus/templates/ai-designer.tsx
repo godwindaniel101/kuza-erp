@@ -152,6 +152,15 @@ export default function AiDesignerPage() {
           }
         />
 
+        {/* Preview notice — the designer is deterministic, not yet AI-powered */}
+        <div className="flex-shrink-0 mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          <i className="bx bx-info-circle mt-0.5 text-base" aria-hidden="true"></i>
+          <span>
+            <span className="font-semibold">{t('previewNotYetAi') || 'Preview — not yet AI-powered.'}</span>{' '}
+            {t('previewNotYetAiBlurb') || 'This designer applies a curated set of presets, not live AI. Real generative design is coming soon.'}
+          </span>
+        </div>
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 p-5 mb-4">
           <div className="space-y-4">

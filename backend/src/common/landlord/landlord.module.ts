@@ -12,6 +12,13 @@ import { SubscriptionPayment } from '../../modules/billing/entities/subscription
 import { AppAccessRequest } from '../../modules/billing/entities/app-access-request.entity';
 import { LandlordWebhookRoute } from '../../modules/integrations/entities/landlord-webhook-route.entity';
 import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route.entity';
+import { NetworkBusiness } from '../../modules/network/entities/network-business.entity';
+import { TradePartnership } from '../../modules/network/entities/trade-partnership.entity';
+import { NetworkOrder } from '../../modules/network/entities/network-order.entity';
+import { NetworkOrderItem } from '../../modules/network/entities/network-order-item.entity';
+import { NetworkCatalogItem } from '../../modules/network/entities/network-catalog-item.entity';
+import { NetworkWallet } from '../../modules/network/entities/network-wallet.entity';
+import { NetworkWalletEntry } from '../../modules/network/entities/network-wallet-entry.entity';
 
 /**
  * Landlord module - handles tenant authentication and management
@@ -37,6 +44,13 @@ import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route
             AppAccessRequest,
             LandlordWebhookRoute,
             MenuSlugRoute,
+            NetworkBusiness,
+            TradePartnership,
+            NetworkOrder,
+            NetworkOrderItem,
+            NetworkCatalogItem,
+            NetworkWallet,
+            NetworkWalletEntry,
           ],
         };
       },

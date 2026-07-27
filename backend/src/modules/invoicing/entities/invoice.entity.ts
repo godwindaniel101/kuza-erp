@@ -63,6 +63,14 @@ export class Invoice extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
+  /**
+   * When this invoice was auto-created from a Kuza Network purchase order, its
+   * order id. Payment on such invoices is managed from the ORDER flow (wallet /
+   * confirmed external) — manual recordPayment on the invoice is blocked.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  networkOrderId: string | null;
+
   @OneToMany(() => InvoiceLine, (line) => line.invoice, { cascade: true })
   lines: InvoiceLine[];
 

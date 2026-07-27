@@ -308,11 +308,30 @@ export class BillingService {
    * becomes ACTIVE for a one-month period (payment provider stubs are on the
    * entity for later Stripe/Paystack integration).
    */
-  async changePlan(tenantId: string, planCode: string): Promise<TenantSubscription> {
+  async changePlan(
+    tenantId: string,
+    planCode: string,
+    opts: { allowPaid?: boolean } = {},
+  ): Promise<TenantSubscription> {
     if (!planCode) {
       throw new BadRequestException('planCode is required');
     }
     const plan = await this.getPlanByCode(planCode);
+
+    // Revenue guard: a PAID plan can only be activated by the payment webhook
+    // (opts.allowPaid) after a verified charge — never by a direct self-service
+    // switch. Without this, /billing/subscription/change would let a tenant
+    // upgrade to a paid plan (and unlock its gated apps) without paying.
+    if (!opts.allowPaid) {
+      const currency = await this.getTenantCurrency();
+      const price = localPriceFor(plan, currency);
+      if (price.amount && price.amount > 0) {
+        throw new BadRequestException(
+          'This is a paid plan — start a checkout to pay for it. Only free plans can be switched to directly.',
+        );
+      }
+    }
+
     const subscription = await this.getOrCreateSubscription(tenantId);
 
     const now = new Date();
@@ -603,7 +622,8 @@ export class BillingService {
     }
 
     // Activate idempotently (changePlan re-sets the same plan/period safely).
-    await this.changePlan(payment.tenantId, payment.planCode);
+    // allowPaid: this is the verified post-payment activation path.
+    await this.changePlan(payment.tenantId, payment.planCode, { allowPaid: true });
 
     payment.status = 'SUCCESS';
     payment.providerRef = normalized.reference;

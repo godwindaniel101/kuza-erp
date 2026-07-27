@@ -40,9 +40,13 @@ interface BuiltOrderLine {
     quantityUsed: number;
     costPerUnit: number;
     totalCost: number;
+    /** Source branch of this inflow batch (multi-branch FIFO). */
+    branchId: string;
   }>;
   deductions: Array<{
     inventoryItemId: string;
+    /** Branch to decrement — deductions are per (item, source branch). */
+    branchId: string;
     baseQty: number;
     costPrice: number;
   }>;
@@ -104,41 +108,40 @@ export class OrdersService {
       quantityUsed: number;
       costPerUnit: number;
       totalCost: number;
+      /** The branch this inflow batch was drawn from (multi-branch FIFO). */
+      branchId: string;
     }>;
   }> {
-    console.log(
-      `[Allocation] *** STARTING ALLOCATION *** inventoryItemId: ${inventoryItemId}, branchId: ${branchId}, quantityBase: ${quantityBase}, allocationMethod: ${allocationMethod}`,
-    );
 
     // Get all inflow items for this inventory item in the specific branch only
     // Use raw SQL query because TypeORM query builder with joins doesn't reliably translate property names
-    console.log(
-      `[Allocation] Querying inflow items for inventoryItemId: ${inventoryItemId}, branchId: ${branchId}`,
-    );
 
+    // Multi-branch FIFO: draw from the order's OWN branch first (fully), then
+    // spill to other branches. `(item.branch_id = $2) DESC` puts the home
+    // branch's rows first; the method order applies within each branch tier.
+    const branchPriority = "(item.branch_id = $2) DESC";
     let orderByClause = "";
     if (allocationMethod === "FEFO") {
-      orderByClause =
-        "ORDER BY item.expiry_date ASC NULLS LAST, item.created_at ASC";
+      orderByClause = `ORDER BY ${branchPriority}, item.expiry_date ASC NULLS LAST, item.created_at ASC`;
     } else if (allocationMethod === "LIFO") {
-      orderByClause = "ORDER BY item.created_at DESC";
+      orderByClause = `ORDER BY ${branchPriority}, item.created_at DESC`;
     } else {
       // FIFO (default)
-      orderByClause = "ORDER BY item.created_at ASC";
+      orderByClause = `ORDER BY ${branchPriority}, item.created_at ASC`;
     }
 
-    // Query to get inflow items for this inventory item in the SPECIFIC BRANCH ONLY
-    // This ensures sales only pick from inflows done to that particular branch
-    // Uses item.branch_id (not inflow.branch_id) to filter by the branch the item was assigned to
-    // FOR UPDATE OF item: pessimistically locks the inflow-item rows so
-    // concurrent orders cannot allocate the same remaining quantity twice
-    // (audit C-INV-4). Runs on the request's transactional connection.
+    // Multi-branch FIFO: query this item's inflow batches across ALL branches,
+    // ordered home-branch-first (see branchPriority) then by the allocation
+    // method. The greedy loop below consumes the home branch fully before
+    // spilling to others, so single-branch sales are unchanged.
+    // FOR UPDATE OF item: pessimistically locks EVERY candidate inflow row
+    // (across branches) so concurrent orders can't double-allocate the same
+    // remaining quantity (audit C-INV-4). Runs on the request's transaction.
     const query = `
       SELECT item.*
       FROM inventory_inflow_items item
       INNER JOIN inventory_inflows inflow ON item.inflow_id = inflow.id
       WHERE item.inventory_item_id = $1
-        AND item.branch_id = $2
       ${orderByClause}
       FOR UPDATE OF item
     `;
@@ -161,25 +164,31 @@ export class OrdersService {
               ? { createdAt: "DESC" }
               : { createdAt: "ASC" },
       });
+      // Home-branch-first priority (the DB `order` above can't express it, and
+      // the greedy loop relies on ordering to spill only after home is depleted).
+      inflowItems.sort((a, b) => {
+        const ah = a.branchId === branchId ? 0 : 1;
+        const bh = b.branchId === branchId ? 0 : 1;
+        if (ah !== bh) return ah - bh;
+        if (allocationMethod === "LIFO") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (allocationMethod === "FEFO") {
+          const ae = a.expiryDate ? new Date(a.expiryDate).getTime() : Infinity;
+          const be = b.expiryDate ? new Date(b.expiryDate).getTime() : Infinity;
+          if (ae !== be) return ae - be;
+        }
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
     }
-
-    console.log(
-      `[Allocation] Found ${inflowItems.length} inflow items for inventoryItemId: ${inventoryItemId}, branchId: ${branchId}`,
-    );
 
     // Log details of each inflow item found
     inflowItems.forEach((item, index) => {
-      console.log(
-        `[Allocation] Inflow item ${index + 1}: id=${item.id}, baseQuantity=${item.baseQuantity}, unitCost=${item.unitCost}, createdAt=${item.createdAt}`,
-      );
     });
 
     if (inflowItems.length === 0) {
-      console.log(
-        `[Allocation] ERROR: No inflow items found for inventoryItemId: ${inventoryItemId}, branchId: ${branchId}`,
-      );
       throw new BadRequestException(
-        `No inventory available for this item in the selected branch. Please ensure the item has been received in this branch before selling.`,
+        `No inventory available for this item in any branch. Please receive stock before selling.`,
       );
     }
 
@@ -191,20 +200,14 @@ export class OrdersService {
       quantityUsed: number;
       costPerUnit: number;
       totalCost: number;
+      branchId: string;
     }> = [];
 
     let remainingQuantity = quantityBase;
-    console.log(
-      `[Allocation] Starting allocation for ${quantityBase} units across ${inflowItems.length} inflow items`,
-    );
 
     // FIFO: Process inflows in order (oldest first), using each until exhausted
     for (const inflowItem of inflowItems) {
       if (remainingQuantity <= 0) break;
-
-      console.log(
-        `[Allocation] Processing inflow item ${inflowItem.id}, baseQuantity: ${inflowItem.baseQuantity}`,
-      );
 
       // Calculate remaining quantity for this inflow item
       // Sum all quantityUsed from OrderItemInflowItem records for this inflow item
@@ -223,10 +226,6 @@ export class OrdersService {
         Number(inflowItem.baseQuantity || 0) - totalSold,
       );
 
-      console.log(
-        `[Allocation] Inflow item ${inflowItem.id}: totalSold=${totalSold}, availableQuantity=${availableQuantity}, remainingQuantity=${remainingQuantity}`,
-      );
-
       if (availableQuantity > 0) {
         const quantityToUse = Math.min(remainingQuantity, availableQuantity);
         // IMPORTANT: Use inflow item's unitCost (cost price from when item was received)
@@ -234,40 +233,27 @@ export class OrdersService {
         const costPerUnit = Number(inflowItem.unitCost || 0);
         const totalCost = quantityToUse * costPerUnit;
 
-        console.log(
-          `[Allocation] Using ${quantityToUse} units from inflow item ${inflowItem.id} at cost ${costPerUnit} per unit (total: ${totalCost})`,
-        );
-
         allocations.push({
           inflowItemId: inflowItem.id,
           quantityUsed: quantityToUse,
           costPerUnit,
           totalCost: Math.round(totalCost * 100) / 100,
+          branchId: inflowItem.branchId,
         });
 
         remainingQuantity -= quantityToUse;
       }
     }
 
-    console.log(
-      `[Allocation] Final allocation: ${allocations.length} allocations, remaining quantity: ${remainingQuantity}`,
-    );
-
     if (allocations.length === 0) {
-      console.log(
-        `[Allocation] ERROR: No available quantity in inflow items for inventoryItemId: ${inventoryItemId}, branchId: ${branchId}`,
-      );
       throw new BadRequestException(
-        `All inventory for this item in the selected branch has been sold out. Please restock or reduce the quantity.`,
+        `All inventory for this item has been sold out across your branches. Please restock or reduce the quantity.`,
       );
     }
 
     // Check if we could fulfill the full requested quantity
     if (remainingQuantity > 0) {
       const allocatedQuantity = quantityBase - remainingQuantity;
-      console.log(
-        `[Allocation] ERROR: Insufficient inventory. Requested: ${quantityBase}, Available: ${allocatedQuantity}`,
-      );
       throw new BadRequestException(
         `Insufficient inventory in this branch. Requested: ${quantityBase}, Available: ${allocatedQuantity}. Please restock or reduce the quantity.`,
       );
@@ -279,18 +265,6 @@ export class OrdersService {
       0,
     );
     const costPrice = quantityBase > 0 ? totalCost / quantityBase : 0;
-
-    console.log(
-      `[Allocation] Item: ${inventoryItemId}, quantityBase: ${quantityBase}, allocations: ${allocations.length}, costTotal: ${totalCost}`,
-    );
-    console.log(
-      `[Allocation] Allocations details:`,
-      allocations.map((a) => ({
-        id: a.inflowItemId,
-        qty: a.quantityUsed,
-        cost: a.totalCost,
-      })),
-    );
 
     return {
       costPrice: Math.round(costPrice * 100) / 100,
@@ -387,11 +361,20 @@ export class OrdersService {
           allocationMethod,
         );
         allocations.push(...alloc.allocations);
-        deductions.push({
-          inventoryItemId: comp.componentItemId,
-          baseQty: requiredBase,
-          costPrice: alloc.costPrice,
-        });
+        // Deductions are per (item, source branch) so cross-branch draws
+        // decrement each branch's own on-hand.
+        const compByBranch = new Map<string, number>();
+        for (const a of alloc.allocations) {
+          compByBranch.set(a.branchId, (compByBranch.get(a.branchId) || 0) + a.quantityUsed);
+        }
+        for (const [bId, qty] of compByBranch) {
+          deductions.push({
+            inventoryItemId: comp.componentItemId,
+            branchId: bId,
+            baseQty: qty,
+            costPrice: alloc.costPrice,
+          });
+        }
         costTotal += alloc.costTotal;
       }
     } else if (inventoryItem.isTrackable !== false) {
@@ -402,11 +385,19 @@ export class OrdersService {
         allocationMethod,
       );
       allocations.push(...alloc.allocations);
-      deductions.push({
-        inventoryItemId: line.inventoryItemId!,
-        baseQty: quantityBase,
-        costPrice: alloc.costPrice,
-      });
+      // Per (item, source branch) so cross-branch draws decrement each branch.
+      const byBranch = new Map<string, number>();
+      for (const a of alloc.allocations) {
+        byBranch.set(a.branchId, (byBranch.get(a.branchId) || 0) + a.quantityUsed);
+      }
+      for (const [bId, qty] of byBranch) {
+        deductions.push({
+          inventoryItemId: line.inventoryItemId!,
+          branchId: bId,
+          baseQty: qty,
+          costPrice: alloc.costPrice,
+        });
+      }
       costTotal += alloc.costTotal;
     } else {
       // Non-trackable simple item: sell freely; cost from its manual unit cost.
@@ -447,20 +438,6 @@ export class OrdersService {
     createOrderDto: CreateOrderDto,
     actor?: { id?: string; name?: string },
   ) {
-    console.log(
-      `[OrderCreate] ===== STARTING ORDER CREATION =====`
-    );
-    console.log(
-      `[OrderCreate] branchId: ${branchId}, items count: ${createOrderDto.items?.length || 0}`
-    );
-    console.log(
-      `[OrderCreate] Order items:`,
-      createOrderDto.items.map((i) => ({
-        inventoryItemId: i.inventoryItemId,
-        quantity: i.quantity,
-        uomId: i.uomId,
-      })),
-    );
 
     try {
       // Generate shorter order number: ORD-{last8digitsoftimestamp}{4randomchars}
@@ -496,10 +473,6 @@ export class OrdersService {
       const totalAmount = subtotal + tax;
       const profit = subtotal - totalCost;
 
-      console.log(
-        `[OrderCreate] Order totals - subtotal: ${subtotal}, totalCost: ${totalCost}, profit: ${profit}`,
-      );
-
       const order = this.orderRepository.create({
         branchId,
         tableId: createOrderDto.tableId || null,
@@ -522,9 +495,6 @@ export class OrdersService {
       });
 
       const savedOrder = await this.orderRepository.save(order);
-      console.log(
-        `[OrderCreate] Saved order with ID: ${savedOrder.id}, totalCost: ${savedOrder.totalCost}`,
-      );
 
       // Save order items, create allocation tracking records, and update stock.
       for (const { item: itemEntity, allocations, deductions } of
@@ -543,6 +513,7 @@ export class OrdersService {
               quantityUsed: allocation.quantityUsed,
               costPerUnit: allocation.costPerUnit,
               totalCost: allocation.totalCost,
+              branchId: allocation.branchId,
             },
           );
           await this.orderItemInflowItemRepository.save(orderItemInflowItem);
@@ -553,6 +524,9 @@ export class OrdersService {
         // both counters (item + branch) under lock and writes a SALE movement.
         for (const deduction of deductions) {
           const deductQty = Number(deduction.baseQty || 0);
+          // Multi-branch FIFO: decrement the SOURCE branch this portion was
+          // drawn from (may differ from the order's branch when it spilled over).
+          const sourceBranchId = deduction.branchId || branchId;
 
           // Update item-level stock (locked read; negative stock forbidden — C-INV-4)
           const inventoryItem = await this.inventoryItemRepository
@@ -578,20 +552,26 @@ export class OrdersService {
             .setLock("pessimistic_write")
             .where(
               "branchItem.branchId = :branchId AND branchItem.inventoryItemId = :itemId",
-              { branchId, itemId: deduction.inventoryItemId },
+              { branchId: sourceBranchId, itemId: deduction.inventoryItemId },
             )
             .getOne();
 
-          if (branchInventory) {
-            const branchAvailable = Number(branchInventory.currentStock || 0);
-            if (branchAvailable < deductQty) {
-              throw new BadRequestException(
-                `Insufficient stock for ${inventoryItem?.name || itemEntity.name} in this branch. Available: ${branchAvailable}, requested: ${deductQty}`,
-              );
-            }
-            branchInventory.currentStock = branchAvailable - deductQty;
-            await this.branchInventoryRepository.save(branchInventory);
+          // Branch counter must move in lockstep with the item counter; a missing
+          // branch row while deducting from that branch would silently diverge the
+          // two stock sources of truth — refuse rather than skip.
+          if (!branchInventory) {
+            throw new BadRequestException(
+              `No stock record for ${inventoryItem?.name || itemEntity.name} in the source branch — cannot sell without diverging branch and item stock.`,
+            );
           }
+          const branchAvailable = Number(branchInventory.currentStock || 0);
+          if (branchAvailable < deductQty) {
+            throw new BadRequestException(
+              `Insufficient stock for ${inventoryItem?.name || itemEntity.name} in the source branch. Available: ${branchAvailable}, requested: ${deductQty}`,
+            );
+          }
+          branchInventory.currentStock = branchAvailable - deductQty;
+          await this.branchInventoryRepository.save(branchInventory);
 
           // Immutable stock ledger entry (roadmap I1): one SALE movement per
           // consumed inventory item, in the same transaction as the deduction.
@@ -601,7 +581,7 @@ export class OrdersService {
             await stockMovementRepository.save(
               stockMovementRepository.create({
                 itemId: deduction.inventoryItemId,
-                branchId,
+                branchId: sourceBranchId,
                 movementType: StockMovementType.SALE,
                 quantity: -deductQty,
                 unitCost:
@@ -635,35 +615,211 @@ export class OrdersService {
       // Use findOne method which properly loads relations
       return await this.findOne(savedOrder.id);
     } catch (error) {
-      console.error(`[OrderCreate] ERROR creating order:`, error);
-      
-      // Additional debugging: check what inflow items are available
-      if (error.message?.includes('No inventory available')) {
-        console.log(`[OrderCreate] Debugging inventory availability...`);
-        const inflowCount = await this.inflowItemRepository.count();
-        const branchInflowCount = await this.inflowItemRepository.count({
-          where: { branchId }
-        });
-        console.log(`[OrderCreate] Total inflow items in DB: ${inflowCount}`);
-        console.log(`[OrderCreate] Inflow items in branch ${branchId}: ${branchInflowCount}`);
-        
-        // Log first few inflow items to see what's available
-        const sampleInflows = await this.inflowItemRepository.find({
-          take: 3,
-          relations: ['inventoryItem'],
-          order: { createdAt: 'DESC' }
-        });
-        console.log(`[OrderCreate] Sample inflow items:`, sampleInflows.map(item => ({
-          id: item.id,
-          branchId: item.branchId,
-          inventoryItemId: item.inventoryItemId,
-          inventoryItemName: item.inventoryItem?.name,
-          baseQuantity: item.baseQuantity,
-          createdAt: item.createdAt
-        })));
-      }
-      
       throw error;
+    }
+  }
+
+  /**
+   * Marketplace sale created in a PENDING state — order + lines are recorded but
+   * NO stock is debited yet. The seller fulfils it later via fulfil(), choosing a
+   * branch. Kept SEPARATE from create() so the live POS path is never touched.
+   */
+  @Transactional()
+  async createPendingSale(
+    branchId: string,
+    dto: CreateOrderDto,
+    actor?: { id?: string; name?: string },
+  ) {
+    const ts = Date.now().toString();
+    const orderNumber = `ORD-${ts.slice(-8)}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    const allocationMethod = await this.getAllocationMethod();
+
+    const lines: Array<{ inventoryItemId: string; name: string; quantity: number; uomId: string | null; unitPrice: number }> = [];
+    let subtotal = 0;
+    for (const line of dto.items) {
+      const inv = await this.inventoryItemRepository.findOne({ where: { id: line.inventoryItemId } });
+      const rawPrice = Number((line as unknown as { unitPrice?: number }).unitPrice);
+      const unitPrice = Number.isFinite(rawPrice) ? rawPrice : Number(inv?.salePrice || 0);
+      const quantity = Number(line.quantity);
+      subtotal += unitPrice * quantity;
+      lines.push({ inventoryItemId: line.inventoryItemId, name: inv?.name || 'Item', quantity, uomId: line.uomId || null, unitPrice });
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+
+    const savedOrder = await this.orderRepository.save(
+      this.orderRepository.create({
+        branchId,
+        orderNumber,
+        subtotal,
+        tax: 0,
+        totalAmount: subtotal,
+        totalCost: 0,
+        profit: 0,
+        allocationMethod,
+        status: 'pending',
+        orderType: dto.type || 'marketplace',
+        customerName: dto.customerName || null,
+        createdBy: actor?.id || null,
+        createdByName: actor?.name || null,
+      }),
+    );
+
+    for (const l of lines) {
+      await this.orderItemRepository.save(
+        this.orderItemRepository.create({
+          orderId: savedOrder.id,
+          inventoryItemId: l.inventoryItemId,
+          name: l.name,
+          quantity: l.quantity,
+          quantityBase: l.quantity,
+          uomId: l.uomId,
+          unitPrice: l.unitPrice,
+          totalPrice: Math.round(l.unitPrice * l.quantity * 100) / 100,
+          costPrice: 0,
+          costTotal: 0,
+        }),
+      );
+    }
+    return this.findOne(savedOrder.id);
+  }
+
+  /**
+   * Fulfil a PENDING marketplace sale: allocate FIFO stock from `branchId` (the
+   * seller's chosen fulfilment branch), debit stock, record the batch breakdown +
+   * double-entry, and set status 'completed'. Reuses the SAME allocator as
+   * create(); create() itself is untouched. Throws on insufficient stock (the
+   * order stays pending). Idempotent — a non-pending order is a no-op.
+   */
+  @Transactional()
+  async fulfil(orderId: string, branchId: string, actor?: { id?: string; name?: string }) {
+    // Lock the order row FOR UPDATE before checking status, so two concurrent
+    // fulfils/accepts can't both pass the 'pending' check and double-debit stock.
+    const order = await this.orderRepository
+      .createQueryBuilder('o')
+      .setLock('pessimistic_write')
+      .where('o.id = :id', { id: orderId })
+      .getOne();
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status !== 'pending') return this.findOne(orderId); // already fulfilled/closed
+
+    const items = await this.orderItemRepository.find({ where: { orderId } });
+    // Resolve in the seller's live context (fulfil runs in the seller tenant),
+    // not from the placeholder stored when the pending sale was created.
+    const allocationMethod = await this.getAllocationMethod();
+    const stockMovementRepository = this.dataSource.getRepository(StockMovement);
+    let totalCost = 0;
+
+    for (const item of items) {
+      if (!item.inventoryItemId) continue;
+      const baseQty = Number(item.quantityBase || item.quantity || 0);
+      if (baseQty <= 0) continue;
+
+      const alloc = await this.allocateInventory(branchId, item.inventoryItemId, baseQty, allocationMethod);
+
+      for (const a of alloc.allocations) {
+        await this.orderItemInflowItemRepository.save(
+          this.orderItemInflowItemRepository.create({
+            orderItemId: item.id,
+            inflowItemId: a.inflowItemId,
+            quantityUsed: a.quantityUsed,
+            costPerUnit: a.costPerUnit,
+            totalCost: a.totalCost,
+            branchId: a.branchId,
+          }),
+        );
+      }
+
+      // Deduct per source branch (allocations may span branches on shortfall).
+      const byBranch = new Map<string, number>();
+      for (const a of alloc.allocations) byBranch.set(a.branchId, (byBranch.get(a.branchId) || 0) + Number(a.quantityUsed));
+      for (const [srcBranch, qty] of byBranch) {
+        const inventoryItem = await this.inventoryItemRepository
+          .createQueryBuilder('item')
+          .setLock('pessimistic_write')
+          .where('item.id = :id', { id: item.inventoryItemId })
+          .getOne();
+        if (inventoryItem) {
+          const available = Number(inventoryItem.currentStock || 0);
+          if (available < qty) throw new BadRequestException(`Insufficient stock for ${inventoryItem.name}. Available: ${available}, requested: ${qty}`);
+          inventoryItem.currentStock = available - qty;
+          await this.inventoryItemRepository.save(inventoryItem);
+        }
+        const branchInventory = await this.branchInventoryRepository
+          .createQueryBuilder('bi')
+          .setLock('pessimistic_write')
+          .where('bi.branchId = :b AND bi.inventoryItemId = :i', { b: srcBranch, i: item.inventoryItemId })
+          .getOne();
+        // Branch counter MUST move in lockstep with the item counter. A missing
+        // branch row while deducting from that branch would silently diverge the
+        // two stock sources of truth — refuse rather than skip.
+        if (!branchInventory) {
+          throw new BadRequestException(
+            `No stock record for ${inventoryItem?.name || 'item'} in the source branch — cannot fulfil without diverging branch and item stock.`,
+          );
+        }
+        const bavail = Number(branchInventory.currentStock || 0);
+        if (bavail < qty) throw new BadRequestException(`Insufficient stock in the source branch. Available: ${bavail}, requested: ${qty}`);
+        branchInventory.currentStock = bavail - qty;
+        await this.branchInventoryRepository.save(branchInventory);
+        await stockMovementRepository.save(
+          stockMovementRepository.create({
+            itemId: item.inventoryItemId,
+            branchId: srcBranch,
+            movementType: StockMovementType.SALE,
+            quantity: -qty,
+            unitCost: alloc.costPrice != null ? Number(alloc.costPrice) : null,
+            sourceType: 'order',
+            sourceId: order.id,
+            balanceAfter: inventoryItem ? Number(inventoryItem.currentStock) : 0,
+          }),
+        );
+      }
+
+      item.costPrice = alloc.costPrice;
+      item.costTotal = alloc.costTotal;
+      await this.orderItemRepository.save(item);
+      totalCost += alloc.costTotal;
+    }
+
+    totalCost = Math.round(totalCost * 100) / 100;
+    order.totalCost = totalCost;
+    order.profit = Math.round((Number(order.subtotal) - totalCost) * 100) / 100;
+    order.branchId = branchId; // reflect where the seller actually fulfilled from
+    order.status = 'completed';
+    if (actor) {
+      order.updatedBy = actor.id || null;
+      order.updatedByName = actor.name || null;
+    }
+    await this.orderRepository.save(order);
+
+    if (Number(order.subtotal) > 0) {
+      // Marketplace sale is on CREDIT — the buyer settles later (wallet/external),
+      // so recognise revenue against Accounts Receivable, not Cash. (POS sales in
+      // create() stay isCash:true — those are paid at the point of sale.) The AR
+      // is cleared when the order is paid; see network-orders settlement.
+      await this.postingService.postSale({
+        sourceType: 'order',
+        sourceId: order.id,
+        revenue: Number(order.subtotal),
+        cogs: totalCost,
+        tax: Number(order.tax || 0),
+        isCash: false,
+        memo: `Marketplace order ${order.orderNumber}`,
+      });
+    }
+    return this.findOne(orderId);
+  }
+
+  /**
+   * Cancel a PENDING marketplace sale (seller declined the order). No-op if the
+   * order is missing or already fulfilled/closed — no stock was moved for a
+   * pending sale, so nothing to reverse.
+   */
+  async cancelIfPending(orderId: string): Promise<void> {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    if (order && order.status === 'pending') {
+      order.status = 'cancelled';
+      await this.orderRepository.save(order);
     }
   }
 
@@ -716,10 +872,12 @@ export class OrdersService {
     };
   }
 
-  async findAll(branchId?: string) {
+  async findAll(branchIds?: string[] | null) {
+    // Scoped to an empty branch set (user assigned to no branch) → no results.
+    if (Array.isArray(branchIds) && branchIds.length === 0) return [];
     const where: any = {};
-    if (branchId) {
-      where.branchId = branchId;
+    if (branchIds && branchIds.length) {
+      where.branchId = branchIds.length === 1 ? branchIds[0] : In(branchIds);
     }
 
     const orders = await this.orderRepository.find({
@@ -826,18 +984,7 @@ export class OrdersService {
     });
     (order as any).payments = payments || [];
 
-    console.log(
-      `[FindOne] Order ${id} - Loaded ${payments.length} payments from database`,
-    );
     if (payments.length > 0) {
-      console.log(
-        `[FindOne] Payment amounts:`,
-        payments.map((p) => ({
-          amount: p.amount,
-          method: p.method,
-          date: p.createdAt,
-        })),
-      );
     }
 
     // Manually load items and their relations using QueryBuilder for better control
@@ -886,16 +1033,9 @@ export class OrdersService {
         .where("itemInflowItem.orderItemId IN (:...itemIds)", { itemIds })
         .getMany();
 
-      console.log(
-        `[FindOne] Loaded ${inflowItems.length} orderItemInflowItems with relations for ${itemIds.length} order items`,
-      );
-
       // Fallback: If relations didn't load (TypeORM sometimes fails with leftJoin), manually load them
       const itemsNeedingLoad = inflowItems.filter((item) => !item.inflowItem);
       if (itemsNeedingLoad.length > 0) {
-        console.warn(
-          `[FindOne] ${itemsNeedingLoad.length} items missing inflowItem relation, loading manually...`,
-        );
         const inflowItemIds = itemsNeedingLoad.map((item) => item.inflowItemId);
         const loadedInflowItems = await this.inflowItemRepository.find({
           where: { id: In(inflowItemIds) },
@@ -916,9 +1056,6 @@ export class OrdersService {
             (item as any).inflowItem = loadedMap.get(item.inflowItemId);
           }
         });
-        console.log(
-          `[FindOne] Manually loaded ${loadedInflowItems.length} inflowItems`,
-        );
       }
 
       // Group by orderItemId and collect supplier/branch IDs for manual loading
@@ -927,9 +1064,6 @@ export class OrdersService {
 
       inflowItems.forEach((itemInflowItem, index) => {
         const orderItemId = itemInflowItem.orderItemId;
-        console.log(
-          `[FindOne] Processing OrderItemInflowItem ${index + 1}: orderItemId=${orderItemId}, inflowItemId=${itemInflowItem.inflowItemId}, quantityUsed=${itemInflowItem.quantityUsed}`,
-        );
 
         if (!inflowItemsMap.has(orderItemId)) {
           inflowItemsMap.set(orderItemId, []);
@@ -940,9 +1074,6 @@ export class OrdersService {
         // Check item-level first, then fall back to inflow-level
         // Add null check for inflowItem
         if (!itemInflowItem.inflowItem) {
-          console.warn(
-            `[FindOne] Warning: itemInflowItem ${itemInflowItem.inflowItemId} has null inflowItem`,
-          );
           return;
         }
 
@@ -955,10 +1086,6 @@ export class OrdersService {
 
         const effectiveSupplierId = itemSupplierId || inflowSupplierId;
         const effectiveBranchId = itemBranchId || inflowBranchId;
-
-        console.log(
-          `[FindOne] Collecting IDs for itemInflowItem ${itemInflowItem.inflowItemId}: itemSupplierId=${itemSupplierId}, itemBranchId=${itemBranchId}, inflowSupplierId=${inflowSupplierId}, inflowBranchId=${inflowBranchId}, effectiveSupplierId=${effectiveSupplierId}, effectiveBranchId=${effectiveBranchId}`,
-        );
 
         if (effectiveSupplierId) {
           supplierIds.add(effectiveSupplierId);
@@ -999,10 +1126,6 @@ export class OrdersService {
       suppliers.forEach((s) => suppliersMap.set(s.id, s));
       branches.forEach((b) => branchesMap.set(b.id, b));
 
-      console.log(
-        `[FindOne] Loaded ${suppliers.length} suppliers and ${branches.length} branches`,
-      );
-
       // Update inflowItems with manually loaded suppliers and branches
       inflowItems.forEach((itemInflowItem) => {
         if (itemInflowItem.inflowItem) {
@@ -1018,25 +1141,15 @@ export class OrdersService {
           const effectiveSupplierId = itemSupplierId || inflowSupplierId;
           const effectiveBranchId = itemBranchId || inflowBranchId;
 
-          console.log(
-            `[FindOne] Updating inflowItem ${itemInflowItem.inflowItemId}: supplierId=${effectiveSupplierId}, branchId=${effectiveBranchId}`,
-          );
-
           // Always set supplier and branch from manually loaded maps if IDs exist
           if (effectiveSupplierId && suppliersMap.has(effectiveSupplierId)) {
             (itemInflowItem.inflowItem as any).supplier =
               suppliersMap.get(effectiveSupplierId);
-            console.log(
-              `[FindOne] Set supplier for inflowItem ${itemInflowItem.inflowItemId}: ${suppliersMap.get(effectiveSupplierId)?.name}`,
-            );
           }
 
           if (effectiveBranchId && branchesMap.has(effectiveBranchId)) {
             (itemInflowItem.inflowItem as any).branch =
               branchesMap.get(effectiveBranchId);
-            console.log(
-              `[FindOne] Set branch for inflowItem ${itemInflowItem.inflowItemId}: ${branchesMap.get(effectiveBranchId)?.name}`,
-            );
           }
         }
       });
@@ -1046,10 +1159,6 @@ export class OrdersService {
     order.items = items.map((orderItem: any) => {
       // Get inflowItems for this item
       const itemInflowItems = inflowItemsMap.get(orderItem.id) || [];
-
-      console.log(
-        `[FindOne] Order item ${orderItem.id} has ${itemInflowItems.length} inflow items`,
-      );
 
       // Calculate conversion factor from sale UOM to base UOM
       const qty = Number(orderItem.quantity || 0);
@@ -1067,16 +1176,9 @@ export class OrdersService {
           const batchCostValue = Number(itemInflowItem.totalCost || 0);
           const batchProfit = batchSaleValue - batchCostValue;
 
-          console.log(
-            `[FindOne] Batch data - qty: ${batchQtyBase}, cost: ${batchCostValue}, sale: ${batchSaleValue}, profit: ${batchProfit}`,
-          );
-
           // Get supplier and branch IDs - use item-level first, then fall back to inflow-level
           // Add null check for inflowItem
           if (!itemInflowItem.inflowItem) {
-            console.warn(
-              `[FindOne] Warning: itemInflowItem ${itemInflowItem.inflowItemId} has null inflowItem in batch mapping`,
-            );
             return {
               inflowItemId: itemInflowItem.inflowItemId,
               quantityUsed: itemInflowItem.quantityUsed,
@@ -1104,10 +1206,6 @@ export class OrdersService {
 
           const effectiveSupplierId = itemSupplierId || inflowSupplierId;
           const effectiveBranchId = itemBranchId || inflowBranchId;
-
-          console.log(
-            `[FindOne] Batch lookup - inflowItemId: ${itemInflowItem.inflowItemId}, supplierId: ${effectiveSupplierId}, branchId: ${effectiveBranchId}, map has supplier: ${suppliersMap.has(effectiveSupplierId || "")}, map has branch: ${branchesMap.has(effectiveBranchId || "")}`,
-          );
 
           // Get supplier and branch from manually loaded maps (from the code above)
           const supplier =
@@ -1153,10 +1251,6 @@ export class OrdersService {
             uom: uom, // UOM from inflow item (extracted as plain object)
           };
         }) || [];
-
-      console.log(
-        `[FindOne] Order item ${orderItem.id} transformed to ${batches.length} batches`,
-      );
 
       return {
         ...orderItem,
@@ -1234,9 +1328,6 @@ export class OrdersService {
     });
 
     const savedPayment = await this.orderPaymentRepository.save(payment);
-    console.log(
-      `[markAsPaid] Saved payment with ID: ${savedPayment.id}, amount: ${paymentAmount}, orderId: ${order.id}`,
-    );
 
     // Calculate new total paid
     const newTotalPaid = totalPaid + paymentAmount;
@@ -1258,10 +1349,6 @@ export class OrdersService {
       order: { createdAt: "ASC" },
     });
 
-    console.log(
-      `[markAsPaid] Found ${payments.length} payments for order ${id}`,
-    );
-
     // Reload order with relations
     const reloadedOrder = await this.orderRepository
       .createQueryBuilder("order")
@@ -1277,15 +1364,11 @@ export class OrdersService {
     // Manually attach payments to the order object
     (reloadedOrder as any).payments = payments;
 
-    console.log(
-      `[markAsPaid] Reloaded order ID: ${id}, payments count: ${payments.length}`,
-    );
     if (payments.length > 0) {
       const totalPaymentsAmount = payments.reduce(
         (sum: number, p: any) => sum + Number(p.amount || 0),
         0,
       );
-      console.log(`[markAsPaid] Total payments amount: ${totalPaymentsAmount}`);
     }
 
     return reloadedOrder;

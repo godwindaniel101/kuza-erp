@@ -64,7 +64,7 @@ export default function EditInventoryItemPage() {
       <div className="w-full max-w-3xl space-y-5">
         <PageHeader
           title={<>{t('edit')} {t('item')}: {item.name}</>}
-          subtitle="Update this item's details and pricing"
+          subtitle={t('inventory.editSubtitle', "Update this item's details and pricing")}
           breadcrumbs={[
             { label: t('inventory') || 'Inventory', href: base },
             { label: item.name },

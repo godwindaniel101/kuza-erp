@@ -63,7 +63,7 @@ export default function RolesPage() {
         
         <PageHeader
           title={t('roles')}
-          subtitle="Permission sets you assign to users"
+          subtitle={t('settings.rolesSubtitle', 'Permission sets you assign to users')}
           count={loading ? undefined : roles.length}
           breadcrumbs={[{ label: t('settings') || 'Settings', href: '/settings' }, { label: t('roles') }]}
           actions={

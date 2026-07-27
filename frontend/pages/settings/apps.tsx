@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { getApp } from '@/lib/apps';
@@ -48,6 +49,7 @@ interface AccessRequest {
 }
 
 export default function AppsPage() {
+  const { t } = useTranslation('common');
   const { fetchTenantContext } = useTenantStore();
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const isAdmin = hasPermission('settings.edit');
@@ -120,16 +122,16 @@ export default function AppsPage() {
     try {
       await api.post('/billing/access-requests', { appKey: key });
       setRequestedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-      setToast({ message: 'Request sent to your admin', type: 'success' });
+      setToast({ message: t('settings.requestSentToAdmin', 'Request sent to your admin'), type: 'success' });
     } catch (err: any) {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
       // 409 already requested / 400 already have it — soft success.
       if (status === 409 || status === 400) {
         setRequestedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-        setToast({ message: serverMsg || `You already requested ${name}`, type: 'info' });
+        setToast({ message: serverMsg || t('settings.alreadyRequested', 'You already requested {{name}}', { name }), type: 'info' });
       } else {
-        setToast({ message: serverMsg || `Could not request ${name}`, type: 'error' });
+        setToast({ message: serverMsg || t('settings.couldNotRequest', 'Could not request {{name}}', { name }), type: 'error' });
       }
     } finally {
       setRequestingKey(null);
@@ -143,7 +145,9 @@ export default function AppsPage() {
     try {
       await api.post(`/billing/access-requests/${req.id}/${action}`);
       setToast({
-        message: action === 'approve' ? `Access to ${name} approved` : `Request for ${name} rejected`,
+        message: action === 'approve'
+          ? t('settings.accessApproved', 'Access to {{name}} approved', { name })
+          : t('settings.requestRejected', 'Request for {{name}} rejected', { name }),
         type: 'success',
       });
       // Refresh both the pending list and the apps grid (approve may enable an app).
@@ -151,7 +155,7 @@ export default function AppsPage() {
       fetchTenantContext(true);
     } catch (err: any) {
       setToast({
-        message: err?.response?.data?.message || `Could not ${action} the request`,
+        message: err?.response?.data?.message || t('settings.couldNotDecideRequest', 'Could not {{action}} the request', { action }),
         type: 'error',
       });
     } finally {
@@ -166,7 +170,7 @@ export default function AppsPage() {
     req.requesterEmail ||
     req.requester?.email ||
     req.user?.email ||
-    'A teammate';
+    t('settings.aTeammate', 'A teammate');
 
   const formatDate = (iso?: string) => {
     if (!iso) return '';
@@ -186,21 +190,29 @@ export default function AppsPage() {
         const added = res.data.addedDependencies ?? [];
         if (enabled && added.length > 0) {
           setToast({
-            message: `Enabled ${added.map((k) => appName(k, res.data.apps)).join(', ')} — required by ${app.name}`,
+            message: t('settings.enabledRequiredBy', 'Enabled {{apps}} — required by {{name}}', {
+              apps: added.map((k) => appName(k, res.data.apps)).join(', '),
+              name: app.name,
+            }),
             type: 'success',
           });
         } else {
-          setToast({ message: `${app.name} ${enabled ? 'enabled' : 'disabled'}`, type: 'success' });
+          setToast({
+            message: enabled
+              ? t('settings.appEnabled', '{{name}} enabled', { name: app.name })
+              : t('settings.appDisabled', '{{name}} disabled', { name: app.name }),
+            type: 'success',
+          });
         }
         // Sidebar + launcher read effectiveApps from the tenant store — refresh it live.
         fetchTenantContext(true);
       } else {
-        setToast({ message: `Could not update ${app.name}`, type: 'error' });
+        setToast({ message: t('settings.couldNotUpdateApp', 'Could not update {{name}}', { name: app.name }), type: 'error' });
       }
     } catch (err: any) {
       // 400 on blocked disable carries the server's explanation (dependents).
       setToast({
-        message: err?.response?.data?.message || `Could not update ${app.name}`,
+        message: err?.response?.data?.message || t('settings.couldNotUpdateApp', 'Could not update {{name}}', { name: app.name }),
         type: 'error',
       });
     } finally {
@@ -220,21 +232,21 @@ export default function AppsPage() {
   return (
     <div className="w-full max-w-5xl space-y-5">
       <PageHeader
-        title="Apps"
-        subtitle="Turn parts of Kuza on or off. Disabling an app hides it — your data is kept."
-        breadcrumbs={[{ label: 'Settings', href: '/settings' }, { label: 'Apps' }]}
+        title={t('settings.apps', 'Apps')}
+        subtitle={t('settings.appsSubtitle', 'Turn parts of Kuza on or off. Disabling an app hides it — your data is kept.')}
+        breadcrumbs={[{ label: t('settings', 'Settings'), href: '/settings' }, { label: t('settings.apps', 'Apps') }]}
       />
 
       {isAdmin && accessRequests && accessRequests.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Access requests</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('settings.accessRequests', 'Access requests')}</h2>
               <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
-                Teammates waiting on an app. Approving enables it for your business.
+                {t('settings.accessRequestsSubtitle', 'Teammates waiting on an app. Approving enables it for your business.')}
               </p>
             </div>
-            <StatusBadge variant="pending" label={`${accessRequests.length} pending`} size="sm" />
+            <StatusBadge variant="pending" label={t('settings.pendingCount', '{{count}} pending', { count: accessRequests.length })} size="sm" />
           </div>
 
           <ul className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">
@@ -262,14 +274,14 @@ export default function AppsPage() {
                       disabled={decidingId === req.id}
                       onClick={() => decideAccessRequest(req, 'reject')}
                     >
-                      Reject
+                      {t('settings.reject', 'Reject')}
                     </Button>
                     <Button
                       size="sm"
                       loading={decidingId === req.id}
                       onClick={() => decideAccessRequest(req, 'approve')}
                     >
-                      Approve
+                      {t('settings.approve', 'Approve')}
                     </Button>
                   </div>
                 </li>
@@ -288,9 +300,9 @@ export default function AppsPage() {
       {!loading && loadError && (
         <EmptyState
           icon="bx-grid-alt"
-          title="Couldn't load your apps"
-          description="The apps service didn't respond. It may still be rolling out — try again in a moment."
-          actions={<Button size="sm" onClick={load}>Retry</Button>}
+          title={t('settings.appsLoadErrorTitle', "Couldn't load your apps")}
+          description={t('settings.appsLoadErrorDescription', "The apps service didn't respond. It may still be rolling out — try again in a moment.")}
+          actions={<Button size="sm" onClick={load}>{t('settings.retry', 'Retry')}</Button>}
         />
       )}
 
@@ -319,14 +331,14 @@ export default function AppsPage() {
                   {locked ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20">
                       <Icon name="lock" size={11} />
-                      Locked
+                      {t('settings.locked', 'Locked')}
                     </span>
                   ) : (
                     <button
                       type="button"
                       role="switch"
                       aria-checked={app.enabled}
-                      aria-label={`${app.enabled ? 'Disable' : 'Enable'} ${app.name}`}
+                      aria-label={app.enabled ? t('settings.disableApp', 'Disable {{name}}', { name: app.name }) : t('settings.enableApp', 'Enable {{name}}', { name: app.name })}
                       disabled={busyKey === app.key}
                       onClick={() => handleToggle(app)}
                       className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-50 ${
@@ -352,7 +364,7 @@ export default function AppsPage() {
                 <div className="mt-3 flex items-center justify-between gap-2 min-h-[20px]">
                   <span className="text-xs text-gray-400 dark:text-gray-500 truncate">
                     {app.dependencies.length > 0 &&
-                      `Requires ${app.dependencies.map((k) => appName(k, apps)).join(', ')}`}
+                      t('settings.requires', 'Requires {{apps}}', { apps: app.dependencies.map((k) => appName(k, apps)).join(', ') })}
                   </span>
                   {locked && (
                     <span className="flex shrink-0 items-center gap-3">
@@ -363,16 +375,16 @@ export default function AppsPage() {
                         className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {requestedKeys.includes(app.key)
-                          ? 'Requested'
+                          ? t('settings.requested', 'Requested')
                           : requestingKey === app.key
-                            ? 'Requesting…'
-                            : 'Request access'}
+                            ? t('settings.requesting', 'Requesting…')
+                            : t('settings.requestAccess', 'Request access')}
                       </button>
                       <Link
                         href="/settings/billing"
                         className="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-150"
                       >
-                        Upgrade
+                        {t('settings.upgrade', 'Upgrade')}
                       </Link>
                     </span>
                   )}
@@ -387,12 +399,12 @@ export default function AppsPage() {
       <Modal
         isOpen={!!confirmDisable}
         onClose={() => setConfirmDisable(null)}
-        title={confirmDisable ? `Disable ${confirmDisable.name}?` : ''}
+        title={confirmDisable ? t('settings.disableTitle', 'Disable {{name}}?', { name: confirmDisable.name }) : ''}
         maxWidth="sm"
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirmDisable(null)}>
-              Cancel
+              {t('cancel', 'Cancel')}
             </Button>
             <Button
               variant="danger"
@@ -405,14 +417,13 @@ export default function AppsPage() {
                 }
               }}
             >
-              Disable
+              {t('settings.disable', 'Disable')}
             </Button>
           </>
         }
       >
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {confirmDisable?.name} will disappear from your sidebar and launcher. Nothing is deleted — all its
-          data is kept and comes back the moment you re-enable it.
+          {t('settings.disableBody', '{{name}} will disappear from your sidebar and launcher. Nothing is deleted — all its data is kept and comes back the moment you re-enable it.', { name: confirmDisable?.name })}
         </p>
       </Modal>
 

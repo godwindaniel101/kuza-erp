@@ -150,7 +150,7 @@ export default function ReportsPage() {
         <PageHeader
           title={tt('analytics', 'Analytics')}
           subtitle={tt('analyticsSubtitle', "What's driving your numbers")}
-          breadcrumbs={[{ label: 'Restaurant' }, { label: tt('analytics', 'Analytics') }]}
+          breadcrumbs={[{ label: tt('restaurant', 'Restaurant') }, { label: tt('analytics', 'Analytics') }]}
           actions={
             /* Fixed-width wrapper: a global rule makes selects 100% wide */
             <div className="w-40 shrink-0">

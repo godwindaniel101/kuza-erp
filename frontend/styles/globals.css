@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --sidebar-width: 240px; /* w-60 */
+  --sidebar-width: 220px; /* slim sidebar */
   --header-height: 56px; /* Slim app header */
   --primary: #2e56d3; /* brand-600 (deep navy-blue) */
   --primary-dark: #2645ab; /* brand-700 */
@@ -108,6 +108,10 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
   html {
     scroll-behavior: smooth;
+    /* Slightly smaller base so the whole (rem-based) UI scales down a touch to
+       match the slimmer 220px sidebar. Mobile inputs keep 16px below to avoid
+       iOS zoom. */
+    font-size: 15px;
   }
 }
 
@@ -452,4 +456,41 @@ html.dark select option {
 .menu-form select,
 .menu-form textarea {
   max-width: none;
+}
+
+/* --- Elegant navigation transitions -------------------------------------
+   Page content eases in on real route changes; sidebar nav groups reveal in
+   a light stagger when switching apps. Disabled under prefers-reduced-motion
+   (see the guard at the end of this block). */
+/* Opacity-ONLY — deliberately no `transform` (and no `will-change: transform`).
+   Either would make `.page-enter` a containing block for position:fixed
+   descendants, trapping modals/toasts inside the content column instead of the
+   viewport. A fade keeps the transition elegant without that side effect. */
+@keyframes pageEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-enter {
+  animation: pageEnter 0.28s ease both;
+}
+
+@keyframes navGroupEnter {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.app-nav-enter > * {
+  animation: navGroupEnter 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.app-nav-enter > *:nth-child(1) { animation-delay: 0.02s; }
+.app-nav-enter > *:nth-child(2) { animation-delay: 0.06s; }
+.app-nav-enter > *:nth-child(3) { animation-delay: 0.10s; }
+.app-nav-enter > *:nth-child(4) { animation-delay: 0.14s; }
+.app-nav-enter > *:nth-child(5) { animation-delay: 0.18s; }
+.app-nav-enter > *:nth-child(6) { animation-delay: 0.22s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .app-nav-enter > * {
+    animation: none !important;
+  }
 }

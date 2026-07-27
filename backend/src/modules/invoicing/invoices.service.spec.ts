@@ -29,6 +29,9 @@ describe('InvoicesService', () => {
       postInvoiceIssued: jest.fn().mockResolvedValue({ id: 'je-inv' }),
       postCustomerPayment: jest.fn().mockResolvedValue({ id: 'je-pay' }),
     };
+    const invoiceSettings = { getOrCreate: jest.fn().mockResolvedValue({}) };
+    const notifications = { sendInvoiceEmail: jest.fn().mockResolvedValue({ success: true }) };
+    const config = { get: jest.fn().mockReturnValue('') };
 
     service = new InvoicesService(
       invoiceRepo as any,
@@ -36,6 +39,9 @@ describe('InvoicesService', () => {
       paymentRepo as any,
       customerRepo as any,
       posting as unknown as PostingService,
+      invoiceSettings as any,
+      notifications as any,
+      config as any,
     );
 
     // Default findOne wiring so the trailing re-load never crashes.

@@ -8,6 +8,69 @@
   "validation_error": "Erreur de validation",
   "created": "Créé avec succès",
   "updated": "Mis à jour avec succès",
-  "deleted": "Supprimé avec succès"
+  "deleted": "Supprimé avec succès",
+  "insights": {
+    "yourBusiness": "Votre entreprise",
+    "cash": {
+      "positive": "Vous avez {amount} en caisse et en banque en ce moment",
+      "overdrawn": "Vos comptes de trésorerie sont à découvert de {amount}",
+      "unavailable": "Position de trésorerie indisponible"
+    },
+    "profit": {
+      "positive": "Vous avez réalisé {profit} de bénéfice depuis le début du mois ({earned} gagnés, {spent} dépensés)",
+      "negative": "Vous êtes dans le rouge de {amount} ce mois-ci ({earned} gagnés, {spent} dépensés)",
+      "unavailable": "Chiffres de bénéfice indisponibles"
+    },
+    "debtor": {
+      "lateOne": "{name} doit {amount} — {days} jour de retard",
+      "lateOther": "{name} doit {amount} — {days} jours de retard",
+      "notDue": "{name} doit {amount} — pas encore dû"
+    },
+    "lowStock": {
+      "outOfStock": "{name} est en rupture de stock — le minimum est {minimum}",
+      "below": "{name} est sous le stock minimum : {current} restant(s), minimum {minimum}",
+      "runningLow": "{count} article(s) bientôt en rupture"
+    },
+    "sales": {
+      "thisMonthOnly": "Ventes ce mois-ci : {amount} (aucune vente le mois dernier pour comparer)",
+      "none": "Aucune vente enregistrée ce mois-ci ni le mois dernier",
+      "up": "Les ventes ont augmenté de {pct}% — {current} ce mois-ci contre {previous} le mois dernier",
+      "down": "Les ventes ont baissé de {pct}% — {current} ce mois-ci contre {previous} le mois dernier",
+      "unavailable": "Tendance des ventes indisponible"
+    },
+    "overdue": {
+      "someOne": "{amount} est en souffrance sur {count} facture — il est temps de relancer les paiements",
+      "someOther": "{amount} est en souffrance sur {count} factures — il est temps de relancer les paiements",
+      "none": "Aucune facture en souffrance — bravo",
+      "noOverdue": "Aucune facture en souffrance"
+    },
+    "topItem": {
+      "headline": "{name} : {revenue} pour {qty} vendus ce mois-ci"
+    },
+    "lowStockByBranch": {
+      "title": "Stock faible par succursale",
+      "bodyOne": "{item} est faible à {branch} ({stock} restant(s), à réapprovisionner à {minimum}).",
+      "bodyMore": "{item} est faible à {branch} ({stock} restant(s), à réapprovisionner à {minimum}) — et {count} article(s) de plus dans vos succursales."
+    },
+    "branches": {
+      "title": "Succursales",
+      "body": "Vous gérez {count} succursales. Le stock est sain — rien en dessous de son seuil de réapprovisionnement pour le moment."
+    },
+    "salesStockCash": {
+      "title": "Ventes, stock et trésorerie"
+    },
+    "profitThisMonth": {
+      "title": "Bénéfice de ce mois"
+    },
+    "moneyOwed": {
+      "title": "Argent qu'on vous doit"
+    },
+    "profitStock": {
+      "title": "Bénéfice et stock"
+    },
+    "salesCash": {
+      "title": "Ventes et trésorerie"
+    }
+  }
 }
 

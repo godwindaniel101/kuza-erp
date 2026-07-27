@@ -54,7 +54,7 @@ export default function CreateRolePage() {
 
         <PageHeader
           title={<>{t('create')} {t('role')}</>}
-          subtitle="Define what this role can see and do"
+          subtitle={t('settings.createRoleSubtitle', 'Define what this role can see and do')}
           breadcrumbs={[
             { label: t('settings') || 'Settings', href: '/settings' },
             { label: t('roles') || 'Roles', href: '/settings/roles' },
@@ -83,7 +83,7 @@ export default function CreateRolePage() {
                     required
                     value={formData.name}
                     onChange={(value) => setFormData({ ...formData, name: value })}
-                    placeholder="e.g., manager"
+                    placeholder={t('settings.roleNameExample', 'e.g., manager')}
                   />
 
                   <FormField
@@ -93,7 +93,7 @@ export default function CreateRolePage() {
                     required
                     value={formData.displayName}
                     onChange={(value) => setFormData({ ...formData, displayName: value })}
-                    placeholder="e.g., Manager"
+                    placeholder={t('settings.roleDisplayNameExample', 'e.g., Manager')}
                   />
 
                   <FormField

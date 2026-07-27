@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
@@ -60,6 +61,7 @@ const adjustmentStatusVariant: Record<AdjustmentStatus, { variant: StatusBadgeVa
 const PAGE_SIZE = 10;
 
 export default function AdjustmentsPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [total, setTotal] = useState(0);
@@ -85,7 +87,7 @@ export default function AdjustmentsPage() {
       }
     } catch (err: any) {
       console.error('Failed to load adjustments:', err);
-      setToast({ message: err.response?.data?.message || 'Failed to load adjustments', type: 'error' });
+      setToast({ message: err.response?.data?.message || t('adjustments.failedLoad', 'Failed to load adjustments'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -102,13 +104,13 @@ export default function AdjustmentsPage() {
   const columns: DataTableColumn<Adjustment>[] = [
     {
       key: 'adjustmentNumber',
-      label: 'Adjustment #',
+      label: t('adjustments.number', 'Adjustment #'),
       render: (a) => <span className="font-medium text-gray-900 dark:text-white">{a.adjustmentNumber}</span>,
     },
-    { key: 'createdAt', label: 'Date', render: (a) => formatDate(a.createdAt) },
+    { key: 'createdAt', label: t('adjustments.date', 'Date'), render: (a) => formatDate(a.createdAt) },
     {
       key: 'branch',
-      label: 'Branch',
+      label: t('adjustments.branch', 'Branch'),
       render: (a) =>
         a.branchName ? (
           <span className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300">
@@ -116,12 +118,12 @@ export default function AdjustmentsPage() {
             {a.branchName}
           </span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500">All branches</span>
+          <span className="text-gray-400 dark:text-gray-500">{t('adjustments.allBranches', 'All branches')}</span>
         ),
     },
     {
       key: 'reason',
-      label: 'Reason',
+      label: t('adjustments.reason', 'Reason'),
       render: (a) => (
         <span className="inline-flex items-center gap-1.5">
           <i className={`bx ${REASON_ICONS[a.reason] || 'bx-dots-horizontal-rounded'} text-gray-400 dark:text-gray-500`} aria-hidden="true"></i>
@@ -129,10 +131,10 @@ export default function AdjustmentsPage() {
         </span>
       ),
     },
-    { key: 'items', label: 'Items', align: 'right', cellClassName: 'tabular-nums', render: (a) => (a.items || []).length },
+    { key: 'items', label: t('adjustments.items', 'Items'), align: 'right', cellClassName: 'tabular-nums', render: (a) => (a.items || []).length },
     {
       key: 'netChange',
-      label: 'Net Qty Change',
+      label: t('adjustments.netQtyChange', 'Net Qty Change'),
       align: 'right',
       render: (a) => {
         const net = (a.items || []).reduce((s, i) => s + Number(i.quantityChange || 0), 0);
@@ -145,7 +147,7 @@ export default function AdjustmentsPage() {
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('adjustments.status', 'Status'),
       render: (a) => {
         const s = adjustmentStatusVariant[a.status] ?? adjustmentStatusVariant.DRAFT;
         return <StatusBadge variant={s.variant} label={s.label} size="sm" />;
@@ -154,7 +156,14 @@ export default function AdjustmentsPage() {
   ];
 
   const handleExportCsv = () => {
-    const headers = ['Adjustment #', 'Date', 'Reason', 'Items', 'Net Qty Change', 'Status'];
+    const headers = [
+      t('adjustments.number', 'Adjustment #'),
+      t('adjustments.date', 'Date'),
+      t('adjustments.reason', 'Reason'),
+      t('adjustments.items', 'Items'),
+      t('adjustments.netQtyChange', 'Net Qty Change'),
+      t('adjustments.status', 'Status'),
+    ];
     const rows = adjustments.map((a) => [
       a.adjustmentNumber || '',
       formatDate(a.createdAt),
@@ -173,16 +182,16 @@ export default function AdjustmentsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Stock Adjustments"
+        title={t('adjustments.title', 'Stock Adjustments')}
         count={loading ? undefined : total}
-        subtitle="Correct stock levels for damage, theft, counts and more"
-        breadcrumbs={[{ label: 'IMS', href: '/ims/inventory' }, { label: 'Adjustments' }]}
+        subtitle={t('adjustments.subtitle', 'Correct stock levels for damage, theft, counts and more')}
+        breadcrumbs={[{ label: t('adjustments.ims', 'IMS'), href: '/ims/inventory' }, { label: t('adjustments.breadcrumb', 'Adjustments') }]}
         actions={
           <>
             {!loading && adjustments.length > 0 && (
               <Button size="sm" variant="secondary" onClick={handleExportCsv}>
                 <i className="bx bx-download"></i>
-                Export CSV
+                {t('adjustments.exportCsv', 'Export CSV')}
               </Button>
             )}
             <Link
@@ -190,7 +199,7 @@ export default function AdjustmentsPage() {
               className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
             >
               <i className="bx bx-plus mr-2"></i>
-              New Adjustment
+              {t('adjustments.new', 'New Adjustment')}
             </Link>
           </>
         }
@@ -201,22 +210,22 @@ export default function AdjustmentsPage() {
           {
             key: 'status',
             type: 'select',
-            placeholder: 'All statuses',
+            placeholder: t('adjustments.allStatuses', 'All statuses'),
             className: 'w-full sm:w-52',
             options: [
-              { value: '', label: 'All statuses' },
-              { value: 'DRAFT', label: 'Draft' },
-              { value: 'APPROVED', label: 'Approved' },
-              { value: 'REJECTED', label: 'Rejected' },
+              { value: '', label: t('adjustments.allStatuses', 'All statuses') },
+              { value: 'DRAFT', label: t('adjustments.statusDraft', 'Draft') },
+              { value: 'APPROVED', label: t('adjustments.statusApproved', 'Approved') },
+              { value: 'REJECTED', label: t('adjustments.statusRejected', 'Rejected') },
             ],
           },
           {
             key: 'reason',
             type: 'select',
-            placeholder: 'All reasons',
+            placeholder: t('adjustments.allReasons', 'All reasons'),
             className: 'w-full sm:w-52',
             options: [
-              { value: '', label: 'All reasons' },
+              { value: '', label: t('adjustments.allReasons', 'All reasons') },
               ...Object.entries(REASON_LABELS).map(([value, label]) => ({ value, label })),
             ],
           },
@@ -242,16 +251,16 @@ export default function AdjustmentsPage() {
         emptyState={
           <EmptyState
             icon="bx-transfer-alt"
-            title={hasFilters ? 'No adjustments match your filters' : 'No adjustments yet'}
+            title={hasFilters ? t('adjustments.noMatch', 'No adjustments match your filters') : t('adjustments.noneYet', 'No adjustments yet')}
             description={
-              hasFilters ? 'Try adjusting the status or reason filters' : 'Create an adjustment to correct stock levels'
+              hasFilters ? t('adjustments.tryAdjustingFilters', 'Try adjusting the status or reason filters') : t('adjustments.createToCorrect', 'Create an adjustment to correct stock levels')
             }
             actions={
               <Link
                 href="/ims/adjustments/new"
                 className="h-8 px-3 bg-brand-600 text-white rounded-lg text-[13px] font-medium hover:bg-brand-700 flex items-center"
               >
-                New Adjustment
+                {t('adjustments.new', 'New Adjustment')}
               </Link>
             }
           />

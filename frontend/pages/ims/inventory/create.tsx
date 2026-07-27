@@ -16,7 +16,7 @@ export default function CreateInventoryItemPage() {
       <div className="w-full max-w-3xl space-y-5">
         <PageHeader
           title={<>{t('add')} {t('item')}</>}
-          subtitle="Add a new item to your catalog"
+          subtitle={t('inventory.createSubtitle', 'Add a new item to your catalog')}
           breadcrumbs={[
             { label: t('inventory') || 'Inventory', href: base },
             { label: t('add') || 'Add' },

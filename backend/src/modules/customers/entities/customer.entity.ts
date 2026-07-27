@@ -26,4 +26,12 @@ export class Customer extends TenantEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string;
+
+  /**
+   * Kuza Network: when this customer is a materialized reference to another
+   * tenant on the platform (via an accepted trade partnership), this holds
+   * that tenant's landlord id. Null for ordinary, manually-created customers.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  linkedTenantId?: string;
 }

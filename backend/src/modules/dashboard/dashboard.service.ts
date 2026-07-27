@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Order } from '../rms/entities/order.entity';
 import { BranchInventoryItem } from '../ims/entities/branch-inventory-item.entity';
 import { Table } from '../rms/entities/table.entity';
@@ -50,40 +50,64 @@ export class DashboardService {
     return { startDate, endDate };
   }
 
-  async getStats(period?: string) {
+  async getStats(period?: string, branchIds?: string[] | null) {
     const { startDate, endDate } = this.getDateRange(period);
 
+    // Branch scoping: a non-null list means the user is scoped (admins/unscoped
+    // pass null and see all — existing behavior). A scoped user assigned to NO
+    // branch (empty list) must see nothing, so we substitute a no-match sentinel
+    // (an empty SQL IN (...) is invalid), yielding zero across every metric.
+    const scoped = Array.isArray(branchIds);
+    const bids =
+      branchIds && branchIds.length
+        ? branchIds
+        : ['00000000-0000-0000-0000-000000000000'];
+
     // Sales for the selected period
-    const periodSales = await this.orderRepository
+    const periodSalesQb = this.orderRepository
       .createQueryBuilder('order')
       .andWhere('order.createdAt >= :startDate', { startDate })
       .andWhere('order.createdAt < :endDate', { endDate })
-      .select('COALESCE(SUM(order.totalAmount), 0)', 'total')
-      .getRawOne();
+      .select('COALESCE(SUM(order.totalAmount), 0)', 'total');
+    if (scoped) {
+      periodSalesQb.andWhere('order.branchId IN (:...bids)', { bids });
+    }
+    const periodSales = await periodSalesQb.getRawOne();
 
     // Active orders (pending, preparing, ready)
-    const activeOrders = await this.orderRepository
+    const activeOrdersQb = this.orderRepository
       .createQueryBuilder('order')
-      .andWhere('order.status IN (:...statuses)', { statuses: ['pending', 'preparing', 'ready'] })
-      .getCount();
+      .andWhere('order.status IN (:...statuses)', { statuses: ['pending', 'preparing', 'ready'] });
+    if (scoped) {
+      activeOrdersQb.andWhere('order.branchId IN (:...bids)', { bids });
+    }
+    const activeOrders = await activeOrdersQb.getCount();
 
     // Low stock items - Check branch-specific inventory
-    const lowStockItems = await this.branchInventoryRepository
+    const lowStockQb = this.branchInventoryRepository
       .createQueryBuilder('bi')
       .innerJoin('bi.inventoryItem', 'item')
       .andWhere('item.isTrackable = :isTrackable', { isTrackable: true })
       .andWhere('bi.minimumStock IS NOT NULL')
       .andWhere('CAST(bi.minimumStock AS DECIMAL) > 0')
-      .andWhere('CAST(bi.currentStock AS DECIMAL) <= CAST(bi.minimumStock AS DECIMAL)')
-      .getCount();
+      .andWhere('CAST(bi.currentStock AS DECIMAL) <= CAST(bi.minimumStock AS DECIMAL)');
+    if (scoped) {
+      lowStockQb.andWhere('bi.branchId IN (:...bids)', { bids });
+    }
+    const lowStockItems = await lowStockQb.getCount();
 
     // Table occupancy
-    const totalTables = await this.tableRepository.count();
+    const totalTables = await this.tableRepository.count(
+      scoped ? { where: { branchId: In(bids) } } : {},
+    );
 
-    const occupiedTables = await this.tableRepository
+    const occupiedTablesQb = this.tableRepository
       .createQueryBuilder('table')
-      .andWhere('table.status = :status', { status: 'occupied' })
-      .getCount();
+      .andWhere('table.status = :status', { status: 'occupied' });
+    if (scoped) {
+      occupiedTablesQb.andWhere('table.branchId IN (:...bids)', { bids });
+    }
+    const occupiedTables = await occupiedTablesQb.getCount();
 
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
 

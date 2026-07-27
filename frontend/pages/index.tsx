@@ -17,6 +17,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { formatMoney, useCurrency } from '@/lib/format';
 import AiInsights from '@/components/AiInsights';
 import GettingStarted from '@/components/GettingStarted';
+import OnboardingModal from '@/components/OnboardingModal';
 
 interface AnalyticsData {
   bestBranch: {
@@ -297,6 +298,7 @@ export default function Dashboard() {
         />
 
         {/* Guided first-run — self-hides once the workspace is set up */}
+        <OnboardingModal />
         <GettingStarted />
 
         {/* KPI row — progressive disclosure by business type */}
@@ -304,7 +306,7 @@ export default function Dashboard() {
           <StatCard
             label={
               businessType === 'retail' && period === 'today'
-                ? "Today's takings"
+                ? t('dashboard.todaysTakings', "Today's takings")
                 : period === 'today'
                 ? t('todaysSales')
                 : period === 'week'
@@ -320,7 +322,7 @@ export default function Dashboard() {
             <StatCard label={t('activeOrders')} value={stats.activeOrders} icon="bx-receipt" tone="info" />
           ) : (
             <StatCard
-              label={businessType === 'services' ? 'Outstanding' : 'Outstanding invoices'}
+              label={businessType === 'services' ? t('dashboard.outstanding', 'Outstanding') : t('dashboard.outstandingInvoices', 'Outstanding invoices')}
               value={outstandingInvoices != null ? formatCurrency(outstandingInvoices) : '—'}
               icon="bx-file"
               tone="info"
@@ -330,7 +332,7 @@ export default function Dashboard() {
             <StatCard
               label={
                 businessType === 'retail'
-                  ? `${term(businessType, 'items')} low`
+                  ? t('dashboard.itemsLow', '{{items}} low', { items: term(businessType, 'items') })
                   : t('lowStock')
               }
               value={analytics?.lowStockCount || stats.lowStockCount || 0}
@@ -347,7 +349,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 divide-y divide-gray-100 dark:divide-gray-800 sm:divide-y-0 sm:divide-x rounded-xl bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 sm:grid-cols-4">
           <div className="px-4 py-3">
             <p className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Today vs yesterday
+              {t('dashboard.todayVsYesterday', 'Today vs yesterday')}
             </p>
             <div className="mt-1 flex items-center gap-2">
               <p className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">
@@ -356,12 +358,12 @@ export default function Dashboard() {
               <DeltaPill current={todayRevenue} previous={yesterdayRevenue} />
             </div>
             <p className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
-              Yesterday {formatCurrency(yesterdayRevenue)}
+              {t('dashboard.yesterdayAmount', 'Yesterday {{amount}}', { amount: formatCurrency(yesterdayRevenue) })}
             </p>
           </div>
           <div className="px-4 py-3">
             <p className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              This week vs last
+              {t('dashboard.thisWeekVsLast', 'This week vs last')}
             </p>
             <div className="mt-1 flex items-center gap-2">
               <p className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">
@@ -370,12 +372,12 @@ export default function Dashboard() {
               <DeltaPill current={thisWeekRevenue} previous={lastWeekRevenue} />
             </div>
             <p className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
-              Last week {formatCurrency(lastWeekRevenue)}
+              {t('dashboard.lastWeekAmount', 'Last week {{amount}}', { amount: formatCurrency(lastWeekRevenue) })}
             </p>
           </div>
           <div className="px-4 py-3">
             <p className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Top item
+              {t('dashboard.topItem', 'Top item')}
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
               {analytics?.bestProduct?.name || '—'}
@@ -386,7 +388,7 @@ export default function Dashboard() {
           </div>
           <div className="px-4 py-3">
             <p className="text-2xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Top branch
+              {t('dashboard.topBranch', 'Top branch')}
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
               {analytics?.bestBranch?.name || '—'}
@@ -402,11 +404,11 @@ export default function Dashboard() {
 
         {/* Primary revenue chart + stacked mini charts (reference layout) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card title="Revenue" subtitle="Last 14 days" className="lg:col-span-2">
+          <Card title={t('charts.revenue', 'Revenue')} subtitle={t('charts.last14Days', 'Last 14 days')} className="lg:col-span-2">
             <RevenueAreaChart data={revenueSeries} height={230} formatValue={(v) => `\u20a6${compactNumber(v)}`} />
           </Card>
           <div className="flex flex-col gap-4">
-            <Card title="Sales trend" subtitle="Daily totals">
+            <Card title={t('charts.salesTrend', 'Sales trend')} subtitle={t('charts.dailyTotals', 'Daily totals')}>
               <RevenueAreaChart
                 data={revenueSeries}
                 height={130}
@@ -414,7 +416,7 @@ export default function Dashboard() {
                 emptyMessage={t('noDataYet')}
               />
             </Card>
-            <Card title="This week" subtitle="Revenue by day">
+            <Card title={t('charts.thisWeekTitle', 'This week')} subtitle={t('charts.revenueByDay', 'Revenue by day')}>
               <WeeklyBarChart
                 data={revenueSeries.slice(-7).map((d, i) => {
                   const day = new Date();

@@ -1,3 +1,15 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Kuza ERP — local Docker stack (full app: db + backend + frontend + website).
+#
+#   docker compose up -d                 # start the app stack
+#   docker compose --profile ai up -d    # …and the local Ollama LLM backend
+#   docker compose down                  # stop (add -v to wipe volumes)
+#
+# Env overrides come from a `.env` next to this file (see .env.example).
+# Every value below has a sane default, so a bare `docker compose up` works.
+# Production is deployed separately via infra/terraform (AWS ECS Fargate).
+# ─────────────────────────────────────────────────────────────────────────
+name: kuza
 
 services:
   postgres:
@@ -19,6 +31,7 @@ services:
       retries: 5
     networks:
       - erp_network
+    restart: unless-stopped
 
   backend:
     build:
@@ -47,6 +60,10 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ERP Platform}
+      # Transactional email provider (set EMAIL_PROVIDER=brevo + BREVO_API_KEY in
+      # the gitignored root .env). Values interpolate from there — never inline a key here.
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
       # --- AI / LLM provider (provider-agnostic; switch by config, not code) ---
       # AI_PROVIDER selects the backend:
       #   'ollama'    (default) — LOCAL, OpenAI-compatible /chat/completions
@@ -76,10 +93,14 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
-      - ./backend/src/i18n:/app/src/i18n
-      - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
       - backend_uploads:/app/uploads
       - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:4001/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - erp_network
     restart: unless-stopped
@@ -97,14 +118,15 @@ services:
     ports:
       - "${FRONTEND_PORT:-5001}:3000"
     depends_on:
-      - backend
-    networks:
-      - erp_network
-    restart: unless-stopped
+      backend:
+        condition: service_started
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    networks:
+      - erp_network
+    restart: unless-stopped
     command: npm run dev -- -H 0.0.0.0
 
   website:
@@ -118,16 +140,16 @@ services:
       - erp_network
     restart: unless-stopped
 
-  # Optional: local Llama (OpenAI-compatible) LLM backend.
-  # This service is opt-in — the backend does not depend on it, so nothing
-  # breaks if you never start it. To use it as the AI backend:
-  #   1) docker compose up -d ollama
-  #   2) docker exec erp_ollama ollama pull llama3.1
-  #   3) set AI_PROVIDER=openai, AI_BASE_URL=http://ollama:11434/v1,
-  #      AI_MODEL=llama3.1 (see the backend service env above) and restart backend.
+  # Optional local Llama (OpenAI-compatible) LLM backend — opt-in via the `ai`
+  # profile, so a bare `docker compose up` never pulls this heavy image.
+  #   1) docker compose --profile ai up -d ollama
+  #   2) docker exec erp_ollama ollama pull llama3.2
+  #   3) point the backend at it: AI_PROVIDER=openai,
+  #      AI_BASE_URL=http://ollama:11434/v1, AI_MODEL=llama3.2 — then restart backend.
   ollama:
     image: ollama/ollama:latest
     container_name: erp_ollama
+    profiles: ["ai"]
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     volumes:
@@ -144,4 +166,3 @@ volumes:
 networks:
   erp_network:
     driver: bridge
-

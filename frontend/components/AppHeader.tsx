@@ -4,6 +4,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useTenantStore } from '@/store/globalStore';
 import { useKuzaStore } from '@/store/kuzaStore';
 import { useUiStore } from '@/store/uiStore';
+import { useSearchStore } from '@/store/searchStore';
+import NotificationBell from './NotificationBell';
 import { getApp, presetFor } from '@/lib/apps';
 import { availableCoarseApps, appDisplayName, hasAppKey } from '@/lib/appCatalog';
 import { useTranslation } from 'next-i18next';
@@ -23,8 +25,13 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // Global search is page-driven: the active page opts in via usePageSearch(),
+  // enabling the box and receiving the live query to filter its own data.
+  const searchEnabled = useSearchStore((s) => s.enabled);
+  const searchQuery = useSearchStore((s) => s.query);
+  const searchPlaceholder = useSearchStore((s) => s.placeholder);
+  const setSearchQuery = useSearchStore((s) => s.setQuery);
   const [darkMode, setDarkMode] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLDivElement>(null);
@@ -44,6 +51,30 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   const launcherApps = availableCoarseApps(effectiveApps, businessType).filter(
     (a) => a.id !== 'settings',
   );
+
+  // Which app is the current route in? Mirrors the sidebar's resolution so the
+  // launcher can highlight the active app. Shared surfaces ('/', POS, sales,
+  // market) belong to the selling app (Restaurant for hospitality, else Inventory).
+  const currentAppId = (() => {
+    const p = router.pathname;
+    if (p.startsWith('/hrms')) return 'hr';
+    if (p.startsWith('/accounting')) return 'accounting';
+    if (p.startsWith('/sales') || p.startsWith('/settings/invoicing')) return 'sales';
+    if (p.startsWith('/payments')) return 'payments';
+    if (
+      p.startsWith('/rms/items') ||
+      p.startsWith('/rms/tables') ||
+      p.startsWith('/rms/menus') ||
+      p.startsWith('/rms/reservations') ||
+      p.startsWith('/menu-studio')
+    )
+      return 'restaurant';
+    if (p.startsWith('/ims') || p.startsWith('/inventory') || p.startsWith('/purchases')) return 'inventory';
+    if (p === '/' || p.startsWith('/pos') || p.startsWith('/rms') || p.startsWith('/market')) {
+      return businessType === 'hospitality' || businessType === 'restaurant' ? 'restaurant' : 'inventory';
+    }
+    return null;
+  })();
   const openKuza = useKuzaStore((s) => s.setOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
 
@@ -73,23 +104,10 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
     ] as { label: string; href: string; icon: Parameters<typeof Icon>[0]['name']; key: string }[]
   ).filter((it) => hasAppKey(it.key, effectiveApps));
 
-  // Global search routes the query to the most relevant list for the active module.
-  const SEARCH_TARGETS: [string, string][] = [
-    ['/hrms', '/hrms/employees'],
-    ['/pos', '/ims/inventory'],
-    ['/ims', '/ims/inventory'],
-    ['/sales', '/sales/invoices'],
-    ['/accounting', '/accounting/journal-entries'],
-    ['/rms', '/rms/orders'],
-  ];
-
+  // The query filters the current page live (see usePageSearch), so submit just
+  // dismisses the mobile bar — there's nothing to route to.
   const handleSearchSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-    const match = SEARCH_TARGETS.find(([prefix]) => router.pathname.startsWith(prefix));
-    const target = match ? match[1] : '/ims/inventory';
-    router.push({ pathname: target, query: { search: q } });
     setMobileSearchOpen(false);
   };
 
@@ -289,13 +307,17 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('search') || 'Search'}
+              disabled={!searchEnabled}
+              placeholder={searchEnabled ? searchPlaceholder || t('search') || 'Search' : t('search') || 'Search'}
               aria-label="Search"
-              className="h-9 w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 pl-10 pr-12 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
+              title={searchEnabled ? undefined : t('searchNotAvailable') || 'Search is not available on this page'}
+              className="h-9 w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 pl-10 pr-12 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-0.5 text-2xs font-medium text-gray-400 dark:text-gray-500">
-              ↵
-            </kbd>
+            {searchEnabled && (
+              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-0.5 text-2xs font-medium text-gray-400 dark:text-gray-500">
+                ↵
+              </kbd>
+            )}
           </form>
         </div>
 
@@ -310,15 +332,16 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
             </div>
           )}
 
-          {/* Mobile: search toggle */}
+          {/* Mobile: search toggle (disabled when the page isn't searchable) */}
           <button
             type="button"
             onClick={() => setMobileSearchOpen((v) => !v)}
+            disabled={!searchEnabled}
             id="mobile-search-toggle"
             aria-label={t('search') || 'Search'}
             aria-expanded={mobileSearchOpen}
-            title={t('search') || 'Search'}
-            className={`md:hidden ${iconButton}`}
+            title={searchEnabled ? t('search') || 'Search' : t('searchNotAvailable') || 'Search is not available on this page'}
+            className={`md:hidden ${iconButton} disabled:cursor-not-allowed disabled:opacity-40`}
           >
             <Icon name="search" size={18} />
           </button>
@@ -396,22 +419,30 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
                 className="absolute right-0 mt-2 w-72 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-popover"
               >
                 <div className="grid grid-cols-3 gap-1 p-2 max-h-80 overflow-y-auto">
-                  {launcherApps.map((app) => (
-                    <Link
-                      key={app.id}
-                      href={app.home}
-                      role="menuitem"
-                      onClick={() => setLauncherOpen(false)}
-                      className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-2.5 text-center transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                        <Icon name={app.icon} size={18} />
-                      </span>
-                      <span className="w-full truncate text-2xs font-medium text-gray-700 dark:text-gray-300">
-                        {appDisplayName(app)}
-                      </span>
-                    </Link>
-                  ))}
+                  {launcherApps.map((app) => {
+                    const active = app.id === currentAppId;
+                    return (
+                      <Link
+                        key={app.id}
+                        href={app.home}
+                        role="menuitem"
+                        aria-current={active ? 'page' : undefined}
+                        onClick={() => setLauncherOpen(false)}
+                        className={`flex flex-col items-center gap-1.5 rounded-lg px-1 py-2.5 text-center transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                          active
+                            ? 'bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-500/15 dark:ring-brand-500/30'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800/70'
+                        }`}
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                          <Icon name={app.icon} size={18} />
+                        </span>
+                        <span className={`w-full truncate text-2xs font-medium ${active ? 'text-brand-700 dark:text-brand-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {appDisplayName(app)}
+                        </span>
+                      </Link>
+                    );
+                  })}
                   {launcherApps.length === 0 && (
                     <p className="col-span-3 px-2 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
                       No apps enabled yet
@@ -433,13 +464,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
             )}
           </div>
 
-          <button type="button" className={`relative ${iconButton}`} aria-label="Notifications">
-            <Icon name="bell" size={18} />
-            <span
-              className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900"
-              aria-hidden="true"
-            />
-          </button>
+          <NotificationBell />
 
           <button
             type="button"
@@ -566,7 +591,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('search') || 'Search'}
+              placeholder={searchPlaceholder || t('search') || 'Search'}
               aria-label="Search"
               className="h-9 w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 pl-10 pr-3 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent"
             />

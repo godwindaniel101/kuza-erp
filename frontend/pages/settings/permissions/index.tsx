@@ -14,7 +14,7 @@ export default function PermissionsPage() {
       <div className="w-full max-w-5xl space-y-5">
         <PageHeader
           title={t('permissions')}
-          subtitle="Browse every permission available across your enabled apps"
+          subtitle={t('settings.permissionsSubtitle', 'Browse every permission available across your enabled apps')}
           breadcrumbs={[
             { label: t('settings') || 'Settings', href: '/settings' },
             { label: t('permissions') },

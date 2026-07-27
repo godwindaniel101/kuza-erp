@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { I18nContext } from 'nestjs-i18n';
+import * as Sentry from '@sentry/node';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -152,11 +153,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
             extras.enableHint = responseObj.enableHint;
           }
         }
-        
-        // Debug logging in development
-        if (process.env.NODE_ENV !== 'production' && status === HttpStatus.BAD_REQUEST) {
-          console.log('Validation error details:', JSON.stringify(responseObj, null, 2));
-        }
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -175,6 +171,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // In development, include stack trace
     if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
       (errorResponse as any).stack = exception.stack;
+    }
+
+    // Report only genuine server-side failures (5xx) to Sentry. Guarded on DSN
+    // presence so this is a no-op when Sentry was never initialized (see main.ts).
+    if (process.env.SENTRY_DSN && status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      Sentry.captureException(exception);
     }
 
     response.status(status).json(errorResponse);

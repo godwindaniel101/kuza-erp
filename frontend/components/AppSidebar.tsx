@@ -89,11 +89,6 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
 
   // ---- App catalog -----------------------------------------------------
 
-  // A tenant sells through ONE app: Restaurant (hospitality) or Inventory
-  // (everyone else). Selling links only appear in that app, so clicking Sell
-  // never cross-jumps between Inventory and Restaurant.
-  const sellsViaRestaurant = businessType === 'hospitality' || businessType === 'restaurant';
-
   // Sidebar nav groups per app id. App-level metadata (name/icon/home/appKeys/
   // businessTypes/blurb) lives in the shared COARSE_APPS catalog — see below.
   const groupsByApp: Record<string, NavGroup[]> = {
@@ -102,28 +97,35 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     restaurant: [
       { items: [{ href: '/', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
       {
-        label: 'Sell',
+        label: tr('nav.sell', 'Sell'),
         items: [
-          { href: '/pos', label: 'POS', icon: 'building-storefront', permission: 'orders.create', exact: true },
-          { href: '/rms/orders', label: tr('orders', 'Orders'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
+          { href: '/pos', label: tr('nav.pos', 'POS'), icon: 'building-storefront', permission: 'orders.create', exact: true },
+          { href: '/rms/orders', label: tr('nav.sales', 'Sales'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
         ],
       },
       {
-        label: 'Dine-in',
+        label: tr('nav.dineIn', 'Dine-in'),
         items: [
           { href: '/rms/tables', label: tr('tables', 'Tables'), icon: 'table-cells', permission: 'tables.view' },
         ],
       },
       {
-        label: 'Menu',
+        label: tr('nav.menu', 'Menu'),
         items: [
-          { href: '/rms/items', label: 'Items', icon: 'cube', permission: 'inventory.view' },
-          { href: '/rms/menus', label: 'Menus', icon: 'menu-book', permission: 'menus.view', also: ['/menu-studio'] },
+          { href: '/rms/items', label: tr('nav.items', 'Items'), icon: 'cube', permission: 'inventory.view' },
+          { href: '/rms/menus', label: tr('nav.menus', 'Menus'), icon: 'menu-book', permission: 'menus.view', also: ['/menu-studio'] },
           { href: '/rms/reservations', label: tr('reservations', 'Reservations'), icon: 'calendar', permission: 'reservations.view' },
         ],
       },
       {
-        label: 'Insights',
+        // Market stays within the Restaurant module (resolves to this app, like POS).
+        label: tr('nav.purchasing', 'Purchasing'),
+        items: [
+          { href: '/market', label: tr('nav.market', 'Market'), icon: 'squares-2x2' },
+        ],
+      },
+      {
+        label: tr('nav.insights', 'Insights'),
         items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
       },
       {
@@ -134,40 +136,41 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
             label: tr('configuration', 'Configuration'),
             icon: 'cog',
             permission: 'branches.view',
-            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method'],
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'],
           },
         ],
       },
     ],
     inventory: [
       { items: [{ href: '/ims', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
-      // Selling is a section in Inventory for retail; hidden for hospitality
-      // (they sell via Restaurant) so its links never jump to another workspace.
-      ...(sellsViaRestaurant
-        ? []
-        : [
-            {
-              label: 'Sell',
-              items: [
-                { href: '/pos', label: 'POS', icon: 'building-storefront' as IconName, permission: 'orders.create', exact: true },
-                { href: '/rms/orders', label: 'Sales', icon: 'receipt' as IconName, permission: 'orders.view', exclude: ['/rms/orders/create'] },
-              ],
-            },
-          ]),
+      // Sell (POS + Sales) is a section in Inventory. It's a shared selling
+      // surface (also in Restaurant); the sticky app-resolution keeps POS/Sales
+      // in whichever app you opened them from, so they never cross-jump.
       {
-        label: 'Stock',
+        label: tr('nav.sell', 'Sell'),
         items: [
-          { href: '/ims/inflows', label: 'Receive Stock', icon: 'inbox-arrow', permission: 'inflows.view' },
-          { href: '/ims/branch-items', label: 'Branch Stock', icon: 'building-storefront' },
-          { href: '/ims/inventory', label: 'Stock Items', icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+          { href: '/pos', label: tr('nav.pos', 'POS'), icon: 'building-storefront' as IconName, permission: 'orders.create', exact: true },
+          { href: '/rms/orders', label: tr('nav.sales', 'Sales'), icon: 'receipt' as IconName, permission: 'orders.view', exclude: ['/rms/orders/create'] },
+        ],
+      },
+      {
+        label: tr('nav.stock', 'Stock'),
+        items: [
+          { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
+          { href: '/ims/inventory', label: tr('nav.stockItems', 'Stock Items'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
           { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
           { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
           { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
         ],
       },
       {
-        label: 'Purchasing',
-        items: [{ href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' }],
+        // Purchasing (buy-side): Purchases (receipts + supplier POs), your
+        // suppliers, and the cross-tenant Market. JWT-only (no plan gate).
+        label: tr('nav.purchasing', 'Purchasing'),
+        items: [
+          { href: '/ims/inflows', label: tr('nav.purchases', 'Purchases'), icon: 'inbox-arrow', permission: 'inflows.view' },
+          { href: '/market', label: tr('nav.market', 'Market'), icon: 'squares-2x2' },
+        ],
       },
       {
         // Single entry into the shared Setup workspace (Branches, Categories,
@@ -178,7 +181,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
             label: tr('configuration', 'Configuration'),
             icon: 'cog',
             permission: 'branches.view',
-            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method'],
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'],
           },
         ],
       },
@@ -191,16 +194,17 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         ],
       },
       {
-        label: 'Setup',
+        label: tr('nav.setup', 'Setup'),
         items: [
           { href: '/sales/customers', label: tr('customers', 'Customers'), icon: 'users', permission: 'sales.view' },
+          { href: '/settings/invoicing', label: tr('nav.setupTemplate', 'Setup template'), icon: 'cog', permission: 'sales.manage' },
         ],
       },
     ],
     accounting: [
       {
         items: [
-          { href: '/accounting', label: 'Overview', icon: 'home', exact: true },
+          { href: '/accounting', label: tr('nav.overview', 'Overview'), icon: 'home', exact: true },
           { href: '/accounting/chart-of-accounts', label: tr('chartOfAccounts', 'Chart of Accounts'), icon: 'book-open' },
           { href: '/accounting/journal-entries', label: tr('journalEntries', 'Journal Entries'), icon: 'pencil-square' },
           { href: '/accounting/reports', label: tr('reports', 'Reports'), icon: 'chart-bar' },
@@ -210,7 +214,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     hr: [
       { items: [{ href: '/hrms/dashboard', label: tr('dashboard', 'Dashboard'), icon: 'home', exact: true }] },
       {
-        label: 'People',
+        label: tr('nav.people', 'People'),
         items: [
           { href: '/hrms/employees', label: tr('employees', 'Employees'), icon: 'users', permission: 'employees.view' },
           { href: '/hrms/org-chart', label: tr('orgChart', 'Org chart'), icon: 'git-branch', permission: 'employees.view' },
@@ -220,7 +224,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         ],
       },
       {
-        label: 'Talent',
+        label: tr('nav.talent', 'Talent'),
         items: [
           { href: '/hrms/recruitment', label: tr('recruitment', 'Recruitment'), icon: 'briefcase', permission: 'recruitment.view' },
           { href: '/hrms/performance', label: tr('performance', 'Performance'), icon: 'star', permission: 'performance.view' },
@@ -228,7 +232,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         ],
       },
       {
-        label: 'Rewards',
+        label: tr('nav.rewards', 'Rewards'),
         items: [
           { href: '/hrms/benefits', label: tr('benefits', 'Benefits'), icon: 'heart', permission: 'benefits.view' },
           { href: '/hrms/compensation', label: tr('compensation', 'Compensation'), icon: 'wallet', permission: 'compensation.view' },
@@ -250,7 +254,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     // People configuration — its own left rail, entered from People → Configuration.
     'hr-config': [
       {
-        label: 'Organization',
+        label: tr('nav.organization', 'Organization'),
         items: [
           { href: '/hrms/departments', label: tr('departments', 'Departments'), icon: 'building-office', permission: 'departments.view' },
           { href: '/hrms/positions', label: tr('positions', 'Positions'), icon: 'briefcase', permission: 'positions.view' },
@@ -261,14 +265,14 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     settings: [
       {
         items: [
-          { href: '/settings', label: 'General', icon: 'cog', exact: true },
+          { href: '/settings', label: tr('nav.general', 'General'), icon: 'cog', exact: true },
           { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
           { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
           { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
         ],
       },
       {
-        label: 'Access control',
+        label: tr('nav.accessControl', 'Access control'),
         items: [
           { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
           { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
@@ -279,13 +283,14 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     payments: [
       { items: [{ href: '/payments', label: tr('paymentMethods', 'Payment methods'), icon: 'credit-card', exact: true }] },
       { items: [{ href: '/payments/transactions', label: tr('transactions', 'Transactions'), icon: 'receipt' }] },
+      { items: [{ href: '/payments/wallet', label: tr('nav.wallet', 'Wallet'), icon: 'wallet' }] },
       // Single entry into the Payments Configuration workspace (its own rail).
       { items: [{ href: '/payments/settlement', label: tr('configuration', 'Configuration'), icon: 'cog', also: ['/payments/security', '/payments/setup'] }] },
     ],
     // Payments configuration — its own left rail, entered from Payments → Configuration.
     'payments-config': [
       {
-        label: 'Payments',
+        label: tr('nav.payments', 'Payments'),
         items: [
           { href: '/payments/settlement', label: tr('settlementAccount', 'Settlement account'), icon: 'banknotes' },
           { href: '/payments/security', label: tr('twoFactorAuth', 'Two-factor authentication'), icon: 'shield' },
@@ -297,21 +302,39 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     // no config link is duplicated per app and entering it never cross-jumps.
     setup: [
       {
-        label: 'Locations',
+        label: tr('locations', 'Locations'),
         items: [
           { href: '/settings/branches', label: tr('branch', 'Branches'), icon: 'git-branch', permission: 'branches.view' },
         ],
       },
       {
-        label: 'Catalog',
+        // Team invite + access control — reuses the existing settings pages,
+        // surfaced here so it's reachable from Restaurant/Inventory Configuration.
+        label: tr('nav.teamAccess', 'Team & access'),
+        items: [
+          { href: '/settings/invitations', label: tr('nav.inviteTeam', 'Invite team'), icon: 'envelope', permission: 'invitations.view' },
+          { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
+          { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
+          { href: '/settings/permissions', label: tr('permissions', 'Permissions'), icon: 'lock', permission: 'roles.view' },
+        ],
+      },
+      {
+        label: tr('nav.purchasing', 'Purchasing'),
+        items: [
+          { href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' },
+        ],
+      },
+      {
+        label: tr('nav.catalog', 'Catalog'),
         items: [
           { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
           { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
         ],
       },
       {
-        label: 'Stock rules',
+        label: tr('nav.stockRules', 'Stock rules'),
         items: [
+          { href: '/settings/market', label: tr('nav.marketSetup', 'Market Setup'), icon: 'squares-2x2', permission: 'settings.view' },
           { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
         ],
       },
@@ -401,12 +424,17 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
 
   // ---- Which app am I in? (route-driven) -------------------------------
 
+  // Shared surfaces (Market, network orders) belong to whichever selling app you
+  // came from — this remembers the last Inventory/Restaurant app so they stick to
+  // it instead of cross-jumping. Updated by an effect after each render.
+  const lastAppIdRef = useRef<string | null>(null);
+
   const appForPath = useCallback(
     (path: string): AppDef => {
       // Shared-config subpaths live in the dedicated Setup workspace (its own
       // left rail), not Settings or a module app — so it's reachable from both
       // Inventory and Restaurant without cross-jumping into either.
-      const setupPaths = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method'];
+      const setupPaths = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method', '/settings/market', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'];
       if (setupPaths.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'setup')!;
 
       if (
@@ -423,11 +451,35 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       )
         return apps.find((a) => a.id === 'hr-config')!;
       if (path.startsWith('/hrms')) return apps.find((a) => a.id === 'hr')!;
-      if (path.startsWith('/ims') || path.startsWith('/inventory')) return apps.find((a) => a.id === 'inventory')!;
+      // Purchases order detail (buyer) is reached from the Purchases list; it
+      // resolves to Inventory just like /ims/inflows so the workspace chrome stays.
+      if (path.startsWith('/ims') || path.startsWith('/inventory') || path.startsWith('/purchases'))
+        return apps.find((a) => a.id === 'inventory')!;
+      // Invoice customization lives under /settings but belongs to the Sales app.
+      if (path.startsWith('/settings/invoicing')) return apps.find((a) => a.id === 'sales')!;
       if (path.startsWith('/sales')) return apps.find((a) => a.id === 'sales')!;
       if (path.startsWith('/accounting')) return apps.find((a) => a.id === 'accounting')!;
       if (path.startsWith('/settings')) return apps.find((a) => a.id === 'settings')!;
-      if (path.startsWith('/rms/suppliers')) return apps.find((a) => a.id === 'inventory')!;
+      // Shared selling/purchasing surfaces (POS, Sales, Market, network orders)
+      // live in both the Inventory and Restaurant apps. Stay in whichever app
+      // you came from (sticky) so they behave like a section of the current
+      // module and never cross-jump; fall back to the selling app on cold load.
+      if (
+        path.startsWith('/market') ||
+        path.startsWith('/network/orders') ||
+        path.startsWith('/pos') ||
+        path.startsWith('/rms/orders')
+      ) {
+        const sticky = lastAppIdRef.current;
+        if (sticky === 'inventory' || sticky === 'restaurant') {
+          const a = businessApps.find((x) => x.id === sticky);
+          if (a) return a;
+        }
+        const sellingAppId =
+          businessType === 'hospitality' || businessType === 'restaurant' ? 'restaurant' : 'inventory';
+        return businessApps.find((a) => a.id === sellingAppId) ?? businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
+      }
+      // Kuza Network lives in the Inventory app (feeds purchasing).
       // Restaurant surfaces: items catalog, dine-in tables, menus, QR menu.
       if (
         path.startsWith('/rms/items') ||
@@ -463,6 +515,14 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     activeApp.id === 'settings' ||
     activeApp.id === 'hr-config' ||
     activeApp.id === 'payments-config';
+
+  // Remember the current selling app so shared surfaces (Market, network orders)
+  // stick to it instead of cross-jumping.
+  useEffect(() => {
+    if (activeApp.id === 'inventory' || activeApp.id === 'restaurant') {
+      lastAppIdRef.current = activeApp.id;
+    }
+  }, [activeApp.id]);
 
   // Remember the last business-app page so Back returns to that exact navbar
   // position (not browser-history back, which just walks the sub-nav).
@@ -554,7 +614,11 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
 
       {/* Active app navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3">
-        {activeApp.groups.map(renderGroup)}
+        {/* Keyed on the app id so nav groups gracefully re-reveal (staggered)
+            when switching apps, but stay put during in-app page navigation. */}
+        <div key={activeApp.id} className="app-nav-enter">
+          {activeApp.groups.map(renderGroup)}
+        </div>
       </nav>
 
       {/* Upgrade promo — FREE / TRIALING only */}

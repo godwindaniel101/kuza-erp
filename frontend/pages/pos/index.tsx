@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
 import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
@@ -54,6 +55,7 @@ const EMPTY_META: OrderMeta = {
  * both are visible; on phones the ticket collapses into a bottom bar + drawer.
  */
 export default function PosPage() {
+  const { t } = useTranslation('common');
   const currency = useCurrency();
   const { businessName } = useTenantStore();
   const [loading, setLoading] = useState(true);
@@ -199,7 +201,7 @@ export default function PosPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setToast({ message: 'Failed to load POS data', type: 'error' });
+          setToast({ message: t('pos.failedToLoadData', 'Failed to load POS data'), type: 'error' });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -224,7 +226,7 @@ export default function PosPage() {
       setProducts(res.success && Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
       setProductsError(
-        err?.response?.data?.message || err?.message || 'Failed to load products',
+        err?.response?.data?.message || err?.message || t('pos.failedToLoadProducts', 'Failed to load products'),
       );
       setProducts([]);
     } finally {
@@ -342,7 +344,7 @@ export default function PosPage() {
       }
     } catch (e: any) {
       setToast({
-        message: e?.response?.data?.message || 'Could not start transfer collection',
+        message: e?.response?.data?.message || t('pos.couldNotStartTransfer', 'Could not start transfer collection'),
         type: 'error',
       });
     }
@@ -364,7 +366,7 @@ export default function PosPage() {
             setAwaitingByTab((prev) =>
               prev[tabId] ? { ...prev, [tabId]: { ...prev[tabId], status: 'paid' } } : prev,
             );
-            setToast({ message: 'Payment received', type: 'success' });
+            setToast({ message: t('pos.paymentReceived', 'Payment received'), type: 'success' });
             setTimeout(() => {
               setAwaitingByTab((prev) => {
                 const next = { ...prev };
@@ -468,11 +470,11 @@ export default function PosPage() {
 
   const handleSubmit = useCallback(async () => {
     if (!branchId) {
-      setToast({ message: 'Please select a branch', type: 'error' });
+      setToast({ message: t('pos.pleaseSelectBranch', 'Please select a branch'), type: 'error' });
       return;
     }
     if (lines.length === 0) {
-      setToast({ message: 'Add at least one item to the order', type: 'error' });
+      setToast({ message: t('pos.addAtLeastOneItem', 'Add at least one item to the order'), type: 'error' });
       return;
     }
     setSaving(true);
@@ -531,7 +533,7 @@ export default function PosPage() {
     } catch (err: any) {
       setToast({
         message:
-          err?.response?.data?.message || err?.message || 'Failed to place order',
+          err?.response?.data?.message || err?.message || t('pos.failedToPlaceOrder', 'Failed to place order'),
         type: 'error',
       });
     } finally {
@@ -576,7 +578,7 @@ export default function PosPage() {
             </span>
             <div>
               <h1 className="text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100">
-                Point of Sale
+                {t('pos.title', 'Point of Sale')}
               </h1>
             </div>
           </div>
@@ -596,16 +598,16 @@ export default function PosPage() {
                   setBranchId(v);
                   if (typeof window !== 'undefined') localStorage.setItem('kuza.pos.branchId', v);
                 }}
-                placeholder="Select branch"
-                searchPlaceholder="Search branch…"
+                placeholder={t('pos.selectBranch', 'Select branch')}
+                searchPlaceholder={t('pos.searchBranch', 'Search branch…')}
                 disabled={loading || branches.length === 0}
               />
             </div>
             <button
               type="button"
               onClick={toggleFullscreen}
-              title={isFullscreen ? 'Exit full screen' : 'Full screen'}
-              aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+              title={isFullscreen ? t('pos.exitFullScreen', 'Exit full screen') : t('pos.fullScreen', 'Full screen')}
+              aria-label={isFullscreen ? t('pos.exitFullScreen', 'Exit full screen') : t('pos.fullScreen', 'Full screen')}
               className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <i className={`bx ${isFullscreen ? 'bx-exit-fullscreen' : 'bx-fullscreen'} text-lg`} aria-hidden="true" />
@@ -615,31 +617,31 @@ export default function PosPage() {
 
         {/* Sale tabs — park multiple carts and switch between them */}
         <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
-          {tabs.map((t, i) => {
-            const count = t.lines.reduce((s, l) => s + l.quantity, 0);
-            const active = t.id === activeTabId;
+          {tabs.map((tab, i) => {
+            const count = tab.lines.reduce((s, l) => s + l.quantity, 0);
+            const active = tab.id === activeTabId;
             return (
               <div
-                key={t.id}
+                key={tab.id}
                 onClick={() => {
-                  setActiveTabId(t.id);
-                  if (awaitingByTab[t.id]) setAwaitingModalTab(t.id);
+                  setActiveTabId(tab.id);
+                  if (awaitingByTab[tab.id]) setAwaitingModalTab(tab.id);
                 }}
                 className={`flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition ${
                   active
                     ? 'border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/30 dark:text-brand-300'
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
-                title={awaitingByTab[t.id] ? 'Awaiting transfer' : undefined}
+                title={awaitingByTab[tab.id] ? t('pos.awaitingTransfer', 'Awaiting transfer') : undefined}
               >
-                {awaitingByTab[t.id] && (
+                {awaitingByTab[tab.id] && (
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full ${
-                      awaitingByTab[t.id].status === 'paid' ? 'bg-emerald-500' : 'animate-pulse bg-amber-500'
+                      awaitingByTab[tab.id].status === 'paid' ? 'bg-emerald-500' : 'animate-pulse bg-amber-500'
                     }`}
                   ></span>
                 )}
-                <span>Sale {i + 1}</span>
+                <span>{t('pos.sale', 'Sale {{n}}', { n: i + 1 })}</span>
                 {count > 0 && (
                   <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-gradient px-1 text-[10px] font-bold text-white">
                     {count}
@@ -650,9 +652,9 @@ export default function PosPage() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      closeTab(t.id);
+                      closeTab(tab.id);
                     }}
-                    aria-label={`Close Sale ${i + 1}`}
+                    aria-label={t('pos.closeSale', 'Close Sale {{n}}', { n: i + 1 })}
                     className="-mr-1 ml-0.5 flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-red-500"
                   >
                     <i className="bx bx-x text-base" aria-hidden="true" />
@@ -664,10 +666,10 @@ export default function PosPage() {
           <button
             type="button"
             onClick={addTab}
-            aria-label="New sale"
+            aria-label={t('pos.newSale', 'New sale')}
             className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-dashed border-gray-300 px-2.5 text-[13px] font-medium text-gray-500 transition hover:border-brand-400 hover:text-brand-600 dark:border-gray-600"
           >
-            <i className="bx bx-plus text-base" aria-hidden="true" /> New sale
+            <i className="bx bx-plus text-base" aria-hidden="true" /> {t('pos.newSale', 'New sale')}
           </button>
         </div>
 
@@ -706,7 +708,7 @@ export default function PosPage() {
             <span className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-bold">
               {itemCount}
             </span>
-            View order
+            {t('pos.viewOrder', 'View order')}
           </span>
           <span className="flex items-center gap-2 font-mono text-base font-bold">
             <PaymentIcon size={18} />
@@ -746,7 +748,7 @@ export default function PosPage() {
           <Modal
             isOpen
             onClose={() => setAwaitingModalTab(null)}
-            title="Awaiting payment"
+            title={t('pos.awaitingPayment', 'Awaiting payment')}
             maxWidth="sm"
             closeOnOutsideClick={false}
             footer={
@@ -755,7 +757,7 @@ export default function PosPage() {
                 onClick={() => setAwaitingModalTab(null)}
                 className="h-9 whitespace-nowrap rounded-lg border border-gray-300 px-4 text-[13px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
               >
-                {paid ? 'Done' : 'Keep serving others'}
+                {paid ? t('pos.done', 'Done') : t('pos.keepServingOthers', 'Keep serving others')}
               </button>
             }
           >
@@ -764,16 +766,16 @@ export default function PosPage() {
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
                   <i className="bx bx-check text-3xl"></i>
                 </div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Payment received</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{formatNaira(a.amount)} confirmed.</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">{t('pos.paymentReceived', 'Payment received')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('pos.amountConfirmed', '{{amount}} confirmed.', { amount: formatNaira(a.amount) })}</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {a.items && a.items.length > 0 && (
                   <div className="rounded-xl border border-gray-200 dark:border-gray-800">
                     <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-xs font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                      <span>{a.orderNumber || 'Order'}</span>
-                      <span>{a.items.reduce((s, it) => s + it.quantity, 0)} item(s)</span>
+                      <span>{a.orderNumber || t('pos.order', 'Order')}</span>
+                      <span>{t('pos.itemCount', '{{count}} item(s)', { count: a.items.reduce((s, it) => s + it.quantity, 0) })}</span>
                     </div>
                     <div className="max-h-40 overflow-y-auto">
                       {a.items.map((it, idx) => (
@@ -790,31 +792,30 @@ export default function PosPage() {
                   </div>
                 )}
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Ask the customer to transfer{' '}
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNaira(a.amount)}</span> to:
+                  {t('pos.askCustomerTransfer', 'Ask the customer to transfer {{amount}} to:', { amount: formatNaira(a.amount) })}
                 </p>
                 {a.account ? (
                   <div className="rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 px-4 py-4 text-white dark:from-gray-800 dark:to-gray-900">
-                    <p className="text-[11px] uppercase tracking-wide text-white/60">{a.account.bankName || 'Bank'}</p>
+                    <p className="text-[11px] uppercase tracking-wide text-white/60">{a.account.bankName || t('pos.bank', 'Bank')}</p>
                     <div className="flex items-center justify-between">
                       <p className="font-mono text-2xl font-semibold tabular-nums">{a.account.accountNumber}</p>
                       <button
                         onClick={() => navigator.clipboard?.writeText(a.account.accountNumber)}
                         className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-medium hover:bg-white/20"
                       >
-                        <i className="bx bx-copy"></i> Copy
+                        <i className="bx bx-copy"></i> {t('pos.copy', 'Copy')}
                       </button>
                     </div>
                     <p className="truncate text-xs text-white/70">{a.account.accountName}</p>
                   </div>
                 ) : (
                   <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-                    No virtual account is set up for this branch.
+                    {t('pos.noVirtualAccount', 'No virtual account is set up for this branch.')}
                   </p>
                 )}
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-                  Waiting for the transfer to land — you can keep serving other customers.
+                  {t('pos.waitingForTransfer', 'Waiting for the transfer to land — you can keep serving other customers.')}
                 </div>
               </div>
             )}
@@ -826,7 +827,7 @@ export default function PosPage() {
       <Modal
         isOpen={successOpen}
         onClose={() => { clearCart(); setMeta(EMPTY_META); setSuccessOpen(false); }}
-        title="Sale completed"
+        title={t('pos.saleCompleted', 'Sale completed')}
         maxWidth="md"
         footer={
           <>
@@ -835,7 +836,7 @@ export default function PosPage() {
               onClick={() => { clearCart(); setMeta(EMPTY_META); setSuccessOpen(false); }}
               className="h-9 whitespace-nowrap rounded-lg border border-gray-300 px-4 text-[13px] font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
             >
-              Done
+              {t('pos.done', 'Done')}
             </button>
             {hasTransfer && (
               <button
@@ -844,7 +845,7 @@ export default function PosPage() {
                 className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-300 px-4 text-[13px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-500/10"
               >
                 <i className="bx bx-transfer text-base" aria-hidden="true"></i>
-                Pay by transfer
+                {t('pos.payByTransfer', 'Pay by transfer')}
               </button>
             )}
             <button
@@ -853,7 +854,7 @@ export default function PosPage() {
               className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white hover:opacity-90"
             >
               <i className="bx bx-printer text-base" aria-hidden="true"></i>
-              Print receipt
+              {t('pos.printReceipt', 'Print receipt')}
             </button>
           </>
         }
@@ -863,11 +864,11 @@ export default function PosPage() {
             <i className="bx bx-check text-xl" aria-hidden="true"></i>
           </span>
           <div className="text-sm text-gray-700 dark:text-gray-300">
-            <p className="font-medium text-gray-900 dark:text-gray-100">Order placed successfully</p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{t('pos.orderPlacedSuccessfully', 'Order placed successfully')}</p>
             <p className="mt-0.5 text-gray-500 dark:text-gray-400">
               {lastOrder?.orderNumber
-                ? `Receipt ${lastOrder.orderNumber}`
-                : 'You can print a receipt for this sale.'}
+                ? t('pos.receiptNumber', 'Receipt {{number}}', { number: lastOrder.orderNumber })
+                : t('pos.canPrintReceipt', 'You can print a receipt for this sale.')}
             </p>
           </div>
         </div>

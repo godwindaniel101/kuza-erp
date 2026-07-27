@@ -4,13 +4,19 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Not } from "typeorm";
+import { Repository, Not, In } from "typeorm";
 import { Branch } from "../../../common/entities/branch.entity";
 import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { Order } from "../../rms/entities/order.entity";
 import { BranchInventoryItem } from "../../ims/entities/branch-inventory-item.entity";
 import { BulkUploadLog } from "../../ims/entities/bulk-upload-log.entity";
+import { BranchUser } from "../../../common/entities/branch-user.entity";
+import { User } from "../../../common/entities/user.entity";
+import {
+  BranchScopeService,
+  ScopeActor,
+} from "../../../common/branch-scope/branch-scope.service";
 
 // Interface for bulk upload results
 export interface BulkBranchUploadResult {
@@ -47,7 +53,77 @@ export class BranchesService {
     private branchInventoryRepository: Repository<BranchInventoryItem>,
     @InjectRepository(BulkUploadLog)
     private bulkUploadLogRepository: Repository<BulkUploadLog>,
+    @InjectRepository(BranchUser)
+    private branchUserRepository: Repository<BranchUser>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private branchScopeService: BranchScopeService,
   ) {}
+
+  // ----------------------------------------------------------------------
+  // Branch members (users assigned to a branch; isManager = branch manager)
+  // ----------------------------------------------------------------------
+
+  /** Tenant users that can be assigned to a branch (id, name, email). */
+  async getAssignableUsers() {
+    const users = await this.userRepository.find({
+      where: { isActive: true },
+      order: { name: "ASC" },
+    });
+    return users.map((u) => ({ id: u.id, name: u.name, email: u.email }));
+  }
+
+  /** Users assigned to a branch, with their user details + manager flag. */
+  async listMembers(branchId: string) {
+    await this.findOne(branchId); // 404 if branch missing
+    const rows = await this.branchUserRepository.find({ where: { branchId } });
+    if (rows.length === 0) return [];
+    const users = await this.userRepository.find({
+      where: { id: In(rows.map((r) => r.userId)) },
+    });
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return rows.map((r) => {
+      const u = byId.get(r.userId);
+      return {
+        id: r.id,
+        userId: r.userId,
+        isManager: r.isManager,
+        name: u?.name || null,
+        email: u?.email || null,
+      };
+    });
+  }
+
+  /** Assign a user to a branch (idempotent; updates manager flag if re-added). */
+  async addMember(branchId: string, userId: string, isManager = false) {
+    await this.findOne(branchId);
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException("User not found");
+    let row = await this.branchUserRepository.findOne({ where: { branchId, userId } });
+    if (row) {
+      row.isManager = isManager;
+    } else {
+      row = this.branchUserRepository.create({ branchId, userId, isManager });
+    }
+    await this.branchUserRepository.save(row);
+    return this.listMembers(branchId);
+  }
+
+  /** Toggle a member's manager flag. */
+  async setMemberManager(branchId: string, userId: string, isManager: boolean) {
+    const row = await this.branchUserRepository.findOne({ where: { branchId, userId } });
+    if (!row) throw new NotFoundException("This user is not assigned to the branch");
+    row.isManager = isManager;
+    await this.branchUserRepository.save(row);
+    return this.listMembers(branchId);
+  }
+
+  /** Remove a user's assignment from a branch. */
+  async removeMember(branchId: string, userId: string) {
+    const row = await this.branchUserRepository.findOne({ where: { branchId, userId } });
+    if (row) await this.branchUserRepository.remove(row);
+    return this.listMembers(branchId);
+  }
 
   async create(createDto: CreateBranchDto) {
     // Check if branch with same name exists in this business
@@ -79,10 +155,17 @@ export class BranchesService {
     return await this.branchRepository.save(branch);
   }
 
-  async findAll(includeStats = false) {
-    const branches = await this.branchRepository.find({
+  async findAll(includeStats = false, actor?: ScopeActor) {
+    let branches = await this.branchRepository.find({
       order: { isDefault: "DESC", name: "ASC" },
     });
+
+    // Branch-scoped users only ever see the branches they're assigned to.
+    const allowed = await this.branchScopeService.allowedBranchIds(actor);
+    if (allowed !== null) {
+      const set = new Set(allowed);
+      branches = branches.filter((b) => set.has(b.id));
+    }
 
     if (!includeStats) {
       return branches;
@@ -219,8 +302,6 @@ export class BranchesService {
     // Generate upload session ID
     const uploadSessionId = `branch-session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    console.log(`[BulkBranchUpload] Starting bulk branch upload with session ID: ${uploadSessionId}`);
-
     // Remove BOM if present
     let csvContent = csv;
     if (csvContent.charCodeAt(0) === 0xfeff) {
@@ -228,14 +309,6 @@ export class BranchesService {
     }
 
     const lines = csvContent.trim().split("\n");
-
-    console.log(
-      `[BulkBranchUpload] CSV parsing: ${lines.length} total lines (including header)`,
-    );
-    console.log(`[BulkBranchUpload] First line (header): ${lines[0]}`);
-    if (lines.length > 1) {
-      console.log(`[BulkBranchUpload] Second line (first data): ${lines[1]}`);
-    }
 
     if (lines.length < 2) {
       return {
@@ -425,11 +498,8 @@ export class BranchesService {
           // Add to existing names to prevent duplicates within the same CSV
           existingBranchNames.add(row.branchName.toLowerCase());
           successCount++;
-          console.log(`[BulkBranchUpload] Successfully created branch: ${row.branchName}`);
         }
       } catch (error: any) {
-        console.error(`[BulkBranchUpload] Failed to create branch "${row.branchName}":`, error.message);
-        
         failedUploads.push({
           lineNumber,
           rowData: { 
@@ -459,9 +529,8 @@ export class BranchesService {
         );
         
         await this.bulkUploadLogRepository.save(logEntries);
-        console.log(`[BulkBranchUpload] Logged ${logEntries.length} failed uploads`);
       } catch (logError: any) {
-        console.error(`[BulkBranchUpload] Failed to log upload errors:`, logError.message);
+        // Non-critical: failed to persist upload error log; continue.
       }
     }
 

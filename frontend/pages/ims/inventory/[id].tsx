@@ -141,7 +141,7 @@ export default function InventoryItemViewPage() {
       <div className="w-full max-w-5xl space-y-5">
         <PageHeader
           title={item.name}
-          subtitle="Stock, batches and history for this item"
+          subtitle={t('inventory.viewSubtitle', 'Stock, batches and history for this item')}
           breadcrumbs={[
             { label: t('inventory') || 'Inventory', href: base },
             { label: item.name },
@@ -207,7 +207,8 @@ export default function InventoryItemViewPage() {
               salesByBranch={salesByBranch}
               item={item}
               formatCurrency={formatCurrency}
-              t={t} 
+              formatDate={formatDate}
+              t={t}
             />
           )}
         </div>
@@ -490,7 +491,7 @@ const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t 
   </div>
 );
 
-const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency, t }: any) => (
+const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency, formatDate, t }: any) => (
   <div className="w-full max-w-5xl space-y-5">
     {/* Branch Stock Distribution */}
     <div>
@@ -512,6 +513,9 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
                   {t('salePrice')}
                 </th>
                 <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                  {t('inventory.expiringSoon', 'Expiring soon')}
+                </th>
+                <th className="px-6 py-2.5 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
                   {t('status')}
                 </th>
               </tr>
@@ -520,6 +524,7 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
               {branchStocks.map((branch: any) => {
                 const currentStock = Number(branch.currentStock || 0);
                 const isLowStock = currentStock <= Number(branch.minimumStock || 0);
+                const expiringSoonCount = Number(branch.expiringSoonCount || 0);
                 return (
                   <tr key={branch.branchId}>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] font-medium text-gray-900 dark:text-white">
@@ -536,6 +541,19 @@ const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency,
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] text-gray-500 dark:text-gray-400">
                       {formatCurrency(Number(branch.salePrice || 0))}
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-[13px]">
+                      {expiringSoonCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                          <i className="bx bx-time-five"></i>
+                          {t('inventory.expiringCount', '{{count}} expiring', { count: expiringSoonCount })}
+                          {branch.nextExpiry
+                            ? ` · ${t('inventory.soonest', 'soonest')} ${formatDate(branch.nextExpiry)}`
+                            : ''}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <span

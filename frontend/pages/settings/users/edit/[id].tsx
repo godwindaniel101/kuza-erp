@@ -149,7 +149,7 @@ export default function EditUserPage() {
 
         <PageHeader
           title={<>{t('edit')} {t('user')}: {user.name || user.email}</>}
-          subtitle="Update this user's profile, status and roles"
+          subtitle={t('settings.editUserSubtitle', "Update this user's profile, status and roles")}
           breadcrumbs={[
             { label: t('settings') || 'Settings', href: '/settings' },
             { label: t('users') || 'Users', href: '/settings/users' },

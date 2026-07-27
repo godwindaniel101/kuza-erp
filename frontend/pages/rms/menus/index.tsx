@@ -16,7 +16,7 @@ export default function MenusPage() {
   const router = useRouter();
   const [menus, setMenus] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [downloadingBarcode, setDownloadingBarcode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,8 +52,8 @@ export default function MenusPage() {
     setDownloadingBarcode(menuId);
     try {
       // TODO: Implement barcode download endpoint
-      // For now, show a message
-      setToast({ message: t('barcodeDownloadComingSoon') || 'Barcode download feature coming soon', type: 'success' });
+      // Not yet available — show an informational (not success) message
+      setToast({ message: t('barcodeDownloadComingSoon') || 'Barcode download is coming soon', type: 'info' });
     } catch (err: any) {
       console.error('Failed to download barcode:', err);
       setToast({ message: err.response?.data?.message || t('failedToDownloadBarcode') || 'Failed to download barcode', type: 'error' });
@@ -95,8 +95,8 @@ export default function MenusPage() {
       <PageHeader
         title={t('menus') || 'Menus'}
         count={loading ? undefined : menus.length}
-        subtitle="The menus your guests browse and order from"
-        breadcrumbs={[{ label: 'Restaurant' }, { label: t('menus') || 'Menus' }]}
+        subtitle={t('menu.guestBrowseBlurb', 'The menus your guests browse and order from')}
+        breadcrumbs={[{ label: t('restaurant', 'Restaurant') }, { label: t('menus') || 'Menus' }]}
         actions={
           <PermissionGuard permission="menus.create">
             <Button href="/rms/menus/create" size="sm">

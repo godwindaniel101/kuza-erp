@@ -47,8 +47,8 @@ export default function TablesPage() {
         <PageHeader
           title={t('tables') || 'Tables'}
           count={loading ? undefined : tables.length}
-          subtitle="Your floor plan, seat by seat"
-          breadcrumbs={[{ label: 'Restaurant' }, { label: t('tables') || 'Tables' }]}
+          subtitle={t('tables.floorPlanBlurb', 'Your floor plan, seat by seat')}
+          breadcrumbs={[{ label: t('restaurant', 'Restaurant') }, { label: t('tables') || 'Tables' }]}
           actions={
             <PermissionGuard permission="tables.create">
               <Button

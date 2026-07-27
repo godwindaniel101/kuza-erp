@@ -179,7 +179,7 @@ export default function CreateMenuPage() {
 
         <PageHeader
           title={t('createNewMenu')}
-          subtitle="Select a branch and items to create your menu"
+          subtitle={t('menu.createSubtitle', 'Select a branch and items to create your menu')}
           breadcrumbs={[
             { label: t('menus') || 'Menus', href: '/rms/menus' },
             { label: t('create') || 'Create' },
@@ -222,7 +222,7 @@ export default function CreateMenuPage() {
                   required
                   value={formData.name}
                   onChange={(value) => setFormData({ ...formData, name: value })}
-                  placeholder={t('e.g. Lunch Menu') || 'e.g., Lunch Menu, Drinks Menu'}
+                  placeholder={t('menu.menuNamePlaceholder', 'e.g., Lunch Menu, Drinks Menu')}
                   className="w-full mb-5"
                 />
 
@@ -340,7 +340,7 @@ export default function CreateMenuPage() {
                 </div>
 
                 {/* Items Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-[450px] overflow-y-auto pr-1 border-t border-gray-100 dark:border-gray-800 p-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 max-h-[485px] overflow-y-auto pr-1 border-t border-gray-100 dark:border-gray-800 p-2">
                   {filteredItems.length > 0 ? (
                     filteredItems.map((item) => {
                       const isSelected = selectedItemIds.includes(item.id);

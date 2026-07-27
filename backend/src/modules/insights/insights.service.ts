@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { I18nService, I18nContext } from 'nestjs-i18n';
 import { Invoice } from '../invoicing/entities/invoice.entity';
 import { Business } from '../../common/entities/business.entity';
 import { LlmService } from '../../common/ai/llm.service';
@@ -101,10 +102,23 @@ export class InsightsService {
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     private readonly llm: LlmService,
+    private readonly i18n: I18nService,
   ) {}
 
   private async sql<T = any>(query: string, params: any[] = []): Promise<T[]> {
     return this.invoiceRepository.query(query, params);
+  }
+
+  /**
+   * Translate a user-facing insight string. The active language is resolved
+   * per-request by the nestjs-i18n resolver (Accept-Language header) via
+   * I18nContext; when no request context is present it falls back to `en`.
+   * Dynamic parts (money strings, counts, names) are passed as interpolation
+   * args and are NOT translated.
+   */
+  private t(key: string, args?: Record<string, any>): string {
+    const lang = I18nContext.current()?.lang;
+    return this.i18n.translate(key, { lang, args });
   }
 
   private formatMoney(amount: number, currency: string): string {
@@ -133,7 +147,7 @@ export class InsightsService {
       null,
     );
     const currency = business?.currency || 'NGN';
-    const businessName = business?.name || 'Your business';
+    const businessName = business?.name || this.t('insights.yourBusiness');
 
     const [
       cashPosition,
@@ -147,13 +161,13 @@ export class InsightsService {
     ] = await Promise.all([
       this.safe(() => this.cashPosition(currency), {
         amount: 0,
-        headline: 'Cash position unavailable',
+        headline: this.t('insights.cash.unavailable'),
       }),
       this.safe(() => this.profitThisMonth(currency), {
         income: 0,
         expense: 0,
         profit: 0,
-        headline: 'Profit figures unavailable',
+        headline: this.t('insights.profit.unavailable'),
       }),
       this.safe(() => this.topDebtors(currency), []),
       this.safe(() => this.lowStock(), []),
@@ -161,12 +175,12 @@ export class InsightsService {
         thisMonth: 0,
         lastMonth: 0,
         changePct: null as number | null,
-        headline: 'Sales trend unavailable',
+        headline: this.t('insights.sales.unavailable'),
       }),
       this.safe(() => this.overdueTotal(currency), {
         amount: 0,
         count: 0,
-        headline: 'No overdue invoices',
+        headline: this.t('insights.overdue.noOverdue'),
       }),
       this.safe(() => this.topItems(currency), []),
       this.safe(() => this.employeeCount(), 0),
@@ -201,40 +215,65 @@ export class InsightsService {
     ]);
     const insights: Array<{ title: string; body: string; tone: 'positive' | 'warning' | 'info'; metric?: string }> = [];
 
-    // Branch-aware low stock: the most useful operational nudge.
-    if (biz.lowStockByBranch.length > 0) {
-      const top = biz.lowStockByBranch[0];
-      const more = biz.lowStockByBranch.length - 1;
-      insights.push({
-        title: 'Low stock by branch',
-        body:
-          `${top.item} is low at ${top.branch} (${top.stock} left, reorder at ${top.minimum})` +
-          (more > 0 ? ` — and ${more} more item(s) across your branches.` : '.'),
-        tone: 'warning',
-      });
-    } else if (biz.branchCount > 1) {
-      insights.push({
-        title: 'Branches',
-        body: `You run ${biz.branchCount} branches. Stock is healthy — nothing below its reorder point right now.`,
-        tone: 'positive',
-      });
+    // Exactly two cards. Card 1 — "Profit & stock": profit this month merged with
+    // the branch-aware low-stock nudge (previously two separate cards). Card 2 —
+    // "Sales & cash": sales trend, cash position and money owed.
+
+    // Card 1: Profit & stock.
+    {
+      const parts: string[] = [];
+      if (d.profitThisMonth) parts.push(d.profitThisMonth.headline);
+      const hasLowByBranch = biz.lowStockByBranch.length > 0;
+      if (hasLowByBranch) {
+        const top = biz.lowStockByBranch[0];
+        const more = biz.lowStockByBranch.length - 1;
+        parts.push(
+          more > 0
+            ? this.t('insights.lowStockByBranch.bodyMore', {
+                item: top.item,
+                branch: top.branch,
+                stock: top.stock,
+                minimum: top.minimum,
+                count: more,
+              })
+            : this.t('insights.lowStockByBranch.bodyOne', {
+                item: top.item,
+                branch: top.branch,
+                stock: top.stock,
+                minimum: top.minimum,
+              }),
+        );
+      }
+      if (parts.length > 0) {
+        insights.push({
+          title: this.t('insights.profitStock.title'),
+          body: parts.join(' • '),
+          tone: hasLowByBranch
+            ? 'warning'
+            : (d.profitThisMonth?.profit ?? 0) >= 0
+              ? 'positive'
+              : 'warning',
+        });
+      }
     }
 
-    // Sales trend + low stock + cash position, merged into one insight — first.
+    // Card 2: Sales & cash.
     {
-      const low = Array.isArray(d.lowStock) ? d.lowStock : [];
-      const hasLow = low.length > 0;
-      if (d.salesTrend || hasLow || d.cashPosition) {
-        const parts: string[] = [];
-        if (d.salesTrend) parts.push(d.salesTrend.headline);
-        if (hasLow) {
-          parts.push(low[0]?.headline || `${low.length} item(s) running low`);
-        }
-        if (d.cashPosition) parts.push(d.cashPosition.headline);
+      const parts: string[] = [];
+      if (d.salesTrend) parts.push(d.salesTrend.headline);
+      if (d.cashPosition) parts.push(d.cashPosition.headline);
+      const hasOverdue = !!(d.overdueTotal && (d.overdueTotal.amount ?? 0) > 0);
+      if (hasOverdue) {
+        parts.push(
+          (Array.isArray(d.topDebtors) && d.topDebtors[0]?.headline) ||
+            d.overdueTotal.headline,
+        );
+      }
+      if (parts.length > 0) {
         insights.push({
-          title: 'Sales, stock & cash',
+          title: this.t('insights.salesCash.title'),
           body: parts.join(' • '),
-          tone: hasLow
+          tone: hasOverdue
             ? 'warning'
             : (d.salesTrend?.changePct ?? 0) >= 0
               ? 'positive'
@@ -242,20 +281,7 @@ export class InsightsService {
         });
       }
     }
-    if (d.profitThisMonth) {
-      insights.push({
-        title: 'Profit this month',
-        body: d.profitThisMonth.headline,
-        tone: (d.profitThisMonth.profit ?? 0) >= 0 ? 'positive' : 'warning',
-      });
-    }
-    if (d.overdueTotal && (d.overdueTotal.amount ?? 0) > 0) {
-      insights.push({
-        title: 'Money owed to you',
-        body: (Array.isArray(d.topDebtors) && d.topDebtors[0]?.headline) || d.overdueTotal.headline,
-        tone: 'warning',
-      });
-    }
+
     return { insights };
   }
 
@@ -281,8 +307,12 @@ export class InsightsService {
     const amount = Number(rows[0]?.balance || 0);
     const headline =
       amount >= 0
-        ? `You have ${this.formatMoney(amount, currency)} in cash and bank right now`
-        : `Your cash accounts are overdrawn by ${this.formatMoney(Math.abs(amount), currency)}`;
+        ? this.t('insights.cash.positive', {
+            amount: this.formatMoney(amount, currency),
+          })
+        : this.t('insights.cash.overdrawn', {
+            amount: this.formatMoney(Math.abs(amount), currency),
+          });
     return { amount, headline };
   }
 
@@ -305,8 +335,16 @@ export class InsightsService {
     const profit = Math.round((income - expense) * 100) / 100;
     const headline =
       profit >= 0
-        ? `You have made ${this.formatMoney(profit, currency)} profit so far this month (${this.formatMoney(income, currency)} earned, ${this.formatMoney(expense, currency)} spent)`
-        : `You are ${this.formatMoney(Math.abs(profit), currency)} in the red this month (${this.formatMoney(income, currency)} earned, ${this.formatMoney(expense, currency)} spent)`;
+        ? this.t('insights.profit.positive', {
+            profit: this.formatMoney(profit, currency),
+            earned: this.formatMoney(income, currency),
+            spent: this.formatMoney(expense, currency),
+          })
+        : this.t('insights.profit.negative', {
+            amount: this.formatMoney(Math.abs(profit), currency),
+            earned: this.formatMoney(income, currency),
+            spent: this.formatMoney(expense, currency),
+          });
     return { income, expense, profit, headline };
   }
 
@@ -349,8 +387,20 @@ export class InsightsService {
         : 0;
       const headline =
         daysOverdue > 0
-          ? `${row.name} owes ${this.formatMoney(outstanding, currency)} — ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} late`
-          : `${row.name} owes ${this.formatMoney(outstanding, currency)} — not due yet`;
+          ? this.t(
+              daysOverdue === 1
+                ? 'insights.debtor.lateOne'
+                : 'insights.debtor.lateOther',
+              {
+                name: row.name,
+                amount: this.formatMoney(outstanding, currency),
+                days: daysOverdue,
+              },
+            )
+          : this.t('insights.debtor.notDue', {
+              name: row.name,
+              amount: this.formatMoney(outstanding, currency),
+            });
       return {
         customerId: row.customer_id,
         name: row.name,
@@ -382,8 +432,15 @@ export class InsightsService {
       const minimumStock = Number(row.minimum_stock || 0);
       const headline =
         currentStock <= 0
-          ? `${row.name} is out of stock — minimum is ${minimumStock}`
-          : `${row.name} is below minimum stock: ${currentStock} left, minimum ${minimumStock}`;
+          ? this.t('insights.lowStock.outOfStock', {
+              name: row.name,
+              minimum: minimumStock,
+            })
+          : this.t('insights.lowStock.below', {
+              name: row.name,
+              current: currentStock,
+              minimum: minimumStock,
+            });
       return { itemId: row.id, name: row.name, currentStock, minimumStock, headline };
     });
   }
@@ -431,12 +488,22 @@ export class InsightsService {
     if (changePct === null) {
       headline =
         current > 0
-          ? `Sales this month: ${this.formatMoney(current, currency)} (no sales last month to compare)`
-          : 'No sales recorded this month or last month';
+          ? this.t('insights.sales.thisMonthOnly', {
+              amount: this.formatMoney(current, currency),
+            })
+          : this.t('insights.sales.none');
     } else if (changePct >= 0) {
-      headline = `Sales are up ${changePct}% — ${this.formatMoney(current, currency)} this month vs ${this.formatMoney(previous, currency)} last month`;
+      headline = this.t('insights.sales.up', {
+        pct: changePct,
+        current: this.formatMoney(current, currency),
+        previous: this.formatMoney(previous, currency),
+      });
     } else {
-      headline = `Sales are down ${Math.abs(changePct)}% — ${this.formatMoney(current, currency)} this month vs ${this.formatMoney(previous, currency)} last month`;
+      headline = this.t('insights.sales.down', {
+        pct: Math.abs(changePct),
+        current: this.formatMoney(current, currency),
+        previous: this.formatMoney(previous, currency),
+      });
     }
 
     return { thisMonth: current, lastMonth: previous, changePct, headline };
@@ -455,8 +522,13 @@ export class InsightsService {
     const count = Number(rows[0]?.count || 0);
     const headline =
       count > 0
-        ? `${this.formatMoney(amount, currency)} is overdue across ${count} invoice${count === 1 ? '' : 's'} — time to chase payments`
-        : 'No overdue invoices — well done';
+        ? this.t(
+            count === 1
+              ? 'insights.overdue.someOne'
+              : 'insights.overdue.someOther',
+            { amount: this.formatMoney(amount, currency), count },
+          )
+        : this.t('insights.overdue.none');
     return { amount, count, headline };
   }
 
@@ -488,7 +560,11 @@ export class InsightsService {
         name: row.name,
         revenue,
         quantity: qty,
-        headline: `${row.name}: ${this.formatMoney(revenue, currency)} from ${qty} sold this month`,
+        headline: this.t('insights.topItem.headline', {
+          name: row.name,
+          revenue: this.formatMoney(revenue, currency),
+          qty,
+        }),
       };
     });
   }

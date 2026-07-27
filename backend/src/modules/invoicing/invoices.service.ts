@@ -14,6 +14,9 @@ import { CreateInvoiceDto, InvoiceLineDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
 import { PostingService } from '../accounting/posting.service';
+import { ConfigService } from '@nestjs/config';
+import { NotificationsService } from '../notifications/notifications.service';
+import { InvoiceSettingsService } from './invoice-settings.service';
 
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
@@ -37,6 +40,9 @@ export class InvoicesService {
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
     private readonly postingService: PostingService,
+    private readonly invoiceSettingsService: InvoiceSettingsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -377,6 +383,11 @@ export class InvoicesService {
     if (invoice.status !== 'DRAFT') {
       throw new BadRequestException('Only DRAFT invoices can be sent');
     }
+    if (Number(invoice.total) <= 0) {
+      throw new BadRequestException(
+        'This invoice totals zero. Add at least one line with a price above 0 before sending.',
+      );
+    }
     invoice.status = 'SENT';
     await this.invoiceRepository.save(invoice);
     // Post AR / Revenue / Tax when the invoice is issued. Revenue is net of
@@ -389,6 +400,49 @@ export class InvoicesService {
       date: invoice.issueDate,
       memo: `Invoice ${invoice.invoiceNumber} issued`,
     });
+
+    // Best-effort: email the invoice to the customer using the tenant's invoice
+    // settings. Fire-and-forget so a slow/failed send never holds the DB
+    // transaction open or blocks issuing the invoice.
+    try {
+      const [customer, settings] = await Promise.all([
+        this.customerRepository.findOne({ where: { id: invoice.customerId } }),
+        this.invoiceSettingsService.getOrCreate(),
+      ]);
+      if (customer?.email) {
+        const business = settings.displayName || 'Your business';
+        const subject = (settings.emailSubject || 'Invoice {{invoiceNumber}} from {{business}}')
+          .replace(/\{\{\s*invoiceNumber\s*\}\}/g, invoice.invoiceNumber)
+          .replace(/\{\{\s*business\s*\}\}/g, business);
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+        const cc = settings.ccEmails
+          ? settings.ccEmails.split(',').map((s) => s.trim()).filter(Boolean)
+          : undefined;
+        void this.notificationsService
+          .sendInvoiceEmail({
+            to: customer.email,
+            subject,
+            replyTo: settings.replyToEmail || undefined,
+            cc: cc && cc.length ? cc : undefined,
+            senderName: settings.senderName || business,
+            context: {
+              businessName: business,
+              invoiceNumber: invoice.invoiceNumber,
+              customerName: customer.name,
+              amount: Number(invoice.total).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+              currency: invoice.currency,
+              dueDate: invoice.dueDate,
+              invoiceUrl: frontendUrl ? `${frontendUrl}/sales/invoices/${invoice.id}` : '',
+              emailBody: settings.emailBody || '',
+              senderName: settings.senderName || business,
+            },
+          })
+          .catch(() => undefined);
+      }
+    } catch {
+      // best-effort — never block issuing the invoice on email
+    }
+
     return this.findOne(id);
   }
 
@@ -397,6 +451,11 @@ export class InvoicesService {
     const invoice = await this.invoiceRepository.findOne({ where: { id } });
     if (!invoice) {
       throw new NotFoundException('Invoice not found');
+    }
+    if (invoice.networkOrderId) {
+      throw new BadRequestException(
+        'This invoice was generated from a purchase order — record its payment from the order, not the invoice.',
+      );
     }
     if (invoice.status === 'DRAFT') {
       throw new BadRequestException(
