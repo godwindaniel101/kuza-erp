@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Request,
   UseGuards,
@@ -23,6 +24,7 @@ import { SetTenantAppDto } from './dto/set-tenant-app.dto';
 import { ChangeTenantPlanDto } from './dto/change-tenant-plan.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { UpdatePricingDto } from './dto/update-pricing.dto';
 import { AccessRequestStatus } from '../billing/entities/app-access-request.entity';
 
 /**
@@ -140,6 +142,26 @@ export class AdminController {
   })
   async deactivatePlan(@Param('code') code: string) {
     const data = await this.adminService.deactivatePlan(code);
+    return { success: true, data };
+  }
+
+  @Get('pricing')
+  @ApiOperation({
+    summary:
+      'À-la-carte pricing config (per-app + usage unit prices per currency, included allowance)',
+  })
+  async getPricing() {
+    const data = await this.adminService.getPricing();
+    return { success: true, data };
+  }
+
+  @Put('pricing')
+  @ApiOperation({
+    summary:
+      'Update the platform pricing config (assists stay free; prices validated at the boundary)',
+  })
+  async updatePricing(@Body() dto: UpdatePricingDto) {
+    const data = await this.adminService.updatePricing(dto);
     return { success: true, data };
   }
 }

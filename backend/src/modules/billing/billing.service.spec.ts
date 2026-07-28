@@ -24,6 +24,7 @@ describe('BillingService', () => {
   let subRepo: MockRepo;
   let payRepo: MockRepo;
   let accessRepo: MockRepo;
+  let pricingRepo: MockRepo;
   let userRepo: MockRepo;
   let branchRepo: MockRepo;
   let itemRepo: MockRepo;
@@ -121,6 +122,7 @@ describe('BillingService', () => {
     subRepo = createMockRepo();
     payRepo = createMockRepo();
     accessRepo = createMockRepo();
+    pricingRepo = createMockRepo();
     userRepo = createMockRepo();
     branchRepo = createMockRepo();
     itemRepo = createMockRepo();
@@ -150,6 +152,7 @@ describe('BillingService', () => {
       subRepo as any,
       payRepo as any,
       accessRepo as any,
+      pricingRepo as any,
       configService as any,
       paystackAdapter as any,
       userRepo as any,

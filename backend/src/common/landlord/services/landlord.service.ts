@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Tenant } from '../entities/tenant.entity';
 import { LandlordUser } from '../entities/landlord-user.entity';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class LandlordService {
@@ -77,6 +78,17 @@ export class LandlordService {
   }
 
   /**
+   * Link a Google account to an existing landlord user (first Google sign-in),
+   * and mark the email verified since Google has verified it.
+   */
+  async linkGoogleId(userId: string, googleId: string): Promise<void> {
+    await this.landlordUserRepository.update(
+      { id: userId } as any,
+      { googleId, emailVerified: new Date() },
+    );
+  }
+
+  /**
    * Create a new tenant and its schema/database
    */
   async createTenant(name: string, slug: string): Promise<Tenant> {
@@ -133,7 +145,7 @@ export class LandlordService {
     name: string,
     email: string,
     password: string,
-    tenantId: string,
+    tenantId: string | null,
   ): Promise<LandlordUser> {
     // Check if user already exists
     const existingUser = await this.findUserByEmail(email);
@@ -152,6 +164,60 @@ export class LandlordService {
       tenantId,
     });
 
+    return await this.landlordUserRepository.save(user);
+  }
+
+  /**
+   * Link a (previously business-less) landlord user to the tenant provisioned
+   * for them at onboarding, and set their display name. Used by the email-first
+   * signup flow and by new-Google-user onboarding.
+   */
+  async setUserTenant(
+    userId: string,
+    tenantId: string,
+    name?: string,
+  ): Promise<void> {
+    // Invariant: an account that owns a business is verified. The email-first
+    // and Google paths already set emailVerified before this point; the legacy
+    // single-shot register() does not, so stamp it here to keep every
+    // provisioned account able to log in through the verification gate.
+    const patch: Partial<LandlordUser> = { tenantId, emailVerified: new Date() };
+    if (name) patch.name = name;
+    await this.landlordUserRepository.update({ id: userId } as any, patch);
+  }
+
+  /**
+   * Mark a landlord user's email as verified (email-first signup).
+   */
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.landlordUserRepository.update(
+      { id: userId } as any,
+      { emailVerified: new Date() },
+    );
+  }
+
+  /**
+   * Create a brand-new, business-less landlord user from a verified Google
+   * identity (email already verified by Google). A random password is stored so
+   * the column is non-empty; the account is driven by Google sign-in. Returns
+   * the existing row if one already matches the email (idempotent).
+   */
+  async createGoogleUser(
+    name: string,
+    email: string,
+    googleId: string,
+  ): Promise<LandlordUser> {
+    const existing = await this.findUserByEmail(email);
+    if (existing) return existing;
+    const randomPassword = await bcrypt.hash(`${googleId}:${email}:google`, 10);
+    const user = this.landlordUserRepository.create({
+      name: name || email.split('@')[0],
+      email,
+      password: randomPassword,
+      tenantId: null,
+      googleId,
+      emailVerified: new Date(),
+    });
     return await this.landlordUserRepository.save(user);
   }
 
@@ -231,5 +297,104 @@ export class LandlordService {
     user.isSuperAdmin = true;
     await this.landlordUserRepository.save(user);
     return 'promoted';
+  }
+
+  // ------------------------------------------------------------------
+  // Programmatic API tokens (MCP) — hashed at rest, plaintext shown once.
+  // ------------------------------------------------------------------
+
+  /** SHA-256 hex of a plaintext API token. Deterministic — lets us look a token
+   *  up by hash without ever storing the plaintext. */
+  private hashApiToken(token: string): string {
+    return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+  }
+
+  /**
+   * Issue (or rotate) the current user's API token. Generates a fresh random
+   * token, stores ONLY its hash (+ label + createdAt, and clears lastUsed), and
+   * returns the plaintext ONCE — the caller must surface it immediately; it can
+   * never be retrieved again. Any previously-issued token is invalidated.
+   */
+  async issueApiToken(
+    userId: string,
+    label?: string,
+  ): Promise<{ token: string; createdAt: Date }> {
+    const user = await this.landlordUserRepository.findOne({
+      where: { id: userId } as any,
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    // 32 bytes of CSPRNG entropy, url-safe. The `kuza_` prefix makes the token
+    // recognizable and greppable in secret scanners / leak detection.
+    const plaintext = `kuza_${crypto.randomBytes(32).toString('base64url')}`;
+    const createdAt = new Date();
+    await this.landlordUserRepository.update({ id: userId } as any, {
+      apiTokenHash: this.hashApiToken(plaintext),
+      apiTokenLabel: label?.trim() ? label.trim().slice(0, 100) : null,
+      apiTokenCreatedAt: createdAt,
+      apiTokenLastUsedAt: null,
+    });
+    return { token: plaintext, createdAt };
+  }
+
+  /** Revoke the current user's API token (nulls every token column). Idempotent. */
+  async revokeApiToken(userId: string): Promise<void> {
+    await this.landlordUserRepository.update({ id: userId } as any, {
+      apiTokenHash: null,
+      apiTokenLabel: null,
+      apiTokenCreatedAt: null,
+      apiTokenLastUsedAt: null,
+    });
+  }
+
+  /** Look up the landlord user owning a given token hash (null if none). */
+  async findByApiTokenHash(hash: string): Promise<LandlordUser | null> {
+    if (!hash) return null;
+    return this.landlordUserRepository.findOne({
+      where: { apiTokenHash: hash } as any,
+    });
+  }
+
+  /**
+   * Resolve the active landlord user for a PLAINTEXT API token. Hashing happens
+   * here (the boundary) so callers never handle the hash. Returns null for a
+   * missing / malformed token.
+   */
+  async findByApiToken(token: string): Promise<LandlordUser | null> {
+    if (!token || typeof token !== 'string') return null;
+    return this.findByApiTokenHash(this.hashApiToken(token));
+  }
+
+  /**
+   * Best-effort "last used" stamp for an API token. Never throws — token
+   * exchange must not fail on a telemetry write.
+   */
+  async touchApiTokenLastUsed(userId: string): Promise<void> {
+    try {
+      await this.landlordUserRepository.update({ id: userId } as any, {
+        apiTokenLastUsedAt: new Date(),
+      });
+    } catch {
+      /* non-fatal — ignore */
+    }
+  }
+
+  /** Presentable status of the current user's API token (never leaks the hash). */
+  async getApiTokenInfo(userId: string): Promise<{
+    hasToken: boolean;
+    label: string | null;
+    createdAt: Date | null;
+    lastUsedAt: Date | null;
+  }> {
+    const user = await this.landlordUserRepository.findOne({
+      where: { id: userId } as any,
+    });
+    return {
+      hasToken: !!user?.apiTokenHash,
+      label: user?.apiTokenLabel ?? null,
+      createdAt: user?.apiTokenCreatedAt ?? null,
+      lastUsedAt: user?.apiTokenLastUsedAt ?? null,
+    };
   }
 }

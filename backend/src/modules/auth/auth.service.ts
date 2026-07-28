@@ -16,6 +16,7 @@ import { BranchesService } from "../settings/branches/branches.service";
 import { UomsService } from "../ims/uoms/uoms.service";
 import { UomConversionsService } from "../ims/uom-conversions/uom-conversions.service";
 import { LandlordService } from "../../common/landlord/services/landlord.service";
+import { LandlordUser } from "../../common/landlord/entities/landlord-user.entity";
 import { TenantMigrationService } from "../../common/tenant/tenant-migration.service";
 import { TenantConnectionService } from "../../common/tenant/tenant-connection.service";
 import {
@@ -43,8 +44,17 @@ export class AuthService {
     private tenantConnectionService: TenantConnectionService,
   ) {}
 
+  /**
+   * Legacy single-shot registration: creates the landlord account AND its
+   * business/tenant in one call. Kept for backward compatibility; the primary
+   * flow is now email-first signup() → verifyEmail() → completeOnboarding().
+   */
   async register(registerDto: RegisterDto) {
     const { name, email, password, businessName, businessType } = registerDto;
+
+    if (!businessName) {
+      throw new ConflictException("businessName is required");
+    }
 
     // Check if user already exists in landlord database
     const existingLandlordUser =
@@ -53,33 +63,96 @@ export class AuthService {
       throw new ConflictException("User already exists");
     }
 
-    // Generate slug from business name
+    // Create the landlord (auth) account first, business-less; provisioning
+    // links it to the tenant it creates.
+    const landlordUser = await this.landlordService.createLandlordUser(
+      name,
+      email,
+      password,
+      null,
+    );
+
+    const { tenant, completeUser } = await this.provisionTenant(landlordUser, {
+      businessName,
+      businessType,
+      country: registerDto.country,
+      enabledApps: registerDto.enabledApps,
+      displayName: name,
+    });
+
+    const token = this.generateToken(
+      landlordUser.id,
+      landlordUser.email,
+      tenant.id,
+      landlordUser.isSuperAdmin === true,
+    );
+    const safeUser = {
+      ...this.mapUser(completeUser),
+      isSuperAdmin: landlordUser.isSuperAdmin === true,
+    };
+
+    return {
+      user: { ...safeUser, tenantId: tenant.id },
+      token,
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        schemaName: tenant.schemaName,
+      },
+    };
+  }
+
+  /**
+   * Provision a fresh tenant (schema + business + admin user/role + default
+   * data) for an already-existing, business-less landlord user, and link the
+   * landlord user to it. Shared by register() and completeOnboarding(); this is
+   * the single source of truth for tenant creation, so the two paths cannot
+   * drift. On any failure the shared search_path is reset before rethrowing.
+   *
+   * The tenant user's password column is seeded with the landlord user's
+   * already-hashed password — login authenticates against the landlord record,
+   * so the tenant copy is never checked, but the column stays non-empty.
+   */
+  private async provisionTenant(
+    landlordUser: LandlordUser,
+    opts: {
+      businessName: string;
+      businessType?: string;
+      country?: string;
+      enabledApps?: string[];
+      displayName: string;
+    },
+  ) {
+    const { businessName, businessType, country, enabledApps, displayName } =
+      opts;
+
     const slug = businessName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/-+/g, "-");
 
     try {
-      // Step 1: Create tenant in landlord database (this creates the tenant schema)
+      // Step 1: Create tenant + its schema in the landlord database, then link
+      // the landlord user to it (and record their display name).
       const tenant = await this.landlordService.createTenant(
         businessName,
         slug,
       );
-
-      // Step 2: Create landlord user for authentication
-      const landlordUser = await this.landlordService.createLandlordUser(
-        name,
-        email,
-        password,
+      await this.landlordService.setUserTenant(
+        landlordUser.id,
         tenant.id,
+        displayName,
       );
+      landlordUser.tenantId = tenant.id;
+      landlordUser.name = displayName;
 
-      // Step 3: Initialize tenant schema with tables
+      // Step 2: Initialize tenant schema with tables.
       await this.tenantMigrationService.initializeTenantSchema(
         tenant.schemaName,
       );
 
-      // Step 4: Switch to tenant schema and create tenant-specific data
+      // Step 3: Switch to tenant schema and create tenant-specific data.
       await this.tenantConnectionService.switchToTenantSchema(
         tenant.schemaName,
       );
@@ -88,44 +161,39 @@ export class AuthService {
       // 'general') to their canonical edition at write time — only the
       // canonical value is stored (docs/APPS-MODEL.md §2).
       const canonicalBusinessType = normalizeBusinessType(businessType);
-      // Create business in tenant database. enabledApps: the caller's
-      // explicit choice (or the edition preset), expanded to include
-      // every app dependency (see docs/APPS-MODEL.md §2, §6).
-      const enabledApps = expandDependencies(
-        registerDto.enabledApps ??
-          presetForBusinessType(canonicalBusinessType),
+      // enabledApps: the caller's explicit choice (or the edition preset),
+      // expanded to include every app dependency (docs/APPS-MODEL.md §2, §6).
+      const apps = expandDependencies(
+        enabledApps ?? presetForBusinessType(canonicalBusinessType),
       );
       // Local-first pricing: the registration country sets the currency all
       // plans and prices are shown/billed in (docs/GTM.md §0).
-      const country = registerDto.country?.toUpperCase() || null;
+      const c = country?.toUpperCase() || null;
       const business = this.businessRepository.create({
         name: businessName,
         slug: slug,
-        country,
-        currency: country
-          ? currencyForCountry(country)
-          : tenant.currency || "NGN",
+        country: c,
+        currency: c ? currencyForCountry(c) : tenant.currency || "NGN",
         businessType: canonicalBusinessType,
-        enabledApps,
+        enabledApps: apps,
       });
       const savedBusiness = await this.businessRepository.save(business);
 
-      // Create admin user in tenant database
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Create the admin user in the tenant database, linked to the landlord
+      // user. Reuse the landlord user's already-hashed password (see doc above).
       const user = this.userRepository.create({
-        name,
-        email,
-        password: hashedPassword,
-        landlordUserId: landlordUser.id, // Link to landlord user
+        name: displayName,
+        email: landlordUser.email,
+        password: landlordUser.password,
+        landlordUserId: landlordUser.id,
       });
       const savedUser = await this.userRepository.save(user);
 
-      // Create admin role with all permissions in tenant database
+      // Create the admin role in the tenant database.
       let adminRole = await this.roleRepository.findOne({
         where: { name: "admin" },
         relations: ["permissions"],
       });
-
       if (!adminRole) {
         adminRole = this.roleRepository.create({
           name: "admin",
@@ -134,74 +202,234 @@ export class AuthService {
         });
         adminRole = await this.roleRepository.save(adminRole);
       }
-
-      // Assign admin role to user
       savedUser.roles = [adminRole];
       await this.userRepository.save(savedUser);
 
-      // Step 5: Initialize default data for new tenant
+      // Initialize default data for the new tenant.
       try {
-        // Create default branch
         await this.createDefaultBranch(savedBusiness.id);
-
-        // Initialize default UOMs and conversions
         await this.createDefaultUoms(savedBusiness.id);
       } catch (error) {
         console.warn(
           `⚠️  Warning: Failed to initialize some default data:`,
           error,
         );
-        // Don't fail registration if default data creation fails
+        // Don't fail provisioning if default data creation fails.
       }
 
-      // Step 6: Get complete user data with relations (similar to login)
       const completeUser = await this.userRepository.findOne({
         where: { id: savedUser.id },
         relations: ["roles", "roles.permissions", "business", "employee"],
       });
 
-      // Step 7: Generate JWT token with tenant information
-      const payload = {
-        email: landlordUser.email,
-        sub: landlordUser.id,
-        tenantId: tenant.id, // Use tenantId consistently
-        // Platform super-admin claim (server-side authority for /admin). A newly
-        // registered owner is never a super-admin; kept explicit for consistency.
-        isSuperAdmin: landlordUser.isSuperAdmin === true,
-      };
-      const token = this.jwtService.sign(payload);
-
-      // Step 8: Map user to safe format (like in login) + expose super-admin flag
-      const safeUser = { ...this.mapUser(completeUser), isSuperAdmin: landlordUser.isSuperAdmin === true };
-
-      // Step 9: Reset schema to default for future requests
+      // Reset schema to default for future requests.
       await this.tenantConnectionService.resetSchema();
 
-      return {
-        user: {
-          ...safeUser,
-          tenantId: tenant.id,
-        },
-        token,
-        tenant: {
-          id: tenant.id,
-          name: tenant.name,
-          slug: tenant.slug,
-          schemaName: tenant.schemaName,
-        },
-      };
+      return { tenant, completeUser, savedUser };
     } catch (error) {
-      console.error(`❌ Registration failed for ${email}:`, error);
-
-      // Reset schema in case of error
+      console.error(
+        `❌ Tenant provisioning failed for ${landlordUser.email}:`,
+        error,
+      );
       try {
         await this.tenantConnectionService.resetSchema();
       } catch (resetError) {
         console.error("Failed to reset schema after error:", resetError);
       }
-
-      throw new ConflictException(`Registration failed: ${error.message}`);
+      throw new ConflictException(`Provisioning failed: ${error.message}`);
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Phase B: email-first signup → verify → first-run onboarding
+  // ------------------------------------------------------------------
+
+  /**
+   * Short-lived signed token emailed as a verification link. Carries only the
+   * landlord user id; stateless (no DB column needed).
+   */
+  signEmailVerifyToken(landlordUserId: string): string {
+    return this.jwtService.sign(
+      { purpose: "email-verify", sub: landlordUserId },
+      { expiresIn: "24h" },
+    );
+  }
+
+  /**
+   * Short-lived token proving the bearer just verified their email (or a new
+   * Google identity), authorizing them to complete onboarding.
+   */
+  signOnboardingToken(landlordUserId: string): string {
+    return this.jwtService.sign(
+      { purpose: "onboarding", sub: landlordUserId },
+      { expiresIn: "2h" },
+    );
+  }
+
+  /**
+   * Step 1 of email-first signup: create a business-less, unverified landlord
+   * account and return a verification token to email. Idempotent for an
+   * abandoned (unverified, business-less) signup — the password is refreshed
+   * and a new link issued rather than erroring. A fully onboarded email is
+   * rejected so it can't be silently overwritten.
+   */
+  async signup(email: string, password: string) {
+    const existing = await this.landlordService.findUserByEmail(email);
+    if (existing) {
+      if (existing.tenantId) {
+        throw new ConflictException(
+          "An account with this email already exists. Please log in.",
+        );
+      }
+      // Pending signup (verified or not) with no business yet → refresh the
+      // password and re-issue a verification link.
+      await this.landlordService.updateLandlordUserPassword(
+        existing.id,
+        password,
+      );
+      return {
+        landlordUserId: existing.id,
+        verifyToken: this.signEmailVerifyToken(existing.id),
+      };
+    }
+    const user = await this.landlordService.createLandlordUser(
+      email.split("@")[0],
+      email,
+      password,
+      null,
+    );
+    return {
+      landlordUserId: user.id,
+      verifyToken: this.signEmailVerifyToken(user.id),
+    };
+  }
+
+  /**
+   * Step 2: verify the email link. Marks the account verified and, when it has
+   * no business yet, returns an onboarding token to drive the first-run wizard.
+   */
+  async verifyEmail(token: string) {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new UnauthorizedException(
+        "Verification link is invalid or has expired.",
+      );
+    }
+    if (payload?.purpose !== "email-verify") {
+      throw new UnauthorizedException("Invalid verification token.");
+    }
+    const user = await this.landlordService.findUserById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException("Account not found.");
+    }
+    if (!user.emailVerified) {
+      await this.landlordService.markEmailVerified(user.id);
+    }
+    const needsOnboarding = !user.tenantId;
+    return {
+      email: user.email,
+      needsOnboarding,
+      onboardingToken: needsOnboarding
+        ? this.signOnboardingToken(user.id)
+        : null,
+    };
+  }
+
+  /**
+   * Re-issue a verification link for an unverified account. Returns whether a
+   * link was produced; the controller decides what to email (and never leaks
+   * whether the address exists).
+   */
+  async resendVerification(email: string) {
+    const user = await this.landlordService.findUserByEmail(email);
+    if (!user || user.emailVerified) {
+      return { sent: false as const, verifyToken: null };
+    }
+    return {
+      sent: true as const,
+      verifyToken: this.signEmailVerifyToken(user.id),
+    };
+  }
+
+  /**
+   * Step 3: first-run onboarding. Consumes either an `onboarding` token (from
+   * verifyEmail, existing business-less landlord user) or a `google-onboarding`
+   * token (brand-new Google user — the landlord account is created here). Then
+   * provisions the tenant and returns a full session, exactly like login.
+   */
+  async completeOnboarding(dto: {
+    token: string;
+    businessName: string;
+    businessType?: string;
+    country?: string;
+    enabledApps?: string[];
+    name?: string;
+  }) {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(dto.token);
+    } catch {
+      throw new UnauthorizedException(
+        "Onboarding session expired. Please sign in again.",
+      );
+    }
+
+    let landlordUser: LandlordUser | null;
+    if (payload?.purpose === "google-onboarding") {
+      landlordUser = await this.landlordService.createGoogleUser(
+        payload.name || dto.name || payload.email.split("@")[0],
+        payload.email,
+        payload.googleId,
+      );
+    } else if (payload?.purpose === "onboarding") {
+      landlordUser = await this.landlordService.findUserById(payload.sub);
+    } else {
+      throw new UnauthorizedException("Invalid onboarding token.");
+    }
+
+    if (!landlordUser) {
+      throw new UnauthorizedException("Account not found.");
+    }
+    if (landlordUser.tenantId) {
+      throw new ConflictException("This account already has a business.");
+    }
+    if (!dto.businessName) {
+      throw new ConflictException("businessName is required");
+    }
+
+    const displayName =
+      dto.name || landlordUser.name || landlordUser.email.split("@")[0];
+    const { tenant, completeUser } = await this.provisionTenant(landlordUser, {
+      businessName: dto.businessName,
+      businessType: dto.businessType,
+      country: dto.country,
+      enabledApps: dto.enabledApps,
+      displayName,
+    });
+
+    const token = this.generateToken(
+      landlordUser.id,
+      landlordUser.email,
+      tenant.id,
+      landlordUser.isSuperAdmin === true,
+    );
+    const safeUser = {
+      ...this.mapUser(completeUser),
+      isSuperAdmin: landlordUser.isSuperAdmin === true,
+    };
+
+    return {
+      user: { ...safeUser, tenantId: tenant.id },
+      token,
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        schemaName: tenant.schemaName,
+      },
+    };
   }
 
   async login(loginDto: LoginDto) {
@@ -221,6 +449,26 @@ export class AuthService {
       );
       if (!isValid) {
         throw new UnauthorizedException("Invalid credentials");
+      }
+
+      // Email-first signup gate: an account that hasn't verified its email
+      // can't sign in yet. (Google/invite accounts are verified on creation.)
+      // Password is already checked above, so this only ever tells the true
+      // owner their own account is unverified. Returned as a 200 signal (not a
+      // thrown 401) so the client can offer "resend link" — mirrors the
+      // needsOnboarding branch below.
+      if (!landlordUser.emailVerified) {
+        return { needsVerification: true as const, email: landlordUser.email };
+      }
+
+      // Verified but business-less (signed up, never finished onboarding) →
+      // hand back an onboarding token so the client resumes the wizard rather
+      // than dropping into an app with no tenant.
+      if (!landlordUser.tenantId) {
+        return {
+          needsOnboarding: true as const,
+          onboardingToken: this.signOnboardingToken(landlordUser.id),
+        };
       }
 
       // Step 3: Get tenant information
@@ -309,6 +557,12 @@ export class AuthService {
       return null;
     }
 
+    // A business-less (pending onboarding) account has no valid session — it
+    // should only ever hold an onboarding token, never a full JWT.
+    if (!landlordUser.tenantId) {
+      return null;
+    }
+
     // Get tenant information
     const tenant = await this.landlordService.findTenantById(
       landlordUser.tenantId,
@@ -390,39 +644,48 @@ export class AuthService {
     }
   }
 
+  /**
+   * Google OAuth resolution — LANDLORD-model (the callback has no tenant
+   * context). Matches an existing landlord account by email and links the
+   * Google id on first use. A brand-new user has no landlord account yet
+   * (landlord_users.tenantId is required), so we return an `isNew` marker; the
+   * controller routes them into onboarding, which creates the tenant + account.
+   */
   async validateGoogleUser(googleId: string, email: string, name: string) {
-    let user = await this.userRepository.findOne({
-      where: { googleId },
-      relations: ["roles", "roles.permissions", "business", "employee"],
-    });
-
-    if (!user) {
-      // Check if user exists by email
-      user = await this.userRepository.findOne({
-        where: { email },
-        relations: ["roles", "roles.permissions", "business", "employee"],
-      });
-
-      if (user) {
-        // Link Google account
-        user.googleId = googleId;
-        user.emailVerified = new Date();
-        await this.userRepository.save(user);
-      } else {
-        // Create new user
-        user = this.userRepository.create({
-          name,
-          email,
-          googleId,
-          emailVerified: new Date(),
-          password: "", // No password for Google users
-        });
-        user = await this.userRepository.save(user);
+    const landlordUser = await this.landlordService.findUserByEmail(email);
+    if (landlordUser) {
+      if (landlordUser.googleId !== googleId) {
+        await this.landlordService.linkGoogleId(landlordUser.id, googleId);
       }
+      // Existing account but no business yet (email-first signup that never
+      // finished onboarding) → route through onboarding, same as a brand-new
+      // Google user. completeOnboarding's createGoogleUser is idempotent, so it
+      // re-uses this very row rather than creating a duplicate.
+      if (!landlordUser.tenantId) {
+        return { isNew: true as const, email: landlordUser.email, name, googleId };
+      }
+      const tenant = await this.landlordService.findTenantById(landlordUser.tenantId);
+      return {
+        isNew: false as const,
+        landlordUserId: landlordUser.id,
+        email: landlordUser.email,
+        tenantId: tenant.id,
+        isSuperAdmin: landlordUser.isSuperAdmin === true,
+      };
     }
+    // No account yet → onboarding creates the business/tenant.
+    return { isNew: true as const, email, name, googleId };
+  }
 
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+  /**
+   * Short-lived signed token carrying a Google identity for a brand-new user,
+   * handed to the onboarding flow so it can create the business + link Google.
+   */
+  signGoogleOnboardingToken(email: string, name: string, googleId: string): string {
+    return this.jwtService.sign(
+      { purpose: "google-onboarding", email, name, googleId },
+      { expiresIn: "30m" },
+    );
   }
 
   /**
@@ -580,6 +843,59 @@ export class AuthService {
     } catch (error) {
       console.error("Failed to create default UOMs:", error);
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Programmatic API tokens (MCP) — a stable, revocable per-user credential
+  // that is EXCHANGED for a normal short-lived JWT. This is the only place the
+  // API token is validated; every downstream call uses the minted JWT, so the
+  // global guard chain (JwtAuthGuard → TenantGuard → PermissionsGuard) and
+  // per-tenant isolation are completely unchanged.
+  // ------------------------------------------------------------------
+
+  /** Issue/rotate the current user's API token. Returns the plaintext ONCE. */
+  async issueApiToken(userId: string, label?: string) {
+    return this.landlordService.issueApiToken(userId, label);
+  }
+
+  /** Revoke the current user's API token. */
+  async revokeApiToken(userId: string) {
+    return this.landlordService.revokeApiToken(userId);
+  }
+
+  /** Presentable status of the current user's API token (no secret material). */
+  async getApiTokenInfo(userId: string) {
+    return this.landlordService.getApiTokenInfo(userId);
+  }
+
+  /**
+   * Exchange a plaintext API token for a normal, tenant-scoped JWT. Validates
+   * the token by hash, re-checks the account/tenant are active (mirrors login),
+   * best-effort stamps last-used, then mints a JWT carrying the owner's own
+   * tenantId + privilege. A revoked/invalid token yields a 401 — never a JWT.
+   */
+  async exchangeApiToken(token: string) {
+    const user = await this.landlordService.findByApiToken(token);
+    if (!user || !user.apiTokenHash || !user.isActive) {
+      throw new UnauthorizedException('Invalid or revoked API token.');
+    }
+    if (!user.tenantId) {
+      // A token can only exist on a fully-provisioned account, but guard anyway.
+      throw new UnauthorizedException('This account has no active business.');
+    }
+    const tenant = await this.landlordService.findTenantById(user.tenantId);
+    if (!tenant.isActive) {
+      throw new UnauthorizedException('Tenant account is not active');
+    }
+    // Best-effort telemetry — must not block or deny the exchange.
+    void this.landlordService.touchApiTokenLastUsed(user.id);
+    const jwt = this.generateToken(
+      user.id,
+      user.email,
+      tenant.id,
+      user.isSuperAdmin === true,
+    );
+    return { token: jwt, tokenType: 'Bearer' as const };
   }
 
   // Public method to generate JWT tokens (for Google OAuth callback)

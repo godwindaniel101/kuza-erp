@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
+import { authService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
@@ -18,6 +19,10 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Set when login is blocked because the email isn't verified — reveals a
+  // resend action inline.
+  const [needsVerify, setNeedsVerify] = useState(false);
+  const [resent, setResent] = useState(false);
 
   // A management user is an admin/super-admin or someone with broad settings
   // access. Everyone else who is linked to an employee record lands on the
@@ -77,19 +82,44 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsVerify(false);
+    setResent(false);
     setLoading(true);
 
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      // Email not verified yet → offer a resend instead of signing in.
+      if (result?.needsVerification) {
+        setNeedsVerify(true);
+        setError(t('auth.verifyBeforeSignIn', 'Please verify your email before signing in.'));
+        setLoading(false);
+        return;
+      }
+      // Verified account that never finished onboarding → resume the wizard.
+      if (result?.needsOnboarding && result.onboardingToken) {
+        router.push(`/onboarding?token=${encodeURIComponent(result.onboardingToken)}`);
+        return;
+      }
       // login() has already set the auth store synchronously; resolve the
       // employee-aware landing and navigate.
       await navigateAfterAuth();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || t('loginFailed');
-      setError(errorMessage);
+      const data = err.response?.data;
+      const msg = typeof data?.message === 'string' ? data.message : err.message;
+      setError(msg || t('loginFailed'));
       setLoading(false);
       // Don't redirect on error - stay on page
     }
+  };
+
+  const handleResendVerification = async () => {
+    setResent(false);
+    try {
+      await authService.resendVerification(email);
+    } catch {
+      /* endpoint never reveals whether the address exists */
+    }
+    setResent(true);
   };
 
   const handleGoogleSignIn = () => {
@@ -118,6 +148,15 @@ export default function Login() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('auth.signIn', 'Sign in')}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">{t('auth.pickUpWhereLeftOff', 'Pick up where your business left off.')}</p>
 
+            {router.query.verified && !error && (
+              <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-lg animate-fade-in">
+                <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center">
+                  <i className="bx bx-check-circle mr-2 text-lg"></i>
+                  {t('auth.emailVerifiedSignIn', 'Email verified — sign in to continue.')}
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg shadow-sm animate-fade-in">
                 <div className="flex items-start">
@@ -125,13 +164,33 @@ export default function Login() {
                     <i className="bx bx-error-circle text-red-500 dark:text-red-400 text-xl"></i>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">{t('auth.loginFailedTitle', 'Login Failed')}</h3>
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">
+                      {needsVerify ? t('auth.verifyYourEmail', 'Verify your email') : t('auth.loginFailedTitle', 'Login Failed')}
+                    </h3>
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                    {needsVerify && (
+                      <div className="mt-2">
+                        {resent ? (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                            <i className="bx bx-check-circle mr-1"></i>
+                            {t('auth.linkResent', 'A new link is on its way.')}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleResendVerification}
+                            className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                          >
+                            {t('auth.resendVerification', 'Resend verification link')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="ml-4 flex-shrink-0">
                     <button
                       type="button"
-                      onClick={() => setError('')}
+                      onClick={() => { setError(''); setNeedsVerify(false); }}
                       className="inline-flex text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
                     >
                       <i className="bx bx-x text-lg"></i>

@@ -17,8 +17,10 @@ import {
   LEGACY_PLAN_MODULE_TO_APPS,
   appsForPlanModules,
   dependentsOf,
+  exclusiveConflicts,
   expandDependencies,
   getApp,
+  isAssist,
 } from '../../common/apps/app-registry';
 import { Plan, PlanCode, PlanLimits } from './entities/plan.entity';
 import {
@@ -29,12 +31,22 @@ import {
   AppAccessRequest,
   AccessRequestStatus,
 } from './entities/app-access-request.entity';
+import { PricingConfig } from './entities/pricing-config.entity';
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
 import { PaystackAdapter } from '../integrations/adapters/paystack.adapter';
+import {
+  computeQuote,
+  pricingConfig,
+  DEFAULT_PRICING,
+  PricingConfigData,
+  PRICING_CURRENCIES,
+  Quote,
+  QuoteInput,
+} from './pricing';
 
-const TRIAL_DAYS = 14;
+const DEFAULT_TRIAL_DAYS = 14;
 
 /** Super-admin plan CRUD inputs (validated by the admin DTOs at the boundary). */
 export interface CreatePlanInput {
@@ -54,6 +66,23 @@ export interface UpdatePlanInput {
   description?: string;
   limits?: PlanLimits;
   isActive?: boolean;
+}
+
+/**
+ * Super-admin pricing-config update (validated at the boundary by the admin
+ * DTO + BillingService.updatePricingConfig). Every field is optional — only the
+ * provided maps/values change; omitted apps/currencies keep their stored value.
+ */
+export interface UpdatePricingInput {
+  /** Partial map of appKey → (currency → monthly price). */
+  appPrices?: Record<string, Record<string, number>>;
+  /** Partial map of usage unit → (currency → monthly price). */
+  usagePrices?: {
+    branch?: Record<string, number>;
+    user?: Record<string, number>;
+  };
+  includedBranches?: number;
+  includedUsers?: number;
 }
 
 const PLAN_SEED: Array<{
@@ -126,7 +155,18 @@ function localPriceFor(plan: Plan, currency: string): { currency: string; amount
 @Injectable()
 export class BillingService {
   private seedPromise: Promise<void> | null = null;
+  private pricingSeedPromise: Promise<void> | null = null;
   private readonly logger = new Logger(BillingService.name);
+
+  /**
+   * How many days the all-access free trial runs before a tenant must pay.
+   * Configurable via env TRIAL_DAYS (founder direction); defaults to 14. A
+   * non-positive or non-numeric value falls back to the default.
+   */
+  private trialDays(): number {
+    const raw = Number(this.configService.get<string>('TRIAL_DAYS'));
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_TRIAL_DAYS;
+  }
 
   constructor(
     @InjectRepository(Plan, 'landlord')
@@ -137,6 +177,8 @@ export class BillingService {
     private paymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(AppAccessRequest, 'landlord')
     private accessRequestRepository: Repository<AppAccessRequest>,
+    @InjectRepository(PricingConfig, 'landlord')
+    private pricingConfigRepository: Repository<PricingConfig>,
     private readonly configService: ConfigService,
     private readonly paystackAdapter: PaystackAdapter,
     // Tenant-connection repositories: scoped to the caller's schema by the
@@ -265,7 +307,9 @@ export class BillingService {
     if (!subscription) {
       const growth = await this.getPlanByCode('GROWTH');
       const now = new Date();
-      const trialEnd = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+      const trialEnd = new Date(
+        now.getTime() + this.trialDays() * 24 * 60 * 60 * 1000,
+      );
       subscription = await this.subscriptionRepository.save(
         this.subscriptionRepository.create({
           tenantId,
@@ -278,19 +322,17 @@ export class BillingService {
       );
     }
 
-    // Trial expired → downgrade to FREE / ACTIVE.
+    // Trial expired with no paid subscription → EXPIRED (read-only until they
+    // pay). No permanent free tier: free is the trial window only. planId is
+    // left as-is so the tenant can still READ everything they had during the
+    // trial; TrialLockGuard blocks writes based on status/price.
     if (
       subscription.status === 'TRIALING' &&
       subscription.trialEndsAt &&
       new Date(subscription.trialEndsAt).getTime() < Date.now()
     ) {
-      const free = await this.getPlanByCode('FREE');
-      const now = new Date();
-      subscription.planId = free.id;
-      subscription.status = 'ACTIVE';
+      subscription.status = 'EXPIRED';
       subscription.trialEndsAt = null;
-      subscription.currentPeriodStart = now;
-      subscription.currentPeriodEnd = this.addMonths(now, 1);
       subscription = await this.subscriptionRepository.save(subscription);
     }
 
@@ -621,9 +663,25 @@ export class BillingService {
       return { handled: false, reason: 'amount_mismatch', paymentId: payment.id };
     }
 
-    // Activate idempotently (changePlan re-sets the same plan/period safely).
-    // allowPaid: this is the verified post-payment activation path.
-    await this.changePlan(payment.tenantId, payment.planCode, { allowPaid: true });
+    // Activate idempotently. À-la-carte checkouts carry a `selection` (apps +
+    // usage) and activate that; legacy tier checkouts re-set the plan. Both are
+    // safe to run again on a duplicate delivery (getOrCreateSubscription +
+    // re-set are idempotent).
+    if (payment.selection) {
+      await this.activateQuoteSubscription(payment.tenantId, {
+        apps: payment.selection.apps,
+        branches: payment.selection.branches,
+        users: payment.selection.users,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        schemaName: payment.selection.schemaName,
+      });
+    } else if (payment.planCode) {
+      // allowPaid: this is the verified post-payment activation path.
+      await this.changePlan(payment.tenantId, payment.planCode, {
+        allowPaid: true,
+      });
+    }
 
     payment.status = 'SUCCESS';
     payment.providerRef = normalized.reference;
@@ -673,6 +731,460 @@ export class BillingService {
       status: subscription.status,
       trialEndsAt: subscription.trialEndsAt,
     };
+  }
+
+  /**
+   * Whether the tenant is READ-ONLY (free trial elapsed with no active PAID
+   * subscription) — TrialLockGuard blocks writes when true. TRIALING is never
+   * read-only. ACTIVE is read-only only when the current plan is free/zero-price
+   * across every currency (so switching to a free plan can't escape the
+   * paywall). EXPIRED / PAST_DUE / CANCELED are always read-only.
+   *
+   * Landlord-scoped only (no tenant-schema read) so it is safe to call from a
+   * guard that runs before the request's search_path is pinned. getOrCreate…
+   * also performs the lazy TRIALING→EXPIRED transition on read.
+   */
+  async isReadOnly(tenantId: string): Promise<boolean> {
+    const subscription = await this.getOrCreateSubscription(tenantId);
+    if (subscription.status === 'TRIALING') {
+      return false;
+    }
+    if (subscription.status === 'ACTIVE') {
+      // Paid via an à-la-carte selection (amountMajor > 0) → full access.
+      if (Number(subscription.amountMajor) > 0) {
+        return false;
+      }
+      // Paid via a fixed tier (plan has a non-zero price in any currency).
+      const plan = subscription.plan;
+      const anyPaid =
+        Number(plan?.monthlyPriceUsd) > 0 ||
+        Object.values(plan?.prices ?? {}).some((v) => Number(v) > 0);
+      return !anyPaid;
+    }
+    // EXPIRED / PAST_DUE / CANCELED
+    return true;
+  }
+
+  // ---------------------------------------------------------------------
+  // À-la-carte pricing (docs: pricing.ts) — pure computation, charges nothing.
+  // Config is persisted LANDLORD-scoped (PricingConfig, one global row) and
+  // super-admin editable; the code constants in pricing.ts remain the fallback.
+  // ---------------------------------------------------------------------
+
+  /**
+   * Lazily seed the single global pricing-config row from the code defaults if
+   * the table is empty (idempotent, single-flight — mirrors ensurePlansSeeded).
+   */
+  private ensurePricingSeeded(): Promise<void> {
+    if (!this.pricingSeedPromise) {
+      this.pricingSeedPromise = (async () => {
+        const existing = await this.pricingConfigRepository.findOne({
+          where: { key: 'global' },
+        });
+        if (!existing) {
+          await this.pricingConfigRepository.save(
+            this.pricingConfigRepository.create({
+              key: 'global',
+              // Deep-copy the defaults so later edits never mutate the code
+              // constants (they are shared module-level objects).
+              appPrices: JSON.parse(JSON.stringify(DEFAULT_PRICING.appPrices)),
+              usagePrices: JSON.parse(
+                JSON.stringify(DEFAULT_PRICING.usagePrices),
+              ),
+              includedBranches: DEFAULT_PRICING.included.branches,
+              includedUsers: DEFAULT_PRICING.included.users,
+            }),
+          );
+        }
+      })().catch((error) => {
+        // Allow a retry on the next call instead of caching the failure.
+        this.pricingSeedPromise = null;
+        throw error;
+      });
+    }
+    return this.pricingSeedPromise;
+  }
+
+  /**
+   * Load the persisted pricing config as the engine's PricingConfigData. Seeds
+   * on first use; falls back to the code defaults if the row is somehow absent
+   * so the pricing endpoints never break when unseeded.
+   */
+  private async loadPricingConfig(): Promise<PricingConfigData> {
+    await this.ensurePricingSeeded();
+    const row = await this.pricingConfigRepository.findOne({
+      where: { key: 'global' },
+    });
+    if (!row) {
+      return DEFAULT_PRICING;
+    }
+    return {
+      appPrices: row.appPrices ?? DEFAULT_PRICING.appPrices,
+      usagePrices: row.usagePrices ?? DEFAULT_PRICING.usagePrices,
+      included: {
+        branches: row.includedBranches,
+        users: row.includedUsers,
+      },
+    };
+  }
+
+  /** The pricing catalog in the tenant's currency (for the UI builder). */
+  async getPricingConfig() {
+    const [currency, config] = await Promise.all([
+      this.getTenantCurrency(),
+      this.loadPricingConfig(),
+    ]);
+    return pricingConfig(currency, config);
+  }
+
+  /** Compute an itemized monthly quote for an app + usage selection. */
+  async quote(input: QuoteInput): Promise<Quote> {
+    const [config, tenantCurrency] = await Promise.all([
+      this.loadPricingConfig(),
+      input.currency ? Promise.resolve(input.currency) : this.getTenantCurrency(),
+    ]);
+    return computeQuote({ ...input, currency: tenantCurrency }, config);
+  }
+
+  /**
+   * Validate a proposed à-la-carte selection: no two apps from the same
+   * exclusive group (items ⊕ rms), and an assist requires a non-assist host.
+   * Returns the cleaned, dependency-agnostic app list (unknown keys dropped).
+   */
+  private validateSelection(apps: string[]): string[] {
+    const cleaned = (apps || []).filter((k) => getApp(k));
+    for (const key of cleaned) {
+      const conflicts = exclusiveConflicts(key, cleaned).filter(
+        (c) => c !== key,
+      );
+      if (conflicts.length > 0) {
+        const names = [key, ...conflicts]
+          .map((k) => getApp(k)?.name ?? k)
+          .join(' & ');
+        throw new BadRequestException(
+          `${names} can't be combined — they are separate business types. Pick one.`,
+        );
+      }
+    }
+    if (cleaned.some((k) => isAssist(k)) && !cleaned.some((k) => !isAssist(k))) {
+      throw new BadRequestException(
+        'Add-ons (like AI Assist) need at least one business app selected.',
+      );
+    }
+    return cleaned;
+  }
+
+  /**
+   * À-la-carte checkout (money-path). Computes the AUTHORITATIVE quote
+   * server-side (client amounts are never trusted), validates the selection,
+   * then:
+   *  - zero total → activate immediately, no charge;
+   *  - paid → reuse the exact Paystack init + PENDING SubscriptionPayment
+   *    idempotency ledger (unique `reference`) as the tier checkout. The plan is
+   *    NOT activated here — only the signature-verified charge.success webhook
+   *    activates it, via the stored `selection`.
+   */
+  async checkoutQuote(
+    tenantId: string,
+    schemaName: string,
+    input: { apps: string[]; branches?: number; users?: number },
+    user: { email?: string } | undefined,
+  ): Promise<
+    | { free: true; subscription: TenantSubscription }
+    | {
+        free: false;
+        authorizationUrl: string;
+        reference: string;
+        quote: Quote;
+      }
+  > {
+    const apps = this.validateSelection(input.apps);
+    const quote = await this.quote({
+      apps,
+      branches: input.branches,
+      users: input.users,
+    });
+    const branches = Math.max(
+      quote.includedBranches,
+      Math.floor(input.branches ?? quote.includedBranches),
+    );
+    const users = Math.max(
+      quote.includedUsers,
+      Math.floor(input.users ?? quote.includedUsers),
+    );
+
+    // Nothing to charge (only free/assist apps within the included allowance).
+    if (!quote.total || quote.total <= 0) {
+      const subscription = await this.activateQuoteSubscription(tenantId, {
+        apps,
+        branches,
+        users,
+        amount: 0,
+        currency: quote.currency,
+        schemaName,
+      });
+      return { free: true, subscription };
+    }
+
+    const email = user?.email;
+    if (!email) {
+      throw new BadRequestException('A billing email is required for checkout');
+    }
+    const secretKey = this.paystackSecretKey();
+    if (!secretKey) {
+      throw new BadRequestException(
+        'Payments are not configured — set PAYSTACK_SECRET_KEY',
+      );
+    }
+
+    const reference = `KZA-SUB-${randomUUID()}`;
+    const payment = await this.paymentRepository.save(
+      this.paymentRepository.create({
+        tenantId,
+        planId: null,
+        planCode: null,
+        selection: { apps, branches, users, schemaName },
+        provider: 'paystack',
+        reference,
+        amount: quote.total,
+        currency: quote.currency,
+        status: 'PENDING',
+      }),
+    );
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      'http://localhost:5001';
+
+    let init: { authorizationUrl: string; reference: string };
+    try {
+      init = await this.paystackAdapter.initializeTransaction(
+        {
+          email,
+          amountSubunit: Math.round(quote.total * 100),
+          currency: quote.currency,
+          reference,
+          metadata: { tenantId, kind: 'alacarte_subscription' },
+          callbackUrl: `${frontendUrl}/settings/billing?ref=${reference}`,
+        },
+        { secretKey },
+      );
+    } catch (error) {
+      payment.status = 'FAILED';
+      payment.failureReason = (error as Error).message;
+      await this.paymentRepository.save(payment);
+      throw error;
+    }
+
+    payment.authorizationUrl = init.authorizationUrl;
+    await this.paymentRepository.save(payment);
+
+    const subscription = await this.getOrCreateSubscription(tenantId);
+    subscription.paymentProvider = 'paystack';
+    subscription.paymentProviderRef = reference;
+    await this.subscriptionRepository.save(subscription);
+
+    return { free: false, authorizationUrl: init.authorizationUrl, reference, quote };
+  }
+
+  /**
+   * Activate an à-la-carte subscription for a tenant (idempotent). Sets the
+   * subscription ACTIVE with the paid selection + period, and applies the paid
+   * apps to the business's enabled_apps (dependency-closed) via schema-qualified
+   * SQL — safe to call from the webhook (no tenant request context). A failure
+   * to apply enabled_apps never fails activation (the payment already
+   * succeeded); it is logged for reconciliation.
+   */
+  async activateQuoteSubscription(
+    tenantId: string,
+    sel: {
+      apps: string[];
+      branches: number;
+      users: number;
+      amount: number;
+      currency: string;
+      schemaName: string;
+    },
+  ): Promise<TenantSubscription> {
+    const subscription = await this.getOrCreateSubscription(tenantId);
+    const now = new Date();
+    subscription.status = 'ACTIVE';
+    subscription.selectedApps = sel.apps;
+    subscription.branches = sel.branches;
+    subscription.users = sel.users;
+    subscription.amountMajor = sel.amount;
+    subscription.currency = sel.currency;
+    subscription.trialEndsAt = null;
+    subscription.currentPeriodStart = now;
+    subscription.currentPeriodEnd = this.addMonths(now, 1);
+    const saved = await this.subscriptionRepository.save(subscription);
+
+    try {
+      const enabled = expandDependencies(sel.apps);
+      await this.ensureEnabledAppsColumn(sel.schemaName);
+      const rows = await this.tenantDataSource.manager.query(
+        `SELECT id FROM "${sel.schemaName}"."businesses" ORDER BY created_at ASC LIMIT 1`,
+      );
+      if (rows[0]) {
+        await this.tenantDataSource.manager.query(
+          `UPDATE "${sel.schemaName}"."businesses"
+           SET enabled_apps = $1::jsonb, updated_at = now()
+           WHERE id = $2`,
+          [JSON.stringify(enabled), rows[0].id],
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Activated subscription for ${tenantId} but failed to apply enabled_apps: ${
+          error instanceof Error ? error.message : error
+        }`,
+      );
+    }
+
+    return saved;
+  }
+
+  // ---------------------------------------------------------------------
+  // Pricing config CRUD (super-admin) — LANDLORD-scoped. Guarded by
+  // SuperAdminGuard on the /admin controller; this service assumes authorized.
+  // ---------------------------------------------------------------------
+
+  /**
+   * The full pricing config for the super-admin editor: every app (with its
+   * registry group/name) and its per-currency price, the usage unit prices, the
+   * included allowance, and the list of currencies. Seeds on first read.
+   */
+  async getPricingAdmin() {
+    const config = await this.loadPricingConfig();
+    return {
+      currencies: [...PRICING_CURRENCIES],
+      includedBranches: config.included.branches,
+      includedUsers: config.included.users,
+      usagePrices: {
+        branch: config.usagePrices.branch ?? {},
+        user: config.usagePrices.user ?? {},
+      },
+      apps: APP_REGISTRY.map((app) => ({
+        key: app.key,
+        name: app.name,
+        group: app.group,
+        description: app.description,
+        isAssist: isAssist(app.key),
+        prices: config.appPrices[app.key] ?? {},
+      })),
+    };
+  }
+
+  /** True if v is a finite, non-negative number (rejects NaN/Infinity/negatives). */
+  private isNonNegativeNumber(v: unknown): v is number {
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0;
+  }
+
+  private assertKnownCurrency(currency: string): void {
+    if (!(PRICING_CURRENCIES as readonly string[]).includes(currency)) {
+      throw new BadRequestException(
+        `Unknown currency '${currency}'. Allowed: ${PRICING_CURRENCIES.join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * Validate a per-currency price map at the boundary: every key is a known
+   * currency and every value is a finite, non-negative number. If
+   * `mustBeZero` (assists), any non-zero price is rejected.
+   */
+  private validatePriceMap(
+    label: string,
+    map: Record<string, number>,
+    mustBeZero = false,
+  ): void {
+    for (const [currency, value] of Object.entries(map)) {
+      this.assertKnownCurrency(currency);
+      if (!this.isNonNegativeNumber(value)) {
+        throw new BadRequestException(
+          `${label} price for ${currency} must be a non-negative number`,
+        );
+      }
+      if (mustBeZero && value !== 0) {
+        throw new BadRequestException(
+          `${label} is an assist (add-on) and must stay free — its price must be 0`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Update the platform pricing config (super-admin). Validates every write at
+   * the boundary: known app keys, known currencies, non-negative prices, and
+   * assists (ai, market) forced to stay 0. Only the provided maps/values change;
+   * omitted apps/currencies keep their persisted value (partial merge).
+   */
+  async updatePricingConfig(input: UpdatePricingInput): Promise<PricingConfig> {
+    await this.ensurePricingSeeded();
+    const row = await this.pricingConfigRepository.findOne({
+      where: { key: 'global' },
+    });
+    if (!row) {
+      // Should never happen (ensurePricingSeeded just ran), but never write blind.
+      throw new NotFoundException('Pricing config not found');
+    }
+
+    if (input.appPrices !== undefined) {
+      const nextAppPrices = { ...row.appPrices };
+      for (const [appKey, priceMap] of Object.entries(input.appPrices)) {
+        const app = getApp(appKey);
+        if (!app) {
+          throw new BadRequestException(
+            `Unknown app '${appKey}'. Allowed: ${APP_KEYS.join(', ')}`,
+          );
+        }
+        this.validatePriceMap(app.name, priceMap, isAssist(appKey));
+        nextAppPrices[appKey] = { ...(nextAppPrices[appKey] ?? {}), ...priceMap };
+      }
+      row.appPrices = nextAppPrices;
+    }
+
+    if (input.usagePrices !== undefined) {
+      const nextUsage = {
+        branch: { ...(row.usagePrices?.branch ?? {}) },
+        user: { ...(row.usagePrices?.user ?? {}) },
+      };
+      if (input.usagePrices.branch !== undefined) {
+        this.validatePriceMap('Branch', input.usagePrices.branch);
+        nextUsage.branch = { ...nextUsage.branch, ...input.usagePrices.branch };
+      }
+      if (input.usagePrices.user !== undefined) {
+        this.validatePriceMap('User', input.usagePrices.user);
+        nextUsage.user = { ...nextUsage.user, ...input.usagePrices.user };
+      }
+      row.usagePrices = nextUsage;
+    }
+
+    if (input.includedBranches !== undefined) {
+      if (
+        !this.isNonNegativeNumber(input.includedBranches) ||
+        !Number.isInteger(input.includedBranches)
+      ) {
+        throw new BadRequestException(
+          'includedBranches must be a non-negative integer',
+        );
+      }
+      row.includedBranches = input.includedBranches;
+    }
+
+    if (input.includedUsers !== undefined) {
+      if (
+        !this.isNonNegativeNumber(input.includedUsers) ||
+        !Number.isInteger(input.includedUsers)
+      ) {
+        throw new BadRequestException(
+          'includedUsers must be a non-negative integer',
+        );
+      }
+      row.includedUsers = input.includedUsers;
+    }
+
+    return this.pricingConfigRepository.save(row);
   }
 
   private addMonths(date: Date, months: number): Date {
@@ -836,6 +1348,36 @@ export class BillingService {
           `${names} ${planLocked.length === 1 ? 'is' : 'are'} not included in your current plan. Please upgrade to enable ${app.name}.`,
         );
       }
+
+      // Vertical exclusivity: nothing in the closure may clash with an app the
+      // business already runs (e.g. enabling Restaurant while Inventory is on,
+      // or enabling Marketplace — which pulls Inventory — on a restaurant).
+      // These are separate business types; at most one per exclusiveGroup.
+      const currentKeys = [...current];
+      for (const k of closure) {
+        const conflicts = exclusiveConflicts(k, currentKeys);
+        if (conflicts.length > 0) {
+          const names = conflicts.map((c) => getApp(c)?.name ?? c).join(', ');
+          const trigger = getApp(k)?.name ?? k;
+          throw new ConflictException(
+            `${app.name} can't run alongside ${names} — ${trigger} and ${names} are separate business types. Disable ${names} first.`,
+          );
+        }
+      }
+
+      // Assists (AI, Marketplace) can't stand alone — they only work on top of
+      // a vertical/common. Require at least one non-assist app after this change.
+      if (isAssist(app.key)) {
+        const willHaveHost = [...currentKeys, ...closure].some(
+          (k) => !isAssist(k),
+        );
+        if (!willHaveHost) {
+          throw new BadRequestException(
+            `${app.name} is an add-on — enable a business app first, then turn on ${app.name}.`,
+          );
+        }
+      }
+
       alsoEnabled = closure.filter((k) => k !== app.key && !current.has(k));
       closure.forEach((k) => current.add(k));
     } else {

@@ -4,6 +4,7 @@ import {
   BillingService,
   CreatePlanInput,
   UpdatePlanInput,
+  UpdatePricingInput,
 } from '../billing/billing.service';
 import { AccessRequestStatus } from '../billing/entities/app-access-request.entity';
 
@@ -216,5 +217,19 @@ export class AdminService {
   /** Soft-delete (deactivate) a plan by code — never breaks existing tenants. */
   async deactivatePlan(code: string) {
     return this.billingService.deactivatePlan(code);
+  }
+
+  /** Full à-la-carte pricing config for the editor (seeds on first read). */
+  async getPricing() {
+    return this.billingService.getPricingAdmin();
+  }
+
+  /**
+   * Update the platform pricing config. BillingService validates every write
+   * at the boundary (known apps/currencies, non-negative prices, assists=0).
+   */
+  async updatePricing(input: UpdatePricingInput) {
+    await this.billingService.updatePricingConfig(input);
+    return this.billingService.getPricingAdmin();
   }
 }

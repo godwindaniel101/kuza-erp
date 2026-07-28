@@ -137,6 +137,10 @@ function AdminTenantsInner() {
               <i className="bx bx-package text-base" aria-hidden="true" />
               Plans
             </Button>
+            <Button href="/admin/pricing" variant="secondary" size="sm">
+              <i className="bx bx-dollar-circle text-base" aria-hidden="true" />
+              Pricing
+            </Button>
             <Button href="/admin/requests" variant="secondary" size="sm">
               <i className="bx bx-bell text-base" aria-hidden="true" />
               Pending requests

@@ -6,7 +6,11 @@ export type SubscriptionStatus =
   | 'TRIALING'
   | 'ACTIVE'
   | 'PAST_DUE'
-  | 'CANCELED';
+  | 'CANCELED'
+  // Free trial elapsed with no paid subscription — the tenant is READ-ONLY
+  // (writes blocked by TrialLockGuard) until they pay. There is no permanent
+  // free tier; free = the trial window only (founder direction).
+  | 'EXPIRED';
 
 /**
  * A tenant's subscription to a plan — LANDLORD-scoped (lives in the
@@ -44,4 +48,29 @@ export class TenantSubscription extends BaseEntity {
 
   @Column({ nullable: true })
   paymentProviderRef: string;
+
+  // ---- À-la-carte selection (the new pricing model) ------------------------
+  // Populated when a tenant subscribes to a computed app+usage bundle rather
+  // than a fixed tier. The selection is the source of truth for what they pay
+  // for; planId is left pointing at the trial plan for legacy compatibility.
+
+  /** Canonical app keys the tenant pays for (their vertical + commons). */
+  @Column({ type: 'jsonb', nullable: true })
+  selectedApps: string[] | null;
+
+  /** Purchased branch allowance. */
+  @Column({ type: 'int', nullable: true })
+  branches: number | null;
+
+  /** Purchased user/seat allowance. */
+  @Column({ type: 'int', nullable: true })
+  users: number | null;
+
+  /** Computed monthly total, in MAJOR currency units. */
+  @Column({ type: 'decimal', precision: 14, scale: 2, nullable: true })
+  amountMajor: number | null;
+
+  /** Billing currency for amountMajor. */
+  @Column({ type: 'varchar', nullable: true })
+  currency: string | null;
 }

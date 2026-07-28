@@ -99,6 +99,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     const isAuthPage =
       router.pathname === '/login' ||
       router.pathname === '/register' ||
+      router.pathname === '/verify-email' ||
+      router.pathname === '/onboarding' ||
       router.pathname === '/auth/callback' ||
       router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||
@@ -188,7 +190,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     // Only update cookie, don't redirect
     if (path.startsWith('/hrms')) {
       Cookies.set('service', 'hrms', { expires: 7 });
-    } else if (path !== '/login' && path !== '/register' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/reserve/')) {
+    } else if (path !== '/login' && path !== '/register' && path !== '/verify-email' && path !== '/onboarding' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/reserve/')) {
       // Only set RMS cookie if not on auth pages
       Cookies.set('service', 'rms', { expires: 7 });
     }
@@ -199,6 +201,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     const isAuthPage =
       router.pathname === '/login' ||
       router.pathname === '/register' ||
+      router.pathname === '/verify-email' ||
+      router.pathname === '/onboarding' ||
       router.pathname === '/auth/callback' ||
       router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||

@@ -8,6 +8,7 @@ import { Plan } from './entities/plan.entity';
 import { TenantSubscription } from './entities/tenant-subscription.entity';
 import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { AppAccessRequest } from './entities/app-access-request.entity';
+import { PricingConfig } from './entities/pricing-config.entity';
 import { User } from '../../common/entities/user.entity';
 import { Branch } from '../../common/entities/branch.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
@@ -29,7 +30,7 @@ import { PaystackAdapter } from '../integrations/adapters/paystack.adapter';
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [Plan, TenantSubscription, SubscriptionPayment, AppAccessRequest],
+      [Plan, TenantSubscription, SubscriptionPayment, AppAccessRequest, PricingConfig],
       'landlord',
     ),
     TypeOrmModule.forFeature([User, Branch, InventoryItem]),

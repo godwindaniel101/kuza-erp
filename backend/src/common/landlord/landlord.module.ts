@@ -10,6 +10,7 @@ import { Plan } from '../../modules/billing/entities/plan.entity';
 import { TenantSubscription } from '../../modules/billing/entities/tenant-subscription.entity';
 import { SubscriptionPayment } from '../../modules/billing/entities/subscription-payment.entity';
 import { AppAccessRequest } from '../../modules/billing/entities/app-access-request.entity';
+import { PricingConfig } from '../../modules/billing/entities/pricing-config.entity';
 import { LandlordWebhookRoute } from '../../modules/integrations/entities/landlord-webhook-route.entity';
 import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route.entity';
 import { NetworkBusiness } from '../../modules/network/entities/network-business.entity';
@@ -42,6 +43,7 @@ import { NetworkWalletEntry } from '../../modules/network/entities/network-walle
             TenantSubscription,
             SubscriptionPayment,
             AppAccessRequest,
+            PricingConfig,
             LandlordWebhookRoute,
             MenuSlugRoute,
             NetworkBusiness,

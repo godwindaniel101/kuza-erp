@@ -5,6 +5,40 @@ import { I18nService, I18nContext } from 'nestjs-i18n';
 import { Invoice } from '../invoicing/entities/invoice.entity';
 import { Business } from '../../common/entities/business.entity';
 import { LlmService } from '../../common/ai/llm.service';
+import {
+  BranchScopeService,
+  ScopeActor,
+} from '../../common/branch-scope/branch-scope.service';
+import { BillingService } from '../billing/billing.service';
+import { AppKey, getApp } from '../../common/apps/app-registry';
+
+/**
+ * Read-only ask context threaded from the controller. `actor` drives branch
+ * scoping (BranchScopeService); `tenantId` + `schemaName` drive the
+ * subscription/effective-apps pre-check. All optional so the copilot still
+ * works (unscoped, all-apps) when called without a request context, e.g. tests.
+ */
+export interface AskOptions {
+  actor?: ScopeActor;
+  tenantId?: string;
+  schemaName?: string;
+  /** Explicit branch id to scope to (from the UI). */
+  branchId?: string;
+}
+
+/**
+ * The resolved branch scope for a single ask:
+ *  - `branchIds === null` → all branches the caller may see (unscoped);
+ *  - `branchIds === []`   → caller is assigned to no branch (sees nothing);
+ *  - `branchIds === [...]`→ scope to exactly these branches.
+ * `label` is a human phrase for the prompt ("branch Lekki", "all branches").
+ * `denied` is set when the caller asked about a branch they cannot access.
+ */
+interface ResolvedBranchScope {
+  branchIds: string[] | null;
+  label: string;
+  denied?: string;
+}
 
 /**
  * "Accountant in your pocket": computes plain-language insights from data
@@ -103,6 +137,9 @@ export class InsightsService {
     private readonly businessRepository: Repository<Business>,
     private readonly llm: LlmService,
     private readonly i18n: I18nService,
+    // Both modules are @Global, so these resolve without importing them here.
+    private readonly branchScope: BranchScopeService,
+    private readonly billing: BillingService,
   ) {}
 
   private async sql<T = any>(query: string, params: any[] = []): Promise<T[]> {
@@ -780,7 +817,23 @@ export class InsightsService {
    * answer real questions ("how many branches", "what's low in branch X",
    * accounting, restaurant) and know when a feature's app is turned off.
    */
-  private async getBusinessContext() {
+  /**
+   * Build an ` AND <col> = ANY($n)` clause bound to `branchIds`, pushing the
+   * bind value onto `params`. Returns '' (no filter) when unscoped (null).
+   * An empty list ([] = caller assigned to no branch) yields a clause that
+   * matches nothing, which is the correct "sees no branch data" behaviour.
+   */
+  private branchClause(
+    branchIds: string[] | null,
+    col: string,
+    params: any[],
+  ): string {
+    if (branchIds === null) return '';
+    params.push(branchIds);
+    return ` AND ${col} = ANY($${params.length})`;
+  }
+
+  private async getBusinessContext(branchIds: string[] | null = null) {
     const business = await this.safe(
       () => this.businessRepository.findOne({ where: {} }),
       null,
@@ -799,35 +852,40 @@ export class InsightsService {
       topProductRows,
       topStaffRows,
     ] = await Promise.all([
-        this.safe(
-          () =>
-            this.sql<any>(
-              `SELECT b.name AS branch,
-                      COUNT(bi.id) FILTER (WHERE bi.current_stock > 0) AS in_stock_items,
-                      COUNT(bi.id) FILTER (WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock) AS low_stock_items,
-                      COALESCE(SUM(bi.current_stock * COALESCE(ii.unit_cost, 0)), 0) AS stock_value
-               FROM branches b
-               LEFT JOIN branch_inventory_items bi ON bi.branch_id = b.id
-               LEFT JOIN inventory_items ii ON ii.id = bi.inventory_item_id
-               GROUP BY b.id, b.name
-               ORDER BY b.name`,
-            ),
-          [],
-        ),
-        this.safe(
-          () =>
-            this.sql<any>(
-              `SELECT ii.name AS item, b.name AS branch,
-                      bi.current_stock AS stock, bi.minimum_stock AS minimum
-               FROM branch_inventory_items bi
-               JOIN branches b ON b.id = bi.branch_id
-               JOIN inventory_items ii ON ii.id = bi.inventory_item_id
-               WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock
-               ORDER BY (bi.current_stock - bi.minimum_stock) ASC
-               LIMIT 50`,
-            ),
-          [],
-        ),
+        this.safe(() => {
+          const params: any[] = [];
+          const where = branchIds === null
+            ? ''
+            : `WHERE b.id = ANY($${(params.push(branchIds), params.length)})`;
+          return this.sql<any>(
+            `SELECT b.name AS branch,
+                    COUNT(bi.id) FILTER (WHERE bi.current_stock > 0) AS in_stock_items,
+                    COUNT(bi.id) FILTER (WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock) AS low_stock_items,
+                    COALESCE(SUM(bi.current_stock * COALESCE(ii.unit_cost, 0)), 0) AS stock_value
+             FROM branches b
+             LEFT JOIN branch_inventory_items bi ON bi.branch_id = b.id
+             LEFT JOIN inventory_items ii ON ii.id = bi.inventory_item_id
+             ${where}
+             GROUP BY b.id, b.name
+             ORDER BY b.name`,
+            params,
+          );
+        }, []),
+        this.safe(() => {
+          const params: any[] = [];
+          const clause = this.branchClause(branchIds, 'b.id', params);
+          return this.sql<any>(
+            `SELECT ii.name AS item, b.name AS branch,
+                    bi.current_stock AS stock, bi.minimum_stock AS minimum
+             FROM branch_inventory_items bi
+             JOIN branches b ON b.id = bi.branch_id
+             JOIN inventory_items ii ON ii.id = bi.inventory_item_id
+             WHERE bi.minimum_stock > 0 AND bi.current_stock <= bi.minimum_stock${clause}
+             ORDER BY (bi.current_stock - bi.minimum_stock) ASC
+             LIMIT 50`,
+            params,
+          );
+        }, []),
         this.safe(
           () =>
             this.sql<any>(
@@ -846,35 +904,40 @@ export class InsightsService {
         // Best-selling products from POS/order sales (restaurants sell via
         // orders, not invoices — so this, not invoice-based topItems, is the
         // real "best performing product").
-        this.safe(
-          () =>
-            this.sql<any>(
-              `SELECT ii.name AS product,
-                      COALESCE(SUM(oi.quantity_base), 0) AS units,
-                      COALESCE(SUM(oi.total_price), 0) AS revenue
-               FROM order_items oi
-               JOIN inventory_items ii ON ii.id = oi.inventory_item_id
-               GROUP BY ii.name
-               ORDER BY revenue DESC
-               LIMIT 10`,
-            ),
-          [],
-        ),
+        this.safe(() => {
+          const params: any[] = [];
+          const clause = this.branchClause(branchIds, 'o.branch_id', params);
+          return this.sql<any>(
+            `SELECT ii.name AS product,
+                    COALESCE(SUM(oi.quantity_base), 0) AS units,
+                    COALESCE(SUM(oi.total_price), 0) AS revenue
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+             JOIN inventory_items ii ON ii.id = oi.inventory_item_id
+             WHERE o.status <> 'cancelled'${clause}
+             GROUP BY ii.name
+             ORDER BY revenue DESC
+             LIMIT 10`,
+            params,
+          );
+        }, []),
         // Best-performing staff: the user who rang up the most sales (orders).
-        this.safe(
-          () =>
-            this.sql<any>(
-              `SELECT u.name AS staff,
-                      COALESCE(SUM(o.total_amount), 0) AS revenue,
-                      COUNT(*) AS orders
-               FROM orders o
-               JOIN users u ON u.id = o.user_id
-               GROUP BY u.name
-               ORDER BY revenue DESC
-               LIMIT 5`,
-            ),
-          [],
-        ),
+        this.safe(() => {
+          const params: any[] = [];
+          const clause = this.branchClause(branchIds, 'o.branch_id', params);
+          return this.sql<any>(
+            `SELECT u.name AS staff,
+                    COALESCE(SUM(o.total_amount), 0) AS revenue,
+                    COUNT(*) AS orders
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             WHERE o.status <> 'cancelled'${clause}
+             GROUP BY u.name
+             ORDER BY revenue DESC
+             LIMIT 5`,
+            params,
+          );
+        }, []),
       ]);
 
     return {
@@ -920,7 +983,9 @@ export class InsightsService {
    * The AI only chooses WHICH table to show (by key); the app supplies the real
    * rows here — the model never fabricates table data.
    */
-  private async buildTables(): Promise<
+  private async buildTables(
+    branchIds: string[] | null = null,
+  ): Promise<
     Record<
       string,
       { title: string; description: string; columns: string[]; rows: (string | number)[][] }
@@ -933,20 +998,22 @@ export class InsightsService {
     const round = (n: number) => Math.round(Number(n || 0) * 100) / 100;
 
     // Sales per product per branch (units + revenue), pivoted into a matrix.
-    const salesRows = await this.safe(
-      () =>
-        this.sql<any>(
-          `SELECT ii.name AS product, b.name AS branch,
-                  COALESCE(SUM(oi.quantity_base), 0) AS units,
-                  COALESCE(SUM(oi.total_price), 0) AS revenue
-           FROM order_items oi
-           JOIN orders o ON o.id = oi.order_id
-           JOIN branches b ON b.id = o.branch_id
-           JOIN inventory_items ii ON ii.id = oi.inventory_item_id
-           GROUP BY ii.name, b.name`,
-        ),
-      [],
-    );
+    const salesRows = await this.safe(() => {
+      const params: any[] = [];
+      const clause = this.branchClause(branchIds, 'o.branch_id', params);
+      return this.sql<any>(
+        `SELECT ii.name AS product, b.name AS branch,
+                COALESCE(SUM(oi.quantity_base), 0) AS units,
+                COALESCE(SUM(oi.total_price), 0) AS revenue
+         FROM order_items oi
+         JOIN orders o ON o.id = oi.order_id
+         JOIN branches b ON b.id = o.branch_id
+         JOIN inventory_items ii ON ii.id = oi.inventory_item_id
+         WHERE o.status <> 'cancelled'${clause}
+         GROUP BY ii.name, b.name`,
+        params,
+      );
+    }, []);
     if (salesRows.length > 0) {
       const branches = [...new Set(salesRows.map((r: any) => r.branch).filter(Boolean))].sort();
       const products = [...new Set(salesRows.map((r: any) => r.product).filter(Boolean))];
@@ -977,16 +1044,18 @@ export class InsightsService {
     }
 
     // Current stock per product per branch.
-    const stockRows = await this.safe(
-      () =>
-        this.sql<any>(
-          `SELECT ii.name AS product, b.name AS branch, bi.current_stock AS stock
-           FROM branch_inventory_items bi
-           JOIN branches b ON b.id = bi.branch_id
-           JOIN inventory_items ii ON ii.id = bi.inventory_item_id`,
-        ),
-      [],
-    );
+    const stockRows = await this.safe(() => {
+      const params: any[] = [];
+      const clause = this.branchClause(branchIds, 'b.id', params);
+      return this.sql<any>(
+        `SELECT ii.name AS product, b.name AS branch, bi.current_stock AS stock
+         FROM branch_inventory_items bi
+         JOIN branches b ON b.id = bi.branch_id
+         JOIN inventory_items ii ON ii.id = bi.inventory_item_id
+         ${clause ? `WHERE 1=1${clause}` : ''}`,
+        params,
+      );
+    }, []);
     if (stockRows.length > 0) {
       const branches = [...new Set(stockRows.map((r: any) => r.branch).filter(Boolean))].sort();
       const products = [...new Set(stockRows.map((r: any) => r.product).filter(Boolean))];
@@ -1216,16 +1285,187 @@ export class InsightsService {
   }
 
   /**
-   * Kuza Copilot: answers a plain-language question using the full business
-   * snapshot (financial digest + branches, stock, apps) as context. Never
-   * throws — degraded states come back as { available: false, message }.
+   * Cross-module workforce snapshot (People/HR + payroll) so the copilot can
+   * answer HR questions and cross-module ones like "can I afford another
+   * employee?" — which need headcount + payroll cost alongside cash/profit.
+   * Every figure degrades to 0 when the People app's tables are absent.
+   * Business-wide (not branch-scoped): HR is org-level, employees carry no
+   * branch_id (only an optional location_id).
    */
-  async ask(question: string) {
-    const [digest, biz, tables] = await Promise.all([
-      this.getDigest(),
-      this.getBusinessContext(),
-      this.buildTables(),
+  private async getWorkforceContext() {
+    const [head, salaries, lastPayroll] = await Promise.all([
+      this.safe(() => this.employeeCount(), 0),
+      this.safe(
+        () =>
+          this.sql<any>(
+            `SELECT COALESCE(SUM(gross_salary), 0) AS monthly_cost,
+                    COALESCE(AVG(gross_salary), 0) AS avg_salary,
+                    COUNT(*) AS on_payroll
+             FROM employee_salaries
+             WHERE is_active = true`,
+          ),
+        [{ monthly_cost: '0', avg_salary: '0', on_payroll: '0' }],
+      ),
+      this.safe(
+        () =>
+          this.sql<any>(
+            `SELECT COALESCE(SUM(net_pay), 0) AS net, MAX(pay_date) AS last_pay_date
+             FROM payrolls
+             WHERE pay_period_start = (SELECT MAX(pay_period_start) FROM payrolls)`,
+          ),
+        [{ net: '0', last_pay_date: null }],
+      ),
     ]);
+
+    return {
+      headcount: head,
+      onPayroll: Number(salaries?.[0]?.on_payroll || 0),
+      monthlyPayrollCost: Number(salaries?.[0]?.monthly_cost || 0),
+      averageSalary: Number(salaries?.[0]?.avg_salary || 0),
+      lastPayrollNet: Number(lastPayroll?.[0]?.net || 0),
+      lastPayrollDate: lastPayroll?.[0]?.last_pay_date ?? null,
+    };
+  }
+
+  /**
+   * Map a question to the ONE app whose vocabulary it clearly needs, so the
+   * copilot can tell the owner an app is off (D3) instead of hallucinating.
+   * Deliberately conservative: only strongly app-specific phrasing matches, so
+   * broad "how is my business doing" questions are never wrongly gated.
+   */
+  private requiredAppForQuestion(question: string): AppKey | null {
+    const s = question.toLowerCase();
+    const rules: Array<{ app: AppKey; re: RegExp }> = [
+      { app: 'people', re: /\b(payroll|salar(y|ies)|employee|staff wage|headcount|hire|hiring|attendance|leave request|hr\b|human resource|wage bill)\b/ },
+      { app: 'books', re: /\b(ledger|journal entry|balance sheet|trial balance|chart of accounts|profit and loss|p&l|income statement|reconcile|double.?entry|accounting)\b/ },
+      { app: 'invoicing', re: /\b(invoice|receivable|debtor|who owes|money owed|unpaid bill|accounts receivable|\bar\b)\b/ },
+      { app: 'rms', re: /\b(menu|dish|dine.?in|table reservation|waiter|kitchen|restaurant)\b/ },
+      { app: 'payments', re: /\b(payment gateway|settlement|card payment|mobile money|payout|payment transaction)\b/ },
+      { app: 'market', re: /\b(marketplace|supplier network|b2b order|sourcing)\b/ },
+      { app: 'items', re: /\b(stock level|inventory|reorder|sku|warehouse|restock|out of stock)\b/ },
+    ];
+    for (const r of rules) if (r.re.test(s)) return r.app;
+    return null;
+  }
+
+  /**
+   * Resolve the branch scope for an ask, honouring BranchScopeService semantics
+   * and inferring a branch from the question text when none is passed. Returns
+   * `denied` when the caller asks about a branch outside their allowed set.
+   */
+  private async resolveBranchScope(
+    opts: AskOptions,
+    question: string,
+  ): Promise<ResolvedBranchScope> {
+    // allowed: null = all branches (admin/unscoped), [] = none, [...] = subset.
+    const allowed = await this.safe(
+      () => this.branchScope.allowedBranchIds(opts.actor),
+      null,
+    );
+
+    // All branches the caller may see, for name matching + access checks.
+    const params: any[] = [];
+    const clause =
+      allowed === null ? '' : `WHERE id = ANY($${(params.push(allowed), params.length)})`;
+    const branches = await this.safe(
+      () =>
+        this.sql<{ id: string; name: string }>(
+          `SELECT id, name FROM branches ${clause} ORDER BY name`,
+          params,
+        ),
+      [],
+    );
+    const inAllowed = (id: string) => allowed === null || allowed.includes(id);
+
+    // 1) Explicit branch id from the UI.
+    if (opts.branchId) {
+      const match = branches.find((b) => b.id === opts.branchId);
+      if (!inAllowed(opts.branchId) || !match) {
+        return {
+          branchIds: allowed,
+          label: allowed === null ? 'all branches' : 'your branches',
+          denied: opts.branchId,
+        };
+      }
+      return { branchIds: [match.id], label: `branch ${match.name}` };
+    }
+
+    // 2) Infer a branch mentioned by name in the question (word-boundary match).
+    const q = question.toLowerCase();
+    const named = branches.find(
+      (b) => b.name && new RegExp(`\\b${this.escapeRegex(b.name.toLowerCase())}\\b`).test(q),
+    );
+    if (named) return { branchIds: [named.id], label: `branch ${named.name}` };
+
+    // 3) General question — scope to everything the caller may see.
+    return {
+      branchIds: allowed,
+      label: allowed === null ? 'all branches' : 'your assigned branches',
+    };
+  }
+
+  private escapeRegex(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Effective apps (Business.enabledApps ∩ plan-allowed) via BillingService,
+   * degrading to null (treat as "all enabled") when the tenant context is
+   * missing or the lookup fails — the copilot must never hard-fail on this.
+   */
+  private async getEffectiveApps(opts: AskOptions): Promise<AppKey[] | null> {
+    if (!opts.tenantId || !opts.schemaName) return null;
+    return this.safe(
+      () => this.billing.getEffectiveApps(opts.tenantId!, opts.schemaName!),
+      null,
+    );
+  }
+
+  /**
+   * Kuza Copilot: answers a plain-language question using the full business
+   * snapshot (financial digest + branches, stock, apps, workforce) as context,
+   * scoped to the caller's allowed branches and aware of which apps are on.
+   * Never throws — degraded states come back as { available: false, message }.
+   */
+  async ask(question: string, opts: AskOptions = {}) {
+    // Effective apps (Business.enabledApps ∩ plan-allowed). null = unknown →
+    // treat as "all enabled" so the copilot never hard-fails on billing.
+    const effectiveApps = await this.getEffectiveApps(opts);
+
+    // Subscription-awareness (D3): if the question clearly needs an app the
+    // tenant is not subscribed to, say so helpfully instead of hallucinating.
+    const requiredApp = this.requiredAppForQuestion(question);
+    if (requiredApp) {
+      if (effectiveApps !== null && !effectiveApps.includes(requiredApp)) {
+        const name = getApp(requiredApp)?.name ?? requiredApp;
+        return {
+          available: true,
+          answer:
+            `That question needs the ${name} app, which isn't enabled for your business yet. ` +
+            `You can turn it on under Settings → Apps (it may require a plan upgrade). ` +
+            `Once ${name} is on, ask me again and I'll answer from your real data.`,
+          requiresApp: requiredApp,
+        };
+      }
+    }
+
+    const scope = await this.resolveBranchScope(opts, question);
+
+    const [digest, biz, tables, workforce] = await Promise.all([
+      this.getDigest(),
+      this.getBusinessContext(scope.branchIds),
+      this.buildTables(scope.branchIds),
+      this.getWorkforceContext(),
+    ]);
+
+    if (scope.denied) {
+      return {
+        available: true,
+        answer:
+          "You don't have access to that branch, so I can't show its figures. " +
+          'Ask about a branch you are assigned to, or ask your admin for access.',
+      };
+    }
 
     // Deterministic, code-computed answers for common factual questions — always
     // correct and crisp, independent of the model's reasoning ability.
@@ -1252,14 +1492,33 @@ export class InsightsService {
           .join('\n')}`
       : 'No data tables are available right now — do not include a table.';
 
+    // Cross-module affordability block (D2): everything the model needs to
+    // reason about "can I afford another employee?" in one place — cash on
+    // hand, this month's profit, current monthly payroll cost and average pay.
+    const financialCapacity = {
+      cashOnHand: digest.cashPosition?.amount ?? 0,
+      profitThisMonth: digest.profitThisMonth?.profit ?? 0,
+      monthlyPayrollCost: workforce.monthlyPayrollCost,
+      averageSalaryPerEmployee: workforce.averageSalary,
+      headcount: workforce.headcount,
+    };
+
+    // Effective apps drive the enabledApps line so the model matches D3's
+    // pre-check; falls back to the Business.enabledApps display list.
+    const effectiveAppNames =
+      effectiveApps !== null
+        ? effectiveApps.map((k) => getApp(k)?.name ?? k)
+        : biz.enabledApps;
+
     const context = [
       `Business name: ${digest.businessName}`,
       `Business type/edition: ${biz.businessType ?? 'unknown'}`,
       `Currency: ${digest.currency}`,
       `Number of branches: ${biz.branchCount}`,
-      `Enabled apps (features currently turned ON): ${biz.enabledApps.join(', ')}${biz.allAppsEnabled ? ' (all apps)' : ''}`,
-      `Full business snapshot (JSON — financials, branches, per-branch stock, low stock, inventory, restaurant):`,
-      JSON.stringify({ ...digest, ...biz }),
+      `Scope of this answer: ${scope.label} (all money/finance figures below are business-wide; branches, per-branch stock, sales, top products/staff are limited to this scope).`,
+      `Enabled apps (features currently turned ON): ${effectiveAppNames.join(', ')}${biz.allAppsEnabled && effectiveApps === null ? ' (all apps)' : ''}`,
+      `Full business snapshot (JSON — financials, branches, per-branch stock, low stock, inventory, restaurant, workforce/HR & payroll, and a financialCapacity block for affordability questions):`,
+      JSON.stringify({ ...digest, ...biz, workforce, financialCapacity }),
       '',
       seriesBlock,
       '',
@@ -1280,6 +1539,12 @@ export class InsightsService {
         'items, inventory totals, cash, profit, sales, debtors, and more. When ' +
         'asked "how many branches", "what is low in branch X", or similar, read ' +
         'the exact numbers from the snapshot and answer precisely. ' +
+        'For cross-module questions like "can I afford to hire someone?", use the ' +
+        '"financialCapacity" block (cash on hand, profit this month, current ' +
+        'monthly payroll cost, average salary) and reason it through explicitly. ' +
+        'For people/HR/payroll questions use the "workforce" block. Respect the ' +
+        '"Scope of this answer" line: when scoped to a branch, do not claim to ' +
+        'report other branches. ' +
         'The snapshot lists "enabledApps" — the features currently turned on. ' +
         'ONLY suggest enabling an app if it is genuinely missing from that list; ' +
         'if the relevant app is already enabled, never tell them to enable it. ' +

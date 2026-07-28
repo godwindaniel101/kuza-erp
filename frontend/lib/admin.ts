@@ -100,6 +100,41 @@ export interface AdminTenantDetail extends AdminTenant {
   accessRequests?: AdminAccessRequest[];
 }
 
+/** One app row in the pricing editor (GET /admin/pricing). */
+export interface AdminPricingApp {
+  key: string;
+  name: string;
+  group: 'vertical' | 'common' | 'assist';
+  description?: string;
+  /** Assists (ai, market) are never payable — their price stays 0. */
+  isAssist: boolean;
+  /** Monthly price keyed by currency; may be sparse. */
+  prices: Record<string, number>;
+}
+
+/** The full à-la-carte pricing config (GET /admin/pricing). */
+export interface AdminPricing {
+  currencies: string[];
+  includedBranches: number;
+  includedUsers: number;
+  usagePrices: {
+    branch: Record<string, number>;
+    user: Record<string, number>;
+  };
+  apps: AdminPricingApp[];
+}
+
+/** Partial pricing update payload (PUT /admin/pricing). */
+export interface AdminPricingUpdate {
+  appPrices?: Record<string, Record<string, number>>;
+  usagePrices?: {
+    branch?: Record<string, number>;
+    user?: Record<string, number>;
+  };
+  includedBranches?: number;
+  includedUsers?: number;
+}
+
 interface ApiEnvelope<T> {
   success?: boolean;
   data?: T;
@@ -201,6 +236,18 @@ export const adminApi = {
   /** Deactivate (soft-delete) a plan. */
   async deletePlan(code: string): Promise<void> {
     await api.delete(`/admin/plans/${encodeURIComponent(code)}`);
+  },
+
+  /** À-la-carte pricing config (super-admin). */
+  async getPricing(): Promise<AdminPricing | undefined> {
+    const res = await api.get<ApiEnvelope<AdminPricing>>('/admin/pricing');
+    return unwrap<AdminPricing>(res);
+  },
+
+  /** Update the platform pricing config; returns the refreshed config. */
+  async updatePricing(input: AdminPricingUpdate): Promise<AdminPricing | undefined> {
+    const res = await api.put<ApiEnvelope<AdminPricing>>('/admin/pricing', input);
+    return unwrap<AdminPricing>(res);
   },
 };
 

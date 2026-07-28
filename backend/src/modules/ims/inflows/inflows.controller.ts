@@ -27,7 +27,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - Inventory Inflows")
 @Controller("ims/inflows")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items")
+@RequireApp("items", "rms")
 @ApiBearerAuth()
 export class InflowsController {
   constructor(

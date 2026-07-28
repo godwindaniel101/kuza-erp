@@ -268,6 +268,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
           { href: '/settings', label: tr('nav.general', 'General'), icon: 'cog', exact: true },
           { href: '/settings/invitations', label: tr('invitations', 'Invitations'), icon: 'envelope', permission: 'invitations.view' },
           { href: '/settings/apps', label: tr('apps', 'Apps'), icon: 'squares-2x2', permission: 'settings.view' },
+          { href: '/settings/api', label: tr('nav.apiAccess', 'API access'), icon: 'key', permission: 'settings.view' },
           { href: '/settings/billing', label: tr('billing', 'Billing'), icon: 'credit-card', permission: 'settings.view' },
         ],
       },

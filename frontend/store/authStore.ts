@@ -8,7 +8,15 @@ interface AuthStore {
   isLoading: boolean;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
+  completeOnboarding: (payload: {
+    token: string;
+    businessName: string;
+    name?: string;
+    businessType?: string;
+    country?: string;
+    enabledApps?: string[];
+  }) => Promise<void>;
   register: (data: {
     name: string;
     email: string;
@@ -47,11 +55,27 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   login: async (email, password) => {
     const data = await authService.login(email, password);
+    // Non-session outcomes (unverified email, or verified-but-business-less
+    // needing onboarding) — surface to the caller without marking authenticated.
+    if ((data as any)?.needsOnboarding || (data as any)?.needsVerification) {
+      return data;
+    }
+    set({
+      user: (data as any).user,
+      token: (data as any).token,
+      isAuthenticated: true,
+      isLoading: false, // Ensure loading is false after login
+    });
+    return data;
+  },
+
+  completeOnboarding: async (payload) => {
+    const data = await authService.completeOnboarding(payload);
     set({
       user: data.user,
       token: data.token,
       isAuthenticated: true,
-      isLoading: false, // Ensure loading is false after login
+      isLoading: false,
     });
   },
 

@@ -20,7 +20,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - UOM Conversions")
 @Controller("ims/uom-conversions")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items")
+@RequireApp("items", "rms")
 @ApiBearerAuth()
 export class UomConversionsController {
   constructor(private readonly conversionsService: UomConversionsService) {}

@@ -99,16 +99,23 @@ function classifyError(err: any): { status: AiStatus; message: string } {
   };
 }
 
-export async function askCopilot(question: string): Promise<CopilotResult> {
+export async function askCopilot(
+  question: string,
+  branchId?: string,
+): Promise<CopilotResult> {
   const trimmed = question.trim();
   if (!trimmed) {
     return { status: 'error', message: 'Please enter a question.' };
   }
 
   try {
+    // Only send branchId when a specific branch is chosen; omitting it lets the
+    // backend answer across all branches the caller can see.
+    const body: { question: string; branchId?: string } = { question: trimmed };
+    if (branchId) body.branchId = branchId;
     // Bounded above the backend LLM timeout (OLLAMA_TIMEOUT, default 30s) so an
     // unreachable model resolves to "unavailable" instead of loading forever.
-    const raw = await api.post('/insights/copilot', { question: trimmed }, { timeout: 40000 });
+    const raw = await api.post('/insights/copilot', body, { timeout: 40000 });
     const payload = unwrap(raw);
 
     if (looksUnavailable(raw) || looksUnavailable(payload)) {
@@ -179,6 +186,41 @@ function normalizeChart(chart: any): CopilotChart | undefined {
       ? chart.title.trim()
       : 'Chart';
   return { type, title, points };
+}
+
+/** A branch the caller can scope the copilot to. */
+export interface CopilotBranch {
+  id: string;
+  name: string;
+}
+
+/**
+ * Fetch the branches the current user can scope the copilot to. Relies on the
+ * backend's existing per-user scoping (GET /settings/branches returns only the
+ * branches the caller may see). Never throws — on any failure (e.g. the user
+ * lacks branches.view) it returns [], so the copilot simply shows "All
+ * branches" with no picker.
+ */
+export async function fetchCopilotBranches(): Promise<CopilotBranch[]> {
+  try {
+    const raw = await api.get('/settings/branches');
+    const payload = unwrap(raw);
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(raw?.data)
+      ? raw.data
+      : [];
+    return list
+      .filter((b: any) => b && b.id != null)
+      .map((b: any) => ({
+        id: String(b.id),
+        name: String(b.name ?? 'Branch').trim() || 'Branch',
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchInsightsSummary(): Promise<SummaryResult> {

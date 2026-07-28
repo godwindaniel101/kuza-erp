@@ -1,245 +1,397 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
-import { api } from '@/lib/api';
 import { useTenantStore } from '@/store/globalStore';
 import Toast from '@/components/Toast';
-import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
-import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
-import { formatDate, formatNumber } from '@/lib/format';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { formatMoney } from '@/lib/format';
+import {
+  getPricing,
+  quote as fetchQuote,
+  getSubscription,
+  checkoutQuote,
+  type Pricing,
+  type PricingApp,
+  type Quote,
+  type Subscription,
+  type AppGroup,
+} from '@/lib/billing';
 
-type PlanCode = 'FREE' | 'STARTER' | 'GROWTH' | 'ENTERPRISE';
-type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
-
-interface PlanLimits {
-  maxUsers: number;
-  maxBranches: number;
-  maxItems: number;
-  modules: string[];
-}
-
-interface Plan {
-  id: string;
-  code: PlanCode;
-  name: string;
-  monthlyPriceUsd: number;
-  /** Price in the tenant's currency (from the registration country). */
-  localPrice?: { currency: string; amount: number };
-  description?: string;
-  limits: PlanLimits;
-}
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  NGN: '₦',
-  GHS: 'GH₵',
-  KES: 'KSh',
-  XOF: 'CFA',
-  USD: '$',
-  GBP: '£',
-  EUR: '€',
+/** Boxicons glyph per known app key, with a sensible per-group fallback. */
+const APP_ICON: Record<string, string> = {
+  items: 'bx-cube',
+  ims: 'bx-cube',
+  rms: 'bx-restaurant',
+  restaurant: 'bx-restaurant',
+  invoicing: 'bx-receipt',
+  sales: 'bx-receipt',
+  books: 'bx-calculator',
+  accounting: 'bx-calculator',
+  people: 'bx-group',
+  hrms: 'bx-group',
+  payments: 'bx-credit-card',
 };
+const GROUP_FALLBACK_ICON: Record<AppGroup, string> = {
+  vertical: 'bx-store',
+  common: 'bx-package',
+  assist: 'bx-bot',
+};
+const appIcon = (app: PricingApp) => APP_ICON[app.key] ?? GROUP_FALLBACK_ICON[app.group];
 
-/** "₦45,000" in the tenant currency; falls back to USD when unlocalized. */
-function planPrice(plan: Plan, decimals = 0): { text: string; amount: number } {
-  const lp = plan.localPrice ?? { currency: 'USD', amount: plan.monthlyPriceUsd };
-  const symbol = CURRENCY_SYMBOLS[lp.currency] ?? `${lp.currency} `;
-  return { text: `${symbol}${formatNumber(lp.amount, decimals)}`, amount: lp.amount };
-}
+const GROUP_ORDER: AppGroup[] = ['vertical', 'common', 'assist'];
 
-/**
- * Pull the Paystack authorization URL (and reference) out of a checkout
- * response, tolerating envelope vs. raw payloads and snake/camel field names.
- */
-function extractCheckout(res: any): { authorizationUrl?: string; reference?: string } {
-  const d = res?.data ?? res ?? {};
-  return {
-    authorizationUrl: d.authorizationUrl ?? d.authorization_url ?? d.url ?? d.checkoutUrl,
-    reference: d.reference ?? d.reference_id ?? d.ref,
-  };
-}
-
-interface Subscription {
-  id: string;
-  status: SubscriptionStatus;
-  trialEndsAt?: string;
-  currentPeriodStart?: string;
-  currentPeriodEnd?: string;
-  plan: Plan;
-}
-
-interface Usage {
-  usage: { users: number; branches: number; items: number };
-  limits: PlanLimits;
-  plan?: Plan;
-}
-
-const statusVariant: Record<SubscriptionStatus, { variant: StatusBadgeVariant; label: string }> = {
+const statusVariant: Record<string, { variant: StatusBadgeVariant; label: string }> = {
   TRIALING: { variant: 'info', label: 'Trialing' },
   ACTIVE: { variant: 'success', label: 'Active' },
+  EXPIRED: { variant: 'error', label: 'Expired' },
   PAST_DUE: { variant: 'warning', label: 'Past due' },
   CANCELED: { variant: 'error', label: 'Canceled' },
 };
 
-const limitLabel = (value: number, t: (key: string, fallback: string) => string) =>
-  value === -1 ? t('settings.unlimited', 'Unlimited') : formatNumber(value);
+interface StepperProps {
+  label: string;
+  value: number;
+  min: number;
+  included: number;
+  unitPrice: number;
+  currency: string;
+  onChange: (v: number) => void;
+}
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+function Stepper({ label, value, min, included, unitPrice, currency, onChange }: StepperProps) {
   const { t } = useTranslation('common');
-  const unlimited = limit === -1;
-  const pct = unlimited || limit === 0 ? 0 : Math.min(100, Math.round((used / limit) * 100));
-  const nearLimit = !unlimited && pct >= 90;
   return (
-    <div>
-      <div className="flex items-center justify-between text-sm mb-1">
-        <span className="font-medium text-gray-700 dark:text-gray-300">{label}</span>
-        <span className={`${nearLimit ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-          {formatNumber(used)} / {limitLabel(limit, t)}
-        </span>
+    <div className="flex items-center justify-between gap-4 py-3">
+      <div>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          {t('settings.includedThenEach', '{{count}} included, then {{price}}/mo each', {
+            count: included,
+            price: formatMoney(unitPrice, currency),
+          })}
+        </p>
       </div>
-      <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-        {unlimited ? (
-          <div className="h-full w-full bg-gradient-to-r from-green-400 to-green-500 dark:from-green-600 dark:to-green-500 opacity-40" />
-        ) : (
-          <div
-            className={`h-full rounded-full transition-all ${nearLimit ? 'bg-red-500' : 'bg-brand-500 dark:bg-brand-400'}`}
-            style={{ width: `${pct}%` }}
-          />
-        )}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={t('settings.decrease', 'Decrease')}
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={value <= min}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <i className="bx bx-minus" aria-hidden="true"></i>
+        </button>
+        <input
+          type="number"
+          value={value}
+          min={min}
+          onChange={(e) => {
+            const n = parseInt(e.target.value, 10);
+            onChange(Number.isNaN(n) ? min : Math.max(min, n));
+          }}
+          className="w-14 h-8 text-center text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        />
+        <button
+          type="button"
+          aria-label={t('settings.increase', 'Increase')}
+          onClick={() => onChange(value + 1)}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+        >
+          <i className="bx bx-plus" aria-hidden="true"></i>
+        </button>
       </div>
     </div>
   );
 }
 
-const moduleLabel = (module: string) =>
-  module
-    .replace(/[_-]/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+interface AppToggleProps {
+  app: PricingApp;
+  selected: boolean;
+  disabled: boolean;
+  disabledReason?: string;
+  currency: string;
+  onToggle: () => void;
+}
+
+function AppToggle({ app, selected, disabled, disabledReason, currency, onToggle }: AppToggleProps) {
+  const { t } = useTranslation('common');
+  const isFree = app.price <= 0;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      aria-pressed={selected}
+      title={disabled ? disabledReason : undefined}
+      className={`relative text-left rounded-xl ring-1 p-4 transition-colors ${
+        selected
+          ? 'bg-brand-50/60 dark:bg-brand-500/10 ring-brand-400 dark:ring-brand-600'
+          : 'bg-white dark:bg-gray-900 ring-gray-200 dark:ring-gray-800 hover:ring-gray-300 dark:hover:ring-gray-700'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-lg text-lg ${
+            selected
+              ? 'bg-brand-gradient text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <i className={`bx ${appIcon(app)}`} aria-hidden="true"></i>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{app.name}</p>
+            <span
+              className={`shrink-0 h-4 w-4 inline-flex items-center justify-center rounded-full border ${
+                selected
+                  ? 'bg-brand-gradient border-transparent text-white'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+            >
+              {selected && <i className="bx bx-check text-[11px]" aria-hidden="true"></i>}
+            </span>
+          </div>
+          {app.description && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{app.description}</p>
+          )}
+          <p className="text-xs font-medium mt-2 text-gray-700 dark:text-gray-300">
+            {isFree ? (
+              <span className="text-green-600 dark:text-green-400">{t('settings.free', 'Free')}</span>
+            ) : (
+              <>
+                {formatMoney(app.price, currency)}
+                <span className="text-gray-400">{t('settings.perMonthShort', '/mo')}</span>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
 
 export default function BillingPage() {
   const { t } = useTranslation('common');
   const router = useRouter();
   const fetchTenantContext = useTenantStore((s) => s.fetchTenantContext);
-  const [plans, setPlans] = useState<Plan[]>([]);
+
+  const [pricing, setPricing] = useState<Pricing | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [switchTarget, setSwitchTarget] = useState<Plan | null>(null);
-  const [switching, setSwitching] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [branches, setBranches] = useState(1);
+  const [users, setUsers] = useState(1);
+
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
-    const [plansRes, subRes, usageRes] = await Promise.allSettled([
-      api.get<{ success: boolean; data: Plan[] }>('/billing/plans'),
-      api.get<{ success: boolean; data: Subscription }>('/billing/subscription'),
-      api.get<{ success: boolean; data: Usage }>('/billing/usage'),
-    ]);
-    if (plansRes.status === 'fulfilled' && plansRes.value.success) setPlans(plansRes.value.data || []);
-    if (subRes.status === 'fulfilled' && subRes.value.success) setSubscription(subRes.value.data);
-    if (usageRes.status === 'fulfilled' && usageRes.value.success) setUsage(usageRes.value.data);
-    if ([plansRes, subRes, usageRes].some((r) => r.status === 'rejected')) {
+    const [pricingRes, subRes] = await Promise.allSettled([getPricing(), getSubscription()]);
+
+    let pr: Pricing | null = null;
+    if (pricingRes.status === 'fulfilled') {
+      pr = pricingRes.value;
+      setPricing(pr);
+    }
+    const sub = subRes.status === 'fulfilled' ? subRes.value : null;
+    if (sub) setSubscription(sub);
+
+    if (pr) {
+      // Seed the builder from the current subscription, else from plan defaults.
+      const seedApps = sub?.selectedApps ?? [];
+      setSelected(new Set(seedApps));
+      setBranches(Math.max(pr.includedBranches, sub?.branches ?? pr.usage.branch ?? pr.includedBranches));
+      setUsers(Math.max(pr.includedUsers, sub?.users ?? pr.usage.user ?? pr.includedUsers));
+    }
+
+    if (pricingRes.status === 'rejected') {
+      setFailed(true);
       setToast({ message: t('settings.billingDataLoadFailed', 'Some billing data failed to load'), type: 'error' });
-      if (subRes.status === 'rejected' && plansRes.status === 'rejected') setFailed(true);
+    } else if (subRes.status === 'rejected') {
+      setToast({ message: t('settings.billingDataLoadFailed', 'Some billing data failed to load'), type: 'error' });
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // Handle the return from Paystack (?payment=success|cancelled). Activation is
-  // webhook-driven, so on success we refresh context and re-fetch rather than
-  // trusting the redirect alone. The query is stripped so a refresh won't re-fire.
+  // Return from Paystack. The verified webhook does the real activation, so we
+  // just refresh context + re-fetch rather than trusting the redirect. Strip the
+  // query so a manual refresh won't re-fire the toast.
   useEffect(() => {
     if (!router.isReady) return;
-    const payment = router.query.payment;
-    if (payment !== 'success' && payment !== 'cancelled') return;
-    if (payment === 'success') {
+    const { ref, payment } = router.query;
+    if (!ref && payment !== 'success' && payment !== 'cancelled') return;
+    if (payment === 'cancelled') {
+      setToast({ message: t('settings.paymentCancelled', 'Payment cancelled — your plan was not changed.'), type: 'info' });
+    } else {
       setToast({ message: t('settings.paymentReceived', 'Payment received — your plan is being activated.'), type: 'success' });
       fetchTenantContext(true);
       load();
-    } else {
-      setToast({ message: t('settings.paymentCancelled', 'Payment cancelled — your plan was not changed.'), type: 'info' });
     }
-    const { payment: _p, reference: _r, ...rest } = router.query;
+    const { ref: _ref, payment: _p, reference: _r, ...rest } = router.query;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, router.query.payment]);
+  }, [router.isReady, router.query.ref, router.query.payment]);
 
-  const handleSwitch = async () => {
-    if (!switchTarget) return;
-    setSwitching(true);
-    const isPaid = (switchTarget.monthlyPriceUsd ?? 0) > 0;
-    try {
-      if (isPaid) {
-        // Paid upgrade: start a Paystack checkout and hand off. The plan is
-        // activated by the verified webhook, not by this redirect.
-        const res = await api.post('/billing/subscription/checkout', {
-          planCode: switchTarget.code,
-        });
-        const { authorizationUrl } = extractCheckout(res);
-        if (!authorizationUrl) throw new Error(t('settings.couldNotStartCheckout', 'Could not start checkout. Please try again.'));
-        window.location.href = authorizationUrl;
-        return; // navigating away — keep the switching state
+  const appsByKey = useMemo(() => {
+    const m = new Map<string, PricingApp>();
+    (pricing?.apps ?? []).forEach((a) => m.set(a.key, a));
+    return m;
+  }, [pricing]);
+
+  const nonAssistSelected = useMemo(
+    () => Array.from(selected).some((k) => appsByKey.get(k)?.group !== 'assist'),
+    [selected, appsByKey],
+  );
+
+  const toggleApp = useCallback(
+    (app: PricingApp) => {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(app.key)) {
+          next.delete(app.key);
+        } else {
+          next.add(app.key);
+          // Exclusivity: drop any already-selected sibling in the same group.
+          if (app.exclusiveGroup) {
+            for (const other of pricing?.apps ?? []) {
+              if (other.key !== app.key && other.exclusiveGroup === app.exclusiveGroup) {
+                next.delete(other.key);
+              }
+            }
+          }
+        }
+        // Assists require at least one non-assist app — drop them if none remain.
+        const stillHasNonAssist = Array.from(next).some((k) => appsByKey.get(k)?.group !== 'assist');
+        if (!stillHasNonAssist) {
+          for (const k of Array.from(next)) {
+            if (appsByKey.get(k)?.group === 'assist') next.delete(k);
+          }
+        }
+        return next;
+      });
+    },
+    [pricing, appsByKey],
+  );
+
+  // Debounced live quote on any change to the selection / steppers.
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!pricing) return;
+    const apps = Array.from(selected);
+    if (apps.length === 0) {
+      setQuote(null);
+      setQuoting(false);
+      return;
+    }
+    setQuoting(true);
+    if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    quoteTimer.current = setTimeout(async () => {
+      try {
+        const q = await fetchQuote({ apps, branches, users });
+        setQuote(q);
+      } catch {
+        setQuote(null);
+        setToast({ message: t('settings.quoteFailed', 'Could not calculate your quote'), type: 'error' });
+      } finally {
+        setQuoting(false);
       }
-      // Free plan: instant change, no payment.
-      await api.post('/billing/subscription/change', { planCode: switchTarget.code });
-      setToast({ message: t('settings.switchedToPlan', 'Switched to the {{name}} plan', { name: switchTarget.name }), type: 'success' });
-      setSwitchTarget(null);
-      await fetchTenantContext(true);
-      await load();
-      setSwitching(false);
+    }, 300);
+    return () => {
+      if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricing, selected, branches, users]);
+
+  const handleSubscribe = async () => {
+    if (!nonAssistSelected) return;
+    setSubscribing(true);
+    try {
+      const res = await checkoutQuote({ apps: Array.from(selected), branches, users });
+      if (res.free) {
+        setToast({ message: t('settings.subscriptionUpdated', 'Your subscription has been updated.'), type: 'success' });
+        setSubscription(res.subscription);
+        await fetchTenantContext(true);
+        await load();
+        setSubscribing(false);
+      } else {
+        // Navigating away to Paystack — keep the subscribing state on the button.
+        window.location.href = res.authorizationUrl;
+      }
     } catch (err: any) {
       setToast({
-        message: err.response?.data?.message || err?.message || t('settings.failedToSwitchPlan', 'Failed to switch plan'),
+        message: err?.response?.data?.message || err?.message || t('settings.checkoutFailed', 'Could not start checkout. Please try again.'),
         type: 'error',
       });
-      setSwitching(false);
+      setSubscribing(false);
     }
   };
 
-  const trialDaysLeft = (() => {
-    if (subscription?.status !== 'TRIALING' || !subscription.trialEndsAt) return null;
-    const ms = new Date(subscription.trialEndsAt).getTime() - Date.now();
-    return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
-  })();
+  const currency = pricing?.currency ?? subscription?.currency ?? 'NGN';
+  const status = subscription ? statusVariant[subscription.status] : null;
+  const isExpired = subscription?.status === 'EXPIRED' || subscription?.status === 'CANCELED' || subscription?.status === 'PAST_DUE';
+  const isActive = subscription?.status === 'ACTIVE';
 
-  const status = subscription ? statusVariant[subscription.status] ?? statusVariant.ACTIVE : null;
-  const currentPlanCode = subscription?.plan?.code;
+  const grouped = useMemo(() => {
+    const g: Record<AppGroup, PricingApp[]> = { vertical: [], common: [], assist: [] };
+    (pricing?.apps ?? []).forEach((a) => g[a.group]?.push(a));
+    return g;
+  }, [pricing]);
 
-  const statusLabels: Record<SubscriptionStatus, string> = {
-    TRIALING: t('settings.statusTrialing', 'Trialing'),
-    ACTIVE: t('active', 'Active'),
-    PAST_DUE: t('settings.statusPastDue', 'Past due'),
-    CANCELED: t('settings.statusCanceled', 'Canceled'),
+  const groupTitle: Record<AppGroup, string> = {
+    vertical: t('settings.groupVerticals', 'Verticals'),
+    common: t('settings.groupCommon', 'Common'),
+    assist: t('settings.groupAssist', 'Assist'),
+  };
+  const groupSubtitle: Record<AppGroup, string> = {
+    vertical: t('settings.groupVerticalsHint', 'Pick the one that matches your business'),
+    common: t('settings.groupCommonHint', 'Add-ons that work across any business'),
+    assist: t('settings.groupAssistHint', 'AI helpers — free with any paid app'),
   };
 
+  // Exclusivity groups that already have a selection (used to disable siblings).
+  const lockedExclusiveGroups = useMemo(() => {
+    const locked = new Set<string>();
+    Array.from(selected).forEach((k) => {
+      const a = appsByKey.get(k);
+      if (a?.exclusiveGroup) locked.add(a.exclusiveGroup);
+    });
+    return locked;
+  }, [selected, appsByKey]);
+
   return (
-    <div className="w-full max-w-5xl space-y-5">
+    <div className="w-full max-w-6xl space-y-5">
       <PageHeader
-        title={t('settings.billingTitle', 'Billing & Plans')}
-        subtitle={t('settings.billingSubtitle', 'Your subscription, usage and available plans')}
+        title={t('settings.planBuilderTitle', 'Build your plan')}
+        subtitle={t('settings.planBuilderSubtitle', 'Pick the apps you need and pay only for those')}
         breadcrumbs={[{ label: t('settings', 'Settings'), href: '/settings' }, { label: t('settings.billing', 'Billing') }]}
       />
 
       {loading ? (
-        <div className="w-full max-w-5xl space-y-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <CardSkeleton count={2} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
           </div>
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-80 w-full" />
         </div>
-      ) : failed ? (
+      ) : failed || !pricing ? (
         <EmptyState
           icon="bx-error-circle"
           title={t('settings.billingLoadError', 'Could not load billing information')}
@@ -252,177 +404,171 @@ export default function BillingPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-            {/* Current plan card */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('settings.currentPlanLabel', 'Current Plan')}</p>
-                  <h2 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white mt-1">
-                    {subscription?.plan?.name || t('settings.noPlan', 'No plan')}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {subscription?.plan
-                      ? planPrice(subscription.plan).amount > 0
-                        ? t('settings.pricePerMonth', '{{price}} / month', { price: planPrice(subscription.plan).text })
-                        : t('settings.free', 'Free')
-                      : ''}
-                  </p>
-                </div>
-                {status && subscription && <StatusBadge variant={status.variant} label={statusLabels[subscription.status] ?? status.label} />}
-              </div>
-              {subscription?.status === 'TRIALING' && trialDaysLeft != null && (
-                <div className="mb-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                  <i className="bx bx-time-five" aria-hidden="true"></i>
-                  {trialDaysLeft === 0
-                    ? t('settings.trialEndsToday', 'Your trial ends today')
-                    : t('settings.trialDaysLeft', '{{count}} day{{plural}} left in your trial', { count: trialDaysLeft, plural: trialDaysLeft === 1 ? '' : 's' })}
-                  {subscription.trialEndsAt && <span>{t('settings.trialEndsDate', '(ends {{date}})', { date: formatDate(subscription.trialEndsAt) })}</span>}
-                </div>
-              )}
-              {subscription?.currentPeriodStart && subscription?.currentPeriodEnd && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('settings.currentPeriod', 'Current period: {{start}} – {{end}}', { start: formatDate(subscription.currentPeriodStart), end: formatDate(subscription.currentPeriodEnd) })}
-                </p>
-              )}
-              {subscription?.plan?.description && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{subscription.plan.description}</p>
-              )}
+          {/* Status banners */}
+          {isExpired && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-300 flex items-center gap-2">
+              <i className="bx bx-error-circle text-lg" aria-hidden="true"></i>
+              {t('settings.trialEndedBanner', 'Your free trial has ended — pick your apps to continue.')}
             </div>
-
-            {/* Usage card */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">{t('settings.usage', 'Usage')}</p>
-              {usage ? (
-                <div className="space-y-4">
-                  <UsageBar label={t('settings.users', 'Users')} used={usage.usage.users} limit={usage.limits.maxUsers} />
-                  <UsageBar label={t('settings.branches', 'Branches')} used={usage.usage.branches} limit={usage.limits.maxBranches} />
-                  <UsageBar label={t('settings.items', 'Items')} used={usage.usage.items} limit={usage.limits.maxItems} />
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.usageUnavailable', 'Usage information is unavailable.')}</p>
-              )}
+          )}
+          {subscription?.status === 'TRIALING' && (
+            <div className="px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
+              <i className="bx bx-time-five text-lg" aria-hidden="true"></i>
+              {t('settings.trialActiveBanner', "You're on a free trial. Choose your apps below whenever you're ready to continue.")}
             </div>
-          </div>
+          )}
 
-          {/* Plan comparison grid */}
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('settings.allPlans', 'All Plans')}</h2>
-          {plans.length === 0 ? (
-            <EmptyState icon="bx-package" title={t('settings.noPlansAvailable', 'No plans available')} description={t('settings.plansNotLoaded', 'Plans could not be loaded')} />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {plans.map((plan) => {
-                const isCurrent = plan.code === currentPlanCode;
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+            {/* Builder */}
+            <div className="lg:col-span-2 space-y-6">
+              {GROUP_ORDER.map((group) => {
+                const apps = grouped[group];
+                if (!apps || apps.length === 0) return null;
+                const assistLocked = group === 'assist' && !nonAssistSelected;
                 return (
-                  <div
-                    key={plan.id}
-                    className={`rounded-xl ring-1 p-5 flex flex-col ${
-                      isCurrent
-                        ? 'bg-brand-50/50 dark:bg-brand-500/10 ring-brand-300 dark:ring-brand-700'
-                        : 'bg-white dark:bg-gray-900 ring-gray-200 dark:ring-gray-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{plan.name}</h3>
-                      {isCurrent && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-                          <i className="bx bx-check" aria-hidden="true"></i>
-                          {t('settings.current', 'Current')}
-                        </span>
-                      )}
+                  <section key={group}>
+                    <div className="mb-2">
+                      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{groupTitle[group]}</h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{groupSubtitle[group]}</p>
                     </div>
-                    <p className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
-                      {planPrice(plan).amount > 0 ? (
-                        <>
-                          {planPrice(plan).text}
-                          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t('settings.perMonthShort', '/mo')}</span>
-                        </>
-                      ) : (
-                        t('settings.free', 'Free')
-                      )}
-                    </p>
-                    {plan.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{plan.description}</p>
-                    )}
-                    <ul className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-300 flex-1">
-                      <li className="flex items-center gap-2">
-                        <i className="bx bx-user text-gray-400" aria-hidden="true"></i>
-                        {t('settings.usersCount', '{{value}} users', { value: limitLabel(plan.limits.maxUsers, t) })}
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <i className="bx bx-git-branch text-gray-400" aria-hidden="true"></i>
-                        {t('settings.branchesCount', '{{value}} branches', { value: limitLabel(plan.limits.maxBranches, t) })}
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <i className="bx bx-box text-gray-400" aria-hidden="true"></i>
-                        {t('settings.itemsCount', '{{value}} items', { value: limitLabel(plan.limits.maxItems, t) })}
-                      </li>
-                      {(plan.limits.modules || []).map((module) => (
-                        <li key={module} className="flex items-center gap-2">
-                          <i className="bx bx-check text-green-500" aria-hidden="true"></i>
-                          {moduleLabel(module)}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {apps.map((app) => {
+                        const isSelected = selected.has(app.key);
+                        const exclusiveLocked =
+                          !isSelected &&
+                          !!app.exclusiveGroup &&
+                          lockedExclusiveGroups.has(app.exclusiveGroup);
+                        const disabled = (assistLocked && !isSelected) || exclusiveLocked;
+                        const reason = assistLocked
+                          ? t('settings.assistNeedsApp', 'Select a paid app first')
+                          : exclusiveLocked
+                            ? t('settings.exclusiveLocked', 'Not available with your current selection')
+                            : undefined;
+                        return (
+                          <AppToggle
+                            key={app.key}
+                            app={app}
+                            selected={isSelected}
+                            disabled={disabled}
+                            disabledReason={reason}
+                            currency={currency}
+                            onToggle={() => toggleApp(app)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+
+              {/* Capacity */}
+              <section>
+                <div className="mb-2">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('settings.capacity', 'Capacity')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings.capacityHint', 'Branches and team members on your account')}</p>
+                </div>
+                <div className="rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 bg-white dark:bg-gray-900 px-4 divide-y divide-gray-100 dark:divide-gray-800">
+                  <Stepper
+                    label={t('settings.branches', 'Branches')}
+                    value={branches}
+                    min={pricing.includedBranches}
+                    included={pricing.includedBranches}
+                    unitPrice={quote?.lines.find((l) => l.key === 'branch')?.unit ?? 0}
+                    currency={currency}
+                    onChange={setBranches}
+                  />
+                  <Stepper
+                    label={t('settings.users', 'Users')}
+                    value={users}
+                    min={pricing.includedUsers}
+                    included={pricing.includedUsers}
+                    unitPrice={quote?.lines.find((l) => l.key === 'user')?.unit ?? 0}
+                    currency={currency}
+                    onChange={setUsers}
+                  />
+                </div>
+              </section>
+            </div>
+
+            {/* Live quote summary (sticky) */}
+            <div className="lg:sticky lg:top-4">
+              <div className="rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 bg-white dark:bg-gray-900 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('settings.yourPlan', 'Your plan')}</h2>
+                  {status && subscription && (
+                    <StatusBadge variant={status.variant} label={status.label} size="sm" />
+                  )}
+                </div>
+
+                {isActive && subscription?.amountMajor != null && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                    {t('settings.currentlyPaying', 'Currently {{price}}/mo', {
+                      price: formatMoney(subscription.amountMajor, subscription.currency ?? currency),
+                    })}
+                  </p>
+                )}
+
+                {selected.size === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
+                    {t('settings.selectAppsToQuote', 'Select apps to see your monthly price.')}
+                  </p>
+                ) : (
+                  <>
+                    <ul className="space-y-2.5 mb-4">
+                      {(quote?.lines ?? []).map((line) => (
+                        <li key={`${line.kind}-${line.key}`} className="flex items-start justify-between gap-3 text-sm">
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {line.label}
+                            {line.kind === 'usage' && line.qty > 0 && (
+                              <span className="text-gray-400 dark:text-gray-500">
+                                {' '}
+                                ({line.qty} × {formatMoney(line.unit, currency)})
+                              </span>
+                            )}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-gray-900 dark:text-gray-100">
+                            {line.amount > 0 ? formatMoney(line.amount, currency) : t('settings.free', 'Free')}
+                          </span>
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      variant="primary"
-                      onClick={() => setSwitchTarget(plan)}
-                      disabled={isCurrent}
-                      className="mt-5 w-full"
-                    >
-                      {isCurrent ? t('settings.currentPlan', 'Current plan') : t('settings.switchPlan', 'Switch plan')}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+                    <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('settings.totalPerMonth', 'Total / month')}</span>
+                      <span className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white tabular-nums">
+                        {quoting && !quote ? (
+                          <span className="inline-block h-5 w-20 rounded bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                        ) : (
+                          formatMoney(quote?.total ?? 0, currency)
+                        )}
+                      </span>
+                    </div>
+                  </>
+                )}
 
-      {/* Switch plan confirm */}
-      <Modal isOpen={!!switchTarget} onClose={() => setSwitchTarget(null)} title={t('settings.switchPlanTitle', 'Switch Plan')} maxWidth="md">
-        {switchTarget && (
-          <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              {t('settings.switchFrom', 'Switch from')} <strong className="text-gray-900 dark:text-gray-100">{subscription?.plan?.name || t('settings.yourCurrentPlan', 'your current plan')}</strong>{' '}
-              {t('settings.switchTo', 'to')} <strong className="text-gray-900 dark:text-gray-100">{switchTarget.name}</strong>
-              {switchTarget.monthlyPriceUsd > 0
-                ? t('settings.atPricePerMonth', ' at ${{price}}/month?', { price: formatNumber(switchTarget.monthlyPriceUsd, 2) })
-                : t('settings.freeQuestion', ' (free)?')}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
-              {switchTarget.monthlyPriceUsd > 0
-                ? t('settings.paystackRedirectNote', "You'll be redirected to Paystack to complete payment. Your plan activates once payment is confirmed.")
-                : t('settings.downgradeNote', "Plan limits apply immediately. Downgrading may restrict access to features above the new plan's limits.")}
-            </p>
-            <div className="flex justify-end space-x-3 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setSwitchTarget(null)}
-                disabled={switching}
-              >
-                {t('cancel', 'Cancel')}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={handleSwitch}
-                disabled={switching}
-              >
-                {switching
-                  ? switchTarget.monthlyPriceUsd > 0
-                    ? t('settings.redirecting', 'Redirecting...')
-                    : t('settings.switching', 'Switching...')
-                  : switchTarget.monthlyPriceUsd > 0
-                    ? t('settings.continueToPayment', 'Continue to payment')
-                    : t('settings.confirmSwitch', 'Confirm Switch')}
-              </Button>
+                <Button
+                  variant="primary"
+                  className="mt-5 w-full"
+                  loading={subscribing}
+                  disabled={!nonAssistSelected || subscribing}
+                  onClick={handleSubscribe}
+                >
+                  {isActive
+                    ? t('settings.updatePlan', 'Update plan')
+                    : t('settings.subscribe', 'Subscribe')}
+                </Button>
+                {!nonAssistSelected && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
+                    {t('settings.pickOneApp', 'Pick at least one paid app to continue.')}
+                  </p>
+                )}
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center mt-3 leading-relaxed">
+                  {t('settings.paystackSecured', 'Payments are securely processed by Paystack. Billed monthly, cancel anytime.')}
+                </p>
+              </div>
             </div>
           </div>
-        )}
-      </Modal>
+        </>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

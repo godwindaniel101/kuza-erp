@@ -14,6 +14,8 @@ import { BillingService } from './billing.service';
 import { ChangePlanDto } from './dto/change-plan.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import { UpdateAppDto } from './dto/update-app.dto';
+import { QuoteDto } from './dto/quote.dto';
+import { CheckoutQuoteDto } from './dto/checkout-quote.dto';
 import { CreateAccessRequestDto } from './dto/create-access-request.dto';
 import { AccessRequestStatus } from './entities/app-access-request.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -65,6 +67,42 @@ export class BillingController {
     const data = await this.billingService.checkout(
       req.user.tenantId,
       dto.planCode,
+      req.user,
+    );
+    return { success: true, data };
+  }
+
+  @Get('pricing')
+  @ApiOperation({
+    summary:
+      'À-la-carte pricing catalog in the tenant currency (per-app + usage unit prices, included allowance) for the plan builder',
+  })
+  async getPricing() {
+    const data = await this.billingService.getPricingConfig();
+    return { success: true, data };
+  }
+
+  @Post('pricing/quote')
+  @ApiOperation({
+    summary:
+      'Compute an itemized monthly quote for a selection of apps + branch/user counts (charges nothing)',
+  })
+  async quote(@Body() dto: QuoteDto) {
+    const data = await this.billingService.quote(dto);
+    return { success: true, data };
+  }
+
+  @Post('subscription/checkout-quote')
+  @RequirePermissions('settings.edit')
+  @ApiOperation({
+    summary:
+      'Subscribe to an à-la-carte selection (apps + usage). Zero-total activates instantly; a paid total returns a Paystack authorizationUrl + reference.',
+  })
+  async checkoutQuote(@Request() req: any, @Body() dto: CheckoutQuoteDto) {
+    const data = await this.billingService.checkoutQuote(
+      req.user.tenantId,
+      req.tenant.schemaName,
+      dto,
       req.user,
     );
     return { success: true, data };

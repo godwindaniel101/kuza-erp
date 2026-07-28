@@ -26,11 +26,25 @@ export class SubscriptionPayment extends BaseEntity {
   @Column({ type: 'uuid' })
   tenantId: string;
 
-  @Column({ type: 'uuid' })
-  planId: string;
+  // Nullable: à-la-carte checkouts carry a `selection` instead of a plan.
+  @Column({ type: 'uuid', nullable: true })
+  planId: string | null;
 
-  @Column()
-  planCode: string;
+  @Column({ nullable: true })
+  planCode: string | null;
+
+  /**
+   * À-la-carte selection paid for by this checkout (null for legacy tier
+   * checkouts). Carries the tenant schemaName so the webhook — which has no
+   * tenant/JWT context — can apply the paid apps to the right schema.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  selection: {
+    apps: string[];
+    branches: number;
+    users: number;
+    schemaName: string;
+  } | null;
 
   @Column({ default: 'paystack' })
   provider: string;

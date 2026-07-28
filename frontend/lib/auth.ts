@@ -86,23 +86,95 @@ class AuthService {
 
   async login(email: string, password: string) {
     try {
-      const response = await api.post<{ success: boolean; data: { user: User; token: string } }>(
-        '/auth/login',
-        { email, password },
-      );
-      
+      const response = await api.post<{
+        success: boolean;
+        data: {
+          user?: User;
+          token?: string;
+          needsOnboarding?: boolean;
+          onboardingToken?: string;
+          needsVerification?: boolean;
+        };
+      }>('/auth/login', { email, password });
+
       if (response.success && response.data) {
-        this.setToken(response.data.token);
+        const d = response.data;
+        // Account exists + password ok, but email not verified yet.
+        if (d.needsVerification) {
+          return { needsVerification: true as const };
+        }
+        // Verified account that never finished onboarding → the caller resumes
+        // the wizard with this token; no session cookie is set here.
+        if (d.needsOnboarding && d.onboardingToken) {
+          return { needsOnboarding: true as const, onboardingToken: d.onboardingToken };
+        }
+        this.setToken(d.token as string);
         // Normalize roles/permissions in case backend returns relational data
-        const normalizedUser = this.normalizeUser(response.data.user as any);
+        const normalizedUser = this.normalizeUser(d.user as any);
         this.setUser(normalizedUser as User);
-        return { ...response.data, user: normalizedUser as User };
+        return { ...d, user: normalizedUser as User };
       }
       throw new Error('Login failed');
     } catch (error: any) {
       // Re-throw with original error message
       throw error;
     }
+  }
+
+  /**
+   * Email-first signup (step 1): email + password only. The backend emails a
+   * verification link; no session is created yet.
+   */
+  async signup(email: string, password: string) {
+    return api.post<{ success: boolean; message: string }>('/auth/signup', {
+      email,
+      password,
+    });
+  }
+
+  /**
+   * Verify the email link (step 2). Returns an onboarding token when the
+   * account still needs its business provisioned.
+   */
+  async verifyEmail(token: string) {
+    const response = await api.post<{
+      success: boolean;
+      data: { email: string; needsOnboarding: boolean; onboardingToken: string | null };
+    }>('/auth/verify-email', { token });
+    return response.data;
+  }
+
+  /** Resend the verification link for an unverified account. */
+  async resendVerification(email: string) {
+    return api.post<{ success: boolean; message: string }>(
+      '/auth/resend-verification',
+      { email },
+    );
+  }
+
+  /**
+   * Complete first-run onboarding (step 3): provisions the business/tenant and
+   * returns a full session, which is persisted just like login.
+   */
+  async completeOnboarding(payload: {
+    token: string;
+    businessName: string;
+    name?: string;
+    businessType?: string;
+    country?: string;
+    enabledApps?: string[];
+  }) {
+    const response = await api.post<{
+      success: boolean;
+      data: { user: User; token: string; tenant: any };
+    }>('/auth/onboarding', payload);
+    if (response.success && response.data) {
+      this.setToken(response.data.token);
+      const normalizedUser = this.normalizeUser(response.data.user as any);
+      this.setUser(normalizedUser as User);
+      return { ...response.data, user: normalizedUser as User };
+    }
+    throw new Error('Onboarding failed');
   }
 
   async register(data: {

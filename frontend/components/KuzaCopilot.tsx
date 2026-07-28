@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, useCallback, Fragment } from 'react';
-import { askCopilot, type CopilotChart, type CopilotTable } from '@/lib/insights';
+import {
+  askCopilot,
+  fetchCopilotBranches,
+  type CopilotBranch,
+  type CopilotChart,
+  type CopilotTable,
+} from '@/lib/insights';
 import { useKuzaStore } from '@/store/kuzaStore';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -158,11 +164,25 @@ export default function KuzaCopilot() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [branches, setBranches] = useState<CopilotBranch[]>([]);
+  const [branchId, setBranchId] = useState('');
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const persistReady = useRef(false);
+  const branchesLoaded = useRef(false);
+
+  // Load the caller's branches the first time the panel opens. The backend
+  // returns only the branches this user can see, so non-admins get their
+  // assigned branches (or none). Failures are swallowed → picker just hides.
+  useEffect(() => {
+    if (!open || branchesLoaded.current) return;
+    branchesLoaded.current = true;
+    fetchCopilotBranches()
+      .then(setBranches)
+      .catch(() => setBranches([]));
+  }, [open]);
 
   // Restore this user's chat after mount (client-only, so no SSR mismatch).
   // Blocks the next persist so the initial empty state can't clobber the save.
@@ -235,7 +255,7 @@ export default function KuzaCopilot() {
       setInput('');
       setLoading(true);
 
-      const result = await askCopilot(trimmed);
+      const result = await askCopilot(trimmed, branchId || undefined);
 
       const assistantMsg: ChatMessage =
         result.status === 'ok'
@@ -261,7 +281,7 @@ export default function KuzaCopilot() {
       setMessages((prev) => [...prev, assistantMsg]);
       setLoading(false);
     },
-    [loading],
+    [loading, branchId],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -337,6 +357,37 @@ export default function KuzaCopilot() {
             </button>
           </div>
         </div>
+
+        {/* Branch scope — only when the user has branches to choose from. */}
+        {branches.length > 0 && (
+          <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+            <label
+              htmlFor="kuza-branch"
+              className="shrink-0 text-[11px] font-medium text-gray-500 dark:text-gray-400"
+            >
+              Scope
+            </label>
+            <div className="relative min-w-0 flex-1">
+              <select
+                id="kuza-branch"
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full cursor-pointer appearance-none truncate rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-8 text-[12px] text-gray-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                <option value="">All branches</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <i
+                className="bx bx-chevron-down pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-base text-gray-400 dark:text-gray-500"
+                aria-hidden="true"
+              ></i>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div

@@ -38,6 +38,7 @@ import { LandlordModule } from './common/landlord/landlord.module';
 import { TenantModule } from './common/tenant/tenant.module';
 import { BranchScopeModule } from './common/branch-scope/branch-scope.module';
 import { TenantGuard } from './common/tenant/tenant.guard';
+import { TrialLockGuard } from './modules/billing/guards/trial-lock.guard';
 import { TenantTransactionInterceptor } from './common/tenant/tenant-transaction.interceptor';
 import { AppController } from './app.controller';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -120,6 +121,14 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     {
       provide: APP_GUARD,
       useClass: TenantGuard,
+    },
+    // Trial-lock guard: after the tenant is resolved, blocks WRITE requests for
+    // tenants whose free trial has ended with no paid subscription (read-only
+    // until they pay). Fails open and always allows /billing + /auth so a locked
+    // tenant can reach checkout to recover.
+    {
+      provide: APP_GUARD,
+      useClass: TrialLockGuard,
     },
     // Permissions Guard runs last in the guard chain, after JwtAuthGuard has
     // populated request.user. Global registration closes the "forgotten

@@ -17,19 +17,25 @@ import { BillingService } from '../billing.service';
 export const REQUIRE_MODULE_KEY = 'require_module';
 
 /**
- * Gate a controller (or handler) behind an app from the canonical registry
- * (common/apps/app-registry.ts), e.g.:
+ * Gate a controller (or handler) behind one OR MORE apps from the canonical
+ * registry (common/apps/app-registry.ts), e.g.:
  *
  *   @UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
- *   @RequireApp('books')
+ *   @RequireApp('books')            // single app
+ *   @RequireApp('items', 'rms')     // any-of: shared stock core — either vertical
  *
- * The guard checks the key against the tenant's EFFECTIVE apps:
+ * With several keys the check is ANY-OF: the handler passes if the tenant has
+ * at least one of them effective. This is how the shared stock core is exposed
+ * to both the Inventory (items) and Restaurant (rms) verticals without coupling
+ * them (stock is a reusable core owned by no app).
+ *
+ * The keys are checked against the tenant's EFFECTIVE apps:
  * (Business.enabledApps ?? legacy-all) ∩ apps allowed by the plan — see
  * BillingService.getEffectiveApps. TRIALING subscriptions pass the plan side
  * entirely but still respect the business's own enabledApps.
  */
-export const RequireApp = (appKey: AppKey | string) =>
-  SetMetadata(REQUIRE_MODULE_KEY, appKey);
+export const RequireApp = (...appKeys: (AppKey | string)[]) =>
+  SetMetadata(REQUIRE_MODULE_KEY, appKeys);
 
 /**
  * @deprecated Backward-compatible alias for pre-apps-model call sites.
@@ -46,12 +52,15 @@ export class FeatureGateGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredKey = this.reflector.getAllAndOverride<string>(
+    // Metadata is an array of keys (RequireApp is variadic). Tolerate a bare
+    // string from any legacy call site.
+    const meta = this.reflector.getAllAndOverride<string | string[]>(
       REQUIRE_MODULE_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredKey) {
+    const requiredKeys = Array.isArray(meta) ? meta : meta ? [meta] : [];
+    if (requiredKeys.length === 0) {
       return true;
     }
 
@@ -65,10 +74,13 @@ export class FeatureGateGuard implements CanActivate {
       return false;
     }
 
-    // Canonical key → itself; legacy plan-module key → its apps (any-of).
-    const requiredApps: string[] = (APP_KEYS as string[]).includes(requiredKey)
-      ? [requiredKey]
-      : (LEGACY_PLAN_MODULE_TO_APPS[requiredKey] ?? [requiredKey]);
+    // Expand each key: canonical → itself; legacy plan-module key → its apps.
+    // The union is checked ANY-OF (having one required app is enough).
+    const requiredApps: string[] = requiredKeys.flatMap((key) =>
+      (APP_KEYS as string[]).includes(key)
+        ? [key]
+        : (LEGACY_PLAN_MODULE_TO_APPS[key] ?? [key]),
+    );
 
     const effective: string[] = await this.billingService.getEffectiveApps(
       tenantId,
