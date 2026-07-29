@@ -410,7 +410,7 @@ export default function Home() {
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-leaf shadow-card">
               <Sparkle width={15} height={15} /> The AI operating system for business
             </span>
-            <h1 className="mt-5 font-display text-[2.6rem] font-extrabold leading-[1.05] text-forest sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="mt-5 font-display text-[2.2rem] font-extrabold leading-[1.05] text-forest sm:text-[2.55rem] lg:text-[3rem]">
               Run your whole business — and let Kuza sell for you, wherever you sell.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">

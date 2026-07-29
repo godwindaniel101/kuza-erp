@@ -8,7 +8,7 @@ const d = (s: number) => ({ animationDelay: `${s}s` });
 
 export default function HeroDemo() {
   return (
-    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+    <div className="relative mx-auto w-full max-w-sm lg:max-w-[85%]">
       <div className="rounded-3xl border border-line bg-white p-4 shadow-lift sm:p-5">
         {/* Chat panel */}
         <div className="rounded-2xl bg-paper p-3.5 sm:p-4">
