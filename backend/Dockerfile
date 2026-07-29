@@ -1,3 +1,4 @@
+# Deployed by GitHub Actions — per-service, keyless via WIF (.github/workflows/deploy.yml)
 # Build stage
 FROM node:20-alpine AS builder
 
