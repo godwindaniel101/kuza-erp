@@ -1,22 +1,46 @@
-# Kuza marketing site — Next.js + React (same stack as the portal), built to a
-# static export and served by nginx on :8080. Two-stage build.
+FROM node:20-alpine AS base
 
-# ---- build stage: compile the Next.js app to static HTML in /app/out ----
-FROM node:20-alpine AS build
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Set production environment for build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the application (Next standalone output)
 RUN npm run build
 
-# ---- serve stage: nginx serves the static export ----
-FROM nginx:alpine
-# The whole site is now Next.js (public/ -> out/, hashed CSS/JS in out/_next).
-COPY --from=build /app/out /usr/share/nginx/html
-# Clean URLs (/restaurant -> restaurant.html) + gzip + caching.
-COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
 
-EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -q -O /dev/null http://localhost:80/ || exit 1
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy the standalone build
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]

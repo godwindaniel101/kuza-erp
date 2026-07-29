@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+@theme {
+  /* Kuza marketing palette — dashboard blue + cool slate on warm paper.
+     Token NAMES are inherited from the earlier green build so every page
+     re-tints automatically; only the VALUES changed.
+       forest / forest-deep  → deep navy surfaces + heading ink (branded dark)
+       leaf / leaf-dark      → the blue accent (buttons, links, primary)
+       mint                  → soft blue accent tint (pills, hovers)
+       amber / amber-deep    → the lighter blue used on dark surfaces + marks */
+  --color-ink: #111827;
+  --color-forest: #0f1e46;
+  --color-forest-deep: #0a1533;
+  --color-leaf: #2563eb;
+  --color-leaf-dark: #1d4ed8;
+  --color-mint: #e8f0ff;
+  --color-paper: #faf9f7;
+  --color-line: #e5e7eb;
+  --color-muted: #6b7280;
+  --color-amber: #60a5fa;
+  --color-amber-deep: #1d4ed8;
+
+  /* Semantic (separate from accent) — success stays emerald */
+  --color-success: #059669;
+  --color-success-soft: #ecfdf5;
+
+  --font-display: var(--font-bricolage);
+  --font-body: var(--font-figtree);
+
+  /* Navy-tinted elevation (rgb 23 32 68) */
+  --shadow-card: 0 1px 2px rgb(23 32 68 / 0.03), 0 12px 32px -12px rgb(23 32 68 / 0.1);
+  --shadow-lift: 0 1px 2px rgb(23 32 68 / 0.04), 0 20px 44px -16px rgb(23 32 68 / 0.16);
+}
+
+/* The one gradient — reach for it on hero/CTA/proof surfaces only */
+.bg-brand-gradient {
+  background: linear-gradient(120deg, #3b82f6, #2563eb);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--color-ink);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--color-mint);
+  color: var(--color-leaf-dark);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-leaf);
+  outline-offset: 2px;
+}
+
+/* ---- The one authored motion moment: a DM becomes an order ---- */
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tick-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.demo-seq > * {
+  opacity: 0;
+  animation: bubble-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.demo-row {
+  opacity: 0;
+  animation: row-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.demo-tick {
+  opacity: 0;
+  animation: tick-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Below-fold section reveal (added by ScrollFx; visible-by-default) */
+.fx-pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.fx-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- Staggered child reveal (pairs with the section-level ScrollFx classes) ----
+   The hidden start-state is scoped to .fx-pending, which is JS-added only. So
+   with no JS, above-the-fold sections, or reduced motion, children stay visible;
+   only a below-fold section that scrolls in hides then rises its children in,
+   each a beat after the last (per-card transition-delay is set inline). */
+section.fx-pending .stagger-child {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+section.fx-in .stagger-child {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Card lift used by the modules & industries grids. */
+.card-lift {
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* ---- Hero copy: one orchestrated on-load rise, staggered top to bottom ---- */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-rise > * {
+  opacity: 0;
+  animation: hero-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.hero-rise > *:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.hero-rise > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.hero-rise > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.hero-rise > *:nth-child(4) {
+  animation-delay: 0.28s;
+}
+.hero-rise > *:nth-child(5) {
+  animation-delay: 0.36s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .demo-seq > *,
+  .demo-row,
+  .demo-tick,
+  .stagger-child,
+  .hero-rise > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .card-lift {
+    transition: none;
+  }
+  .card-lift:hover {
+    transform: none;
+  }
+}

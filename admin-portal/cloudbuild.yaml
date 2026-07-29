@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Cloud Build — kuza-admin-portal (super-admin console, Next standalone).
+# Trigger SCOPED to admin-portal/** (see CLOUDBUILD.md).
+# NEXT_PUBLIC_API_URL is baked at BUILD time — passed as a --build-arg.
+# ─────────────────────────────────────────────────────────────────────────
+substitutions:
+  _REGION: europe-west1
+  _AR_REPO: kuza
+  _SERVICE: kuza-admin-portal
+  _NEXT_PUBLIC_API_URL: ""             # backend public URL (set on the trigger)
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/admin-portal:$SHORT_SHA'
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - admin-portal/Dockerfile
+      - --build-arg
+      - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
+      - -t
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/admin-portal:$SHORT_SHA'
+      - admin-portal
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/admin-portal:$SHORT_SHA'
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        gcloud run deploy ${_SERVICE} \
+          --image '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/admin-portal:$SHORT_SHA' \
+          --region ${_REGION} --platform managed --allow-unauthenticated \
+          --port 8080 --memory 512Mi --cpu 1 \
+          --min-instances 0 --max-instances 2 --concurrency 80 \
+          --set-env-vars NODE_ENV=production,NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}

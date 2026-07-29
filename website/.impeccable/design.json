@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-29T00:00:00Z",
+  "title": "Design System: Kuza Marketing Site",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#14201a", "tonalRamp": ["oklch(15% 0.02 165)", "oklch(25% 0.03 165)", "oklch(35% 0.03 165)", "oklch(48% 0.03 165)", "oklch(62% 0.03 165)", "oklch(75% 0.02 165)", "oklch(87% 0.015 165)", "oklch(95% 0.01 165)"] },
+      "forest": { "role": "primary", "displayName": "Forest", "canonical": "#0a3d2c", "tonalRamp": ["#072b1f", "#0a3d2c", "#095436", "#0c6b45", "#2e8560", "#5ea888", "#a5cfba", "#eaf4ee"] },
+      "forest-deep": { "role": "primary", "displayName": "Forest Deep", "canonical": "#072b1f", "tonalRamp": ["#04180f", "#072b1f", "#0a3d2c", "#095436", "#0c6b45", "#2e8560", "#a5cfba", "#eaf4ee"] },
+      "leaf": { "role": "primary", "displayName": "Leaf", "canonical": "#0c6b45", "tonalRamp": ["#072b1f", "#0a3d2c", "#095436", "#0c6b45", "#2e8560", "#5ea888", "#a5cfba", "#eaf4ee"] },
+      "leaf-dark": { "role": "primary", "displayName": "Leaf Dark", "canonical": "#095436", "tonalRamp": ["#072b1f", "#0a3d2c", "#095436", "#0c6b45", "#2e8560", "#5ea888", "#a5cfba", "#eaf4ee"] },
+      "amber": { "role": "secondary", "displayName": "Amber", "canonical": "#ffb020", "tonalRamp": ["#3d2800", "#8a5a00", "#b87c00", "#e09a0a", "#ffb020", "#ffc24d", "#ffd98c", "#fff3d6"] },
+      "amber-deep": { "role": "secondary", "displayName": "Amber Deep", "canonical": "#8a5a00", "tonalRamp": ["#3d2800", "#8a5a00", "#b87c00", "#e09a0a", "#ffb020", "#ffc24d", "#ffd98c", "#fff3d6"] },
+      "mint": { "role": "neutral", "displayName": "Mint", "canonical": "#eaf4ee", "tonalRamp": ["#0a3d2c", "#0c6b45", "#2e8560", "#5ea888", "#8cc0a5", "#b8d9c6", "#d6e8dd", "#eaf4ee"] },
+      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#f5f7f4", "tonalRamp": ["#14201a", "#2c3a32", "#4b5b53", "#7a8a80", "#a8b5ac", "#cdd6cf", "#e3e9e4", "#f5f7f4"] },
+      "line": { "role": "neutral", "displayName": "Line", "canonical": "#e3e9e4", "tonalRamp": ["#14201a", "#2c3a32", "#4b5b53", "#7a8a80", "#a8b5ac", "#cdd6cf", "#e3e9e4", "#f5f7f4"] },
+      "muted": { "role": "neutral", "displayName": "Muted", "canonical": "#4b5b53", "tonalRamp": ["#14201a", "#2c3a32", "#4b5b53", "#7a8a80", "#a8b5ac", "#cdd6cf", "#e3e9e4", "#f5f7f4"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page h1 only — hero headlines, 800 weight, line-height 1.05, -0.02em, text-wrap balance." },
+      "headline": { "displayName": "Headline", "purpose": "Section h2 — forest on light grounds, white on forest-deep." },
+      "title": { "displayName": "Title", "purpose": "Card, step and mockup headings; amber dt terms on dark bands." },
+      "body": { "displayName": "Body", "purpose": "Figtree; lead paragraphs muted 1.125rem leading-relaxed, capped max-w-xl/2xl." },
+      "label": { "displayName": "Label", "purpose": "Status and roadmap pills, xs semibold; xs muted for Illustrative captions." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 8px 24px -10px rgb(20 32 26 / 0.14)", "purpose": "Resting mockup and industry cards, chat bubbles inside demos." },
+      { "name": "lift", "value": "0 12px 32px -12px rgb(10 61 44 / 0.18)", "purpose": "Primary buttons, hero demo frame, photo frames, card hover state." }
+    ],
+    "motion": [
+      { "name": "ease-authored", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The only easing: hero demo keyframes (bubble-in / row-in / tick-pop, 0.5–0.55s) and ScrollFx section reveal (0.7s). All disabled under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The trial CTA — leaf pill with lift shadow, darkens on hover.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Start free — 14 days, all access</a>",
+      "css": ".ds-btn-primary { display: inline-block; background: #0c6b45; color: #fff; font-family: Figtree, system-ui, sans-serif; font-size: 1rem; font-weight: 600; padding: 14px 28px; border-radius: 9999px; text-decoration: none; box-shadow: 0 12px 32px -12px rgb(10 61 44 / 0.18); transition: background-color 0.15s; } .ds-btn-primary:hover { background: #095436; } .ds-btn-primary:focus-visible { outline: 2px solid #0c6b45; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outline pill that inverts to solid forest on hover.",
+      "html": "<a class=\"ds-btn-secondary\" href=\"#\">Explore industries</a>",
+      "css": ".ds-btn-secondary { display: inline-block; background: transparent; color: #0a3d2c; border: 1px solid #0a3d2c; font-family: Figtree, system-ui, sans-serif; font-size: 1rem; font-weight: 600; padding: 12px 24px; border-radius: 9999px; text-decoration: none; transition: background-color 0.15s, color 0.15s; } .ds-btn-secondary:hover { background: #0a3d2c; color: #fff; } .ds-btn-secondary:focus-visible { outline: 2px solid #0c6b45; outline-offset: 2px; }"
+    },
+    {
+      "name": "Inverse Button (dark bands)",
+      "kind": "button",
+      "refersTo": "button-inverse",
+      "description": "Amber pill used only on forest-deep grounds; hover goes white.",
+      "html": "<a class=\"ds-btn-inverse\" href=\"#\">Start your free trial</a>",
+      "css": ".ds-btn-inverse { display: inline-block; background: #ffb020; color: #14201a; font-family: Figtree, system-ui, sans-serif; font-size: 1rem; font-weight: 600; padding: 16px 32px; border-radius: 9999px; text-decoration: none; transition: background-color 0.15s; } .ds-btn-inverse:hover { background: #fff; } .ds-btn-inverse:focus-visible { outline: 2px solid #ffb020; outline-offset: 2px; }"
+    },
+    {
+      "name": "Amber-Underline Link",
+      "kind": "custom",
+      "description": "The only inline text-link treatment: semibold with a 2px amber underline.",
+      "html": "<a class=\"ds-link\" href=\"#\">Explore accounting</a>",
+      "css": ".ds-link { color: #0c6b45; font-family: Figtree, system-ui, sans-serif; font-weight: 600; text-decoration: underline; text-decoration-color: #ffb020; text-decoration-thickness: 2px; text-underline-offset: 4px; transition: color 0.15s; } .ds-link:hover { color: #0a3d2c; } .ds-link:focus-visible { outline: 2px solid #0c6b45; outline-offset: 2px; }"
+    },
+    {
+      "name": "Live Status Pill",
+      "kind": "chip",
+      "refersTo": "badge-live",
+      "description": "Mint/leaf pill for positive states: Online, Paid, Posted automatically.",
+      "html": "<span class=\"ds-pill-live\">Paid</span>",
+      "css": ".ds-pill-live { display: inline-block; background: #eaf4ee; color: #0c6b45; font-family: Figtree, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Roadmap Pill",
+      "kind": "chip",
+      "refersTo": "badge-roadmap",
+      "description": "Mandatory amber pill on every roadmap or unshipped item.",
+      "html": "<span class=\"ds-pill-roadmap\">On the roadmap — not yet live</span>",
+      "css": ".ds-pill-roadmap { display: inline-block; background: rgb(255 176 32 / 0.2); color: #8a5a00; font-family: Figtree, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Mockup Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The signature evidence frame: white rounded-2xl card, hairline border, card shadow, labeled demo data with tabular Naira figures.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-head\"><p class=\"ds-card-title\">Journal entry · JE-0384</p><span class=\"ds-card-badge\">Posted automatically</span></div><ul class=\"ds-card-rows\"><li><span>Cash</span><span class=\"ds-num\">₦85,000</span></li><li><span>Sales revenue</span><span class=\"ds-num\">₦85,000</span></li></ul><p class=\"ds-card-note\">Illustrative figures</p></div>",
+      "css": ".ds-card { background: #fff; border: 1px solid #e3e9e4; border-radius: 1rem; padding: 20px; box-shadow: 0 8px 24px -10px rgb(20 32 26 / 0.14); font-family: Figtree, system-ui, sans-serif; color: #14201a; max-width: 26rem; } .ds-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; } .ds-card-title { font-size: 0.875rem; font-weight: 600; } .ds-card-badge { background: #eaf4ee; color: #0c6b45; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 9999px; white-space: nowrap; } .ds-card-rows { list-style: none; margin: 16px 0 0; padding: 0; font-size: 0.85rem; font-weight: 500; } .ds-card-rows li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e3e9e4; } .ds-num { font-variant-numeric: tabular-nums; } .ds-card-note { margin: 12px 0 0; font-size: 0.75rem; color: #4b5b53; }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Sticky translucent white bar: lowercase forest wordmark with amber dot, medium links, ghost login + primary pill.",
+      "html": "<header class=\"ds-nav\"><a class=\"ds-nav-mark\" href=\"#\">kuza<span class=\"ds-nav-dot\"></span></a><nav class=\"ds-nav-links\"><a href=\"#\" class=\"ds-nav-link ds-nav-link-active\">Features</a><a href=\"#\" class=\"ds-nav-link\">Kuza AI</a><a href=\"#\" class=\"ds-nav-link\">Pricing</a></nav><div class=\"ds-nav-ctas\"><a href=\"#\" class=\"ds-nav-ghost\">Log in</a><a href=\"#\" class=\"ds-nav-cta\">Start free</a></div></header>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 64px; padding: 0 20px; background: rgb(255 255 255 / 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e3e9e4; font-family: Figtree, system-ui, sans-serif; } .ds-nav-mark { display: flex; align-items: baseline; gap: 2px; font-family: 'Bricolage Grotesque', Figtree, sans-serif; font-size: 1.6rem; font-weight: 700; line-height: 1; color: #0a3d2c; text-decoration: none; letter-spacing: -0.02em; } .ds-nav-dot { width: 8px; height: 8px; border-radius: 9999px; background: #ffb020; } .ds-nav-links { display: flex; gap: 32px; } .ds-nav-link { font-size: 0.95rem; font-weight: 500; color: #14201a; text-decoration: none; transition: color 0.15s; } .ds-nav-link:hover, .ds-nav-link-active { color: #0c6b45; } .ds-nav-ctas { display: flex; align-items: center; gap: 12px; } .ds-nav-ghost { font-size: 0.95rem; font-weight: 600; color: #0a3d2c; padding: 8px 16px; border-radius: 9999px; text-decoration: none; transition: background-color 0.15s; } .ds-nav-ghost:hover { background: #eaf4ee; } .ds-nav-cta { font-size: 0.95rem; font-weight: 600; background: #0c6b45; color: #fff; padding: 10px 20px; border-radius: 9999px; text-decoration: none; box-shadow: 0 12px 32px -12px rgb(10 61 44 / 0.18); transition: background-color 0.15s; } .ds-nav-cta:hover { background: #095436; }"
+    },
+    {
+      "name": "Amber-Dot Bullet",
+      "kind": "custom",
+      "description": "The list marker used in feature bullets and the hero proof strip.",
+      "html": "<ul class=\"ds-dots\"><li><span class=\"ds-dot\"></span>One shared stock core</li><li><span class=\"ds-dot\"></span>Double-entry books, posted automatically</li></ul>",
+      "css": ".ds-dots { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; font-family: Figtree, system-ui, sans-serif; font-size: 1.02rem; color: #14201a; } .ds-dots li { display: flex; gap: 12px; align-items: baseline; } .ds-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 9999px; background: #ffb020; transform: translateY(-1px); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Living Ledger",
+    "overview": "Where the category ships a floating dashboard screenshot, Kuza proves its mechanism live: a WhatsApp DM becomes a structured order, stock movement, ledger row and journal entry in one choreographed sequence. Everything on the site serves that proof — clean, conversion-first SaaS at the Bumpa/Paystack craft bar, executed straight, no vernacular pastiche. The world is deep growth-green and amber on white and off-white grounds, warm African merchant photography, and hand-built product-UI mockups whose demo data is always labeled illustrative. The density is generous and calm: one 72rem container, alternating white and paper bands, split two-column sections that pair an argument with its evidence. Headings carry their own weight — there are no eyebrow labels anywhere. Copy is benefit-led and conversational, Naira-first, and never claims more than the product does.",
+    "keyCharacteristics": [
+      "Mechanism proven live in hand-built product-UI mockups, never dashboard screenshots",
+      "Growth-green (forest/leaf) authority with a single amber accent voice",
+      "Bricolage Grotesque display over Figtree body, tight tracking, balanced headings",
+      "Pill buttons, rounded-2xl/3xl cards, soft green-tinted shadows",
+      "One authored motion moment (hero demo); everything else is restrained reveal",
+      "Radical honesty devices: Illustrative labels, roadmap pills, approval-queue language"
+    ],
+    "rules": [
+      { "name": "The One Accent Voice Rule", "body": "Amber never fills a large surface at full strength. It appears as dots, underlines, highlighted phrases, one inverse button on dark grounds, and 10–20% washes — its rarity is what makes roadmap pills and proof marks legible.", "section": "colors" },
+      { "name": "The Alternating Grounds Rule", "body": "Sections alternate white and paper (#f5f7f4) down the page; forest-deep bands are reserved for trust arguments, page heroes and final CTAs. Mockup cards are always white so they lift off either light ground.", "section": "colors" },
+      { "name": "The No-Eyebrow Rule", "body": "No kicker/eyebrow labels above headings anywhere. The heading carries its own weight; context comes from the copy beneath it.", "section": "typography" },
+      { "name": "The Tabular Money Rule", "body": "Every monetary figure and quantity column is set tabular-nums, in Naira, and accompanied somewhere on the surface by an Illustrative label.", "section": "typography" },
+      { "name": "The Two-Shadow Rule", "body": "Only shadow-card and shadow-lift exist. No new shadow values; if something needs more separation, change its ground or add a line border instead.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do prove the mechanism with a hand-built labeled mockup wherever the category would ship a screenshot — and caption demo data \"Illustrative\".",
+      "Do badge every roadmap or unshipped item with the amber pill (bg-amber/20 text-amber-deep, xs semibold, rounded-full).",
+      "Do set money and quantities tabular-nums, Naira-first, with realistic Nigerian trade names and figures.",
+      "Do alternate white and paper section grounds and reserve forest-deep bands for trust arguments and final CTAs.",
+      "Do use the amber-underline treatment (decoration-amber decoration-2 underline-offset-4) for every inline text link.",
+      "Do keep focus states visible: 2px leaf outline, 2px offset (defined globally)."
+    ],
+    "donts": [
+      "Don't add eyebrow/kicker labels above headings — headings carry their own weight.",
+      "Don't use /img/hausa-girl-carrying-load.avif — it is a watermarked comp, banned from any surface.",
+      "Don't invent a third shadow, a sharp corner, or a non-pill button; the vocabulary is closed (card/lift, rounded-xl→3xl, pills).",
+      "Don't add motion beyond the hero choreography and the ScrollFx reveal, and never motion that survives prefers-reduced-motion.",
+      "Don't fill large surfaces with full-strength amber, and don't put muted (#4b5b53) text on forest grounds — use white at 70–80% opacity there.",
+      "Don't present roadmap capabilities as live, invent customers, or state prices as real — figures are illustrative unless pulled from the pricing model (PRODUCT.md §12–13)."
+    ]
+  }
+}

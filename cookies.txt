@@ -1,7 +1,0 @@
-# HTTrack Website Copier Cookie File
-# This file format is compatible with Netscape cookies
-grey.co	TRUE	/	FALSE	1999999999	_cfuvid	EktAghliG8MfCpPsfTjjSIzdBNdg97EEZbW6Sk2k2zs-1784296727.278906-1.0.1.1-.eOJGvTpQNoRuwuBe3Cl.A8uKN36D5v80Df6MjF9FPE
-grey.co	TRUE	/	FALSE	1999999999	SameSite	None
-moniepoint.com	TRUE	/	FALSE	1999999999	__cf_bm	TFNIx9iWC8XlvuvTVUqK6TwStxbfvG3CDFYNrtVT10c-1784297858.3536375-1.0.1.1-DVXa1xuPcH7AafCKaHeyf5sHLot41E_jw0y83Enm.3ttEK8F6CMWhIP1fgoYGwyjzWxBp4JRXznMtgU0LddopWPWwhi3Ste0wdpuoQ5ScjTZZwXWA5tpU9OVqoW8FsNI
-moniepoint.com	TRUE	/	FALSE	1999999999	SameSite	None
-

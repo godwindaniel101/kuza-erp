@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Cloud Build — kuza-website (public marketing site, Next standalone).
+# Trigger SCOPED to website/** (see CLOUDBUILD.md).
+# The site reads no runtime secrets, so no build-arg is needed.
+# ─────────────────────────────────────────────────────────────────────────
+substitutions:
+  _REGION: europe-west1
+  _AR_REPO: kuza
+  _SERVICE: kuza-website
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/website:$SHORT_SHA'
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - website/Dockerfile
+      - -t
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/website:$SHORT_SHA'
+      - website
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/website:$SHORT_SHA'
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        gcloud run deploy ${_SERVICE} \
+          --image '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/website:$SHORT_SHA' \
+          --region ${_REGION} --platform managed --allow-unauthenticated \
+          --port 8080 --memory 512Mi --cpu 1 \
+          --min-instances 0 --max-instances 2 --concurrency 80
