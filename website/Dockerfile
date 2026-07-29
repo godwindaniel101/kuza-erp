@@ -1,3 +1,4 @@
+# Deployed by GitHub Actions — per-service, keyless via WIF (.github/workflows/deploy.yml)
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
