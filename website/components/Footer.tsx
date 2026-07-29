@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LOGIN_URL, REGISTER_URL } from "@/lib/site";
+import BrandMark from "./BrandMark";
 
 const columns = [
   {
@@ -37,15 +38,15 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-5 py-16 md:px-8">
         <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <Link href="/" aria-label="Kuza home" className="inline-block">
-              {/* light logo for the dark footer */}
-              <img
-                src="/images/logos/kuza_logo_horizontal_dark_blue.svg"
-                alt="Kuza"
-                width={104}
-                height={39}
-                className="h-9 w-auto"
-              />
+            <Link
+              href="/"
+              aria-label="Kuza home"
+              className="inline-flex items-center gap-2"
+            >
+              <BrandMark size={32} className="rounded-[10px]" />
+              <span className="font-display text-2xl font-bold tracking-tight text-white">
+                kuza
+              </span>
             </Link>
             <p className="mt-4 max-w-xs text-[0.95rem] leading-relaxed text-white/70">
               The AI operating system that runs your business and sells for you.

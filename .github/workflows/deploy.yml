@@ -1,16 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────
-# Deploy to Cloud Run (monorepo, per-service, path-filtered).
+# Deploy to Cloud Run — controlled entirely from git.
 #
 # On push to `main`, only the services whose files changed are rebuilt and
-# deployed independently:
-#   backend/**       → build image → run DB migrations (Cloud Run Job) → deploy
-#   user-portal/**   → build image → deploy
-#   admin-portal/**  → build image → deploy
+# deployed (the per-service scoping lives in the `changes` job below, in this
+# file — not in the Cloud console). A `website/**` push deploys ONLY the website.
 #
-# Auth: Workload Identity Federation (no long-lived keys). DB creds/JWT/API keys
-# come from Secret Manager, mapped in at deploy time — never stored in this repo.
+# Deploy uses `gcloud run services update --image`, so the env vars, Cloud SQL
+# connection and secrets already set on each service are preserved — the
+# pipeline only swaps the image. The only secrets GitHub needs are the two WIF
+# values (how GitHub authenticates to Google Cloud); everything else is here.
 #
-# One-time setup + the required repo Variables/Secrets are documented in DEPLOY.md.
+# To add tests later: add a `test` job and make each deploy job
+# `needs: [changes, test]` so a failing test blocks the deploy.
 # ─────────────────────────────────────────────────────────────────────────
 name: deploy
 
@@ -24,24 +25,27 @@ permissions:
   id-token: write # required for Workload Identity Federation
 
 env:
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ vars.GCP_REGION }}
-  # Artifact Registry Docker repo, e.g. REGION-docker.pkg.dev/PROJECT/kuza
-  AR_HOST: ${{ vars.GCP_REGION }}-docker.pkg.dev
-  AR_REPO: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.AR_REPO }}
-  CLOUD_SQL_INSTANCE: ${{ vars.CLOUD_SQL_INSTANCE }} # PROJECT:REGION:INSTANCE
+  PROJECT_ID: kuza-503911
+  REGION: africa-south1
+  AR: africa-south1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
+  # Backend public URL — baked into the portals' bundle at build time.
+  NEXT_PUBLIC_API_URL: https://kuza-backend-1017126847769.africa-south1.run.app
+  # Operator-portal origin — the website's Sign in / Start free redirect target.
+  NEXT_PUBLIC_APP_URL: https://kuza.iyenogun.com
 
 jobs:
+  # Per-service change detection — this is the deployment control, in git.
   changes:
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      user-portal: ${{ steps.filter.outputs.user-portal }}
-      admin-portal: ${{ steps.filter.outputs.admin-portal }}
+      backend: ${{ steps.f.outputs.backend }}
+      user-portal: ${{ steps.f.outputs.user-portal }}
+      admin-portal: ${{ steps.f.outputs.admin-portal }}
+      website: ${{ steps.f.outputs.website }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
-        id: filter
+        id: f
         with:
           filters: |
             backend:
@@ -50,56 +54,30 @@ jobs:
               - 'user-portal/**'
             admin-portal:
               - 'admin-portal/**'
+            website:
+              - 'website/**'
 
-  # ─────────────────────────── BACKEND (API + migrations) ───────────────────
+  # ── Add test / lint jobs here later, then add them to each deploy's `needs` ──
+
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - id: auth
-        uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v2
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker "$AR_HOST" --quiet
-
-      - name: Build & push image
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build, push & deploy
         run: |
-          IMAGE="$AR_REPO/backend:${{ github.sha }}"
-          docker build -f backend/Dockerfile -t "$IMAGE" backend
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          IMG="$AR/kuza-backend:${{ github.sha }}"
+          docker build -f backend/Dockerfile -t "$IMG" backend
+          docker push "$IMG"
+          gcloud run services update kuza-backend --image "$IMG" --region "$REGION" --quiet
 
-      # Run pending migrations to a completion BEFORE the new revision serves
-      # traffic. The job runs `node dist/scripts/run-migrations.js` (landlord +
-      # public template + every tenant schema, idempotent). --wait blocks/fails
-      # the deploy if a migration fails, so a bad migration never ships.
-      - name: Run DB migrations (Cloud Run Job)
-        run: |
-          gcloud run jobs deploy backend-migrate \
-            --image "$IMAGE" --region "$GCP_REGION" \
-            --command node --args dist/scripts/run-migrations.js \
-            --set-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
-            --set-env-vars "DB_HOST=/cloudsql/$CLOUD_SQL_INSTANCE,DB_NAME=${{ vars.DB_NAME }},LANDLORD_DB_NAME=${{ vars.LANDLORD_DB_NAME }}" \
-            --set-secrets "DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest" \
-            --max-retries 0 --task-timeout 900 --quiet
-          gcloud run jobs execute backend-migrate --region "$GCP_REGION" --wait --quiet
-
-      - name: Deploy Cloud Run service
-        run: |
-          gcloud run deploy backend \
-            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
-            --allow-unauthenticated \
-            --add-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
-            --set-env-vars "NODE_ENV=production,DB_SYNCHRONIZE=false,DB_HOST=/cloudsql/$CLOUD_SQL_INSTANCE,DB_NAME=${{ vars.DB_NAME }},LANDLORD_DB_NAME=${{ vars.LANDLORD_DB_NAME }},FRONTEND_URL=${{ vars.FRONTEND_URL }},AI_PROVIDER=${{ vars.AI_PROVIDER }}" \
-            --set-secrets "DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,SUPER_ADMIN_EMAIL=SUPER_ADMIN_EMAIL:latest" \
-            --quiet
-
-  # ─────────────────────────── OPERATOR PORTAL (Next SSR) ───────────────────
   user-portal:
     needs: changes
     if: needs.changes.outputs.user-portal == 'true' || github.event_name == 'workflow_dispatch'
@@ -111,25 +89,15 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v2
-      - run: gcloud auth configure-docker "$AR_HOST" --quiet
-      - name: Build & push image
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build, push & deploy
         run: |
-          IMAGE="$AR_REPO/user-portal:${{ github.sha }}"
-          # NEXT_PUBLIC_* are baked at build time — pass the API URL as a build arg.
+          IMG="$AR/kuza-user-portal:${{ github.sha }}"
           docker build -f user-portal/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
-            -t "$IMAGE" user-portal
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
-      - name: Deploy Cloud Run service
-        run: |
-          gcloud run deploy user-portal \
-            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars "NODE_ENV=production,NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
-            --quiet
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" -t "$IMG" user-portal
+          docker push "$IMG"
+          gcloud run services update kuza-user-portal --image "$IMG" --region "$REGION" --quiet
 
-  # ─────────────────────────── ADMIN PORTAL (Next SSR) ─────────────────────
   admin-portal:
     needs: changes
     if: needs.changes.outputs.admin-portal == 'true' || github.event_name == 'workflow_dispatch'
@@ -141,19 +109,31 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v2
-      - run: gcloud auth configure-docker "$AR_HOST" --quiet
-      - name: Build & push image
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build, push & deploy
         run: |
-          IMAGE="$AR_REPO/admin-portal:${{ github.sha }}"
+          IMG="$AR/kuza-admin-portal:${{ github.sha }}"
           docker build -f admin-portal/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
-            -t "$IMAGE" admin-portal
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
-      - name: Deploy Cloud Run service
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" -t "$IMG" admin-portal
+          docker push "$IMG"
+          gcloud run services update kuza-admin-portal --image "$IMG" --region "$REGION" --quiet
+
+  website:
+    needs: changes
+    if: needs.changes.outputs.website == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build, push & deploy
         run: |
-          gcloud run deploy admin-portal \
-            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars "NODE_ENV=production,NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
-            --quiet
+          IMG="$AR/kuza-website:${{ github.sha }}"
+          docker build -f website/Dockerfile \
+            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" -t "$IMG" website
+          docker push "$IMG"
+          gcloud run services update kuza-website --image "$IMG" --region "$REGION" --quiet

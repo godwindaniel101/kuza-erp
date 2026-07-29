@@ -15,6 +15,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* is inlined into the browser bundle at build time — pass the
+# operator-portal origin (the Sign in / Start free target) as a build arg.
+ARG NEXT_PUBLIC_APP_URL=http://localhost:5001
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
 # Set production environment for build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

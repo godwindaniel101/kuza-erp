@@ -7,6 +7,7 @@ import * as Sentry from '@sentry/node';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { Request, Response } from 'express';
 import { join } from 'path';
 
 async function bootstrap() {
@@ -93,6 +94,15 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
   }
+
+  // Base ping at the service root (outside the /api prefix) — a friendly 200
+  // for anyone hitting the backend URL directly.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .get('/', (_req: Request, res: Response) => {
+      res.status(200).send('Healthy and hearty - 200');
+    });
 
   const port = process.env.PORT || 4001;
   await app.listen(port);
