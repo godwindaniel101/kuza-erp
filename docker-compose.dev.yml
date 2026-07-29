@@ -1,13 +1,13 @@
 # ─────────────────────────────────────────────────────────────────────────
-# Kuza ERP — isolated dev stack (db + backend + frontend only).
+# Kuza ERP — isolated dev stack (db + backend + user-portal + admin-portal).
 #
 #   docker compose -f docker-compose.dev.yml up -d
 #
 # Self-contained on purpose: its own `_dev` containers, its own
-# `postgres_data_dev` volume, and frontend on :4000 — so it never collides
-# with, or overwrites the data of, the full stack in docker-compose.yml.
-# The marketing website + Ollama are omitted from this lightweight app loop;
-# use the full docker-compose.yml when you need them.
+# `postgres_data_dev` volume, user-portal on :4000 and admin-portal on :4002 —
+# so it never collides with, or overwrites the data of, the full stack in
+# docker-compose.yml. Ollama is omitted from this lightweight app loop; use the
+# full docker-compose.yml when you need it.
 # ─────────────────────────────────────────────────────────────────────────
 name: kuza-dev
 
@@ -50,7 +50,7 @@ services:
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000,http://localhost:4002}
       # Optional integrations — passed through when set in your .env, else blank.
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -88,22 +88,45 @@ services:
     command: npm run start:dev
     restart: unless-stopped
 
-  frontend:
+  user-portal:
     build:
-      context: ./frontend
+      context: ./user-portal
       dockerfile: Dockerfile.dev
-    container_name: erp_frontend_dev
+    container_name: erp_user_portal_dev
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
       NEXT_TELEMETRY_DISABLED: 1
     ports:
-      - "${FRONTEND_PORT:-4000}:3000"
+      - "${USER_PORTAL_PORT:-4000}:3000"
     depends_on:
       backend:
         condition: service_started
     volumes:
-      - ./frontend:/app
+      - ./user-portal:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - erp_network
+    command: npm run dev -- -H 0.0.0.0
+    restart: unless-stopped
+
+  admin-portal:
+    build:
+      context: ./admin-portal
+      dockerfile: Dockerfile.dev
+    container_name: erp_admin_portal_dev
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "${ADMIN_PORTAL_PORT:-4002}:3000"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ./admin-portal:/app
       - /app/node_modules
       - /app/.next
     networks:

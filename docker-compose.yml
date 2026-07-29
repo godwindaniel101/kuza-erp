@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────
-# Kuza ERP — local Docker stack (full app: db + backend + frontend + website).
+# Kuza ERP — local Docker stack (db + backend + user-portal + admin-portal).
 #
 #   docker compose up -d                 # start the app stack
 #   docker compose --profile ai up -d    # …and the local Ollama LLM backend
@@ -53,7 +53,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:5001/api/auth/google/callback}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001}
+      # CORS allow-list (comma-separated): operator portal + admin portal origins.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001,http://localhost:5002}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}
@@ -106,22 +107,23 @@ services:
     restart: unless-stopped
     command: npm run start:dev
 
-  frontend:
+  # Operator portal — the tenant-facing dashboard/app (formerly ./frontend).
+  user-portal:
     build:
-      context: ./frontend
-      dockerfile: ${DOCKERFILE_FRONTEND:-Dockerfile.dev}
-    container_name: erp_frontend
+      context: ./user-portal
+      dockerfile: ${DOCKERFILE_USER_PORTAL:-Dockerfile.dev}
+    container_name: erp_user_portal
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
       NEXT_TELEMETRY_DISABLED: 1
     ports:
-      - "${FRONTEND_PORT:-5001}:3000"
+      - "${USER_PORTAL_PORT:-5001}:3000"
     depends_on:
       backend:
         condition: service_started
     volumes:
-      - ./frontend:/app
+      - ./user-portal:/app
       - /app/node_modules
       - /app/.next
     networks:
@@ -129,16 +131,29 @@ services:
     restart: unless-stopped
     command: npm run dev -- -H 0.0.0.0
 
-  website:
+  # Admin portal — platform super-admin console (tenants, plans, pricing, requests).
+  admin-portal:
     build:
-      context: ./website
-      dockerfile: Dockerfile
-    container_name: erp_website
+      context: ./admin-portal
+      dockerfile: ${DOCKERFILE_ADMIN_PORTAL:-Dockerfile.dev}
+    container_name: erp_admin_portal
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
+      NEXT_TELEMETRY_DISABLED: 1
     ports:
-      - "${WEBSITE_PORT:-8080}:80"
+      - "${ADMIN_PORTAL_PORT:-5002}:3000"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ./admin-portal:/app
+      - /app/node_modules
+      - /app/.next
     networks:
       - erp_network
     restart: unless-stopped
+    command: npm run dev -- -H 0.0.0.0
 
   # Optional local Llama (OpenAI-compatible) LLM backend — opt-in via the `ai`
   # profile, so a bare `docker compose up` never pulls this heavy image.

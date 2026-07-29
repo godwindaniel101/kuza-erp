@@ -1,0 +1,228 @@
+/**
+ * Kuza ERP — Design Tokens (CSS custom properties)
+ * ===========================================================================
+ * Runtime mirror of `tokens.ts`. Consumed by Tailwind (via
+ * `tailwind.tokens.js`) and by raw CSS.
+ *
+ * Color scales are stored as SPACE-SEPARATED RGB CHANNEL TRIPLETS (e.g.
+ * `15 122 75`) — NOT hex — so Tailwind can compose alpha:
+ *     color: rgb(var(--color-primary-600) / <alpha-value>);
+ * In hand-written CSS, wrap them yourself: `rgb(var(--color-primary-600))`
+ * or `rgb(var(--color-primary-600) / 0.1)`.
+ *
+ * ONE-FILE SWAP: to rebrand, edit the `--color-primary-*` triplets below
+ * (and, if desired, `--color-accent-*`). Keep `tokens.ts` in sync for TS
+ * consumers. Everything else — Tailwind classes, semantic surfaces, focus
+ * rings — updates automatically.
+ *
+ * Dark mode: the color SCALES are theme-agnostic; only the semantic SURFACE
+ * and TEXT tokens flip. Overrides live in the `.dark` block. Matches the
+ * repo's `darkMode: 'class'` (Tailwind toggles `.dark` on <html>).
+ * ===========================================================================
+ */
+
+:root {
+  /* --- PRIMARY · Kuza Emerald (grow / value) ---------------------- */
+  --color-primary-50: 237 250 243;
+  --color-primary-100: 211 242 224;
+  --color-primary-200: 168 230 196;
+  --color-primary-300: 114 211 162;
+  --color-primary-400: 63 185 126;
+  --color-primary-500: 31 157 98;
+  --color-primary-600: 15 122 75; /* ← brand stop */
+  --color-primary-700: 12 97 64;
+  --color-primary-800: 11 77 52;
+  --color-primary-900: 10 63 44;
+  --color-primary-950: 4 36 26;
+
+  /* --- NEUTRAL · Kuza Slate (green-tinted gray) ------------------- */
+  --color-neutral-50: 247 249 248;
+  --color-neutral-100: 238 241 240;
+  --color-neutral-200: 224 229 227;
+  --color-neutral-300: 201 209 206;
+  --color-neutral-400: 154 165 162;
+  --color-neutral-500: 109 120 117;
+  --color-neutral-600: 84 95 92;
+  --color-neutral-700: 65 75 72;
+  --color-neutral-800: 42 50 48;
+  --color-neutral-900: 26 32 30;
+  --color-neutral-950: 14 18 17;
+
+  /* --- ACCENT · Harvest Gold (warm emphasis, NOT status) --------- */
+  --color-accent-50: 253 248 237;
+  --color-accent-100: 249 236 201;
+  --color-accent-200: 243 217 143;
+  --color-accent-300: 237 194 85;
+  --color-accent-400: 229 169 43;
+  --color-accent-500: 209 143 24;
+  --color-accent-600: 180 114 20;
+  --color-accent-700: 143 85 20;
+  --color-accent-800: 118 67 23;
+  --color-accent-900: 100 57 23;
+  --color-accent-950: 57 29 8;
+
+  /* --- SUCCESS · grass green (distinct from brand emerald) -------- */
+  --color-success-50: 236 253 241;
+  --color-success-100: 209 250 223;
+  --color-success-200: 166 242 193;
+  --color-success-300: 108 228 155;
+  --color-success-400: 52 207 116;
+  --color-success-500: 22 180 90;
+  --color-success-600: 15 144 72;
+  --color-success-700: 12 114 57;
+  --color-success-800: 13 91 48;
+  --color-success-900: 12 74 41;
+  --color-success-950: 3 41 19;
+
+  /* --- WARNING · amber ------------------------------------------- */
+  --color-warning-50: 255 248 235;
+  --color-warning-100: 253 236 200;
+  --color-warning-200: 251 216 141;
+  --color-warning-300: 249 192 82;
+  --color-warning-400: 245 166 35;
+  --color-warning-500: 232 140 10;
+  --color-warning-600: 201 109 5;
+  --color-warning-700: 163 82 8;
+  --color-warning-800: 132 65 14;
+  --color-warning-900: 110 55 15;
+  --color-warning-950: 63 28 4;
+
+  /* --- DANGER · red ---------------------------------------------- */
+  --color-danger-50: 254 242 242;
+  --color-danger-100: 253 227 227;
+  --color-danger-200: 251 204 204;
+  --color-danger-300: 247 163 163;
+  --color-danger-400: 241 111 111;
+  --color-danger-500: 229 69 69;
+  --color-danger-600: 209 43 43;
+  --color-danger-700: 175 32 32;
+  --color-danger-800: 145 30 30;
+  --color-danger-900: 120 31 31;
+  --color-danger-950: 65 11 11;
+
+  /* --- INFO · blue (distinct from green primary) ----------------- */
+  --color-info-50: 238 245 255;
+  --color-info-100: 217 232 255;
+  --color-info-200: 188 214 255;
+  --color-info-300: 142 187 255;
+  --color-info-400: 92 152 251;
+  --color-info-500: 53 118 240;
+  --color-info-600: 32 90 217;
+  --color-info-700: 28 71 175;
+  --color-info-800: 28 61 140;
+  --color-info-900: 28 54 111;
+  --color-info-950: 20 33 69;
+
+  /* --- SEMANTIC SURFACES · light (theme-aware; flipped in .dark) -- */
+  --surface-canvas: 244 246 245;
+  --surface-card: 255 255 255;
+  --surface-raised: 255 255 255;
+  --surface-sunken: 247 249 248;
+  --border-subtle: 14 18 17; /* use with low alpha, e.g. / 0.06 */
+  --border-strong: 224 229 227;
+  --text-primary: 26 32 30;
+  --text-secondary: 84 95 92;
+  --text-muted: 109 120 117;
+  --on-primary: 255 255 255;
+
+  /* --- RADII ------------------------------------------------------ */
+  --radius-none: 0px;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* --- SPACING (4px base) ---------------------------------------- */
+  --space-0: 0px;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* --- ELEVATION (green-neutral tinted; rgb 14 18 17) ------------ */
+  --shadow-xs: 0 1px 2px 0 rgb(14 18 17 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(14 18 17 / 0.04), 0 1px 3px 0 rgb(14 18 17 / 0.06);
+  --shadow-card: 0 1px 2px 0 rgb(14 18 17 / 0.03), 0 12px 32px -12px rgb(14 18 17 / 0.10);
+  --shadow-card-hover: 0 2px 4px 0 rgb(14 18 17 / 0.04), 0 16px 40px -12px rgb(14 18 17 / 0.14);
+  --shadow-popover: 0 4px 12px -4px rgb(14 18 17 / 0.10), 0 20px 48px -12px rgb(14 18 17 / 0.22);
+  --shadow-focus: 0 0 0 3px rgb(15 122 75 / 0.35);
+
+  /* --- TYPOGRAPHY ------------------------------------------------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  /* --- Z-INDEX ---------------------------------------------------- */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-header: 30;
+  --z-sidebar: 40;
+  --z-overlay: 50;
+  --z-drawer: 60;
+  --z-modal: 70;
+  --z-popover: 80;
+  --z-toast: 90;
+  --z-tooltip: 100;
+
+  /* --- MOTION ----------------------------------------------------- */
+  --duration-instant: 75ms;
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --duration-slow: 240ms;
+  --duration-slower: 360ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/**
+ * Dark theme. Applies when `.dark` is on <html> (Tailwind `darkMode: 'class'`).
+ * Only semantic surfaces/text and a couple of tint-sensitive tokens flip;
+ * the color scales are shared with light. `html.dark` is included so the
+ * override wins regardless of how the class is applied.
+ */
+.dark,
+html.dark {
+  --surface-canvas: 14 18 17; /* neutral-950 */
+  --surface-card: 26 32 30; /* neutral-900 */
+  --surface-raised: 42 50 48; /* neutral-800 */
+  --surface-sunken: 10 14 13;
+  --border-subtle: 255 255 255; /* use with low alpha, e.g. / 0.08 */
+  --border-strong: 65 75 72; /* neutral-700 */
+  --text-primary: 247 249 248; /* neutral-50 */
+  --text-secondary: 201 209 206; /* neutral-300 */
+  --text-muted: 154 165 162; /* neutral-400 */
+  --on-primary: 255 255 255;
+
+  /* Shadows barely register on dark surfaces — the border ring carries edges. */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.30), 0 12px 32px -12px rgb(0 0 0 / 0.55);
+  --shadow-card-hover: 0 2px 4px 0 rgb(0 0 0 / 0.35), 0 16px 40px -12px rgb(0 0 0 / 0.60);
+  --shadow-popover: 0 4px 12px -4px rgb(0 0 0 / 0.45), 0 20px 48px -12px rgb(0 0 0 / 0.70);
+}
+
+/* Respect reduced-motion preferences globally. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-slower: 0ms;
+  }
+}

@@ -27,6 +27,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { InvoicingModule } from './modules/invoicing/invoicing.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { InsightsModule } from './modules/insights/insights.module';
+import { AgentsModule } from './modules/agents/agents.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { MenuSitesModule } from './modules/menu-sites/menu-sites.module';
 import { NetworkModule } from './modules/network/network.module';
@@ -96,6 +97,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     InvoicingModule,
     BillingModule,
     InsightsModule,
+    AgentsModule,
     IntegrationsModule,
     MenuSitesModule,
     NetworkModule,

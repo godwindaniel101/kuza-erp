@@ -1428,6 +1428,17 @@ export class InsightsService {
    * Never throws — degraded states come back as { available: false, message }.
    */
   async ask(question: string, opts: AskOptions = {}) {
+    // Language-awareness: Copilot answers in the USER'S language, resolved
+    // per-request from the Accept-Language header (the app sends the `lang`
+    // cookie). JSON keys/structure stay English; only the human-facing text is
+    // localised. Falls back to English for unknown locales.
+    const lang = I18nContext.current()?.lang || 'en';
+    const LANG_NAMES: Record<string, string> = {
+      en: 'English', fr: 'French', es: 'Spanish', pt: 'Portuguese',
+      ar: 'Arabic', sw: 'Swahili', ha: 'Hausa', yo: 'Yoruba', ig: 'Igbo',
+    };
+    const langName = LANG_NAMES[lang.slice(0, 2)] || 'English';
+
     // Effective apps (Business.enabledApps ∩ plan-allowed). null = unknown →
     // treat as "all enabled" so the copilot never hard-fails on billing.
     const effectiveApps = await this.getEffectiveApps(opts);
@@ -1555,6 +1566,9 @@ export class InsightsService {
         'Speak plainly, in short sentences a non-accountant understands. ' +
         'If the snapshot genuinely lacks the answer, say so honestly and suggest ' +
         'where to look. Use the business currency when talking about money.\n\n' +
+        `Write the "answer" text and any chart/table titles in ${langName} — the ` +
+        'user\'s language. Translate naturally (not word-for-word). The JSON keys ' +
+        'and structure below stay exactly as specified (in English).\n\n' +
         'Respond with STRICT JSON ONLY (no markdown, no prose outside the JSON) ' +
         'matching this shape:\n' +
         '{"answer": string, "chart"?: {"type": "area"|"bar"|"line", "title": string, "seriesKey": string}, "table"?: {"title": string, "tableKey": string}}\n' +
