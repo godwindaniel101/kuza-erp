@@ -11,8 +11,9 @@
 #   user-portal/.env   → operator-portal config
 #   admin-portal/.env  → admin-portal config
 # First run: copy each `*.env.example` to `*.env`. Each service loads its own
-# file via `env_file:`; the `environment:` blocks below only force the values
-# that must differ inside the compose network (DB host, shared creds, CORS).
+# file via `env_file:` — there are NO `environment:` blocks. Each service's .env
+# is the single source of its config (backend/.env points DB_HOST at the
+# 'postgres' service, so it works inside the compose network).
 # Production is deployed separately via Cloud Run (see DEPLOY.md).
 # ─────────────────────────────────────────────────────────────────────────
 name: kuza
@@ -21,17 +22,15 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: erp_postgres
-    environment:
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-erp_db}
+    env_file:
+      - ./docker/postgres/.env
     ports:
       - "${DB_PORT:-4433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init-landlord.sql:/docker-entrypoint-initdb.d/01-init-landlord.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,23 +43,10 @@ services:
       context: ./backend
       dockerfile: ${DOCKERFILE_BACKEND:-Dockerfile.dev}
     container_name: erp_backend
-    # App config + secrets (JWT, mail, AI, payments) — owned by the service.
+    # All backend config + secrets live in backend/.env (DB_HOST=postgres points
+    # at the compose service). docker-compose.yml sets no env of its own.
     env_file:
       - ./backend/.env
-    # Only the values that MUST differ inside the compose network. These OVERRIDE
-    # backend/.env (which targets native/bare-metal dev at localhost).
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 4001
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DB_NAME: ${DB_NAME:-erp_db}
-      DB_LANDLORD_NAME: ${DB_LANDLORD_NAME:-erp_landlord}
-      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
-      # CORS allow-list — the two portal origins on the compose network.
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001,http://localhost:5002}
     ports:
       - "${BACKEND_PORT:-4001}:4001"
     depends_on:

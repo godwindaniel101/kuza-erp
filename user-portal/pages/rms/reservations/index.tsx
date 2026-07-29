@@ -550,14 +550,14 @@ export default function ReservationsPage() {
     const bName = branchName(r.branchId);
     return (
       <div
-        className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between ${
+        className={`flex flex-col gap-2 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
           r.status === 'pending' ? 'bg-amber-50/40 dark:bg-amber-500/[0.04]' : ''
         }`}
       >
         {/* Left: time + details */}
-        <div className="flex items-start gap-4 min-w-0">
-          <div className="text-center shrink-0 w-16">
-            <div className="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="text-center shrink-0 w-14">
+            <div className="text-[13px] font-semibold tabular-nums text-gray-900 dark:text-gray-100">
               {formatTime(r.reservationAt)}
             </div>
             {r.durationMins ? (
@@ -566,7 +566,7 @@ export default function ReservationsPage() {
           </div>
           <div className="min-w-0">
             <div className="flex items-center flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100 truncate">
                 {r.customerName}
               </span>
               <StatusBadge status={r.status} label={statusLabel(r.status)} />
@@ -747,36 +747,38 @@ export default function ReservationsPage() {
               </div>
             )}
 
-            {/* Branch filter */}
-            {branches.length > 0 && (
-              <div className="w-56">
-                <SearchableSelect
-                  options={[{ value: '', label: t('allBranches') || 'All branches' }, ...branchOptions]}
-                  value={branchFilter}
-                  onChange={setBranchFilter}
-                  size="sm"
-                  placeholder={t('allBranches') || 'All branches'}
-                  searchPlaceholder={t('searchBranch') || 'Search branch...'}
-                />
-              </div>
-            )}
+            {/* Filters — kept together on the right, beside each other */}
+            <div className="ml-auto flex items-center gap-2">
+              {branches.length > 0 && (
+                <div className="w-44">
+                  <SearchableSelect
+                    options={[{ value: '', label: t('allBranches') || 'All branches' }, ...branchOptions]}
+                    value={branchFilter}
+                    onChange={setBranchFilter}
+                    size="sm"
+                    placeholder={t('allBranches') || 'All branches'}
+                    searchPlaceholder={t('searchBranch') || 'Search branch...'}
+                  />
+                </div>
+              )}
 
-            {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter((e.target.value || 'all') as 'all' | ReservationStatus)
-              }
-              aria-label={t('status') || 'Status'}
-              className="h-9 px-3 pr-8 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:border-transparent"
-            >
-              <option value="all">{t('allStatuses') || 'All statuses'}</option>
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel(s)}
-                </option>
-              ))}
-            </select>
+              {/* Status filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter((e.target.value || 'all') as 'all' | ReservationStatus)
+                }
+                aria-label={t('status') || 'Status'}
+                className="h-9 px-3 pr-8 text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:border-transparent"
+              >
+                <option value="all">{t('allStatuses') || 'All statuses'}</option>
+                {STATUS_ORDER.map((s) => (
+                  <option key={s} value={s}>
+                    {statusLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -891,15 +893,7 @@ export default function ReservationsPage() {
           </div>
         ) : (
           /* ---------------------------------- Day / list view -------------------------------- */
-          <div className="max-w-3xl mx-auto space-y-3">
-            <button
-              type="button"
-              onClick={() => setViewMode('calendar')}
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring rounded"
-            >
-              <i className="bx bx-chevron-left text-base" aria-hidden="true"></i>
-              {t('backToCalendar') || 'Back to calendar'}
-            </button>
+          <div className="w-full">
 
             {sorted.length === 0 ? (
               <EmptyState

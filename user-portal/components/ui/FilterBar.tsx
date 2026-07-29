@@ -219,7 +219,11 @@ export default function FilterBar({
 
   return (
     <div
-      className={`mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-3 ${className}`}
+      // relative z-30: the page wraps FilterBar and DataTable in `kz-stagger`,
+      // whose transform makes each a separate stacking context — so the later
+      // table would paint over this bar's open dropdowns. Elevating this context
+      // lets the category/filter dropdowns sit above the table.
+      className={`relative z-30 mb-4 bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-3 ${className}`}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 flex-1">{filters.map(renderFilter)}</div>
