@@ -8,6 +8,69 @@
   "validation_error": "Validation error",
   "created": "Created successfully",
   "updated": "Updated successfully",
-  "deleted": "Deleted successfully"
+  "deleted": "Deleted successfully",
+  "insights": {
+    "yourBusiness": "Your business",
+    "cash": {
+      "positive": "You have {amount} in cash and bank right now",
+      "overdrawn": "Your cash accounts are overdrawn by {amount}",
+      "unavailable": "Cash position unavailable"
+    },
+    "profit": {
+      "positive": "You have made {profit} profit so far this month ({earned} earned, {spent} spent)",
+      "negative": "You are {amount} in the red this month ({earned} earned, {spent} spent)",
+      "unavailable": "Profit figures unavailable"
+    },
+    "debtor": {
+      "lateOne": "{name} owes {amount} — {days} day late",
+      "lateOther": "{name} owes {amount} — {days} days late",
+      "notDue": "{name} owes {amount} — not due yet"
+    },
+    "lowStock": {
+      "outOfStock": "{name} is out of stock — minimum is {minimum}",
+      "below": "{name} is below minimum stock: {current} left, minimum {minimum}",
+      "runningLow": "{count} item(s) running low"
+    },
+    "sales": {
+      "thisMonthOnly": "Sales this month: {amount} (no sales last month to compare)",
+      "none": "No sales recorded this month or last month",
+      "up": "Sales are up {pct}% — {current} this month vs {previous} last month",
+      "down": "Sales are down {pct}% — {current} this month vs {previous} last month",
+      "unavailable": "Sales trend unavailable"
+    },
+    "overdue": {
+      "someOne": "{amount} is overdue across {count} invoice — time to chase payments",
+      "someOther": "{amount} is overdue across {count} invoices — time to chase payments",
+      "none": "No overdue invoices — well done",
+      "noOverdue": "No overdue invoices"
+    },
+    "topItem": {
+      "headline": "{name}: {revenue} from {qty} sold this month"
+    },
+    "lowStockByBranch": {
+      "title": "Low stock by branch",
+      "bodyOne": "{item} is low at {branch} ({stock} left, reorder at {minimum}).",
+      "bodyMore": "{item} is low at {branch} ({stock} left, reorder at {minimum}) — and {count} more item(s) across your branches."
+    },
+    "branches": {
+      "title": "Branches",
+      "body": "You run {count} branches. Stock is healthy — nothing below its reorder point right now."
+    },
+    "salesStockCash": {
+      "title": "Sales, stock & cash"
+    },
+    "profitThisMonth": {
+      "title": "Profit this month"
+    },
+    "moneyOwed": {
+      "title": "Money owed to you"
+    },
+    "profitStock": {
+      "title": "Profit & stock"
+    },
+    "salesCash": {
+      "title": "Sales & cash"
+    }
+  }
 }
 

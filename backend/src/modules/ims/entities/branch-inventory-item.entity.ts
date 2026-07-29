@@ -24,6 +24,13 @@ export class BranchInventoryItem extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   maximumStock: number;
 
+  /**
+   * Physical row/rack ("bin") location of this item at this branch, e.g.
+   * 'A-03-2' (Warehouse MS v1). Set on goods-in; overrides the item default.
+   */
+  @Column({ nullable: true })
+  binLocation: string;
+
   @ManyToOne(() => Branch, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'branchId' })
   branch: Branch;

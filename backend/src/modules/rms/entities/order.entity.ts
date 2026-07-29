@@ -1,6 +1,5 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { TenantEntity } from '../../../common/entities/base.entity';
-import { Restaurant } from '../../../common/entities/restaurant.entity';
 import { Branch } from '../../../common/entities/branch.entity';
 import { Table } from './table.entity';
 import { OrderItem } from './order-item.entity';
@@ -50,12 +49,30 @@ export class Order extends TenantEntity {
   @Column({ default: 'dine_in' })
   orderType: string;
 
+  /** Channel this sale came through: 'pos' (direct) | 'marketplace' (materialized from a network order). */
+  @Column({ default: 'pos' })
+  source: string;
+
+  /** SALES bridge: the landlord network_orders id this sale was materialized from (null for POS/direct). */
+  @Column({ type: 'uuid', nullable: true })
+  networkOrderId: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   userId: string;
 
-  @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  // Audit: who placed / last changed this order. Name is denormalized so the UI
+  // shows a creator without resolving across the landlord/tenant user split.
+  @Column({ type: 'uuid', nullable: true })
+  createdBy: string;
+
+  @Column({ nullable: true })
+  createdByName: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  updatedBy: string;
+
+  @Column({ nullable: true })
+  updatedByName: string;
 
   @ManyToOne(() => Branch, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'branchId' })

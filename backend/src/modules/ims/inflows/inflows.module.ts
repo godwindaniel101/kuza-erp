@@ -9,7 +9,9 @@ import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { BranchInventoryItem } from '../entities/branch-inventory-item.entity';
 import { BulkUploadLog } from '../entities/bulk-upload-log.entity';
 import { UomConversionsModule } from '../uom-conversions/uom-conversions.module';
-import { Restaurant } from '../../../common/entities/restaurant.entity';
+import { StockMovementsModule } from '../stock-movements/stock-movements.module';
+import { AccountingModule } from '../../accounting/accounting.module';
+import { Business } from '../../../common/entities/business.entity';
 import { Branch } from '../../../common/entities/branch.entity';
 import { Supplier } from '../../rms/entities/supplier.entity';
 import { Uom } from '../entities/uom.entity';
@@ -24,13 +26,15 @@ import { OrderItemInflowItem } from '../../rms/entities/order-item-inflow-item.e
       InventoryBatch,
       BranchInventoryItem,
       BulkUploadLog,
-      Restaurant,
+      Business,
       Branch,
       Supplier,
       Uom,
       OrderItemInflowItem,
     ]),
     UomConversionsModule,
+    StockMovementsModule,
+    AccountingModule,
   ],
   controllers: [InflowsController],
   providers: [InflowsService],

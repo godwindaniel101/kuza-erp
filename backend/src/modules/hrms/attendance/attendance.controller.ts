@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  UseGuards,
   Request,
   Query,
   BadRequestException,
@@ -16,11 +15,13 @@ import { ClockInDto } from './dto/clock-in.dto';
 import { ClockOutDto } from './dto/clock-out.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { FeatureGateGuard, RequireApp } from '../../billing/guards/feature-gate.guard';
 import { UseGuards as UseGuardsDecorator } from '@nestjs/common';
 
 @ApiTags('HRMS - Attendance')
 @Controller('hrms/attendance')
-@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard)
+@UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp('people')
 @ApiBearerAuth()
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
@@ -63,13 +64,11 @@ export class AttendanceController {
   @RequirePermissions('attendance.view')
   @ApiOperation({ summary: 'Get all attendance records' })
   async getAllAttendance(
-    @Request() req,
     @Query('employeeId') employeeId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
     const entries = await this.attendanceService.getAllTimeEntries(
-      req.user.businessId,
       employeeId,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,

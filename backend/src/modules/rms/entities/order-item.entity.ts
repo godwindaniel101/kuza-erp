@@ -10,8 +10,13 @@ export class OrderItem extends BaseEntity {
   @Column({ type: 'uuid' })
   orderId: string;
 
-  @Column({ type: 'uuid' })
-  inventoryItemId: string;
+  /** Set for raw inventory-item lines; null for dish lines (see menuItemId). */
+  @Column({ type: 'uuid', nullable: true })
+  inventoryItemId: string | null;
+
+  /** Set for dish lines; the recipe's ingredients are what actually deplete stock. */
+  @Column({ type: 'uuid', nullable: true })
+  menuItemId: string | null;
 
   @Column()
   name: string;
@@ -35,7 +40,7 @@ export class OrderItem extends BaseEntity {
   costTotal: number;
 
   @Column({ type: 'uuid', nullable: true })
-  uomId: string;
+  uomId: string | null;
 
   @Column({ type: 'text', nullable: true })
   notes: string;
@@ -44,7 +49,7 @@ export class OrderItem extends BaseEntity {
   @JoinColumn({ name: 'orderId' })
   order: Order;
 
-  @ManyToOne(() => InventoryItem, { onDelete: 'CASCADE' })
+  @ManyToOne(() => InventoryItem, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'inventoryItemId' })
   inventoryItem: InventoryItem;
 

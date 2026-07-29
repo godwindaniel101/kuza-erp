@@ -4,7 +4,7 @@ import { LandlordUser } from './landlord-user.entity';
 
 /**
  * Tenant entity stored in the landlord database
- * Each tenant represents a separate business/restaurant
+ * Each tenant represents a separate business/business
  */
 @Entity('tenants')
 export class Tenant extends BaseEntity {
@@ -19,9 +19,6 @@ export class Tenant extends BaseEntity {
 
   @Column({ nullable: true })
   schemaName: string; // PostgreSQL schema name for this tenant
-
-  @Column({ nullable: true })
-  databaseName: string; // Database name if using separate databases instead of schemas
 
   @Column({ default: true })
   isActive: boolean;

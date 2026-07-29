@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InventoryController } from './inventory.controller';
 import { InventoryService } from './inventory.service';
 import { InventoryItem } from '../entities/inventory-item.entity';
+import { InventoryItemComponent } from '../entities/inventory-item-component.entity';
 import { BranchInventoryItem } from '../entities/branch-inventory-item.entity';
 import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { Uom } from '../entities/uom.entity';
@@ -17,6 +18,7 @@ import { Order } from '../../rms/entities/order.entity';
   imports: [
     TypeOrmModule.forFeature([
       InventoryItem,
+      InventoryItemComponent,
       BranchInventoryItem,
       InventoryBatch,
       Uom,

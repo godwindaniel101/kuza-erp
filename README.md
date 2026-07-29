@@ -1,775 +1,193 @@
-# KUZA ERP System v2 - Complete Technical System Documentation
+# Kuza — the AI operating system for business
 
-## Table of Contents
-1. [System Overview](#system-overview)
-2. [Architecture](#architecture)
-3. [Core Features](#core-features)
-4. [Modules & Functionality](#modules--functionality)
-5. [Technical Implementation](#technical-implementation)
-6. [Integration & Workflows](#integration--workflows)
-7. [Security & Performance](#security--performance)
-8. [Deployment & Operations](#deployment--operations)
+> One system to run your entire operation — **stock, sales, money and people, across every branch** — and put **AI agents on the front line** that sell and serve customers wherever they are. Built for African businesses. _For Africa, by Africa._
 
-## System Overview
+This README is the consolidated product reference (product, how it works, features, roadmap, and the **portal design system**). The exhaustive, code-grounded feature truth lives in [`PRODUCT.md`](./PRODUCT.md).
 
-### Purpose
-A comprehensive Enterprise Resource Planning (ERP) system designed for restaurants and hospitality businesses, providing integrated management of inventory, sales, human resources, and operations across multiple locations.
+---
 
-### Key Characteristics
-- **Multi-Tenant Architecture**: Complete data isolation per business
-- **Multi-Branch Support**: Centralized management of multiple locations
-- **Real-time Operations**: Live inventory tracking and sales processing
-- **Role-Based Access**: Granular permission system
-- **Scalable Design**: Containerized microservice-ready architecture
+## Contents
+1. [What Kuza is](#1-what-kuza-is)
+2. [Why Kuza wins — the wedge](#2-why-kuza-wins--the-wedge)
+3. [How it works — architecture & the flow](#3-how-it-works--architecture--the-flow)
+4. [Packaging — editions, verticals, commons, assists](#4-packaging--editions-verticals-commons-assists)
+5. [Features](#5-features)
+6. [The AI layer](#6-the-ai-layer--copilot-agents-mcp)
+7. [Money-path stance](#7-money-path-stance)
+8. [Repository layout & running it](#8-repository-layout--running-it)
+9. [Future plans / roadmap](#9-future-plans--roadmap)
+10. [Portal design system (consistency contract)](#10-portal-design-system-consistency-contract)
 
-### Technology Stack
+---
+
+## 1. What Kuza is
+
+Kuza is a **multi-tenant ERP fused with an AI layer**. Two products in one:
+
+1. **The operating core** — one shared system of record for inventory, selling, invoicing, accounting, payments and people. Every branch and every module reads the same truth.
+2. **The AI layer** — **Kuza Copilot** answers questions of the business's own data; **Kuza Agents** work the storefront across channels, take orders and verify payment against your rules, then hand structured orders back into the ERP.
+
+**Who it's for:** African SMBs and mid-market operators who run real, physical, **multi-branch** businesses and sell where their customers already are — WhatsApp, Instagram, the shop floor, the table, the marketplace — and are done stitching together a POS, a spreadsheet, an accountant and a DM inbox.
+
+**Positioning line:** *Kuza — the AI operating system that runs your business and sells for you.*
+
+---
+
+## 2. Why Kuza wins — the wedge
+
+Foreign ERPs (Odoo, SAP, QuickBooks, Sage) were designed for developed markets and *retro-fitted* to Africa — every local reality becomes a paid customization. (~75% of African ERP implementations fail to deliver.) Kuza makes the things those systems bolt on **native and default**:
+
+- **Money rails are native** — collection, virtual accounts and reconciliation are built in, not a clunky third-party connector.
+- **Reconciliation across bank + transfer + cash** happens automatically instead of on paper.
+- **Local tax & payroll statutory** (NG VAT/WHT/PAYE/pension …) are first-class, not billed add-ons.
+- **Mobile-first, offline-tolerant** — African SMEs are phone-first and connectivity-variable; Kuza is a PWA that tolerates patchy networks.
+- **Minutes to set up, local-currency pricing** — no consultants, no USD enterprise licensing.
+
+Feature parity with Odoo is explicitly **not** the goal. The goal: *"the ERP that does your books and collects your money in your country, with zero accounting knowledge required — and sells for you in the DMs."*
+
+---
+
+## 3. How it works — architecture & the flow
+
+**Multi-tenant, schema-per-tenant.** Each business is an isolated Postgres schema (the connection's `search_path` is switched per request). A shared **landlord (`public`)** schema holds cross-tenant data: the tenant registry, billing/plans/subscriptions, webhook routes, public menu-slug routes, and the entire **Network** (marketplace directory, catalog, B2B orders, wallets).
+
+**Branch scoping is the access spine.** Admins are unscoped; every other user sees only the branches they're assigned to (no assignment = no data), and is 403'd for a branch outside their set. Every operational record carries a `branchId`; list endpoints, dashboards and insights all filter by the resolved branch set.
+
+**The shared stock core is the hub.** Inventory owns items, FIFO/FEFO cost batches, and an **immutable stock-movement ledger** (append-only, one signed row per mutation, written in the same DB transaction as the change). Both verticals — retail **Inventory** and **Restaurant** — sell through the *same* order engine, so they share one inventory truth; item-level and per-branch counters always move in lockstep.
+
+**The canonical flow — a sale ripples through everything, in one transaction:**
+
 ```
-Frontend:  Next.js + React + TypeScript + Tailwind CSS
-Backend:   NestJS + TypeScript + PostgreSQL + TypeORM
-Container: Docker + Docker Compose
-Security:  JWT Authentication + Permission Guards
-```
-
-## Architecture
-
-### System Architecture Diagram
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                       │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
-│  │     IMS     │ │     RMS     │ │    HRMS + Settings      │ │
-│  │  Inventory  │ │ Restaurant  │ │   HR + Configuration    │ │
-│  │ Management  │ │ Management  │ │                         │ │
-│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                       REST APIs
-                            │
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend (NestJS)                         │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
-│  │ IMS Module  │ │ RMS Module  │ │   HRMS + Auth Modules   │ │
-│  │             │ │             │ │                         │ │
-│  │ Controllers │ │ Controllers │ │      Controllers        │ │
-│  │ Services    │ │ Services    │ │      Services           │ │
-│  │ Entities    │ │ Entities    │ │      Entities           │ │
-│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                     Database Layer
-                            │
-┌─────────────────────────────────────────────────────────────┐
-│                PostgreSQL Database                          │
-│                                                             │
-│  Multi-Tenant Data Model with Business ID Isolation        │
-│  - Inventory Data    - Sales Data    - HR Data             │
-│  - User Management   - Settings      - Audit Logs          │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow Architecture
-```
-User Request → Frontend → API Gateway → Backend Service → Database
-     ↓              ↓            ↓             ↓             ↓
-UI Validation → Route Guard → Auth Guard → Business Logic → Data Access
-     ↓              ↓            ↓             ↓             ↓
-User Feedback ← UI Update ← API Response ← Service Result ← Query Result
+Sale (POS or an agent-drafted order)
+  → allocate stock (FIFO/LIFO/FEFO, spilling to other branches when short)
+  → write batch traceability (which batch/supplier each line drew from)
+  → decrement item + branch stock
+  → append SALE rows to the immutable stock ledger
+  → post the double-entry journal (Dr Cash/AR · Cr Revenue+Tax · Dr COGS/Cr Inventory)
+  → dashboard & insights reflect it automatically
 ```
 
-## Core Features
+- **A DM becomes an order** — the agent runtime reads catalog + knowledge to converse; on buy/pay/deliver intent it drafts a structured order into the same pending-sale → fulfilment path the POS uses (subject to the payment rules in §7).
+- **Marketplace ties two tenants together** — a B2B purchase order writes a *pending sale into the supplier's schema*; on acceptance it fulfils (debiting the supplier's stock) and drafts a **sales invoice** to the buyer; on receipt it links a **purchases inflow** into the buyer's stock; payment settles via the internal **wallet** (atomic, idempotent transfer) or an external claim the supplier confirms.
+- **Money is collected at the edges** — enabling bank-transfer reserves a provider **virtual account** per branch; the POS opens an "awaiting payment" and a signature-verified provider **webhook** reconciles it and marks the order paid, idempotently.
 
-### 1. Authentication & Authorization System
+---
 
-#### Multi-Tenant Authentication
-```typescript
-// User login process with tenant isolation
-1. User provides credentials
-2. System validates against specific tenant
-3. JWT token issued with business context
-4. All subsequent requests isolated by business ID
+## 4. Packaging — editions, verticals, commons, assists
+
+- **Editions** (chosen at registration): `hospitality · retail · warehouse · accounts · hr`.
+- **Verticals** (primary surface, mutually exclusive — at most one): **Inventory** (`items`) or **Restaurant** (`rms`).
+- **Commons** (subscribe directly, stack on any vertical): **Invoicing**, **Accounting**, **People/HR**, **Payments**.
+- **Assists** (not billed alone; enhance a host): **AI** (Copilot + Agents), **Marketplace** (supplier network + wallet).
+- **Stock** and **Marketplace** are shared cores owned by no single app. A free **trial** (default 14 days, all-access) drops to read-only until subscribed. Pricing is **à-la-carte**, super-admin-editable per currency; paid activation only ever happens via a signature-verified webhook.
+
+---
+
+## 5. Features
+
+_Condensed catalog — see [`PRODUCT.md`](./PRODUCT.md) for the exhaustive, file-referenced list._
+
+- **Accounts, team & security** — email signup → verify → onboarding wizard (provisions a tenant schema); Google sign-in; landlord auth + API-token exchange (MCP); team invitations; custom **roles & permissions**; **2FA/TOTP** (gates sensitive settlement changes).
+- **Multi-branch** — branch CRUD (+ bulk upload), branch-user assignments with a manager flag, **branch-scoped access everywhere**, per-branch stock/prices/min-max/bins, and **inter-branch transfers** with a manager receive step.
+- **Inventory (the shared stock core)** — catalog (barcode, cost/sale price, images, sell-at-POS), categories/sub-categories, units of measure + conversions, **make-up / bill-of-materials**, approval-gated **goods-in with FIFO/FEFO cost batches**, the **immutable stock-movement ledger** + reconciliation, approval-gated **adjustments/write-offs**, low-stock/out-of-stock/expiring worklists, CSV bulk upload, and **Inventory AI** (demand, reorder, health, forecast).
+- **Restaurant & the POS / selling flow** — the order engine both verticals sell through: FIFO/LIFO/FEFO allocation with **multi-branch spillover**, per-batch cost traceability, cost/profit, cash posting; **pending-sale → fulfilment** (row-locked, idempotent, posts A/R); dine-in **tables** (QR), **reservations** (+ public booking), suppliers.
+- **Menu creation & QR menu site** — menus/menu studio with items linked to inventory + **AI menu design**; a published public **menu site** per tenant (templates, theme, accent, venue info, socials, WiFi, show/hide prices, preview, QR, publish) at `/m/:slug`.
+- **Invoicing (dynamic / white-label) & A/R** — numbered invoices with line taxes/discounts, send / record payment / void; **white-label settings** (logo, accent, template, tax, prefix, footer, terms, bank details, email delivery/auto-send); customers with credit limits; posts to Accounts Receivable.
+- **Payments & reconciliation** — per-branch payment methods; **bank transfer via provider virtual accounts (Monnify)** with a signature-verified reconciliation **webhook**; 2FA-gated settlement config; full payment-transaction ledger. _(Card & mobile-money channels are defined but stubbed — roadmap.)_
+- **Marketplace, supplier network & wallet** — business directory + partnerships, supplier catalog listings (price/MOQ/bargain), **B2B purchase orders** (draft→submit→accept→ship→receive→pay→confirm) bridging both tenants' stock/invoices, and an **internal ledger wallet** (never-negative, append-only, atomic idempotent transfers).
+- **Accounting / books** — chart of accounts, journal entries (draft→post→reverse, idempotent per source), an auto-posting engine driven by operations, and reports (trial balance, general ledger, P&L, balance sheet).
+- **People / HR / payroll** — employees, org chart, departments/positions/locations, attendance & timesheets, leave, **payroll runs with tax calculation** (posts to GL), compensation, benefits, performance, learning, recruitment, self-service.
+- **AI** — Copilot, Agents & an MCP server (see §6).
+- **Platform** — per-surface dashboards, insights digest, notifications (email + in-app inbox), audit logs, billing/pricing & app-access requests, an integrations framework (webhook inbox, Monnify/Paystack adapters), and a super-admin console.
+
+---
+
+## 6. The AI layer — Copilot, Agents, MCP
+
+- **Kuza Copilot** (`/insights`) — asks the business's own data (general or branch-scoped) across modules ("can I afford another employee?"). Numbers are **computed in code**; the model only rephrases (it never invents figures) and flags when a question needs a module the tenant hasn't enabled.
+- **Kuza Agents** — named personas (tone/voice/languages/hours/guardrails/model) on **WhatsApp, Instagram, Messenger, Telegram and web chat** (real Meta/Telegram connect). A **read-only, injection-hardened conversation runtime** with a full **action audit log**, a **human approval queue** for money-path actions, and human takeover/reply. Trained on catalog + FAQ knowledge.
+- **MCP server** — a business can plug Kuza into Claude (read-only tools over its own data). Provider-agnostic LLM gateway (Ollama / OpenAI / Anthropic).
+
+---
+
+## 7. Money-path stance (non-negotiable)
+
+- Real money moves **only** through idempotent, signature-verified paths (payment webhooks; the wallet's atomic, never-negative transfers). Sales/stock/ledger writes happen in one DB transaction so books can't drift from stock.
+- **Rules-based payment verification is the model:** you set the conditions (amount, payer name, date, …); payments that pass clear automatically and can move to fulfilment; only **exceptions** are escalated.
+- The **agent runtime is read-only and fully audited** — every turn and tool call is logged; today it escalates money-moving intent to a human approval queue (rules-based auto-clear is the active direction). Never claim autonomy beyond what is wired.
+
+---
+
+## 8. Repository layout & running it
+
+Monorepo — each deployable service owns its own `Dockerfile`; `docker-compose.yml` orchestrates them.
+
+```
+kuza-erp/
+├─ backend/        NestJS API — the ERP core (Dockerfile + Dockerfile.dev)
+├─ user-portal/    Next.js operator portal / dashboard (Dockerfile + Dockerfile.dev)
+├─ website/        Marketing site (static export)
+├─ mcp/            MCP server (plug Kuza into Claude)
+├─ mobile/         Mobile app
+├─ docker/ infra/  Ops config
+├─ docs/           Portal UI reference (design-refs/)
+├─ docker-compose.yml / docker-compose.dev.yml
+└─ PRODUCT.md      Canonical product-truth doc
 ```
 
-#### Permission Framework
-```typescript
-// Granular permission system
-Permissions: "module.action" 
-Examples:
-- "inflows.create"      // Create inventory inflows
-- "orders.view"         // View sales orders  
-- "employees.edit"      // Edit employee data
-- "settings.manage"     // Manage system settings
-```
-
-#### Role-Based Access Control
-```typescript
-// Role hierarchy and assignment
-Super Admin → Business Admin → Manager → Employee → Limited User
-    ↓              ↓           ↓         ↓           ↓
-All Access    Full Business  Department  Basic     Read-only
-```
-
-### 2. Multi-Branch Management
-
-#### Branch Architecture
-```typescript
-// Branch-centric data organization
-Business
-├── Branch A (Victoria Island)
-│   ├── Inventory Stock Levels
-│   ├── Sales Orders
-│   ├── Employee Assignments
-│   └── Local Settings
-├── Branch B (Lekki)
-│   ├── Independent Stock
-│   ├── Separate Sales
-│   ├── Branch Staff
-│   └── Custom Configuration
-└── Central Management
-    ├── Consolidated Reporting
-    ├── Inter-branch Transfers
-    ├── Global Settings
-    └── Master Data
-```
-
-## Modules & Functionality
-
-### 1. Inventory Management System (IMS)
-
-#### 1.1 Core Inventory Features
-
-##### Inventory Item Master Data
-```typescript
-Features:
-- Product catalog with categories and subcategories
-- Multi-UOM support (bottles, cases, liters, etc.)
-- Automatic UOM conversions
-- Barcode management
-- Pricing and cost tracking
-- Minimum/maximum stock levels
-- Branch-specific availability
-```
-
-##### Stock Level Management
-```typescript
-Real-time Stock Tracking:
-- Branch-specific stock levels
-- Automatic stock updates on sales/inflows
-- Low stock alerts and notifications
-- Stock valuation using weighted average cost
-- Historical stock movement tracking
-- Cycle count support
-```
-
-#### 1.2 Inflow Management System
-
-##### Manual Inflows
-```typescript
-Features:
-- Single item or multi-item inflows
-- Supplier selection and auto-creation
-- Invoice number generation (XXX-XXXX-XXXX format)
-- Expiry date tracking
-- Batch number assignment
-- Cost per unit recording
-- Branch-specific receiving
-```
-
-##### Bulk CSV Upload System
-```typescript
-Advanced Bulk Processing:
-1. CSV Template Generation
-   - Downloadable templates with proper headers
-   - Example data for user guidance
-   
-2. Upload Validation
-   - Header validation (Branch Name, Item Name, UOM, Quantity, Cost)
-   - Data type validation
-   - Entity existence checking (branches, items, suppliers, UOMs)
-   
-3. Processing Pipeline
-   - Parse CSV rows with error tracking
-   - Entity lookup and validation
-   - UOM conversion to base units
-   - Group by branch for separate inflows
-   - Generate unique 6-character batch IDs (e.g., A1B2C3)
-   
-4. Error Management
-   - Line-by-line error tracking
-   - Branch-specific failed upload counts
-   - Detailed error messages and suggestions
-   - Partial success handling
-   
-5. Batch Tracking
-   - Unique batch IDs for traceability
-   - Clickable batch filtering in UI
-   - Batch-based reporting and analysis
-```
-
-##### Supplier Auto-Creation
-```typescript
-Intelligent Supplier Management:
-- Automatic supplier creation during bulk uploads
-- Duplicate prevention using name matching
-- Basic supplier profile generation
-- Integration with existing supplier database
-- Audit trail for auto-created suppliers
-```
-
-#### 1.3 Advanced Features
-
-##### UOM Conversion System
-```typescript
-Multi-Unit Support:
-- Base UOM definition per item
-- Conversion factor setup (1 case = 24 bottles)
-- Automatic conversion during transactions
-- Display flexibility (show in any valid UOM)
-- Inventory accuracy across different units
-```
-
-##### Inventory Valuation
-```typescript
-Cost Management:
-- Weighted average cost calculation
-- FIFO (First-In-First-Out) cost allocation
-- Cost tracking per batch/lot
-- Profit margin analysis
-- Cost variance reporting
-```
-
-### 2. Restaurant Management System (RMS)
-
-#### 2.1 Sales Order Management
-
-##### Order Creation Process
-```typescript
-Order Workflow:
-1. Table/Customer Selection
-   - Table assignment (for dine-in)
-   - Customer information capture
-   - Order type selection (dine-in, takeaway, delivery)
-
-2. Item Selection & Pricing
-   - Menu item selection
-   - Quantity specification
-   - Price calculation with modifiers
-   - Special instructions capture
-
-3. Inventory Validation
-   - Real-time stock availability check
-   - Multi-branch inventory lookup
-   - Alternative item suggestions
-
-4. Order Finalization
-   - Order total calculation
-   - Tax and service charge application
-   - Payment method selection
-   - Order confirmation
-```
-
-##### FIFO Inventory Allocation
-```typescript
-Advanced Stock Allocation:
-1. Stock Availability Check
-   - Check branch-specific stock levels
-   - Identify available batches/lots
-   
-2. FIFO Selection Logic
-   - Sort available stock by received date
-   - Allocate oldest stock first
-   - Handle partial allocations
-   
-3. Cost Calculation
-   - Use actual cost from allocated batches
-   - Calculate weighted average for mixed batches
-   - Track cost basis for profit analysis
-   
-4. Inventory Update
-   - Reduce stock levels atomically
-   - Update branch inventory records
-   - Create audit trail for stock movements
-```
-
-#### 2.2 Profit Analysis System
-
-##### Real-time Profitability
-```typescript
-Profit Calculation Engine:
-1. Revenue Tracking
-   - Item-level sales prices
-   - Total order value
-   - Discount and promotion impact
-   
-2. Cost Analysis
-   - Actual cost from FIFO allocation
-   - Overhead allocation (optional)
-   - Labor cost integration (future)
-   
-3. Profit Metrics
-   - Gross profit per item
-   - Order-level profitability
-   - Profit margin percentages
-   - Contribution analysis
-   
-4. Reporting & Analytics
-   - Profit trends over time
-   - Item profitability ranking
-   - Branch performance comparison
-```
-
-#### 2.3 Enhanced Sales Features
-
-##### Multi-Payment Support
-```typescript
-Payment Options:
-- Cash payments with change calculation
-- Card payments (credit/debit)
-- Mobile payments integration
-- Split payment handling
-- Payment status tracking
-```
-
-##### Order Management
-```typescript
-Order Lifecycle:
-- Order creation and modification
-- Kitchen order management (future)
-- Order fulfillment tracking
-- Customer communication
-- Order history and reprinting
-```
-
-### 3. Human Resource Management System (HRMS)
-
-#### 3.1 Employee Management
-
-##### Employee Lifecycle
-```typescript
-Complete HR Management:
-1. Employee Onboarding
-   - Personal information capture
-   - Document management
-   - Department assignment
-   - Role and permission setup
-   
-2. Employee Records
-   - Contact information management
-   - Emergency contact details
-   - Employment history
-   - Performance tracking
-   
-3. Department Organization
-   - Department hierarchy
-   - Manager assignments
-   - Team structure
-   - Cross-department collaboration
-```
-
-#### 3.2 Leave Management System
-
-##### Leave Types & Policies
-```typescript
-Leave Management:
-- Configurable leave types (annual, sick, personal)
-- Leave balance tracking
-- Approval workflow
-- Leave calendar integration
-- Reporting and analytics
-```
-
-### 4. Settings & Configuration
-
-#### 4.1 Business Configuration
-
-##### Multi-Branch Setup
-```typescript
-Branch Management:
-- Branch registration and setup
-- Location and contact details
-- Operating hours configuration
-- Branch-specific settings
-- Inter-branch relationships
-```
-
-##### System Settings
-```typescript
-Global Configuration:
-- Business profile management
-- Currency and localization
-- Tax rate configuration
-- Email and notification settings
-- Backup and maintenance schedules
-```
-
-#### 4.2 User Management
-
-##### User Administration
-```typescript
-User Lifecycle:
-- User invitation system
-- Role assignment and modification
-- Permission management
-- User activation/deactivation
-- Session management
-```
-
-## Technical Implementation
-
-### 1. Database Design
-
-#### Entity Relationship Model
-```sql
--- Core Business Entities
-Business (1) → (*) Branch
-Business (1) → (*) User
-Business (1) → (*) InventoryItem
-
--- Inventory Flow
-InventoryItem (1) → (*) InventoryInflowItem
-InventoryItem (1) → (*) BranchInventoryItem
-Branch (1) → (*) InventoryInflow
-InventoryInflow (1) → (*) InventoryInflowItem
-
--- Sales Flow
-Branch (1) → (*) Order
-Order (1) → (*) OrderItem
-OrderItem (*) → (*) InventoryInflowItem (via OrderItemInflowItem)
-
--- HR Relationships
-Branch (1) → (*) Employee
-Employee (1) → (*) Leave
-Department (1) → (*) Employee
-```
-
-#### Multi-Tenant Data Isolation
-```sql
--- Every table includes businessId for tenant isolation
-CREATE TABLE inventory_items (
-    id UUID PRIMARY KEY,
-    business_id UUID NOT NULL,
-    name VARCHAR NOT NULL,
-    -- other fields
-    CONSTRAINT fk_business FOREIGN KEY (business_id) REFERENCES businesses(id)
-);
-
--- Automatic filtering in all queries
-SELECT * FROM inventory_items WHERE business_id = :tenantId;
-```
-
-### 2. API Architecture
-
-#### RESTful API Design
-```typescript
-// Standard resource endpoints
-GET    /api/ims/inventory          # List inventory items
-POST   /api/ims/inventory          # Create new item
-GET    /api/ims/inventory/:id      # Get specific item
-PATCH  /api/ims/inventory/:id      # Update item
-DELETE /api/ims/inventory/:id      # Delete item
-
-// Specialized endpoints
-POST   /api/ims/inflows/bulk-upload  # Bulk CSV upload
-GET    /api/ims/inflows/template     # Download CSV template
-POST   /api/rms/orders/:id/pay       # Process payment
-GET    /api/dashboard/stats          # Dashboard analytics
-```
-
-#### Request/Response Patterns
-```typescript
-// Standardized response format
-{
-  success: boolean,
-  data: any,
-  message?: string,
-  errors?: string[]
-}
-
-// Error handling
-{
-  success: false,
-  errors: [
-    "Inventory item 'Beer' not found",
-    "Invalid quantity: must be positive number"
-  ],
-  data: null
-}
-```
-
-### 3. Frontend Architecture
-
-#### Component Hierarchy
-```typescript
-// Page-level components
-_app.tsx
-├── Layout.tsx
-│   ├── AppHeader.tsx
-│   └── AppSidebar.tsx
-├── PermissionGuard.tsx
-└── Page Components
-    ├── Table Components
-    ├── Form Components
-    └── Modal Components
-```
-
-#### State Management Patterns
-```typescript
-// Local state for UI interactions
-const [loading, setLoading] = useState(false);
-const [formData, setFormData] = useState({});
-
-// Global state for auth and shared data
-const { user, permissions } = useAuth();
-const { selectedBranch } = useBranch();
-
-// API state management
-const { data, loading, error } = useAPI('/api/inventory');
-```
-
-## Integration & Workflows
-
-### 1. End-to-End Business Workflows
-
-#### Complete Inventory-to-Sales Flow
-```typescript
-1. Inventory Setup
-   ├── Create inventory categories
-   ├── Add inventory items with UOMs
-   ├── Set up suppliers
-   └── Configure branch locations
-
-2. Stock Receiving (Inflows)
-   ├── Manual entry or CSV bulk upload
-   ├── Supplier assignment (auto-create if needed)
-   ├── Generate batch IDs for traceability  
-   ├── Update branch inventory levels
-   └── Calculate weighted average costs
-
-3. Sales Processing
-   ├── Create sales orders
-   ├── Validate inventory availability
-   ├── Allocate stock using FIFO method
-   ├── Calculate actual costs and profits
-   ├── Update inventory levels
-   └── Generate sales receipts
-
-4. Reporting & Analysis
-   ├── Real-time inventory levels
-   ├── Sales performance metrics
-   ├── Profit analysis by item/branch
-   ├── Stock movement reports
-   └── Low stock alerts
-```
-
-#### Bulk Upload Workflow
-```typescript
-CSV Upload Process:
-1. User downloads template
-2. Fills CSV with inventory data
-3. Uploads through web interface
-4. System validates all data
-5. Creates suppliers automatically if needed
-6. Generates batch ID for traceability
-7. Creates separate inflows per branch
-8. Reports success/failure per row
-9. Updates inventory levels
-10. Enables batch-based filtering and reporting
-```
-
-### 2. Cross-Module Integrations
-
-#### IMS-RMS Integration
-```typescript
-Inventory-Sales Integration:
-- Real-time stock availability for order taking
-- Automatic inventory deduction on order completion
-- Cost basis transfer from inflows to sales
-- Profit calculation using actual inventory costs
-- Stock alerts when inventory falls below minimums
-```
-
-#### User-Role Integration
-```typescript
-Permission-based Feature Access:
-- Menu items show/hide based on permissions
-- API endpoints protected by role guards
-- Branch access restricted by assignment
-- Data filtering by user access level
-```
-
-## Security & Performance
-
-### 1. Security Framework
-
-#### Authentication Security
-```typescript
-JWT Security Implementation:
-- Secure token generation with configurable expiration
-- Automatic token refresh before expiration
-- Secure logout with token invalidation
-- Multi-device session management
-- Brute force protection
-```
-
-#### Data Security
-```typescript
-Multi-layered Protection:
-1. Network Level
-   - HTTPS enforcement
-   - CORS policy configuration
-   - Rate limiting on API endpoints
-   
-2. Application Level
-   - Input validation and sanitization
-   - SQL injection prevention via ORM
-   - XSS protection in frontend
-   - CSRF token protection
-   
-3. Database Level
-   - Tenant data isolation
-   - Encrypted sensitive fields
-   - Audit logging for all changes
-   - Regular backup schedules
-```
-
-### 2. Performance Optimization
-
-#### Database Performance
-```typescript
-Query Optimization:
-- Strategic indexing on business_id and foreign keys
-- Query result caching for frequently accessed data
-- Connection pooling for efficient resource usage
-- Pagination for large datasets
-- Eager/lazy loading based on use case
-```
-
-#### Frontend Performance
-```typescript
-UI Optimization:
-- Code splitting for module-based loading
-- Image optimization with Next.js
-- Debounced search inputs
-- Virtual scrolling for large tables
-- Optimistic UI updates
-- Progressive loading states
-```
-
-## Deployment & Operations
-
-### 1. Containerization Strategy
-
-#### Docker Architecture
-```dockerfile
-# Multi-service Docker Compose setup
-services:
-  frontend:
-    - Next.js production build
-    - Nginx reverse proxy
-    - Static asset optimization
-    
-  backend:
-    - NestJS Node.js application
-    - Production dependencies only
-    - Health check endpoints
-    
-  database:
-    - PostgreSQL with persistent volumes
-    - Automated backups
-    - Performance monitoring
-```
-
-### 2. Environment Management
-
-#### Configuration Management
+**Run the stack (dev):**
 ```bash
-# Environment-specific configurations
-Development: .env.development
-Staging:     .env.staging  
-Production:  .env.production
-
-# Key variables
-DATABASE_URL=postgresql://...
-JWT_SECRET=secure-secret-key
-NEXT_PUBLIC_API_URL=https://api.domain.com
+docker compose -f docker-compose.dev.yml up   # postgres · backend · user-portal · ollama (+ website)
 ```
+Services (dev defaults): backend API `:4001`, operator portal `:5001`, Postgres, Ollama (local LLM). Production images build from each service's `Dockerfile` (override via `DOCKERFILE_BACKEND` / `DOCKERFILE_FRONTEND`).
 
-### 3. Monitoring & Logging
+**Architecture invariants:** schema-per-tenant isolation (never query across tenants); every mutation writes through the request-scoped tenant transaction; money paths stay idempotent and signature-verified (§7).
 
-#### Application Monitoring
-```typescript
-Comprehensive Logging:
-- Request/response logging with timing
-- Error tracking with stack traces
-- User action audit trails
-- System performance metrics
-- Database query performance
-- Business metrics tracking
-```
+---
 
-#### Health Checks
-```typescript
-System Health Monitoring:
-- Database connectivity checks
-- API endpoint availability
-- Memory and CPU usage
-- Disk space monitoring
-- Application error rates
-```
+## 9. Future plans / roadmap
 
-## System Benefits & Outcomes
+Sequenced by phase (`TODO · WIP · DONE`). Foundation & inventory-integrity & the accounting service are largely **done**; the commercial/SaaS layer is in place. The differentiation bets are where Kuza pulls away:
 
-### 1. Business Value
+**Near-term hardening**
+- Rate-limit auth endpoints; per-tenant schema-migration strategy (new columns must reach existing tenant schemas); weighted-average + FIFO valuation & aging; Purchase-Order → GRN → 3-way match; UOM multi-hop + expiry blocking.
 
-#### Operational Efficiency
-- **50%+ reduction** in inventory management time through bulk uploads
-- **Real-time visibility** into stock levels across all branches
-- **Automated cost calculation** eliminating manual profit analysis
-- **Streamlined workflows** from purchase to sale to reporting
+**Differentiation bets**
+- **D1 · Accountant-in-the-box** — auto-posting (done) + plain-language insights ("you made ₦840k profit; Chidi owes ₦120k, 40 days late") and anomaly alerts.
+- **D2 · Payments-native invoicing** — pay-link on every invoice (Paystack / M-Pesa / bank transfer); webhook auto-reconciles into the GL. _(A second revenue line via take-rate.)_
+- **D3 · Country packs** — NG first (VAT 7.5%, PAYE, pension, WHT), then KE / GH; replaces the US-centric tax service.
+- **D4 · Offline-tolerant POS/stock** — PWA layer done (installable, offline reads, public menus offline); next: an offline write-queue replayed through the idempotent posting pipeline ("Count Night").
+- **D5 · WhatsApp surface** — send invoices, approvals and a daily sales digest.
+- **D7 · Credit passport** — "Kuza-verified financials" (immutable double-entry books) as underwriting data → supplier-credit / lending partnerships.
 
-#### Financial Control
-- **Accurate profit tracking** with FIFO cost allocation
-- **Real-time financial insights** with instant profit calculation
-- **Cost optimization** through inventory analysis and reporting
-- **Reduced waste** through better stock management and alerts
+**Also planned:** rules-engine auto-clear for agent payments (§7); card & mobile-money payment channels; data export (Excel/PDF); report builder; approval workflows; enterprise SSO (SAML/OIDC); Pharmacy / Hospital verticals.
 
-#### Scalability Benefits
-- **Multi-tenant architecture** supporting unlimited businesses
-- **Multi-branch capability** for business expansion
-- **Role-based permissions** for team management
-- **Audit trails** for compliance and accountability
+**Benchmark targets:** inventory → Zoho / Odoo Inventory; accounting → QuickBooks / Xero core; SaaS → enterprise RBAC + audit + data residency.
 
-### 2. Technical Excellence
+---
 
-#### Development Efficiency  
-- **Type-safe development** with TypeScript across full stack
-- **Reusable components** reducing development time
-- **Automated testing** ensuring code quality
-- **Docker deployment** for consistent environments
+## 10. Portal design system (consistency contract)
 
-#### Maintainability
-- **Modular architecture** enabling feature-specific updates
-- **Clear separation of concerns** between frontend and backend
-- **Comprehensive documentation** for ongoing development
-- **Version control** and deployment automation
+> The **operator portal** (`user-portal/`) design system — the acceptance contract for the app UI. Numbers and rules, not adjectives. (Marketing-site design is intentionally out of scope here.)
 
-## Future Roadmap
+**Thesis** — one calm, warm-paper operator's console that *dresses for the trade it runs*; the vertical you're in re-tints the accent. Refuses generic SaaS blue-on-grey and the "no motion" rut. Mode: **Operate** — scanability and consistency first; brand lives in precise details, never decoration.
 
-### 1. Immediate Enhancements (Next 3 months)
-- **Advanced Reporting Dashboard** with charts and analytics
-- **Mobile App Development** using React Native
-- **Real-time Notifications** for critical business events
-- **Advanced Search** with filtering and sorting
+**Type** — Display **Bricolage Grotesque** (`font-display`): page/section/card/modal titles, KPI numbers (`tabular-nums`, `tracking-tight`). Body **Hanken Grotesk** (`font-sans`). Both self-hosted via `next/font`. Scale: page title `1.35rem` · section `15px semibold` · body `13px` · metadata `12px` · overline `11px`. No ad-hoc `text-2xl/3xl` in the shell.
 
-### 2. Medium-term Goals (3-12 months)  
-- **Kitchen Display System** for order management
-- **Customer Portal** for order history and loyalty
-- **Accounting Integration** with popular accounting software
-- **Advanced Analytics** with predictive insights
+**Color** — warm-paper canvas `#faf9f7` (`bg-canvas`) / `dark:bg-gray-950`; cards `bg-white` / `dark:bg-gray-900`. **Accent is CSS-variable-driven and follows the current app** (`data-app` → tokens: `bg-accent`, `text-accent`, `bg-accent-soft`, `ring-accent-ring`, `bg-accent-gradient`) — restaurant→ember, inventory→cobalt, accounting→indigo, hr→rose, payments→violet, default→teal. **Semantic** colors are separate and never the accent: success emerald, warning amber, danger red, info sky (status = colour **+** icon via `StatusBadge`, never colour alone). Charts: series-1 `var(--accent)`, series-2 `#d97706`, positive `#10b981` (hand-rolled SVG).
 
-### 3. Long-term Vision (1+ years)
-- **AI-powered Demand Forecasting** for inventory optimization
-- **IoT Integration** for automated inventory tracking
-- **Marketplace Integration** for online ordering
-- **Franchise Management** tools for multi-location businesses
+**Space & rhythm** — generous by default. Sections stack `space-y-6`; cards `p-6` (StatCards `p-5`); more space above a heading than below. Page gutter from `Layout` — pages don't add their own `p-6`/`min-h-screen`. Control rhythm: chrome `h-8`, content `h-9`, POS `h-11`, auth `h-10`. Page widths via `Page.tsx`: **full** (tables/dashboards) · **wide** (reports) · **narrow** (forms).
 
-This ERP system represents a comprehensive, scalable solution that grows with business needs while maintaining operational efficiency and financial control. The technical architecture ensures reliability, security, and performance at scale.
+**Motion** — one curve `--ease-out-expo` `cubic-bezier(0.16,1,0.3,1)`; speeds `140 / 280 / 460ms`; arrive from an already-visible default, never bounce. Per-navigation `.page-enter` (opacity only). Per-view `.kz-stagger` (children rise once). `.kz-lift` on clickable cards; buttons `active:scale-[0.98]`. One authored moment per view; everything disabled under `prefers-reduced-motion`.
+
+**Elevation** — resting cards: **ring only** (`ring-1 ring-gray-950/[0.04]`) on `rounded-2xl` + one soft `shadow-card` (never a >1px border under a shadow — the "ghost card"). Radii 12–16px; pills only for small controls. Floating surfaces: `shadow-popover` (light) / `dark:ring-1`. One elevation per surface.
+
+**Modal** — the canonical focused action (`components/Modal.tsx`): warm backdrop blur, single-elevation panel, expo-out scale+fade, Bricolage title, ESC + outside-click, body-scroll lock. A modal is only for a task that needs protected focus.
+
+**Components (edit these, not one-off pages)** — `Button` (`primary|secondary|ghost|danger` × `sm h-8|md h-9`), `Card`, `PageHeader` (18px display title, actions right, breadcrumbs), `DataTable` (h-11 rows, 11px headers, hairline dividers), `StatCard`, `StatusBadge`, `FilterBar` (h-9), `EmptyState`, `Modal`, `Icon`. Canonical control sizing is captured above; when in doubt use the primitive, don't hand-roll.
+
+**Icons** — one distinctive **hand-drawn 24×24 outline family** (`components/ui/Icon.tsx`, stroke 1.5, rendered 14–18px). One family, one stroke weight, one corner language; legacy boxicons are being migrated out.
+
+**Craft floor (absolute refusals)** — no eyebrow/kicker above a heading; no gradient text; no glass/blur as decoration; no colored `border-left/right` >1px (use tinted fill + full ring); no sparkline/progress-ring standing in for content; no monospace-as-costume; no nested cards; no modal for a task that needs no protected focus. Tracking floor `-0.04em`. Every interactive element ships hover/focus/disabled/loading/empty states **and** a dark variant.
+
+**Dark mode** — class strategy (`.dark`); every colour ships a dark variant (tinted fills `dark:bg-*-500/10`); charts validated on both surfaces. Light leads (a daytime operator's console); dark is first-class but secondary.

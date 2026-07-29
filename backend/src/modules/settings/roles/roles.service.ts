@@ -15,8 +15,8 @@ export class RolesService {
     private permissionRepository: Repository<Permission>,
   ) {}
 
-  async create(businessId: string, createDto: CreateRoleDto) {
-    // Check if role with same name exists
+  async create(createDto: CreateRoleDto) {
+    // Check if role with same name exists in this tenant
     const existing = await this.roleRepository.findOne({
       where: { name: createDto.name },
     });
@@ -42,23 +42,17 @@ export class RolesService {
     return await this.roleRepository.save(role);
   }
 
-  async findAll(businessId: string) {
-    // Get all roles that are assigned to users in this restaurant
-    // This ensures multi-tenant isolation - users only see roles used in their restaurant
-    const rolesWithUsers = await this.roleRepository
-      .createQueryBuilder('role')
-      .leftJoinAndSelect('role.permissions', 'permissions')
-      .leftJoinAndSelect('role.users', 'users')
-      .where('users.businessId = :businessId', { businessId })
-      .orderBy('role.createdAt', 'DESC')
-      .getMany();
+  async findAll() {
+    // Get all roles in this tenant database
+    const roles = await this.roleRepository.find({
+      relations: ['permissions', 'users'],
+      order: { createdAt: 'DESC' },
+    });
 
-    // Also get roles that have no users yet (for display when creating new roles)
-    // But only if this is needed for the UI
-    return rolesWithUsers;
+    return roles;
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const role = await this.roleRepository.findOne({
       where: { id },
       relations: ['permissions', 'users'],
@@ -71,7 +65,7 @@ export class RolesService {
     return role;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdateRoleDto) {
+  async update(id: string, updateDto: UpdateRoleDto) {
     const role = await this.roleRepository.findOne({
       where: { id },
       relations: ['permissions'],
@@ -112,7 +106,7 @@ export class RolesService {
     return await this.roleRepository.save(role);
   }
 
-  async remove(id: string, businessId: string) {
+  async remove(id: string) {
     const role = await this.roleRepository.findOne({
       where: { id },
       relations: ['users'],

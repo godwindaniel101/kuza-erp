@@ -38,8 +38,11 @@ COPY --from=builder /app/src/i18n ./dist/i18n
 COPY --from=builder /app/src/modules/notifications/templates ./src/modules/notifications/templates
 COPY --from=builder /app/src/modules/notifications/templates ./templates
 
+# Create uploads directory for images
+RUN mkdir -p uploads/inventory
+
 # Expose port
-EXPOSE 3000
+EXPOSE 4001
 
 # Start application
 CMD ["node", "dist/main.js"]

@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TaxConfiguration } from '../entities/tax-configuration.entity';
-import { EmployeeTaxInfo } from '../entities/employee-tax-info.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { TaxConfiguration } from "../entities/tax-configuration.entity";
+import { EmployeeTaxInfo } from "../entities/employee-tax-info.entity";
 
 export interface TaxCalculationResult {
   federalTax: number;
@@ -23,7 +23,6 @@ export class TaxCalculationService {
   ) {}
 
   async calculateTaxes(
-    businessId: string,
     employeeId: string,
     grossPay: number,
     payPeriod: string,
@@ -45,12 +44,11 @@ export class TaxCalculationService {
       };
     }
 
-    const country = taxInfo.country || 'US';
+    const country = taxInfo.country || "US";
     const annualGrossPay = this.getAnnualGrossPay(grossPay, payPeriod);
 
     // Calculate Federal Tax (US example)
     const federalTax = await this.calculateFederalTax(
-      businessId,
       country,
       annualGrossPay,
       taxInfo,
@@ -58,7 +56,6 @@ export class TaxCalculationService {
 
     // Calculate State Tax
     const stateTax = await this.calculateStateTax(
-      businessId,
       country,
       annualGrossPay,
       taxInfo,
@@ -66,7 +63,6 @@ export class TaxCalculationService {
 
     // Calculate Local Tax
     const localTax = await this.calculateLocalTax(
-      businessId,
       country,
       annualGrossPay,
       taxInfo,
@@ -111,7 +107,6 @@ export class TaxCalculationService {
   }
 
   private async calculateFederalTax(
-    businessId: string,
     country: string,
     annualGrossPay: number,
     taxInfo: EmployeeTaxInfo,
@@ -123,12 +118,11 @@ export class TaxCalculationService {
     // Get tax brackets for the country
     const taxBrackets = await this.taxConfigRepository.find({
       where: {
-        businessId,
         country,
-        taxType: 'federal',
+        taxType: "federal",
         isActive: true,
       },
-      order: { minIncome: 'ASC' },
+      order: { minIncome: "ASC" },
     });
 
     if (taxBrackets.length === 0) {
@@ -173,7 +167,6 @@ export class TaxCalculationService {
   }
 
   private async calculateStateTax(
-    businessId: string,
     country: string,
     annualGrossPay: number,
     taxInfo: EmployeeTaxInfo,
@@ -184,12 +177,11 @@ export class TaxCalculationService {
 
     const stateTaxBrackets = await this.taxConfigRepository.find({
       where: {
-        businessId,
         country,
-        taxType: 'state',
+        taxType: "state",
         isActive: true,
       },
-      order: { minIncome: 'ASC' },
+      order: { minIncome: "ASC" },
     });
 
     if (stateTaxBrackets.length === 0) {
@@ -222,7 +214,6 @@ export class TaxCalculationService {
   }
 
   private async calculateLocalTax(
-    businessId: string,
     country: string,
     annualGrossPay: number,
     taxInfo: EmployeeTaxInfo,
@@ -233,12 +224,11 @@ export class TaxCalculationService {
 
     const localTaxBrackets = await this.taxConfigRepository.find({
       where: {
-        businessId,
         country,
-        taxType: 'local',
+        taxType: "local",
         isActive: true,
       },
-      order: { minIncome: 'ASC' },
+      order: { minIncome: "ASC" },
     });
 
     if (localTaxBrackets.length === 0) {
@@ -275,7 +265,7 @@ export class TaxCalculationService {
     payPeriod: string,
     country: string,
   ): number {
-    if (country !== 'US') {
+    if (country !== "US") {
       return 0; // Only US has Social Security
     }
 
@@ -298,7 +288,7 @@ export class TaxCalculationService {
     country: string,
     annualGrossPay: number,
   ): number {
-    if (country !== 'US') {
+    if (country !== "US") {
       return 0; // Only US has Medicare
     }
 
@@ -326,15 +316,15 @@ export class TaxCalculationService {
 
   private getPeriodMultiplier(payPeriod: string): number {
     switch (payPeriod.toLowerCase()) {
-      case 'weekly':
+      case "weekly":
         return 52;
-      case 'bi-weekly':
-      case 'biweekly':
+      case "bi-weekly":
+      case "biweekly":
         return 26;
-      case 'semi-monthly':
-      case 'semimonthly':
+      case "semi-monthly":
+      case "semimonthly":
         return 24;
-      case 'monthly':
+      case "monthly":
         return 12;
       default:
         return 12; // Default to monthly
@@ -344,17 +334,16 @@ export class TaxCalculationService {
   private getStandardDeduction(filingStatus: string): number {
     // 2024 US Standard Deductions (should be configurable)
     switch (filingStatus) {
-      case 'single':
+      case "single":
         return 14600;
-      case 'married_joint':
+      case "married_joint":
         return 29200;
-      case 'married_separate':
+      case "married_separate":
         return 14600;
-      case 'head_of_household':
+      case "head_of_household":
         return 21900;
       default:
         return 14600;
     }
   }
 }
-

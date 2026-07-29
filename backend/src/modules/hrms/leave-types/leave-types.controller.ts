@@ -16,10 +16,12 @@ import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequirePermissions, PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { FeatureGateGuard, RequireApp } from '../../billing/guards/feature-gate.guard';
 
 @ApiTags('HRMS - Leave Types')
 @Controller('hrms/leave-types')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
+@RequireApp('people')
 @ApiBearerAuth()
 export class LeaveTypesController {
   constructor(private readonly leaveTypesService: LeaveTypesService) {}
@@ -28,7 +30,7 @@ export class LeaveTypesController {
   @RequirePermissions('leaveTypes.create')
   @ApiOperation({ summary: 'Create a new leave type' })
   async create(@Request() req, @Body() createDto: CreateLeaveTypeDto, @I18n() i18n: I18nContext) {
-    const leaveType = await this.leaveTypesService.create(req.user.businessId, createDto);
+    const leaveType = await this.leaveTypesService.create( createDto);
     return {
       success: true,
       data: leaveType,
@@ -40,7 +42,7 @@ export class LeaveTypesController {
   @RequirePermissions('leaveTypes.view')
   @ApiOperation({ summary: 'Get all leave types' })
   async findAll(@Request() req) {
-    const leaveTypes = await this.leaveTypesService.findAll(req.user.businessId);
+    const leaveTypes = await this.leaveTypesService.findAll();
     return {
       success: true,
       data: leaveTypes,
@@ -51,7 +53,7 @@ export class LeaveTypesController {
   @RequirePermissions('leaveTypes.view')
   @ApiOperation({ summary: 'Get leave type by ID' })
   async findOne(@Request() req, @Param('id') id: string) {
-    const leaveType = await this.leaveTypesService.findOne(id, req.user.businessId);
+    const leaveType = await this.leaveTypesService.findOne(id, );
     return {
       success: true,
       data: leaveType,
@@ -67,7 +69,7 @@ export class LeaveTypesController {
     @Body() updateDto: UpdateLeaveTypeDto,
     @I18n() i18n: I18nContext,
   ) {
-    const leaveType = await this.leaveTypesService.update(id, req.user.businessId, updateDto);
+    const leaveType = await this.leaveTypesService.update(id,  updateDto);
     return {
       success: true,
       data: leaveType,
@@ -79,7 +81,7 @@ export class LeaveTypesController {
   @RequirePermissions('leaveTypes.delete')
   @ApiOperation({ summary: 'Delete leave type' })
   async remove(@Request() req, @Param('id') id: string, @I18n() i18n: I18nContext) {
-    await this.leaveTypesService.remove(id, req.user.businessId);
+    await this.leaveTypesService.remove(id, );
     return {
       success: true,
       message: i18n.t('common.deleted'),

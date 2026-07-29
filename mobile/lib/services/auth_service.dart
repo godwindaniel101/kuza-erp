@@ -38,7 +38,7 @@ class AuthService {
     required String email,
     required String password,
     required String passwordConfirmation,
-    String? restaurantName,
+    String? businessName,
   }) async {
     try {
       final response = await _dio.post('/auth/register', data: {
@@ -46,7 +46,7 @@ class AuthService {
         'email': email,
         'password': password,
         'passwordConfirmation': passwordConfirmation,
-        if (restaurantName != null) 'restaurantName': restaurantName,
+        if (businessName != null) 'businessName': businessName,
       });
 
       if (response.data['success'] == true) {

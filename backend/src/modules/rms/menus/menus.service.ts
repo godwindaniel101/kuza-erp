@@ -1,21 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
-import { Menu } from '../entities/menu.entity';
-import { MenuCategory } from '../entities/menu-category.entity';
-import { MenuItem } from '../entities/menu-item.entity';
-import { InventoryItem } from '../../ims/entities/inventory-item.entity';
-import { CreateMenuDto } from './dto/create-menu.dto';
-import { UpdateMenuDto } from './dto/update-menu.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Transactional } from "typeorm-transactional";
+import { Menu } from "../entities/menu.entity";
+import { MenuCategory } from "../entities/menu-category.entity";
+import { MenuItem } from "../entities/menu-item.entity";
+import { InventoryItem } from "../../ims/entities/inventory-item.entity";
+import { InventoryCategory } from "../../ims/entities/inventory-category.entity";
+import { InventorySubcategory } from "../../ims/entities/inventory-subcategory.entity";
+import { CreateMenuDto } from "./dto/create-menu.dto";
+import { UpdateMenuDto } from "./dto/update-menu.dto";
 
 // Helper function to generate slugs
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    .replace(/[^\w\s-]/g, "") // Remove special characters
+    .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
 }
 
 @Injectable()
@@ -29,139 +36,270 @@ export class MenusService {
     private menuItemRepository: Repository<MenuItem>,
     @InjectRepository(InventoryItem)
     private inventoryItemRepository: Repository<InventoryItem>,
-    private dataSource: DataSource,
+    @InjectRepository(InventoryCategory)
+    private inventoryCategoryRepository: Repository<InventoryCategory>,
+    @InjectRepository(InventorySubcategory)
+    private inventorySubcategoryRepository: Repository<InventorySubcategory>,
   ) {}
 
-  async create(businessId: string, createMenuDto: CreateMenuDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  @Transactional()
+  async create(createMenuDto: CreateMenuDto) {
+    // Generate slug if not provided
+    const slug = createMenuDto.slug || generateSlug(createMenuDto.name);
 
-    try {
-      // Generate slug if not provided
-      const slug = createMenuDto.slug || generateSlug(createMenuDto.name);
+    // Create the menu
+    const menu = this.menuRepository.create({
+      name: createMenuDto.name,
+      slug,
+      description: createMenuDto.description,
+      isActive: createMenuDto.isActive ?? true,
 
-      // Create the menu
-      const menu = this.menuRepository.create({
-        name: createMenuDto.name,
-        slug,
-        description: createMenuDto.description,
-        isActive: createMenuDto.isActive ?? true,
-        businessId,
-        branchId: createMenuDto.branchId || null,
-      });
-      const savedMenu = await queryRunner.manager.save(Menu, menu);
+      branchId: createMenuDto.branchId || null,
+    });
+    const savedMenu = await this.menuRepository.save(menu);
 
-      // If inventory items are provided, create categories and items
-      if (createMenuDto.inventoryItemIds && createMenuDto.inventoryItemIds.length > 0) {
-        // Get inventory items
-        const inventoryItems = await this.inventoryItemRepository.find({
-          where: {
-            id: In(createMenuDto.inventoryItemIds),
-            businessId,
-          },
-        });
+    // If inventory items are provided, create categories and items
+    if (
+      createMenuDto.inventoryItemIds &&
+      createMenuDto.inventoryItemIds.length > 0
+    ) {
+      const createdItems = await this.buildMenuItems(
+        savedMenu.id,
+        createMenuDto.inventoryItemIds,
+      );
+      return { menu: savedMenu, createdItems };
+    }
 
-        if (inventoryItems.length === 0) {
-          throw new BadRequestException('No valid inventory items found');
-        }
+    return { menu: savedMenu, createdItems: [] };
+  }
 
-        // Group inventory items by category
-        const itemsByCategory = new Map<string, InventoryItem[]>();
-        inventoryItems.forEach((item) => {
-          const category = item.category || 'Uncategorized';
-          // Ensure category is a string (it should be from the relation name)
-          const categoryKey = typeof category === 'string' ? category : (category as any)?.name || 'Uncategorized';
-          if (!itemsByCategory.has(categoryKey)) {
-            itemsByCategory.set(categoryKey, []);
-          }
-          itemsByCategory.get(categoryKey)!.push(item);
-        });
+  /**
+   * (Re)build a menu's categories + items from a set of inventory item ids,
+   * grouping by inventory category. Used by both create and update.
+   * Direct category lookup (not the `category` relation) because relation loads
+   * mis-resolve schema under the tenant transaction (F7).
+   */
+  private async buildMenuItems(menuId: string, inventoryItemIds: string[]) {
+    const inventoryItems = await this.inventoryItemRepository.find({
+      where: { id: In(inventoryItemIds) },
+    });
 
-        const createdItems = [];
+    if (inventoryItems.length === 0) {
+      throw new BadRequestException("No valid inventory items found");
+    }
 
-        // Create categories and items
-        let categorySortOrder = 0;
-        for (const [categoryName, items] of itemsByCategory.entries()) {
-          // Create menu category
-          const menuCategory = this.menuCategoryRepository.create({
-            menuId: savedMenu.id,
-            name: categoryName,
-            description: null,
-            sortOrder: categorySortOrder++,
-          });
-          const savedCategory = await queryRunner.manager.save(MenuCategory, menuCategory);
+    const categoryIds = [
+      ...new Set(inventoryItems.map((i) => i.categoryId).filter(Boolean)),
+    ];
+    const categories = categoryIds.length
+      ? await this.inventoryCategoryRepository.find({
+          where: { id: In(categoryIds) },
+        })
+      : [];
+    const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
 
-          // Create menu items for each inventory item
-          let itemSortOrder = 0;
-          for (const inventoryItem of items) {
-            const menuItem = this.menuItemRepository.create({
-              menuId: savedMenu.id,
-              categoryId: savedCategory.id,
-              inventoryItemId: inventoryItem.id,
-              name: inventoryItem.name,
-              description: null,
-              price: Number(inventoryItem.salePrice || 0),
-              isAvailable: true,
-              sortOrder: itemSortOrder++,
-            });
-            const savedMenuItem = await queryRunner.manager.save(MenuItem, menuItem);
+    // Resolve subcategory names too (for two-level menus).
+    const subcategoryIds = [
+      ...new Set(inventoryItems.map((i) => i.subcategoryId).filter(Boolean)),
+    ];
+    const subcategories = subcategoryIds.length
+      ? await this.inventorySubcategoryRepository.find({
+          where: { id: In(subcategoryIds) },
+        })
+      : [];
+    const subcategoryNameById = new Map(subcategories.map((s) => [s.id, s.name]));
 
-            createdItems.push({
-              id: savedMenuItem.id,
-              name: savedMenuItem.name,
-              category: savedCategory.name,
-              price: savedMenuItem.price,
-            });
-          }
-        }
-
-        await queryRunner.commitTransaction();
-
-        return {
-          menu: savedMenu,
-          createdItems,
-        };
+    const itemsByCategory = new Map<string, InventoryItem[]>();
+    inventoryItems.forEach((item) => {
+      const categoryKey =
+        (item.categoryId && categoryNameById.get(item.categoryId)) ||
+        "Uncategorized";
+      if (!itemsByCategory.has(categoryKey)) {
+        itemsByCategory.set(categoryKey, []);
       }
+      itemsByCategory.get(categoryKey)!.push(item);
+    });
 
-      await queryRunner.commitTransaction();
-      return { menu: savedMenu, createdItems: [] };
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
+    const createdItems = [];
+    let categorySortOrder = 0;
+    for (const [categoryName, items] of itemsByCategory.entries()) {
+      const savedCategory = await this.menuCategoryRepository.save(
+        this.menuCategoryRepository.create({
+          menuId,
+          name: categoryName,
+          description: null,
+          sortOrder: categorySortOrder++,
+        }),
+      );
+
+      let itemSortOrder = 0;
+      for (const inventoryItem of items) {
+        const savedMenuItem = await this.menuItemRepository.save(
+          this.menuItemRepository.create({
+            menuId,
+            categoryId: savedCategory.id,
+            inventoryItemId: inventoryItem.id,
+            name: inventoryItem.name,
+            description: null,
+            price: Number(inventoryItem.salePrice || 0),
+            // Carry the inventory item's photo onto the menu item so templates
+            // can show it (the make-up item's frontImage is the dish photo).
+            image: inventoryItem.frontImage || null,
+            subcategory:
+              (inventoryItem.subcategoryId &&
+                subcategoryNameById.get(inventoryItem.subcategoryId)) ||
+              null,
+            isAvailable: true,
+            sortOrder: itemSortOrder++,
+          }),
+        );
+        createdItems.push({
+          id: savedMenuItem.id,
+          name: savedMenuItem.name,
+          category: savedCategory.name,
+          price: savedMenuItem.price,
+        });
+      }
+    }
+    return createdItems;
+  }
+
+  /** Fill any menu item missing an image from its linked inventory item's
+   * frontImage, and subcategory from its inventory subcategory. Mutates the
+   * passed items in place. Read-time fallback for menus built before these
+   * were copied onto the menu item. */
+  private async fillItemImages(items: MenuItem[]) {
+    const needing = items.filter(
+      (i) => (!i.image || !i.subcategory) && i.inventoryItemId,
+    );
+    if (needing.length === 0) return;
+    const invIds = [...new Set(needing.map((i) => i.inventoryItemId))];
+    const inv = await this.inventoryItemRepository.find({
+      where: { id: In(invIds) },
+    });
+    const invById = new Map(inv.map((i) => [i.id, i]));
+
+    const subIds = [
+      ...new Set(inv.map((i) => i.subcategoryId).filter(Boolean)),
+    ];
+    const subs = subIds.length
+      ? await this.inventorySubcategoryRepository.find({
+          where: { id: In(subIds) },
+        })
+      : [];
+    const subNameById = new Map(subs.map((s) => [s.id, s.name]));
+
+    for (const item of needing) {
+      const invItem = invById.get(item.inventoryItemId);
+      if (!invItem) continue;
+      if (!item.image && invItem.frontImage) item.image = invItem.frontImage;
+      if (!item.subcategory && invItem.subcategoryId) {
+        item.subcategory = subNameById.get(invItem.subcategoryId) || null;
+      }
     }
   }
 
-  async findAll(businessId: string) {
-    return this.menuRepository.find({
-      where: { businessId },
-      relations: ['categories', 'categories.items'],
-    });
+  /** Delete a menu's items then categories (order_items keep their snapshot;
+   * order_items.menuItemId has no FK, so dangling references are harmless). */
+  private async clearMenuItems(menuId: string) {
+    const cats = await this.menuCategoryRepository.find({ where: { menuId } });
+    const catIds = cats.map((c) => c.id);
+    if (catIds.length) {
+      await this.menuItemRepository.delete({ categoryId: In(catIds) });
+    }
+    await this.menuItemRepository.delete({ menuId });
+    await this.menuCategoryRepository.delete({ menuId });
   }
 
-  async findOne(id: string, businessId: string) {
-    const menu = await this.menuRepository.findOne({
-      where: { id, businessId },
-      relations: ['categories', 'categories.items'],
+  async findAll() {
+    const menus = await this.menuRepository.find({ where: {}, order: { createdAt: "DESC" } });
+    if (menus.length === 0) return [];
+    const menuIds = menus.map((m) => m.id);
+    const categories = await this.menuCategoryRepository.find({
+      where: { menuId: In(menuIds) },
+      order: { sortOrder: "ASC" },
     });
+    const catIds = categories.map((c) => c.id);
+    const items = catIds.length
+      ? await this.menuItemRepository.find({ where: { categoryId: In(catIds) }, order: { sortOrder: "ASC" } })
+      : [];
+    const itemsByCat = new Map<string, MenuItem[]>();
+    items.forEach((it) => {
+      const list = itemsByCat.get(it.categoryId) || [];
+      list.push(it);
+      itemsByCat.set(it.categoryId, list);
+    });
+    const catsByMenu = new Map<string, any[]>();
+    categories.forEach((c) => {
+      const list = catsByMenu.get(c.menuId) || [];
+      list.push({ ...c, items: itemsByCat.get(c.id) || [] });
+      catsByMenu.set(c.menuId, list);
+    });
+    return menus.map((m) => ({ ...m, categories: catsByMenu.get(m.id) || [] }));
+  }
 
+  async findOne(id: string) {
+    const menu = await this.menuRepository.findOne({ where: { id } });
     if (!menu) {
-      throw new NotFoundException('Menu not found');
+      throw new NotFoundException("Menu not found");
     }
 
-    return menu;
+    // Load categories + items via direct queries and stitch them together.
+    // Nested relations ("categories.items") mis-resolve across tenant schemas
+    // here, which left the edit screen with no pre-selected items.
+    const categories = await this.menuCategoryRepository.find({
+      where: { menuId: id },
+      order: { sortOrder: "ASC" },
+    });
+    const catIds = categories.map((c) => c.id);
+    const items = catIds.length
+      ? await this.menuItemRepository.find({
+          where: { categoryId: In(catIds) },
+          order: { sortOrder: "ASC" },
+        })
+      : [];
+
+    // Backfill missing dish photos from the linked inventory item so menus
+    // created before images were carried over still display them.
+    await this.fillItemImages(items);
+
+    const itemsByCat = new Map<string, MenuItem[]>();
+    for (const it of items) {
+      const list = itemsByCat.get(it.categoryId) || [];
+      list.push(it);
+      itemsByCat.set(it.categoryId, list);
+    }
+    return {
+      ...menu,
+      categories: categories.map((c) => ({ ...c, items: itemsByCat.get(c.id) || [] })),
+    };
   }
 
-  async update(id: string, businessId: string, updateMenuDto: UpdateMenuDto) {
-    await this.findOne(id, businessId);
-    await this.menuRepository.update({ id }, updateMenuDto);
-    return this.findOne(id, businessId);
+  async update(id: string, updateMenuDto: UpdateMenuDto) {
+    await this.findOne(id);
+
+    // inventoryItemIds isn't a menu column — pull it out and, when present,
+    // rebuild the menu's categories/items so item edits actually persist.
+    const { inventoryItemIds, ...scalar } = updateMenuDto as UpdateMenuDto & {
+      inventoryItemIds?: string[];
+    };
+
+    if (Object.keys(scalar).length > 0) {
+      await this.menuRepository.update({ id }, scalar);
+    }
+
+    if (Array.isArray(inventoryItemIds)) {
+      await this.clearMenuItems(id);
+      if (inventoryItemIds.length > 0) {
+        await this.buildMenuItems(id, inventoryItemIds);
+      }
+    }
+
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.menuRepository.delete({ id });
   }
 }

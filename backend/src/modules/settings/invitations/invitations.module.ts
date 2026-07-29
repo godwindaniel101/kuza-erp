@@ -5,11 +5,12 @@ import { InvitationsService } from './invitations.service';
 import { Invitation } from '../../../common/entities/invitation.entity';
 import { User } from '../../../common/entities/user.entity';
 import { Role } from '../../../common/entities/role.entity';
+import { Employee } from '../../hrms/entities/employee.entity';
 import { NotificationsModule } from '../../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Invitation, User, Role]),
+    TypeOrmModule.forFeature([Invitation, User, Role, Employee]),
     NotificationsModule,
   ],
   controllers: [InvitationsController],

@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Position } from '../entities/position.entity';
-import { CreatePositionDto } from './dto/create-position.dto';
-import { UpdatePositionDto } from './dto/update-position.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Position } from "../entities/position.entity";
+import { CreatePositionDto } from "./dto/create-position.dto";
+import { UpdatePositionDto } from "./dto/update-position.dto";
 
 @Injectable()
 export class PositionsService {
@@ -12,49 +12,47 @@ export class PositionsService {
     private positionRepository: Repository<Position>,
   ) {}
 
-  async create(businessId: string, createDto: CreatePositionDto) {
+  async create(createDto: CreatePositionDto) {
     const position = this.positionRepository.create({
       ...createDto,
-      businessId,
     });
     return this.positionRepository.save(position);
   }
 
-  async findAll(businessId: string, departmentId?: string) {
-    const where: any = { businessId };
+  async findAll(departmentId?: string) {
+    const where: any = {};
     if (departmentId) {
       where.departmentId = departmentId;
     }
 
     return this.positionRepository.find({
       where,
-      relations: ['department'],
-      order: { title: 'ASC' },
+      relations: ["department"],
+      order: { title: "ASC" },
     });
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const position = await this.positionRepository.findOne({
-      where: { id, businessId },
-      relations: ['department'],
+      where: { id },
+      relations: ["department"],
     });
 
     if (!position) {
-      throw new NotFoundException('Position not found');
+      throw new NotFoundException("Position not found");
     }
 
     return position;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdatePositionDto) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdatePositionDto) {
+    await this.findOne(id);
     await this.positionRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.positionRepository.delete({ id });
   }
 }
-

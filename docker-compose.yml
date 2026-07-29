@@ -1,3 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Kuza ERP — local Docker stack (db + backend + user-portal + admin-portal).
+#
+#   docker compose up -d                 # start the app stack
+#   docker compose --profile ai up -d    # …and the local Ollama LLM backend
+#   docker compose down                  # stop (add -v to wipe volumes)
+#
+# Config is split by concern (separation of concerns):
+#   .env               → compose topology + Postgres bootstrap creds (this file)
+#   backend/.env       → backend app config + secrets (JWT, mail, AI, payments)
+#   user-portal/.env   → operator-portal config
+#   admin-portal/.env  → admin-portal config
+# First run: copy each `*.env.example` to `*.env`. Each service loads its own
+# file via `env_file:`; the `environment:` blocks below only force the values
+# that must differ inside the compose network (DB host, shared creds, CORS).
+# Production is deployed separately via Cloud Run (see DEPLOY.md).
+# ─────────────────────────────────────────────────────────────────────────
+name: kuza
 
 services:
   postgres:
@@ -19,12 +37,18 @@ services:
       retries: 5
     networks:
       - erp_network
+    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
       dockerfile: ${DOCKERFILE_BACKEND:-Dockerfile.dev}
     container_name: erp_backend
+    # App config + secrets (JWT, mail, AI, payments) — owned by the service.
+    env_file:
+      - ./backend/.env
+    # Only the values that MUST differ inside the compose network. These OVERRIDE
+    # backend/.env (which targets native/bare-metal dev at localhost).
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4001
@@ -35,18 +59,8 @@ services:
       DB_NAME: ${DB_NAME:-erp_db}
       DB_LANDLORD_NAME: ${DB_LANDLORD_NAME:-erp_landlord}
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/auth/google/callback}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-noreply@erp.com}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ERP Platform}
+      # CORS allow-list — the two portal origins on the compose network.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5001,http://localhost:5002}
     ports:
       - "${BACKEND_PORT:-4001}:4001"
     depends_on:
@@ -54,40 +68,105 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
-      - ./backend/src/i18n:/app/src/i18n
-      - ./backend/src/modules/notifications/templates:/app/src/modules/notifications/templates
+      - backend_uploads:/app/uploads
       - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:4001/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - erp_network
     restart: unless-stopped
     command: npm run start:dev
 
-  frontend:
+  # Operator portal — the tenant-facing dashboard/app (formerly ./frontend).
+  user-portal:
     build:
-      context: ./frontend
-      dockerfile: ${DOCKERFILE_FRONTEND:-Dockerfile.dev}
-    container_name: erp_frontend
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
-      NEXT_TELEMETRY_DISABLED: 1
+      context: ./user-portal
+      dockerfile: ${DOCKERFILE_USER_PORTAL:-Dockerfile.dev}
+    container_name: erp_user_portal
+    env_file:
+      - ./user-portal/.env
     ports:
-      - "${FRONTEND_PORT:-4000}:3000"
+      - "${USER_PORTAL_PORT:-5001}:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+    volumes:
+      - ./user-portal:/app
+      - /app/node_modules
+      - /app/.next
     networks:
       - erp_network
     restart: unless-stopped
+    command: npm run dev -- -H 0.0.0.0
+
+  # Admin portal — platform super-admin console (tenants, plans, pricing, requests).
+  admin-portal:
+    build:
+      context: ./admin-portal
+      dockerfile: ${DOCKERFILE_ADMIN_PORTAL:-Dockerfile.dev}
+    container_name: erp_admin_portal
+    env_file:
+      - ./admin-portal/.env
+    ports:
+      - "${ADMIN_PORTAL_PORT:-5002}:3000"
+    depends_on:
+      backend:
+        condition: service_started
     volumes:
-      - ./frontend:/app
+      - ./admin-portal:/app
       - /app/node_modules
       - /app/.next
+    networks:
+      - erp_network
+    restart: unless-stopped
     command: npm run dev -- -H 0.0.0.0
+
+  # Marketing website — public landing / marketing site (Next.js). No API deps.
+  website:
+    build:
+      context: ./website
+      dockerfile: ${DOCKERFILE_WEBSITE:-Dockerfile.dev}
+    container_name: erp_website
+    env_file:
+      - ./website/.env
+    ports:
+      - "${WEBSITE_PORT:-5003}:3000"
+    volumes:
+      - ./website:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - erp_network
+    restart: unless-stopped
+    command: npm run dev -- -H 0.0.0.0
+
+  # Optional local Llama (OpenAI-compatible) LLM backend — opt-in via the `ai`
+  # profile, so a bare `docker compose up` never pulls this heavy image.
+  #   1) docker compose --profile ai up -d ollama
+  #   2) docker exec erp_ollama ollama pull llama3.2
+  #   3) point the backend at it: AI_PROVIDER=openai,
+  #      AI_BASE_URL=http://ollama:11434/v1, AI_MODEL=llama3.2 — then restart backend.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: erp_ollama
+    profiles: ["ai"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - erp_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  backend_uploads:
+  ollama_data:
 
 networks:
   erp_network:
     driver: bridge
-

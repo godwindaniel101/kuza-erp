@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository, In, DataSource } from "typeorm";
+import { Transactional } from "typeorm-transactional";
 import { InventoryItem } from "../entities/inventory-item.entity";
+import { InventoryItemComponent } from "../entities/inventory-item-component.entity";
 import { BranchInventoryItem } from "../entities/branch-inventory-item.entity";
-import { CreateInventoryItemDto } from "./dto/create-inventory-item.dto";
+import { CreateInventoryItemDto, ItemComponentDto } from "./dto/create-inventory-item.dto";
 import { UpdateInventoryItemDto } from "./dto/update-inventory-item.dto";
 import { UomConversionsService } from "../uom-conversions/uom-conversions.service";
 import { Uom } from "../entities/uom.entity";
@@ -12,12 +14,19 @@ import { InventoryCategory } from "../entities/inventory-category.entity";
 import { InventorySubcategory } from "../entities/inventory-subcategory.entity";
 import { OrderItem } from "../../rms/entities/order-item.entity";
 import { Order } from "../../rms/entities/order.entity";
+import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
+import * as sharp from "sharp";
 
 @Injectable()
 export class InventoryService {
   constructor(
     @InjectRepository(InventoryItem)
     private inventoryItemRepository: Repository<InventoryItem>,
+    @InjectRepository(InventoryItemComponent)
+    private componentRepository: Repository<InventoryItemComponent>,
     @InjectRepository(BranchInventoryItem)
     private branchInventoryRepository: Repository<BranchInventoryItem>,
     @InjectRepository(Uom)
@@ -32,14 +41,18 @@ export class InventoryService {
     private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
-    private uomConversionsService: UomConversionsService
+    private uomConversionsService: UomConversionsService,
+    private dataSource: DataSource,
   ) {}
 
-  async create(businessId: string, createDto: CreateInventoryItemDto) {
+  async create(
+    createDto: CreateInventoryItemDto,
+    actor?: { id?: string; name?: string },
+  ) {
     // Validate category if provided
     if (createDto.categoryId) {
       const category = await this.categoryRepository.findOne({
-        where: { id: createDto.categoryId, businessId },
+        where: { id: createDto.categoryId },
       });
       if (!category) {
         throw new NotFoundException("Category not found");
@@ -49,7 +62,7 @@ export class InventoryService {
     // Validate subcategory if provided
     if (createDto.subcategoryId) {
       const subcategory = await this.subcategoryRepository.findOne({
-        where: { id: createDto.subcategoryId, businessId },
+        where: { id: createDto.subcategoryId },
       });
       if (!subcategory) {
         throw new NotFoundException("Subcategory not found");
@@ -60,40 +73,103 @@ export class InventoryService {
         subcategory.categoryId !== createDto.categoryId
       ) {
         throw new NotFoundException(
-          "Subcategory does not belong to the selected category"
+          "Subcategory does not belong to the selected category",
         );
       }
     }
 
+    const { components, ...itemFields } = createDto;
     const item = this.inventoryItemRepository.create({
-      ...createDto,
-      unitCost: 0, // Cost is captured during inflow, not when creating items
-      businessId,
+      ...itemFields,
+      // For tracked items, real cost comes from inflow batches; for untracked /
+      // composed items the provided unitCost is the manual cost price.
+      unitCost: createDto.unitCost ?? 0,
+      createdBy: actor?.id || null,
+      createdByName: actor?.name || null,
+      updatedBy: actor?.id || null,
+      updatedByName: actor?.name || null,
     });
-    return this.inventoryItemRepository.save(item);
+    const savedItem = await this.inventoryItemRepository.save(item);
+
+    if (components && components.length > 0) {
+      await this.setItemComponents(savedItem.id, components);
+    }
+
+    // Explicitly load the item with relations to ensure they're available immediately
+    const itemWithRelations = await this.inventoryItemRepository.findOne({
+      where: { id: savedItem.id },
+      relations: ["category", "subcategory", "baseUom"],
+    });
+
+    return itemWithRelations || savedItem;
   }
 
-  async findAll(businessId: string, branchId?: string) {
-    const items = await this.inventoryItemRepository.find({
-      where: { businessId },
-      relations: [
-        "baseUom",
-        "branches",
-        "branches.branch",
-        "category",
-        "subcategory",
-      ],
-    });
+  /**
+   * Replace an item's make-up (bill of materials). v1 rule: components must be
+   * raw items — a component may not itself have components (no nested make-up).
+   */
+  async setItemComponents(itemId: string, components: ItemComponentDto[]) {
+    const lines = (components || []).filter((c) => c.componentItemId);
+    const ids = lines.map((c) => c.componentItemId);
+
+    if (ids.length) {
+      if (ids.includes(itemId)) {
+        throw new BadRequestException("An item cannot be an ingredient of itself.");
+      }
+      if (new Set(ids).size !== ids.length) {
+        throw new BadRequestException("The same ingredient is listed more than once.");
+      }
+      const found = await this.inventoryItemRepository.find({ where: { id: In(ids) } });
+      if (found.length !== ids.length) {
+        throw new BadRequestException("One or more ingredient items were not found.");
+      }
+      // Enforce raw-only ingredients (no nested make-up).
+      const nested = await this.componentRepository.find({
+        where: { parentItemId: In(ids) },
+      });
+      if (nested.length > 0) {
+        throw new BadRequestException(
+          "Ingredients must be raw items — one of them is itself made up of other items.",
+        );
+      }
+    }
+
+    await this.componentRepository.delete({ parentItemId: itemId });
+    if (lines.length) {
+      await this.componentRepository.save(
+        lines.map((c) =>
+          this.componentRepository.create({
+            parentItemId: itemId,
+            componentItemId: c.componentItemId,
+            quantity: c.quantity,
+            uomId: c.uomId ?? null,
+          }),
+        ),
+      );
+    }
+  }
+
+  async findAll(branchId?: string) {
+    // Use QueryBuilder to ensure relations are properly loaded
+    const items = await this.inventoryItemRepository
+      .createQueryBuilder("item")
+      .leftJoinAndSelect("item.baseUom", "baseUom")
+      .leftJoinAndSelect("item.branches", "branches")
+      .leftJoinAndSelect("branches.branch", "branch")
+      .leftJoinAndSelect("item.category", "category")
+      .leftJoinAndSelect("item.subcategory", "subcategory")
+      .orderBy("item.name", "ASC")
+      .getMany();
 
     // Guard: return early if no items
     if (!items || items.length === 0) {
       return [];
     }
 
-    // Get all UOM conversions and all UOMs for this restaurant
+    // Get all UOM conversions and all UOMs for this business
     const [conversions, allUoms] = await Promise.all([
-      this.uomConversionsService.findAll(businessId),
-      this.uomRepository.find({ where: { businessId } }),
+      this.uomConversionsService.findAll(),
+      this.uomRepository.find({}),
     ]);
 
     // Create a map of all UOMs for quick lookup
@@ -115,12 +191,11 @@ export class InventoryService {
       ...new Set(items.map((item) => item.baseUomId).filter(Boolean)),
     ];
 
-    // Manually load baseUoms with businessId constraint (use already loaded allUomsMap as fallback)
+    // Manually load baseUoms with  constraint (use already loaded allUomsMap as fallback)
     const baseUomsMap = new Map<string, Uom>();
     if (baseUomIds.length > 0) {
       const baseUoms = await this.uomRepository.find({
         where: {
-          businessId,
           id: baseUomIds.length === 1 ? baseUomIds[0] : In(baseUomIds),
         },
       });
@@ -135,12 +210,11 @@ export class InventoryService {
       });
     }
 
-    // Manually load categories and subcategories with businessId constraint
+    // Manually load categories and subcategories with constraint (fallback for QueryBuilder)
     const categoriesMap = new Map<string, InventoryCategory>();
     if (categoryIds.length > 0) {
       const categories = await this.categoryRepository.find({
         where: {
-          businessId,
           id: categoryIds.length === 1 ? categoryIds[0] : In(categoryIds),
         },
       });
@@ -155,7 +229,6 @@ export class InventoryService {
     if (subcategoryIds.length > 0) {
       const subcategories = await this.subcategoryRepository.find({
         where: {
-          businessId,
           id:
             subcategoryIds.length === 1
               ? subcategoryIds[0]
@@ -248,7 +321,7 @@ export class InventoryService {
           }
         }
 
-        // Use manually loaded category/subcategory if relation didn't load
+        // Use manually loaded category/subcategory if relation didn't load (should be rare with QueryBuilder)
         const category =
           item.category ||
           (item.categoryId ? categoriesMap.get(item.categoryId) : null);
@@ -261,6 +334,12 @@ export class InventoryService {
         const result: any = {
           ...item,
           uoms,
+          // Always expose the resolved base UOM (the join may not load under the
+          // tenant search_path; fall back to the manually loaded map) so the UI
+          // isn't left showing "-" for the unit column.
+          baseUom: baseUom
+            ? { id: baseUom.id, name: baseUom.name, abbreviation: baseUom.abbreviation }
+            : null,
           category: category?.name || null,
           subcategory: subcategory?.name || null,
           categoryId: item.categoryId || null,
@@ -275,10 +354,153 @@ export class InventoryService {
         return result;
       });
 
+    await this.attachBatchAndExpiry(itemsWithUoms);
+
     return itemsWithUoms;
   }
 
-  async findAllWithBranchStock(businessId: string) {
+  /**
+   * Attach per-item inflow-batch aggregates (mutates each row in place):
+   *  - batchCount: number of inflow batches (lots) with stock remaining
+   *  - earliestExpiry: the next upcoming batch expiry date (or null)
+   *  - expiringSoonCount: batches expiring within 30 days
+   * Powers the list "Batches" / "Expiring soon" columns and the dashboard
+   * "Expiring soon" widget. One grouped query for the whole page of items.
+   */
+  private async attachBatchAndExpiry(items: any[]): Promise<void> {
+    const ids = (items || []).map((i) => i?.id).filter(Boolean);
+    if (ids.length === 0) return;
+    const rows = await this.inventoryItemRepository.manager.query(
+      `SELECT inventory_item_id AS id,
+              COUNT(*) FILTER (WHERE base_quantity > 0) AS batch_count,
+              MIN(expiry_date) FILTER (WHERE expiry_date >= CURRENT_DATE) AS next_expiry,
+              COUNT(*) FILTER (
+                WHERE expiry_date >= CURRENT_DATE
+                  AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+              ) AS soon_count
+       FROM inventory_inflow_items
+       WHERE inventory_item_id = ANY($1::uuid[])
+       GROUP BY inventory_item_id`,
+      [ids],
+    );
+    const byId = new Map<string, any>((rows || []).map((r: any) => [r.id, r]));
+    items.forEach((it: any) => {
+      const r = byId.get(it.id);
+      it.batchCount = Number(r?.batch_count || 0);
+      it.earliestExpiry = r?.next_expiry || null;
+      it.expiringSoonCount = Number(r?.soon_count || 0);
+    });
+  }
+
+  /**
+   * Batch-level list of stock expiring within `days` (default 30) for the
+   * "Expiring soon" tab on the Branch Stock page. One row per inflow batch
+   * (lot) with remaining stock (base_quantity > 0) and a non-null expiry
+   * between today and today+days, soonest first. Optionally scoped to one
+   * branch. Defensive: bad `days` falls back to 30; no rows -> [], never throws.
+   */
+  async findExpiringSoon(branchId?: string, days = 30): Promise<any[]> {
+    const parsed = Number(days);
+    const window =
+      Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 30;
+    const params: any[] = [window];
+    let branchFilter = "";
+    if (branchId) {
+      params.push(branchId);
+      branchFilter = "AND ii.branch_id = $2";
+    }
+    const rows = await this.branchInventoryRepository.manager.query(
+      `SELECT ii.id                AS "inflowItemId",
+              ii.inventory_item_id AS "inventoryItemId",
+              COALESCE(it.name, ii.original_item_name) AS "itemName",
+              ii.branch_id         AS "branchId",
+              b.name               AS "branchName",
+              ii.batch_number      AS "batchNumber",
+              ii.expiry_date       AS "expiryDate",
+              ii.base_quantity     AS "quantity"
+       FROM inventory_inflow_items ii
+       LEFT JOIN inventory_items it ON it.id = ii.inventory_item_id
+       LEFT JOIN branches b ON b.id = ii.branch_id
+       WHERE ii.base_quantity > 0
+         AND ii.expiry_date IS NOT NULL
+         AND ii.expiry_date >= CURRENT_DATE
+         AND ii.expiry_date <= CURRENT_DATE + ($1::text || ' days')::interval
+         ${branchFilter}
+       ORDER BY ii.expiry_date ASC`,
+      params,
+    );
+    return (rows || []).map((r: any) => ({
+      inflowItemId: r.inflowItemId,
+      inventoryItemId: r.inventoryItemId,
+      itemName: r.itemName || "",
+      branchId: r.branchId || null,
+      branchName: r.branchName || null,
+      batchNumber: r.batchNumber || null,
+      expiryDate: r.expiryDate || null,
+      quantity: Number(r.quantity || 0),
+    }));
+  }
+
+  /**
+   * Upsert the per-branch min/max stock config for a single branch+item on
+   * the `branch_inventory_items` row. Creates the row if it does not exist yet
+   * (e.g. the branch has never received this item). Only min/max are touched;
+   * currentStock / salePrice are left as-is. Purely a config write — does not
+   * mutate stock or FIFO batches.
+   */
+  async updateBranchStockConfig(
+    branchId: string,
+    inventoryItemId: string,
+    data: { minimumStock?: number; maximumStock?: number },
+  ): Promise<any> {
+    if (!branchId || !inventoryItemId) {
+      throw new BadRequestException(
+        "branchId and inventoryItemId are required",
+      );
+    }
+    const toNum = (v: any): number | undefined => {
+      if (v === undefined || v === null || v === "") return undefined;
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new BadRequestException("min/max stock must be a positive number");
+      }
+      return n;
+    };
+    const min = toNum(data.minimumStock);
+    const max = toNum(data.maximumStock);
+    if (min !== undefined && max !== undefined && max > 0 && max < min) {
+      throw new BadRequestException(
+        "maximumStock cannot be less than minimumStock",
+      );
+    }
+
+    let row = await this.branchInventoryRepository.findOne({
+      where: { branchId, inventoryItemId },
+    });
+    if (!row) {
+      row = this.branchInventoryRepository.create({
+        branchId,
+        inventoryItemId,
+        currentStock: 0,
+        salePrice: 0,
+        minimumStock: min ?? 0,
+        maximumStock: max ?? 0,
+      });
+    } else {
+      if (min !== undefined) row.minimumStock = min;
+      if (max !== undefined) row.maximumStock = max;
+    }
+    const saved = await this.branchInventoryRepository.save(row);
+    return {
+      id: saved.id,
+      branchId: saved.branchId,
+      inventoryItemId: saved.inventoryItemId,
+      minimumStock: Number(saved.minimumStock || 0),
+      maximumStock: Number(saved.maximumStock || 0),
+    };
+  }
+
+  async findAllWithBranchStock() {
     // Use query builder to ensure all relations load correctly
     const items = await this.inventoryItemRepository
       .createQueryBuilder("item")
@@ -286,13 +508,11 @@ export class InventoryService {
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .where("item.businessId = :businessId", { businessId })
       .orderBy("item.name", "ASC")
       .getMany();
 
-    // Get all branches for this restaurant
+    // Get all branches for this business
     const branches = await this.branchRepository.find({
-      where: { businessId },
       order: { isDefault: "DESC", name: "ASC" },
     });
 
@@ -301,7 +521,7 @@ export class InventoryService {
     const baseUomsMap = new Map<string, Uom>();
     if (baseUomIds.length > 0) {
       const baseUoms = await this.uomRepository.find({
-        where: { businessId, id: In(baseUomIds) },
+        where: { id: In(baseUomIds) },
       });
       baseUoms.forEach((uom) => {
         if (uom && uom.id) {
@@ -315,7 +535,7 @@ export class InventoryService {
     const categoriesMap = new Map<string, InventoryCategory>();
     if (categoryIds.length > 0) {
       const categories = await this.categoryRepository.find({
-        where: { businessId, id: In(categoryIds) },
+        where: { id: In(categoryIds) },
       });
       categories.forEach((cat) => {
         if (cat && cat.id) {
@@ -331,7 +551,7 @@ export class InventoryService {
     const subcategoriesMap = new Map<string, InventorySubcategory>();
     if (subcategoryIds.length > 0) {
       const subcategories = await this.subcategoryRepository.find({
-        where: { businessId, id: In(subcategoryIds) },
+        where: { id: In(subcategoryIds) },
       });
       subcategories.forEach((sub) => {
         if (sub && sub.id) {
@@ -365,7 +585,7 @@ export class InventoryService {
       return [];
     }
 
-    return items
+    const mapped = items
       .map((item) => {
         // Guard: skip items without ID
         if (!item || !item.id) {
@@ -414,6 +634,7 @@ export class InventoryService {
               branchItem && branchItem.salePrice
                 ? Number(branchItem.salePrice || 0)
                 : null,
+            binLocation: branchItem?.binLocation || null,
           };
         });
 
@@ -446,7 +667,11 @@ export class InventoryService {
           subcategoryId: item.subcategoryId || null,
           unit: unitName,
           baseUomId: item.baseUomId || null,
+          baseUom: baseUom
+            ? { id: baseUom.id, name: baseUom.name, abbreviation: baseUom.abbreviation }
+            : null,
           isTrackable: item.isTrackable !== false,
+          binLocation: item.binLocation || null,
           branchStocks,
           totalStock,
           minimumStock: Number(item.minimumStock || 0),
@@ -455,11 +680,14 @@ export class InventoryService {
         };
       })
       .filter((item) => item !== null); // Filter out any null items
+
+    await this.attachBatchAndExpiry(mapped as any[]);
+    return mapped;
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const item = await this.inventoryItemRepository.findOne({
-      where: { id, businessId },
+      where: { id },
       relations: [
         "baseUom",
         "branches",
@@ -474,117 +702,241 @@ export class InventoryService {
       throw new NotFoundException("Inventory item not found");
     }
 
+    // Make-up (components), so the edit form can prefill the recipe.
+    const components = await this.componentRepository.find({
+      where: { parentItemId: id },
+      order: { createdAt: "ASC" },
+    });
+
     return {
       ...item,
       category: item.category?.name || null,
       subcategory: item.subcategory?.name || null,
+      components: components.map((c) => ({
+        componentItemId: c.componentItemId,
+        quantity: Number(c.quantity),
+        uomId: c.uomId,
+      })),
     };
   }
 
-  async getItemStats(id: string, businessId: string) {
+  async getItemStats(id: string) {
     // Get the item with basic info
-    const item = await this.findOne(id, businessId);
+    const item = await this.findOne(id);
 
-    // Get branch stocks
-    const branchStocks = await this.branchInventoryRepository.find({
-      where: { inventoryItemId: id },
-      relations: ["branch"],
-    });
+    // Get branch stocks using Query Builder for safety
+    const branchStocks = await this.branchInventoryRepository
+      .createQueryBuilder("bs")
+      .leftJoinAndSelect("bs.branch", "branch")
+      .where("bs.inventoryItemId = :id", { id })
+      .getMany();
 
-    // Get sales data from order items (include all orders, not just completed ones)
-    const orderItemsQuery = `
-      SELECT 
-        oi.inventoryItemId,
-        COUNT(DISTINCT oi.orderId) as orderCount,
-        SUM(oi.quantityBase) as totalQuantitySold,
-        SUM(oi.totalPrice) as totalSalesAmount,
-        SUM(oi.costTotal) as totalCost,
-        SUM(oi.totalPrice - oi.costTotal) as totalProfit,
-        CASE 
-          WHEN SUM(oi.totalPrice) > 0 
-          THEN ((SUM(oi.totalPrice - oi.costTotal) / SUM(oi.totalPrice)) * 100)
-          ELSE 0 
-        END as profitMargin
+    // Resolve branch names via a direct lookup keyed by id. The bs.branch
+    // relation can hydrate null (tenant-schema join quirk), which surfaced as
+    // "Unknown Branch"; this map guarantees a real name when the branch exists.
+    const branchIdList = branchStocks
+      .map((bs) => bs.branchId)
+      .filter((v): v is string => Boolean(v));
+    const branchRecords = branchIdList.length
+      ? await this.branchRepository.find({ where: { id: In(branchIdList) } })
+      : [];
+    const branchNameById = new Map(branchRecords.map((b) => [b.id, b.name]));
+    const resolveBranchName = (bs: any) =>
+      branchNameById.get(bs.branchId) || bs.branch?.name || "Unknown Branch";
+
+    // Use Query Builder for all stats to ensure tenant isolation
+    const salesQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("COUNT(DISTINCT oi.orderId)", "orderCount")
+      .addSelect("SUM(oi.quantityBase)", "totalQuantitySold")
+      .addSelect("SUM(oi.totalPrice)", "totalSalesAmount")
+      .addSelect("SUM(oi.costTotal)", "totalCost")
+      .innerJoin("oi.order", "o")
+      .where("oi.inventoryItemId = :id", { id });
+
+    const recentSalesQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("SUM(oi.quantityBase)", "recentQuantity")
+      .addSelect("SUM(oi.totalPrice)", "recentAmount")
+      .innerJoin("oi.order", "o")
+      .where("oi.inventoryItemId = :id", { id })
+      .andWhere("o.createdAt >= NOW() - INTERVAL '30 days'");
+
+    const salesByBranchQuery = this.orderItemRepository
+      .createQueryBuilder("oi")
+      .select("o.branchId", "branchid")
+      .addSelect("b.name", "branchname")
+      .addSelect("COUNT(DISTINCT oi.orderId)", "ordercount")
+      .addSelect("SUM(oi.quantityBase)", "totalquantity")
+      .addSelect("SUM(oi.totalPrice)", "totalamount")
+      .addSelect("SUM(oi.costTotal)", "totalcost")
+      .innerJoin("oi.order", "o")
+      .innerJoin("o.branch", "b")
+      .where("oi.inventoryItemId = :id", { id })
+      .groupBy("o.branchId, b.name")
+      .orderBy("totalamount", "DESC");
+
+    // Per-sale and per-receipt history use RAW SQL with explicit table joins
+    // instead of QueryBuilder relation joins (`oi.order`, `ii.inflow`, …). Under
+    // the tenant schema those relation joins can fail to hydrate — the documented
+    // recurring bug that left inflow date/supplier and sales history empty — so
+    // we join the real tables directly (proven reliable, like the FIFO query).
+    const em = this.orderItemRepository.manager;
+    const salesHistorySql = `
+      SELECT o.created_at AS createdat,
+             o.order_number AS ordernumber,
+             oi.quantity AS quantity,
+             oi.unit_price AS unitprice,
+             oi.total_price AS totalprice,
+             u.name AS uomname,
+             b.name AS branchname
       FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-      GROUP BY oi.inventoryItemId
-    `;
+      INNER JOIN orders o ON o.id = oi.order_id
+      LEFT JOIN branches b ON b.id = o.branch_id
+      LEFT JOIN uoms u ON u.id = oi.uom_id
+      WHERE oi.inventory_item_id = $1
+      ORDER BY o.created_at DESC
+      LIMIT 100`;
+    const inflowHistorySql = `
+      SELECT inflow.received_date AS receivedat,
+             ii.quantity AS quantity,
+             ii.unit_cost AS unitcost,
+             ii.total_cost AS totalcost,
+             ii.batch_number AS batchnumber,
+             ii.expiry_date AS expirydate,
+             u.name AS uomname,
+             COALESCE(s.name, isup.name) AS suppliername,
+             b.name AS branchname
+      FROM inventory_inflow_items ii
+      LEFT JOIN inventory_inflows inflow ON inflow.id = ii.inflow_id
+      LEFT JOIN uoms u ON u.id = ii.uom_id
+      LEFT JOIN suppliers s ON s.id = ii.supplier_id
+      LEFT JOIN suppliers isup ON isup.id = inflow.supplier_id
+      LEFT JOIN branches b ON b.id = ii.branch_id
+      WHERE ii.inventory_item_id = $1
+      ORDER BY inflow.received_date DESC NULLS LAST
+      LIMIT 100`;
 
-    const recentSalesQuery = `
-      SELECT 
-        SUM(oi.quantityBase) as recentQuantity,
-        SUM(oi.totalPrice) as recentAmount
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-        AND o.createdAt >= NOW() - INTERVAL '30 days'
-    `;
-
-    const salesByBranchQuery = `
-      SELECT 
-        o.branchId,
-        b.name as branchName,
-        COUNT(DISTINCT oi.orderId) as orderCount,
-        SUM(oi.quantityBase) as totalQuantity,
-        SUM(oi.totalPrice) as totalAmount,
-        SUM(oi.costTotal) as totalCost,
-        SUM(oi.totalPrice - oi.costTotal) as totalProfit
-      FROM order_items oi
-      INNER JOIN orders o ON oi.orderId = o.id
-      INNER JOIN branches b ON o.branchId = b.id
-      WHERE oi.inventoryItemId = $1 
-        AND o.businessId = $2
-      GROUP BY o.branchId, b.name
-      ORDER BY totalAmount DESC
-    `;
+    // Per-branch "expiring soon" for this item, mirroring the item-level
+    // aggregate in attachBatchAndExpiry (same table / same 30-day window).
+    // Grouped by branch so the branch tab can flag which branch holds stock
+    // about to expire. Defensive: any failure yields an empty map (zeros/null),
+    // never breaks the stats response.
+    const expiringByBranch = new Map<string, any>();
+    try {
+      const expiringRows = await em.query(
+        `SELECT branch_id AS branchid,
+                MIN(expiry_date) FILTER (WHERE expiry_date >= CURRENT_DATE) AS next_expiry,
+                COUNT(*) FILTER (
+                  WHERE expiry_date >= CURRENT_DATE
+                    AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+                    AND base_quantity > 0
+                ) AS soon_count,
+                COALESCE(SUM(base_quantity) FILTER (
+                  WHERE expiry_date >= CURRENT_DATE
+                    AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+                    AND base_quantity > 0
+                ), 0) AS soon_qty
+         FROM inventory_inflow_items
+         WHERE inventory_item_id = $1
+           AND branch_id IS NOT NULL
+         GROUP BY branch_id`,
+        [id],
+      );
+      (expiringRows || []).forEach((r: any) => {
+        expiringByBranch.set(r.branchid, {
+          nextExpiry: r.next_expiry || null,
+          expiringSoonCount: Number(r.soon_count || 0),
+          expiringQuantity: Number(r.soon_qty || 0),
+        });
+      });
+    } catch {
+      // Non-critical: per-branch expiring stock unavailable; continue.
+    }
+    const withExpiry = (bs: any) => {
+      const e = expiringByBranch.get(bs.branchId) || {};
+      return {
+        branchId: bs.branchId,
+        branchName: resolveBranchName(bs),
+        currentStock: Number(bs.currentStock || 0),
+        minimumStock: Number(bs.minimumStock || 0),
+        maximumStock: Number(bs.maximumStock || 0),
+        salePrice: Number(bs.salePrice || 0),
+        nextExpiry: e.nextExpiry ?? null,
+        expiringSoonCount: Number(e.expiringSoonCount || 0),
+        expiringQuantity: Number(e.expiringQuantity || 0),
+      };
+    };
 
     try {
-      const [salesData, recentSales, salesByBranch] = await Promise.all([
-        this.inventoryItemRepository.query(orderItemsQuery, [id, businessId]),
-        this.inventoryItemRepository.query(recentSalesQuery, [id, businessId]),
-        this.inventoryItemRepository.query(salesByBranchQuery, [
-          id,
-          businessId,
-        ]),
-      ]);
+      const [salesData, recentSales, salesByBranch, salesRows, inflowRows] =
+        await Promise.all([
+          salesQuery.getRawOne(),
+          recentSalesQuery.getRawOne(),
+          salesByBranchQuery.getRawMany(),
+          em.query(salesHistorySql, [id]),
+          em.query(inflowHistorySql, [id]),
+        ]);
 
-      const sales = salesData[0] || {
-        orderCount: 0,
-        totalQuantitySold: 0,
-        totalSalesAmount: 0,
-        totalCost: 0,
-        totalProfit: 0,
-        profitMargin: 0,
+      const salesHistory = (salesRows || []).map((r: any) => ({
+        createdAt: r.createdat,
+        quantity: Number(r.quantity || 0),
+        uom: { name: r.uomname || null },
+        unitPrice: Number(r.unitprice || 0),
+        totalPrice: Number(r.totalprice || 0),
+        branch: { name: r.branchname || null },
+        order: { orderNumber: r.ordernumber || null },
+      }));
+
+      const inflowHistory = (inflowRows || []).map((r: any) => {
+        const qty = Number(r.quantity || 0);
+        const unit = Number(r.unitcost || 0);
+        return {
+          receivedAt: r.receivedat,
+          quantity: qty,
+          uom: { name: r.uomname || null },
+          costPerUnit: unit,
+          totalCost: Number(r.totalcost || 0) || unit * qty,
+          batchNumber: r.batchnumber || null,
+          expiryDate: r.expirydate || null,
+          supplier: { name: r.suppliername || null },
+          branch: { name: r.branchname || null },
+        };
+      });
+
+      const totalSalesAmount = Number(salesData?.totalsalesamount || 0);
+      const totalCost = Number(salesData?.totalcost || 0);
+      const totalProfit = totalSalesAmount - totalCost;
+      const profitMargin =
+        totalSalesAmount > 0 ? (totalProfit / totalSalesAmount) * 100 : 0;
+
+      const sales = {
+        orderCount: Number(salesData?.ordercount || 0),
+        totalQuantitySold: Number(salesData?.totalquantitysold || 0),
+        totalSalesAmount,
+        totalCost,
+        totalProfit,
+        profitMargin,
       };
 
-      const recent30Days = recentSales[0] || {
-        recentQuantity: 0,
-        recentAmount: 0,
+      const recent30Days = {
+        recentQuantity: Number(recentSales?.recentquantity || 0),
+        recentAmount: Number(recentSales?.recentamount || 0),
       };
 
       return {
         item,
-        branchStocks: branchStocks.map((bs) => ({
-          branchId: bs.branchId,
-          branchName: bs.branch?.name || "Unknown Branch",
-          currentStock: Number(bs.currentStock || 0),
-          minimumStock: Number(bs.minimumStock || 0),
-          maximumStock: Number(bs.maximumStock || 0),
-          salePrice: Number(bs.salePrice || 0),
-        })),
+        branchStocks: branchStocks.map(withExpiry),
         sales: {
-          orderCount: Number(sales.ordercount || 0),
-          totalQuantity: Number(sales.totalquantitysold || 0),
-          totalAmount: Number(sales.totalsalesamount || 0),
-          totalCost: Number(sales.totalcost || 0),
-          totalProfit: Number(sales.totalprofit || 0),
-          profitMargin: Number(sales.profitmargin || 0),
+          orderCount: sales.orderCount,
+          totalQuantity: sales.totalQuantitySold,
+          totalAmount: sales.totalSalesAmount,
+          totalCost: sales.totalCost,
+          totalProfit: sales.totalProfit,
+          profitMargin: sales.profitMargin,
           recent30Days: {
-            quantity: Number(recent30Days.recentquantity || 0),
-            amount: Number(recent30Days.recentamount || 0),
+            quantity: recent30Days.recentQuantity,
+            amount: recent30Days.recentAmount,
           },
         },
         salesByBranch: salesByBranch.map((branch: any) => ({
@@ -594,22 +946,17 @@ export class InventoryService {
           totalQuantity: Number(branch.totalquantity || 0),
           totalAmount: Number(branch.totalamount || 0),
           totalCost: Number(branch.totalcost || 0),
-          totalProfit: Number(branch.totalprofit || 0),
+          totalProfit:
+            Number(branch.totalamount || 0) - Number(branch.totalcost || 0),
         })),
+        inflowHistory,
+        salesHistory,
       };
-    } catch (error) {
-      console.error("Error getting item stats:", error);
+    } catch {
       // Return default stats if query fails
       return {
         item,
-        branchStocks: branchStocks.map((bs) => ({
-          branchId: bs.branchId,
-          branchName: bs.branch?.name || "Unknown Branch",
-          currentStock: Number(bs.currentStock || 0),
-          minimumStock: Number(bs.minimumStock || 0),
-          maximumStock: Number(bs.maximumStock || 0),
-          salePrice: Number(bs.salePrice || 0),
-        })),
+        branchStocks: branchStocks.map(withExpiry),
         sales: {
           orderCount: 0,
           totalQuantity: 0,
@@ -623,28 +970,32 @@ export class InventoryService {
           },
         },
         salesByBranch: [],
+        inflowHistory: [],
+        salesHistory: [],
       };
     }
   }
 
   async update(
     id: string,
-    businessId: string,
-    updateDto: UpdateInventoryItemDto
-  ) {
-    await this.findOne(id, businessId);
 
-    // Prevent baseUomId and unitCost from being changed
-    const { baseUomId, unitCost, ...updateData } = updateDto as any;
+    updateDto: UpdateInventoryItemDto,
+    actor?: { id?: string; name?: string },
+  ) {
+    await this.findOne(id);
+
+    // Base UOM can't change. Components (make-up) are handled separately below.
+    // unitCost IS allowed now — it doubles as the manual cost price for untracked
+    // / composed items (real COGS for tracked items still comes from inflow).
+    const { baseUomId, components, ...updateData } = updateDto as any;
     if (baseUomId) {
       throw new NotFoundException("Base UOM cannot be changed");
     }
-    // unitCost is removed from updateData - cost is captured during inflow, not when updating items
 
     // Validate category if provided
     if (updateData.categoryId) {
       const category = await this.categoryRepository.findOne({
-        where: { id: updateData.categoryId, businessId },
+        where: { id: updateData.categoryId },
       });
       if (!category) {
         throw new NotFoundException("Category not found");
@@ -654,7 +1005,7 @@ export class InventoryService {
     // Validate subcategory if provided
     if (updateData.subcategoryId) {
       const subcategory = await this.subcategoryRepository.findOne({
-        where: { id: updateData.subcategoryId, businessId },
+        where: { id: updateData.subcategoryId },
       });
       if (!subcategory) {
         throw new NotFoundException("Subcategory not found");
@@ -666,22 +1017,32 @@ export class InventoryService {
           ?.categoryId;
       if (categoryId && subcategory.categoryId !== categoryId) {
         throw new NotFoundException(
-          "Subcategory does not belong to the selected category"
+          "Subcategory does not belong to the selected category",
         );
       }
     }
 
-    await this.inventoryItemRepository.update({ id }, updateData);
-    return this.findOne(id, businessId);
+    if (actor?.id) {
+      updateData.updatedBy = actor.id;
+      updateData.updatedByName = actor.name || null;
+    }
+    if (Object.keys(updateData).length > 0) {
+      await this.inventoryItemRepository.update({ id }, updateData);
+    }
+    // Replace the make-up when the caller sent a components array (empty clears).
+    if (components !== undefined) {
+      await this.setItemComponents(id, components || []);
+    }
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.inventoryItemRepository.delete({ id });
   }
 
-  async getLowStockItems(businessId: string, branchId?: string) {
-    const items = await this.findAll(businessId, branchId);
+  async getLowStockItems(branchId?: string) {
+    const items = await this.findAll(branchId);
 
     return items.filter((item: any) => {
       if (branchId && item.branchStock) {
@@ -696,25 +1057,41 @@ export class InventoryService {
   }
 
   async generateTemplate(): Promise<string> {
-    // Match Laravel template pattern: Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price, Barcode
+    // Template with image support: Name, Category, Subcategory, UOM, Track Stock, Minimum Stock, Maximum Stock, Sales Price, Barcode, Image Link
     const headers = [
       "Name",
       "Category",
       "Subcategory",
-      "Unit",
+      "UOM",
       "Track Stock",
       "Minimum Stock",
       "Maximum Stock",
       "Sales Price",
       "Barcode",
+      "Image Link",
     ];
     return headers.join(",") + "\n";
   }
 
   async bulkUpload(
-    businessId: string,
-    csv: string
-  ): Promise<{ success: number; errors: string[]; skipped: number }> {
+    csv: string,
+  ): Promise<{ 
+    success: number; 
+    errors: string[]; 
+    skipped: number;
+    detailedErrors?: Array<{
+      line: number;
+      data: string;
+      errors: string[];
+    }>;
+    summary?: {
+      total: number;
+      processed: number;
+      successful: number;
+      failed: number;
+      skipped: number;
+    };
+  }> {
     // Remove BOM if present
     let csvContent = csv;
     if (csvContent.charCodeAt(0) === 0xfeff) {
@@ -735,6 +1112,11 @@ export class InventoryService {
     const dataRows = lines.slice(1);
 
     const errors: string[] = [];
+    const detailedErrors: Array<{
+      line: number;
+      data: string;
+      errors: string[];
+    }> = [];
     let success = 0;
     let skipped = 0;
     let duplicateCount = 0;
@@ -771,17 +1153,21 @@ export class InventoryService {
 
       // Validate minimum columns: Name, Category, Subcategory, Unit, Track Stock, Min Stock, Max Stock, Sales Price (at least 7)
       if (row.length < 7) {
-        errors.push(
-          `Line ${lineNumber}: Insufficient columns. Expected at least 7 columns (Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price).`
-        );
+        const errorMessage = `Insufficient columns. Expected at least 7 columns (Name, Category, Subcategory, Unit, Track Stock, Minimum Stock, Maximum Stock, Sales Price).`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
         continue;
       }
 
-      // Map CSV columns based on Laravel pattern:
-      // 0: Name, 1: Category, 2: Subcategory, 3: Unit, 4: Track Stock, 5: Minimum Stock, 6: Maximum Stock, 7: Sales Price, 8: Barcode
+      // Map CSV columns with image support:
+      // 0: Name, 1: Category, 2: Subcategory, 3: UOM, 4: Track Stock, 5: Minimum Stock, 6: Maximum Stock, 7: Sales Price, 8: Barcode, 9: Image Link
       const trackStockValue = (row[4] || "yes").toLowerCase().trim();
       const isTrackable = ["yes", "y", "1", "true", "on"].includes(
-        trackStockValue
+        trackStockValue,
       );
 
       const itemData: any = {
@@ -795,43 +1181,53 @@ export class InventoryService {
           isTrackable && row[6] ? parseFloat(row[6]) || undefined : undefined,
         salePrice: parseFloat(row[7] || "0") || 0,
         barcode: (row[8] || "").trim() || undefined,
+        imageLink: (row[9] || "").trim() || undefined, // New image link field
         currentStock: 0, // Always start at 0
         unitCost: 0, // Cost is captured during inflow
       };
 
       // Validate required fields
+      const currentRowErrors: string[] = [];
+      
       if (!itemData.name) {
-        errors.push(`Line ${lineNumber}: Name is required. Skipping.`);
-        continue;
+        currentRowErrors.push("Name is required");
       }
 
-      // Category is now optional (can be null)
-
       if (!itemData.unit) {
-        errors.push(`Line ${lineNumber}: Unit (UOM) is required. Skipping.`);
-        continue;
+        currentRowErrors.push("Unit (UOM) is required");
       }
 
       if (!itemData.salePrice || itemData.salePrice < 0) {
-        errors.push(
-          `Line ${lineNumber}: Sales Price must be a valid number >= 0. Skipping.`
-        );
+        currentRowErrors.push("Sales Price must be a valid number >= 0");
+      }
+
+      if (currentRowErrors.length > 0) {
+        const errorMessage = currentRowErrors.join(", ");
+        errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: currentRowErrors
+        });
         continue;
       }
 
       // Check for duplicate by name (case-insensitive)
       const existingItem = await this.inventoryItemRepository.findOne({
         where: {
-          businessId,
           name: itemData.name,
         },
       });
 
       if (existingItem) {
         duplicateCount++;
-        errors.push(
-          `Line ${lineNumber}: Item '${itemData.name}' already exists. Skipping.`
-        );
+        const errorMessage = `Item '${itemData.name}' already exists`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
         continue;
       }
 
@@ -839,16 +1235,19 @@ export class InventoryService {
       if (itemData.barcode) {
         const existingBarcode = await this.inventoryItemRepository.findOne({
           where: {
-            businessId,
             barcode: itemData.barcode,
           },
         });
 
         if (existingBarcode) {
           duplicateCount++;
-          errors.push(
-            `Line ${lineNumber}: Barcode '${itemData.barcode}' already exists. Skipping.`
-          );
+          const errorMessage = `Barcode '${itemData.barcode}' already exists`;
+          errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping.`);
+          detailedErrors.push({
+            line: lineNumber,
+            data: dataRows[i],
+            errors: [errorMessage]
+          });
           continue;
         }
       }
@@ -856,34 +1255,34 @@ export class InventoryService {
       // Find or create UOM for the unit
       let uom = await this.uomRepository.findOne({
         where: {
-          businessId,
           name: itemData.unit,
         },
       });
 
       if (!uom) {
         // Try case-insensitive search
-        const allUoms = await this.uomRepository.find({
-          where: { businessId },
-        });
+        const allUoms = await this.uomRepository.find({});
         uom = allUoms.find(
-          (u) => u.name.toLowerCase() === itemData.unit.toLowerCase()
+          (u) => u.name.toLowerCase() === itemData.unit.toLowerCase(),
         );
 
         if (!uom) {
           // Create UOM if it doesn't exist
           try {
             uom = this.uomRepository.create({
-              businessId,
               name: itemData.unit,
               abbreviation: itemData.unit.substring(0, 3).toUpperCase(),
               isDefault: false,
             });
             uom = await this.uomRepository.save(uom);
           } catch (uomError) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create UOM '${itemData.unit}'. Skipping item.`
-            );
+            const errorMessage = `Failed to create UOM '${itemData.unit}'`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping item.`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -893,17 +1292,15 @@ export class InventoryService {
       let categoryId: string | undefined;
       if (itemData.category && itemData.category.trim()) {
         let category = await this.categoryRepository.findOne({
-          where: { businessId, name: itemData.category.trim() },
+          where: { name: itemData.category.trim() },
         });
 
         // Try case-insensitive search if not found
         if (!category) {
-          const allCategories = await this.categoryRepository.find({
-            where: { businessId },
-          });
+          const allCategories = await this.categoryRepository.find({});
           category = allCategories.find(
             (c) =>
-              c.name.toLowerCase() === itemData.category.trim().toLowerCase()
+              c.name.toLowerCase() === itemData.category.trim().toLowerCase(),
           );
         }
 
@@ -913,13 +1310,16 @@ export class InventoryService {
             category = this.categoryRepository.create({
               name: itemData.category.trim(),
               description: null,
-              businessId,
             });
             category = await this.categoryRepository.save(category);
           } catch (categoryError: any) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create category '${itemData.category}'. ${categoryError.message || "Unknown error"}`
-            );
+            const errorMessage = `Failed to create category '${itemData.category}': ${categoryError.message || "Unknown error"}`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -930,24 +1330,29 @@ export class InventoryService {
       let subcategoryId: string | undefined;
       if (itemData.subcategory && itemData.subcategory.trim()) {
         if (!categoryId) {
-          errors.push(
-            `Line ${lineNumber}: Subcategory '${itemData.subcategory}' specified but no category provided. Skipping item.`
-          );
+          const errorMessage = `Subcategory '${itemData.subcategory}' specified but no category provided`;
+          errors.push(`Line ${lineNumber}: ${errorMessage}. Skipping item.`);
+          detailedErrors.push({
+            line: lineNumber,
+            data: dataRows[i],
+            errors: [errorMessage]
+          });
           continue;
         }
 
         let subcategory = await this.subcategoryRepository.findOne({
-          where: { businessId, categoryId, name: itemData.subcategory.trim() },
+          where: { categoryId, name: itemData.subcategory.trim() },
         });
 
         // Try case-insensitive search if not found
         if (!subcategory) {
           const allSubcategories = await this.subcategoryRepository.find({
-            where: { businessId, categoryId },
+            where: { categoryId },
           });
           subcategory = allSubcategories.find(
             (s) =>
-              s.name.toLowerCase() === itemData.subcategory.trim().toLowerCase()
+              s.name.toLowerCase() ===
+              itemData.subcategory.trim().toLowerCase(),
           );
         }
 
@@ -958,13 +1363,16 @@ export class InventoryService {
               name: itemData.subcategory.trim(),
               description: null,
               categoryId,
-              businessId,
             });
             subcategory = await this.subcategoryRepository.save(subcategory);
           } catch (subcategoryError: any) {
-            errors.push(
-              `Line ${lineNumber}: Failed to create subcategory '${itemData.subcategory}' under category '${itemData.category}'. ${subcategoryError.message || "Unknown error"}`
-            );
+            const errorMessage = `Failed to create subcategory '${itemData.subcategory}' under category '${itemData.category}': ${subcategoryError.message || "Unknown error"}`;
+            errors.push(`Line ${lineNumber}: ${errorMessage}`);
+            detailedErrors.push({
+              line: lineNumber,
+              data: dataRows[i],
+              errors: [errorMessage]
+            });
             continue;
           }
         }
@@ -987,19 +1395,63 @@ export class InventoryService {
           isTrackable: itemData.isTrackable,
         };
 
-        await this.create(businessId, createDto);
+        const createdItem = await this.create(createDto);
+        
+        // Process image if provided
+        if (itemData.imageLink && createdItem && createdItem.id) {
+          try {
+            const imageUrl = await this.processItemImage(itemData.imageLink, createdItem.id, itemData.name);
+            if (imageUrl) {
+              // Update the item with the processed image URL
+              await this.inventoryItemRepository.update(createdItem.id, { frontImage: imageUrl });
+            }
+          } catch {
+            // Fallback: persist the original image URL directly so the item still
+            // shows an image even when local download/resize fails. Only accept
+            // http(s) URLs (the frontend can render an absolute URL as-is).
+            const rawLink = String(itemData.imageLink).trim();
+            if (/^https?:\/\//i.test(rawLink)) {
+              try {
+                await this.inventoryItemRepository.update(createdItem.id, { frontImage: rawLink });
+              } catch {
+                // Non-critical: fallback image URL persist failed; continue.
+              }
+            }
+            // Don't fail the entire import if image processing fails
+          }
+        }
+        
         success++;
       } catch (error: any) {
-        errors.push(
-          `Line ${lineNumber}: Failed to create item - ${error.message || "Unknown error"}`
-        );
+        const errorMessage = `Failed to create item - ${error.message || "Unknown error"}`;
+        errors.push(`Line ${lineNumber}: ${errorMessage}`);
+        detailedErrors.push({
+          line: lineNumber,
+          data: dataRows[i],
+          errors: [errorMessage]
+        });
       }
     }
 
-    return { success, errors, skipped };
+    const total = dataRows.length;
+    const failed = detailedErrors.length;
+
+    return { 
+      success, 
+      errors, 
+      skipped,
+      detailedErrors,
+      summary: {
+        total,
+        processed: total - skipped,
+        successful: success,
+        failed,
+        skipped
+      }
+    };
   }
 
-  async findForOrders(businessId: string, branchId?: string) {
+  async findForOrders(branchId?: string) {
     // Use query builder to ensure branches relation is loaded correctly
     // Don't filter branches in WHERE clause - load all and filter in code
     const queryBuilder = this.inventoryItemRepository
@@ -1008,7 +1460,6 @@ export class InventoryService {
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .where("item.businessId = :businessId", { businessId })
       .orderBy("item.name", "ASC");
 
     let items = await queryBuilder.getMany();
@@ -1021,7 +1472,7 @@ export class InventoryService {
     if (baseUomIds.length > 0) {
       const uniqueBaseUomIds = [...new Set(baseUomIds)];
       const loadedBaseUoms = await this.uomRepository.find({
-        where: { businessId, id: In(uniqueBaseUomIds) },
+        where: { id: In(uniqueBaseUomIds) },
       });
       loadedBaseUoms.forEach((uom) => {
         baseUomsMap.set(uom.id, uom);
@@ -1083,55 +1534,74 @@ export class InventoryService {
       });
     }
 
-    // Get all UOM conversions for this restaurant
-    const conversions = await this.uomConversionsService.findAll(businessId);
+    // Get all UOM conversions for this business
+    const conversions = await this.uomConversionsService.findAll();
     const conversionMap = new Map<string, number>();
     conversions.forEach((conv) => {
       conversionMap.set(
         `${conv.fromUomId}-${conv.toUomId}`,
-        Number(conv.factor)
+        Number(conv.factor),
       );
     });
 
+    // Make-up + availability precompute. Composed items have no own stock — how
+    // many can be sold is bounded by the limiting TRACKABLE component. Untracked
+    // items (and untracked components) never block.
+    const allComponents = await this.componentRepository.find();
+    const componentsByParent = new Map<string, InventoryItemComponent[]>();
+    for (const c of allComponents) {
+      const list = componentsByParent.get(c.parentItemId) || [];
+      list.push(c);
+      componentsByParent.set(c.parentItemId, list);
+    }
+    const itemById = new Map(items.map((i) => [i.id, i]));
+    const UNLIMITED = 1_000_000;
+    const branchStockOf = (it: any): number => {
+      if (branchId) {
+        const bs = it.branches?.find((b: any) => b.branchId === branchId);
+        return bs ? Number(bs.currentStock || 0) : 0;
+      }
+      return Number(it.currentStock || 0);
+    };
+    const makeableOf = (item: any): number => {
+      const comps = componentsByParent.get(item.id);
+      if (comps && comps.length > 0) {
+        let min = Infinity;
+        for (const c of comps) {
+          const ci = itemById.get(c.componentItemId);
+          if (!ci) return 0;
+          if (ci.isTrackable === false) continue; // untracked never blocks
+          let perBase = Number(c.quantity) || 0;
+          if (c.uomId && c.uomId !== ci.baseUomId) {
+            const f = conversionMap.get(`${c.uomId}-${ci.baseUomId}`);
+            if (f && f > 0) perBase = Number(c.quantity) * f;
+          }
+          if (perBase <= 0) continue;
+          min = Math.min(min, Math.floor(branchStockOf(ci) / perBase));
+        }
+        return min === Infinity ? UNLIMITED : min; // all-untracked ⇒ unlimited
+      }
+      if (item.isTrackable === false) return UNLIMITED;
+      return branchStockOf(item);
+    };
+
     return items
       .filter((item) => {
-        // Filter items with stock > 0 if branch is specified
-        if (branchId) {
-          // ONLY show items that have branch inventory with stock > 0
-          // No fallback to global stock - only items with stock in the selected branch
-          const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
-          );
-          if (branchStock) {
-            // Item has branch inventory - use branch stock
-            const stock = Number(branchStock.currentStock || 0);
-            return stock > 0;
-          }
-          // Item doesn't have branch inventory - don't show it
-          return false;
-        }
-        // No branch specified - use global stock
-        return Number(item.currentStock || 0) > 0;
+        // Only items offered for sale (ingredients are hidden) that can be made.
+        if (item.sellAtPos === false) return false;
+        return makeableOf(item) > 0;
       })
       .map((item) => {
-        // Get stock from branch inventory if branchId is specified, otherwise use global stock
-        let stock = Number(item.currentStock || 0);
-        if (branchId) {
-          const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
-          );
-          if (branchStock) {
-            // Use branch stock if branch inventory exists
-            stock = Number(branchStock.currentStock || 0);
-          }
-          // If no branch inventory, stock remains 0 (item filtered out above)
-        }
+        // Availability: makeable count (limiting component) / own stock / unlimited.
+        const avail = makeableOf(item);
+        const unlimited = avail >= UNLIMITED; // untracked item / all-untracked make-up
+        const stock = avail;
 
         // Also get sale price from branch inventory if available, otherwise use global
         let price = Number(item.salePrice || 0);
         if (branchId) {
           const branchStock = item.branches?.find(
-            (b) => b.branchId === branchId
+            (b) => b.branchId === branchId,
           );
           if (branchStock && branchStock.salePrice) {
             price = Number(branchStock.salePrice || 0);
@@ -1209,6 +1679,7 @@ export class InventoryService {
           subcategory: item.subcategory?.name || null,
           price,
           stock,
+          unlimited,
           unit: unitName,
           defaultUomId: baseUomId,
           baseUomId,
@@ -1217,5 +1688,160 @@ export class InventoryService {
           uomPrices,
         };
       });
+  }
+
+  /**
+   * Ingredient picker options for the dish/recipe editor: EVERY item (no stock
+   * filter — you define a recipe even when out of stock), each with its
+   * convertible UoMs (factor to base) and a cost-per-base-unit. The cost is the
+   * quantity-weighted average of the item's inflow batches (fallback: the item's
+   * unitCost). Lets the editor compute food cost live as you build the recipe.
+   */
+  async getIngredientOptions() {
+    const all = await this.inventoryItemRepository.find({ relations: ["baseUom"] });
+    if (!all.length) return [];
+
+    // v1: ingredients must be RAW items (no nested make-up). Exclude any item
+    // that itself has components.
+    const composed = await this.componentRepository.find();
+    const composedIds = new Set(composed.map((c) => c.parentItemId));
+    const items = all.filter((i) => !composedIds.has(i.id));
+    if (!items.length) return [];
+
+    const [conversions, allUoms] = await Promise.all([
+      this.uomConversionsService.findAll(),
+      this.uomRepository.find({}),
+    ]);
+    const uomById = new Map(allUoms.map((u) => [u.id, u]));
+
+    // Weighted-average cost per item from its inflow batches.
+    const costRows: Array<{ itemId: string; value: string; qty: string }> =
+      await this.inventoryItemRepository.query(
+        `SELECT inventory_item_id AS "itemId",
+                SUM(base_quantity * unit_cost) AS "value",
+                SUM(base_quantity) AS "qty"
+         FROM inventory_inflow_items
+         GROUP BY inventory_item_id`,
+      );
+    const costByItem = new Map<string, number>();
+    costRows.forEach((r) => {
+      const qty = Number(r.qty) || 0;
+      const value = Number(r.value) || 0;
+      if (qty > 0) costByItem.set(r.itemId, value / qty);
+    });
+
+    return items
+      .filter((item) => item.baseUomId)
+      .map((item) => {
+        const baseUomId = item.baseUomId;
+        const baseUom = item.baseUom || uomById.get(baseUomId);
+        const uoms: Array<{
+          id: string;
+          name: string;
+          abbreviation: string;
+          factorToBase: number;
+        }> = [
+          {
+            id: baseUomId,
+            name: baseUom?.name || "Unit",
+            abbreviation: baseUom?.abbreviation || "",
+            factorToBase: 1,
+          },
+        ];
+
+        conversions.forEach((conv) => {
+          if (conv.toUomId === baseUomId && conv.fromUomId) {
+            if (!uoms.find((u) => u.id === conv.fromUomId)) {
+              const u = uomById.get(conv.fromUomId);
+              uoms.push({
+                id: conv.fromUomId,
+                name: u?.name || "Unit",
+                abbreviation: u?.abbreviation || "",
+                factorToBase: Number(conv.factor),
+              });
+            }
+          } else if (conv.fromUomId === baseUomId && conv.toUomId) {
+            if (!uoms.find((u) => u.id === conv.toUomId)) {
+              const u = uomById.get(conv.toUomId);
+              uoms.push({
+                id: conv.toUomId,
+                name: u?.name || "Unit",
+                abbreviation: u?.abbreviation || "",
+                factorToBase: 1 / Number(conv.factor),
+              });
+            }
+          }
+        });
+
+        return {
+          id: item.id,
+          name: item.name,
+          baseUomId,
+          baseUomName: baseUom?.name || "Unit",
+          costPerBaseUnit: costByItem.get(item.id) ?? (Number(item.unitCost) || 0),
+          uoms,
+        };
+      });
+  }
+
+  /**
+   * Process and store image from URL for inventory item
+   */
+  private async processItemImage(imageUrl: string, itemId: string, itemName: string): Promise<string | null> {
+    try {
+      // Download image from URL
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.statusText}`);
+      }
+
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      
+      // Generate unique filename
+      const imageHash = crypto.createHash('md5').update(imageBuffer).digest('hex');
+      const fileExtension = this.getImageExtension(response.headers.get('content-type') || 'image/jpeg');
+      const fileName = `${itemId}_${imageHash}${fileExtension}`;
+      
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'inventory');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Resize and optimize image using Sharp
+      await sharp(imageBuffer)
+        .resize(800, 600, { 
+          fit: 'inside',
+          withoutEnlargement: true 
+        })
+        .jpeg({ quality: 85 })
+        .toFile(filePath);
+      
+      // Return the relative path for storage in database
+      const relativePath = `/uploads/inventory/${fileName}`;
+      return relativePath;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get file extension based on content type
+   */
+  private getImageExtension(contentType: string): string {
+    switch (contentType.toLowerCase()) {
+      case 'image/png':
+        return '.png';
+      case 'image/gif':
+        return '.gif';
+      case 'image/webp':
+        return '.webp';
+      case 'image/jpeg':
+      case 'image/jpg':
+      default:
+        return '.jpg';
+    }
   }
 }

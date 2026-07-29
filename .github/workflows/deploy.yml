@@ -1,0 +1,159 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Deploy to Cloud Run (monorepo, per-service, path-filtered).
+#
+# On push to `main`, only the services whose files changed are rebuilt and
+# deployed independently:
+#   backend/**       → build image → run DB migrations (Cloud Run Job) → deploy
+#   user-portal/**   → build image → deploy
+#   admin-portal/**  → build image → deploy
+#
+# Auth: Workload Identity Federation (no long-lived keys). DB creds/JWT/API keys
+# come from Secret Manager, mapped in at deploy time — never stored in this repo.
+#
+# One-time setup + the required repo Variables/Secrets are documented in DEPLOY.md.
+# ─────────────────────────────────────────────────────────────────────────
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # manual "deploy everything" button
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  # Artifact Registry Docker repo, e.g. REGION-docker.pkg.dev/PROJECT/kuza
+  AR_HOST: ${{ vars.GCP_REGION }}-docker.pkg.dev
+  AR_REPO: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.AR_REPO }}
+  CLOUD_SQL_INSTANCE: ${{ vars.CLOUD_SQL_INSTANCE }} # PROJECT:REGION:INSTANCE
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      user-portal: ${{ steps.filter.outputs.user-portal }}
+      admin-portal: ${{ steps.filter.outputs.admin-portal }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            user-portal:
+              - 'user-portal/**'
+            admin-portal:
+              - 'admin-portal/**'
+
+  # ─────────────────────────── BACKEND (API + migrations) ───────────────────
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "$AR_HOST" --quiet
+
+      - name: Build & push image
+        run: |
+          IMAGE="$AR_REPO/backend:${{ github.sha }}"
+          docker build -f backend/Dockerfile -t "$IMAGE" backend
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # Run pending migrations to a completion BEFORE the new revision serves
+      # traffic. The job runs `node dist/scripts/run-migrations.js` (landlord +
+      # public template + every tenant schema, idempotent). --wait blocks/fails
+      # the deploy if a migration fails, so a bad migration never ships.
+      - name: Run DB migrations (Cloud Run Job)
+        run: |
+          gcloud run jobs deploy backend-migrate \
+            --image "$IMAGE" --region "$GCP_REGION" \
+            --command node --args dist/scripts/run-migrations.js \
+            --set-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
+            --set-env-vars "DB_HOST=/cloudsql/$CLOUD_SQL_INSTANCE,DB_NAME=${{ vars.DB_NAME }},LANDLORD_DB_NAME=${{ vars.LANDLORD_DB_NAME }}" \
+            --set-secrets "DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest" \
+            --max-retries 0 --task-timeout 900 --quiet
+          gcloud run jobs execute backend-migrate --region "$GCP_REGION" --wait --quiet
+
+      - name: Deploy Cloud Run service
+        run: |
+          gcloud run deploy backend \
+            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
+            --allow-unauthenticated \
+            --add-cloudsql-instances "$CLOUD_SQL_INSTANCE" \
+            --set-env-vars "NODE_ENV=production,DB_SYNCHRONIZE=false,DB_HOST=/cloudsql/$CLOUD_SQL_INSTANCE,DB_NAME=${{ vars.DB_NAME }},LANDLORD_DB_NAME=${{ vars.LANDLORD_DB_NAME }},FRONTEND_URL=${{ vars.FRONTEND_URL }},AI_PROVIDER=${{ vars.AI_PROVIDER }}" \
+            --set-secrets "DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,SUPER_ADMIN_EMAIL=SUPER_ADMIN_EMAIL:latest" \
+            --quiet
+
+  # ─────────────────────────── OPERATOR PORTAL (Next SSR) ───────────────────
+  user-portal:
+    needs: changes
+    if: needs.changes.outputs.user-portal == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "$AR_HOST" --quiet
+      - name: Build & push image
+        run: |
+          IMAGE="$AR_REPO/user-portal:${{ github.sha }}"
+          # NEXT_PUBLIC_* are baked at build time — pass the API URL as a build arg.
+          docker build -f user-portal/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+            -t "$IMAGE" user-portal
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy Cloud Run service
+        run: |
+          gcloud run deploy user-portal \
+            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "NODE_ENV=production,NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
+            --quiet
+
+  # ─────────────────────────── ADMIN PORTAL (Next SSR) ─────────────────────
+  admin-portal:
+    needs: changes
+    if: needs.changes.outputs.admin-portal == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "$AR_HOST" --quiet
+      - name: Build & push image
+        run: |
+          IMAGE="$AR_REPO/admin-portal:${{ github.sha }}"
+          docker build -f admin-portal/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+            -t "$IMAGE" admin-portal
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy Cloud Run service
+        run: |
+          gcloud run deploy admin-portal \
+            --image "$IMAGE" --region "$GCP_REGION" --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "NODE_ENV=production,NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" \
+            --quiet

@@ -1,6 +1,5 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { TenantEntity } from '../../../common/entities/base.entity';
-import { Restaurant } from '../../../common/entities/restaurant.entity';
 import { InventoryBatch } from '../../ims/entities/inventory-batch.entity';
 
 @Entity('suppliers')
@@ -20,9 +19,16 @@ export class Supplier extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'businessId' })
-  restaurant: Restaurant;
+  // In multi-tenant database setup, business relation is not needed
+  // Each database belongs to a specific tenant/business
+
+  /**
+   * Kuza Network: when this supplier is a materialized reference to another
+   * tenant on the platform (via a trade partnership), this holds that
+   * tenant's landlord id. Null for ordinary, manually-created suppliers.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  linkedTenantId?: string;
 
   @OneToMany(() => InventoryBatch, (batch) => batch.supplier)
   batches: InventoryBatch[];

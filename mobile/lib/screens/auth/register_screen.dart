@@ -45,7 +45,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
         passwordConfirmation: _confirmPasswordController.text,
-        restaurantName: _restaurantNameController.text.trim().isEmpty
+        businessName: _restaurantNameController.text.trim().isEmpty
             ? null
             : _restaurantNameController.text.trim(),
       );
@@ -166,9 +166,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _restaurantNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Restaurant Name (Optional)',
+                    labelText: 'Business Name (Optional)',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.restaurant),
+                    prefixIcon: Icon(Icons.business),
                   ),
                 ),
                 const SizedBox(height: 24),

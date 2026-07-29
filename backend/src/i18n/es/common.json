@@ -8,6 +8,69 @@
   "validation_error": "Error de validación",
   "created": "Creado exitosamente",
   "updated": "Actualizado exitosamente",
-  "deleted": "Eliminado exitosamente"
+  "deleted": "Eliminado exitosamente",
+  "insights": {
+    "yourBusiness": "Tu negocio",
+    "cash": {
+      "positive": "Tienes {amount} en efectivo y banco en este momento",
+      "overdrawn": "Tus cuentas de efectivo están sobregiradas por {amount}",
+      "unavailable": "Posición de efectivo no disponible"
+    },
+    "profit": {
+      "positive": "Has obtenido {profit} de ganancia en lo que va del mes ({earned} ganado, {spent} gastado)",
+      "negative": "Estás en números rojos por {amount} este mes ({earned} ganado, {spent} gastado)",
+      "unavailable": "Cifras de ganancia no disponibles"
+    },
+    "debtor": {
+      "lateOne": "{name} debe {amount} — {days} día de retraso",
+      "lateOther": "{name} debe {amount} — {days} días de retraso",
+      "notDue": "{name} debe {amount} — aún no vence"
+    },
+    "lowStock": {
+      "outOfStock": "{name} está agotado — el mínimo es {minimum}",
+      "below": "{name} está por debajo del stock mínimo: quedan {current}, mínimo {minimum}",
+      "runningLow": "{count} artículo(s) con pocas existencias"
+    },
+    "sales": {
+      "thisMonthOnly": "Ventas este mes: {amount} (sin ventas el mes pasado para comparar)",
+      "none": "No se registraron ventas este mes ni el mes pasado",
+      "up": "Las ventas subieron {pct}% — {current} este mes frente a {previous} el mes pasado",
+      "down": "Las ventas bajaron {pct}% — {current} este mes frente a {previous} el mes pasado",
+      "unavailable": "Tendencia de ventas no disponible"
+    },
+    "overdue": {
+      "someOne": "{amount} está vencido en {count} factura — es hora de cobrar",
+      "someOther": "{amount} está vencido en {count} facturas — es hora de cobrar",
+      "none": "No hay facturas vencidas — bien hecho",
+      "noOverdue": "No hay facturas vencidas"
+    },
+    "topItem": {
+      "headline": "{name}: {revenue} de {qty} vendidos este mes"
+    },
+    "lowStockByBranch": {
+      "title": "Stock bajo por sucursal",
+      "bodyOne": "{item} está bajo en {branch} (quedan {stock}, reordenar en {minimum}).",
+      "bodyMore": "{item} está bajo en {branch} (quedan {stock}, reordenar en {minimum}) — y {count} artículo(s) más en tus sucursales."
+    },
+    "branches": {
+      "title": "Sucursales",
+      "body": "Tienes {count} sucursales. El stock está saludable — nada por debajo de su punto de reorden en este momento."
+    },
+    "salesStockCash": {
+      "title": "Ventas, stock y efectivo"
+    },
+    "profitThisMonth": {
+      "title": "Ganancia de este mes"
+    },
+    "moneyOwed": {
+      "title": "Dinero que te deben"
+    },
+    "profitStock": {
+      "title": "Beneficio y stock"
+    },
+    "salesCash": {
+      "title": "Ventas y caja"
+    }
+  }
 }
 

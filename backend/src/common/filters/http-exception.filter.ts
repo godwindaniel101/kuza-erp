@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { I18nContext } from 'nestjs-i18n';
+import * as Sentry from '@sentry/node';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -20,6 +21,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | object = 'Internal server error';
     let errors: any = null;
+    // Actionable extras some exceptions carry (e.g. the FeatureGateGuard 403
+    // includes appKey + enableHint) — preserved on the response body.
+    const extras: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -142,11 +146,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
           // Handle other HTTP exceptions
           message = responseObj.message || responseObj.error || 'An error occurred';
           errors = responseObj.errors || null;
-        }
-        
-        // Debug logging in development
-        if (process.env.NODE_ENV !== 'production' && status === HttpStatus.BAD_REQUEST) {
-          console.log('Validation error details:', JSON.stringify(responseObj, null, 2));
+          if (responseObj.appKey !== undefined) {
+            extras.appKey = responseObj.appKey;
+          }
+          if (responseObj.enableHint !== undefined) {
+            extras.enableHint = responseObj.enableHint;
+          }
         }
       }
     } else if (exception instanceof Error) {
@@ -158,6 +163,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       message: typeof message === 'string' ? message : 'An error occurred',
       errors: errors,
+      ...extras,
       timestamp: new Date().toISOString(),
       path: request.url,
     };
@@ -165,6 +171,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // In development, include stack trace
     if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
       (errorResponse as any).stack = exception.stack;
+    }
+
+    // Report only genuine server-side failures (5xx) to Sentry. Guarded on DSN
+    // presence so this is a no-op when Sentry was never initialized (see main.ts).
+    if (process.env.SENTRY_DSN && status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      Sentry.captureException(exception);
     }
 
     response.status(status).json(errorResponse);

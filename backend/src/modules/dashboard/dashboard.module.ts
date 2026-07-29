@@ -4,10 +4,11 @@ import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { Order } from '../rms/entities/order.entity';
 import { InventoryItem } from '../ims/entities/inventory-item.entity';
+import { BranchInventoryItem } from '../ims/entities/branch-inventory-item.entity';
 import { Table } from '../rms/entities/table.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, InventoryItem, Table])],
+  imports: [TypeOrmModule.forFeature([Order, InventoryItem, BranchInventoryItem, Table])],
   controllers: [DashboardController],
   providers: [DashboardService],
   exports: [DashboardService],

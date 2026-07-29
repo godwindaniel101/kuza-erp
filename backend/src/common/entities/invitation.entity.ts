@@ -11,6 +11,9 @@ export class Invitation extends TenantEntity {
   @Column({ unique: true, length: 64 })
   token: string;
 
+  @Column({ type: 'uuid' })
+  tenantId: string; // Critical: Identifies which tenant this invitation belongs to
+
   @Column({ nullable: true })
   roleId: string;
 

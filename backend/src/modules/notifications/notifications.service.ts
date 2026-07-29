@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import { join } from 'path';
+import * as Handlebars from 'handlebars';
+import { BrevoEmailProvider } from './adapters/brevo.adapter';
+import { getBrevoTemplateId } from './brevo-templates.map';
 
 export interface EmailOptions {
   to: string | string[];
@@ -8,6 +13,9 @@ export interface EmailOptions {
   template: string;
   context: Record<string, any>;
   lang?: string;
+  replyTo?: string;
+  cc?: string[];
+  senderName?: string;
 }
 
 @Injectable()
@@ -15,10 +23,85 @@ export class NotificationsService {
   constructor(
     private mailerService: MailerService,
     private configService: ConfigService,
+    private brevoProvider: BrevoEmailProvider,
   ) {}
+
+  private readonly logger = new Logger(NotificationsService.name);
+
+  /**
+   * Render one of the app's Handlebars email templates to an HTML string, so
+   * the Brevo path can send real mail without a Brevo-side template. Tries
+   * `<name>.<lang>.hbs` then `<name>.en.hbs` across the same candidate dirs the
+   * MailerModule uses. Returns null if no template file is found/renderable.
+   */
+  private renderTemplate(
+    template: string,
+    lang: string,
+    context: Record<string, any>,
+  ): string | null {
+    const dirs = [
+      join(process.cwd(), 'templates'),
+      join(process.cwd(), 'src/modules/notifications/templates'),
+      join(__dirname, 'templates'),
+      join(__dirname, '../../src/modules/notifications/templates'),
+    ];
+    const names = [`${template}.${lang}.hbs`, `${template}.en.hbs`];
+    for (const dir of dirs) {
+      for (const name of names) {
+        const file = join(dir, name);
+        try {
+          if (fs.existsSync(file)) {
+            return Handlebars.compile(fs.readFileSync(file, 'utf8'))(context);
+          }
+        } catch (err) {
+          this.logger.error(
+            `Failed rendering template ${file}: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
+    }
+    return null;
+  }
 
   async sendEmail(options: EmailOptions) {
     const { to, subject, template, context, lang = 'en' } = options;
+
+    // Route through Brevo when explicitly enabled + keyed. Prefer sending the
+    // app's OWN rendered HTML (no dependency on a Brevo-side template existing),
+    // falling back to a mapped Brevo template ID, then to the SMTP path.
+    const provider = this.configService.get<string>('EMAIL_PROVIDER');
+    const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
+
+    if (provider === 'brevo' && brevoApiKey) {
+      // Brevo transactional sends target a single recipient; use the first
+      // address when an array is supplied.
+      const recipient = Array.isArray(to) ? to[0] : to;
+      // Prefer the account's Brevo template (managed in the Brevo UI). Fall back
+      // to the app's own rendered HTML, then to the SMTP path.
+      const brevoTemplateId = getBrevoTemplateId(this.configService, template);
+      if (typeof brevoTemplateId === 'number') {
+        return this.brevoProvider.sendTemplate({
+          to: recipient,
+          templateId: brevoTemplateId,
+          params: context || {},
+          replyTo: options.replyTo,
+          cc: options.cc,
+          senderName: options.senderName,
+        });
+      }
+      const html = this.renderTemplate(template, lang, context || {});
+      if (html) {
+        return this.brevoProvider.sendRaw({
+          to: recipient,
+          subject,
+          html,
+          replyTo: options.replyTo,
+          cc: options.cc,
+          senderName: options.senderName,
+        });
+      }
+      // else fall through to the SMTP path below
+    }
 
     try {
       await this.mailerService.sendMail({
@@ -59,7 +142,8 @@ export class NotificationsService {
   }
 
   async sendInvitation(invitation: any, lang: string = 'en') {
-    const acceptUrl = `${this.configService.get<string>('FRONTEND_URL')}/invitations/accept/${invitation.token}`;
+    // The accept URL is built once, in sendInvitationEmail, using the canonical
+    // query-string format: `${FRONTEND_URL}/invitations/accept?token=${token}`.
     return this.sendInvitationEmail(
       invitation.email,
       invitation.token,
@@ -114,6 +198,49 @@ export class NotificationsService {
       template: 'order-confirmation',
       context: { orderNumber, totalAmount },
       lang,
+    });
+  }
+
+  async sendInvoiceEmail(input: {
+    to: string;
+    subject: string;
+    replyTo?: string;
+    cc?: string[];
+    senderName?: string;
+    context: Record<string, any>;
+  }) {
+    return this.sendEmail({
+      to: input.to,
+      subject: input.subject,
+      template: 'invoice',
+      context: input.context,
+      replyTo: input.replyTo,
+      cc: input.cc,
+      senderName: input.senderName,
+    });
+  }
+
+  async sendSupplierInvite(input: {
+    to: string;
+    context: { inviterBusinessName: string; inviteUrl: string; note?: string };
+  }) {
+    return this.sendEmail({
+      to: input.to,
+      subject: `Join ${input.context.inviterBusinessName} on Kuza`,
+      template: 'supplier-invite',
+      context: input.context,
+    });
+  }
+
+  async sendPartnershipRequest(input: {
+    to: string;
+    context: { buyerBusinessName: string; note?: string; actionUrl: string };
+  }) {
+    return this.sendEmail({
+      to: input.to,
+      subject: `${input.context.buyerBusinessName} wants to buy from you on Kuza`,
+      template: 'partnership-request',
+      context: input.context,
     });
   }
 }

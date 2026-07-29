@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Supplier } from '../entities/supplier.entity';
-import { CreateSupplierDto } from './dto/create-supplier.dto';
-import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Supplier } from "../entities/supplier.entity";
+import { CreateSupplierDto } from "./dto/create-supplier.dto";
+import { UpdateSupplierDto } from "./dto/update-supplier.dto";
 
 @Injectable()
 export class SuppliersService {
@@ -12,41 +12,39 @@ export class SuppliersService {
     private supplierRepository: Repository<Supplier>,
   ) {}
 
-  async create(businessId: string, createDto: CreateSupplierDto) {
+  async create(createDto: CreateSupplierDto) {
     const supplier = this.supplierRepository.create({
       ...createDto,
-      businessId,
     });
     return this.supplierRepository.save(supplier);
   }
 
-  async findAll(businessId: string) {
+  async findAll() {
     return this.supplierRepository.find({
-      where: { businessId },
+      where: {},
     });
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const supplier = await this.supplierRepository.findOne({
-      where: { id, businessId },
+      where: { id },
     });
 
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException("Supplier not found");
     }
 
     return supplier;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdateSupplierDto) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdateSupplierDto) {
+    await this.findOne(id);
     await this.supplierRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.supplierRepository.delete({ id });
   }
 }
-

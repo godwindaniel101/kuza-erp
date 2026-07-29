@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Table } from '../entities/table.entity';
-import { CreateTableDto } from './dto/create-table.dto';
-import { UpdateTableDto } from './dto/update-table.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Table } from "../entities/table.entity";
+import { CreateTableDto } from "./dto/create-table.dto";
+import { UpdateTableDto } from "./dto/update-table.dto";
 
 @Injectable()
 export class TablesService {
@@ -12,44 +12,43 @@ export class TablesService {
     private tableRepository: Repository<Table>,
   ) {}
 
-  async create(businessId: string, branchId: string, createDto: CreateTableDto) {
+  async create(branchId: string, createDto: CreateTableDto) {
     const table = this.tableRepository.create({
       ...createDto,
-      businessId,
+
       branchId,
     });
     return this.tableRepository.save(table);
   }
 
-  async findAll(businessId: string, branchId?: string) {
-    const where: any = { businessId };
+  async findAll(branchId?: string) {
+    const where: any = {};
     if (branchId) {
       where.branchId = branchId;
     }
     return this.tableRepository.find({ where });
   }
 
-  async findOne(id: string, businessId: string) {
+  async findOne(id: string) {
     const table = await this.tableRepository.findOne({
-      where: { id, businessId },
+      where: { id },
     });
 
     if (!table) {
-      throw new NotFoundException('Table not found');
+      throw new NotFoundException("Table not found");
     }
 
     return table;
   }
 
-  async update(id: string, businessId: string, updateDto: UpdateTableDto) {
-    await this.findOne(id, businessId);
+  async update(id: string, updateDto: UpdateTableDto) {
+    await this.findOne(id);
     await this.tableRepository.update({ id }, updateDto);
-    return this.findOne(id, businessId);
+    return this.findOne(id);
   }
 
-  async remove(id: string, businessId: string) {
-    await this.findOne(id, businessId);
+  async remove(id: string) {
+    await this.findOne(id);
     await this.tableRepository.delete({ id });
   }
 }
-

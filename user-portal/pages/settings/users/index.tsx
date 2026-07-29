@@ -1,0 +1,315 @@
+import { useState, useEffect } from 'react';
+import { GetServerSideProps } from 'next';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'next-i18next';
+import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
+import Link from 'next/link';
+import Toast from '@/components/Toast';
+import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/Modal';
+import Button from '@/components/ui/Button';
+import FormField from '@/components/ui/FormField';
+import StatusBadge from '@/components/ui/StatusBadge';
+import { downloadCsv } from '@/lib/format';
+
+const AVATAR_TONES = [
+  'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
+    >
+      {initials}
+    </span>
+  );
+}
+
+export default function UsersPage() {
+  const { t } = useTranslation('common');
+  const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', roleId: '' });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
+  useEffect(() => {
+    loadUsers();
+    loadRoles();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: any[] }>('/users');
+      if (response.success) {
+        setUsers(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const response = await api.get<{ success: boolean; data: any[] }>('/roles');
+      if (response.success) {
+        setRoles(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to load roles:', err);
+    }
+  };
+
+  const deleteUser = async (id: string) => {
+    if (confirm(t('confirmDelete'))) {
+      try {
+        await api.delete(`/users/${id}`);
+        await loadUsers();
+      } catch (err) {
+        console.error('Failed to delete user:', err);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <PageHeader
+        title={t('users')}
+        subtitle={t('settings.usersSubtitle', 'Who can sign in and what they can do')}
+        count={loading ? undefined : users.length}
+        breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('users') }]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                downloadCsv(
+                  'users.csv',
+                  [t('name'), t('email'), t('roles'), t('status')],
+                  users.map((u) => [
+                    u.name,
+                    u.email,
+                    u.roles?.map((r: any) => r.name).join(' | ') || '',
+                    u.isActive ? t('active') : t('inactive'),
+                  ]),
+                )
+              }
+              disabled={loading || users.length === 0}
+            >
+              <i className="bx bx-download"></i>
+              <span>{t('export') || 'Export'} CSV</span>
+            </Button>
+            <PermissionGuard permission="users.create">
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                <i className="bx bx-plus"></i>
+                <span>{t('add')} {t('user')}</span>
+              </Button>
+            </PermissionGuard>
+          </div>
+        }
+      />
+
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl p-8 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+            <i className="bx bx-user text-gray-400 dark:text-gray-500 text-2xl"></i>
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('noUsersYet')}</h3>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">{t('add')} {t('users').toLowerCase()}</p>
+          <PermissionGuard permission="users.create">
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <i className="bx bx-plus"></i>
+              <span>{t('add')} {t('user')}</span>
+            </Button>
+          </PermissionGuard>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-800 rounded-xl overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('name')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('email')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('roles')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+                {users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user, idx) => (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={user.name || user.email || '?'} i={idx} />
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100 truncate">{user.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate sm:hidden">{user.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {user.roles?.map((r: any) => r.name).join(', ') || '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {user.isActive ? (
+                          <StatusBadge variant="success" label={t('active')} size="sm" />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                            <i className="bx bx-minus-circle" aria-hidden="true"></i>
+                            {t('inactive')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <PermissionGuard permission="users.edit">
+                          <Link
+                            href={`/settings/users/edit/${user.id}`}
+                            className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 mr-4"
+                          >
+                            {t('edit')}
+                          </Link>
+                        </PermissionGuard>
+                        <PermissionGuard permission="users.delete">
+                          <button
+                            onClick={() => deleteUser(user.id)}
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                          >
+                            {t('delete')}
+                          </button>
+                        </PermissionGuard>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(users.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={users.length}
+            startIndex={(currentPage - 1) * itemsPerPage}
+            endIndex={Math.min(currentPage * itemsPerPage, users.length)}
+          />
+        </>
+      )}
+
+      {showCreate && (
+        <Modal
+          isOpen
+          onClose={() => setShowCreate(false)}
+          title={`${t('add')} ${t('user')}`}
+          maxWidth="md"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setShowCreate(false)} disabled={saving}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!newUser.name || !newUser.email || saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    const res = await api.post('/users', {
+                      name: newUser.name,
+                      email: newUser.email,
+                      ...(newUser.roleId ? { roleId: newUser.roleId } : {}),
+                    });
+                    if (res.success) {
+                      setShowCreate(false);
+                      setNewUser({ name: '', email: '', roleId: '' });
+                      await loadUsers();
+                      setToast({ message: t('invitationSent') || 'Invitation sent successfully', type: 'success' });
+                    }
+                  } catch (err) {
+                    console.error('Failed to invite user:', err);
+                    setToast({ message: t('failedToCreateUser') || 'Failed to invite user', type: 'error' });
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                {saving ? t('saving') || 'Saving...' : t('send') || 'Send'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <FormField
+              type="text"
+              name="newUserName"
+              label={t('name')}
+              required
+              value={newUser.name}
+              onChange={(value) => setNewUser({ ...newUser, name: value })}
+              placeholder={t('fullName') || 'Full name'}
+            />
+            <FormField
+              type="email"
+              name="newUserEmail"
+              label={t('email')}
+              required
+              value={newUser.email}
+              onChange={(value) => setNewUser({ ...newUser, email: value })}
+              placeholder={t('emailAddress') || 'name@example.com'}
+            />
+            <FormField
+              type="select"
+              name="newUserRole"
+              label={t('role')}
+              value={newUser.roleId}
+              onChange={(value) => setNewUser({ ...newUser, roleId: value })}
+              placeholder={t('selectRole') || 'Select a role'}
+              options={roles.map((r) => ({ value: r.id, label: r.displayName || r.name }))}
+              help={t('inviteRoleHelp') || 'The user will be invited by email to join with this role.'}
+            />
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale || 'en', ['common'])),
+    },
+  };
+};
+

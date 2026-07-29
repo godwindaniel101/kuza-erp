@@ -4,10 +4,15 @@ import { SnakeCaseNamingStrategy } from '@/common/database/snake-naming.strategy
 
 export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOptions => {
   const nodeEnv = configService.get<string>('NODE_ENV', 'development');
-  // Enable synchronize for development or if explicitly enabled
-  // In production, you should use migrations instead
-  const synchronize = nodeEnv === 'development' || configService.get<string>('DB_SYNCHRONIZE') === 'true';
-  
+  // Schema auto-sync is NEVER allowed in production (it can silently drop/alter
+  // columns and destroy data). Production must use explicit migrations only.
+  // Outside production, sync is on for development or when explicitly enabled.
+  const isProd = nodeEnv === 'production';
+  const synchronize = isProd
+    ? false
+    : nodeEnv === 'development' ||
+      configService.get<string>('DB_SYNCHRONIZE') === 'true';
+
   return {
     type: 'postgres',
     host: configService.get<string>('DB_HOST', 'localhost'),

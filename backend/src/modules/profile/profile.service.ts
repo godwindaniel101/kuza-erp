@@ -15,7 +15,7 @@ export class ProfileService {
   async getProfile(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['restaurant', 'roles'],
+      relations: ['business', 'roles'],
     });
 
     if (!user) {

@@ -20,6 +20,13 @@ export class OrderItemInflowItem extends BaseEntity {
   inflowItemId: string;
 
   /**
+   * Source branch this batch was drawn from (multi-branch FIFO). May differ
+   * from the order's branch when the sale spilled over to another branch.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  branchId: string | null;
+
+  /**
    * Quantity from this inflow item that was used for the order
    * This is in base quantity units
    */

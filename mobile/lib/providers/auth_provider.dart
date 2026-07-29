@@ -85,7 +85,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String email,
     required String password,
     required String passwordConfirmation,
-    String? restaurantName,
+    String? businessName,
   }) async {
     state = state.copyWith(isLoading: true);
     final result = await _authService.register(
@@ -93,7 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       email: email,
       password: password,
       passwordConfirmation: passwordConfirmation,
-      restaurantName: restaurantName,
+      businessName: businessName,
     );
     state = state.copyWith(isLoading: false);
 

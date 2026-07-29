@@ -62,10 +62,8 @@ export class AiService {
     };
   }
 
-  async generateReorderSuggestions(businessId: string) {
-    const items = await this.inventoryItemRepository.find({
-      where: { businessId },
-    });
+  async generateReorderSuggestions() {
+    const items = await this.inventoryItemRepository.find();
 
     const suggestions = await Promise.all(
       items.map(async (item) => {
@@ -82,10 +80,8 @@ export class AiService {
       .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
   }
 
-  async analyzeInventoryHealth(businessId: string) {
-    const items = await this.inventoryItemRepository.find({
-      where: { businessId },
-    });
+  async analyzeInventoryHealth() {
+    const items = await this.inventoryItemRepository.find();
 
     const lowStockItems = items.filter(
       (item) => Number(item.currentStock) <= Number(item.minimumStock),

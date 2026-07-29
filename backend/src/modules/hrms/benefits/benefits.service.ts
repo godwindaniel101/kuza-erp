@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { BenefitPlan } from '../entities/benefit-plan.entity';
-import { EmployeeBenefit } from '../entities/employee-benefit.entity';
-import { CreateBenefitPlanDto } from './dto/create-benefit-plan.dto';
-import { UpdateBenefitPlanDto } from './dto/update-benefit-plan.dto';
-import { CreateEmployeeBenefitDto } from './dto/create-employee-benefit.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { BenefitPlan } from "../entities/benefit-plan.entity";
+import { EmployeeBenefit } from "../entities/employee-benefit.entity";
+import { CreateBenefitPlanDto } from "./dto/create-benefit-plan.dto";
+import { UpdateBenefitPlanDto } from "./dto/update-benefit-plan.dto";
+import { CreateEmployeeBenefitDto } from "./dto/create-employee-benefit.dto";
 
 @Injectable()
 export class BenefitsService {
@@ -17,50 +17,53 @@ export class BenefitsService {
   ) {}
 
   // Benefit Plans
-  async createPlan(businessId: string, createDto: CreateBenefitPlanDto) {
+  async createPlan(createDto: CreateBenefitPlanDto) {
     const plan = this.benefitPlanRepository.create({
       ...createDto,
-      businessId,
-      effectiveDate: createDto.effectiveDate ? new Date(createDto.effectiveDate) : undefined,
-      expirationDate: createDto.expirationDate ? new Date(createDto.expirationDate) : undefined,
+      effectiveDate: createDto.effectiveDate
+        ? new Date(createDto.effectiveDate)
+        : undefined,
+      expirationDate: createDto.expirationDate
+        ? new Date(createDto.expirationDate)
+        : undefined,
     });
     return this.benefitPlanRepository.save(plan);
   }
 
-  async findAllPlans(businessId: string, isActive?: boolean) {
-    const where: any = { businessId };
+  async findAllPlans(isActive?: boolean) {
+    const where: any = {};
     if (isActive !== undefined) {
       where.isActive = isActive;
     }
 
     return this.benefitPlanRepository.find({
       where,
-      relations: ['employeeBenefits', 'employeeBenefits.employee'],
-      order: { createdAt: 'DESC' },
+      relations: ["employeeBenefits", "employeeBenefits.employee"],
+      order: { createdAt: "DESC" },
     });
   }
 
-  async findOnePlan(id: string, businessId: string) {
+  async findOnePlan(id: string) {
     const plan = await this.benefitPlanRepository.findOne({
-      where: { id, businessId },
-      relations: ['employeeBenefits', 'employeeBenefits.employee'],
+      where: { id },
+      relations: ["employeeBenefits", "employeeBenefits.employee"],
     });
 
     if (!plan) {
-      throw new NotFoundException('Benefit plan not found');
+      throw new NotFoundException("Benefit plan not found");
     }
 
     return plan;
   }
 
-  async updatePlan(id: string, businessId: string, updateDto: UpdateBenefitPlanDto) {
-    await this.findOnePlan(id, businessId);
+  async updatePlan(id: string, updateDto: UpdateBenefitPlanDto) {
+    await this.findOnePlan(id);
     await this.benefitPlanRepository.update({ id }, updateDto);
-    return this.findOnePlan(id, businessId);
+    return this.findOnePlan(id);
   }
 
-  async removePlan(id: string, businessId: string) {
-    await this.findOnePlan(id, businessId);
+  async removePlan(id: string) {
+    await this.findOnePlan(id);
     await this.benefitPlanRepository.delete({ id });
   }
 
@@ -84,19 +87,19 @@ export class BenefitsService {
 
     return this.employeeBenefitRepository.find({
       where,
-      relations: ['employee', 'plan'],
-      order: { enrollmentDate: 'DESC' },
+      relations: ["employee", "plan"],
+      order: { enrollmentDate: "DESC" },
     });
   }
 
   async findOneEmployeeBenefit(id: string) {
     const benefit = await this.employeeBenefitRepository.findOne({
       where: { id },
-      relations: ['employee', 'plan'],
+      relations: ["employee", "plan"],
     });
 
     if (!benefit) {
-      throw new NotFoundException('Employee benefit not found');
+      throw new NotFoundException("Employee benefit not found");
     }
 
     return benefit;
@@ -104,9 +107,8 @@ export class BenefitsService {
 
   async terminateEmployeeBenefit(id: string, terminationDate: Date) {
     const benefit = await this.findOneEmployeeBenefit(id);
-    benefit.status = 'terminated';
+    benefit.status = "terminated";
     benefit.terminationDate = terminationDate;
     return this.employeeBenefitRepository.save(benefit);
   }
 }
-

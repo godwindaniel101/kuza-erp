@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { JobPosting } from '../entities/job-posting.entity';
-import { JobApplication } from '../entities/job-application.entity';
-import { CreateJobPostingDto } from './dto/create-job-posting.dto';
-import { UpdateJobPostingDto } from './dto/update-job-posting.dto';
-import { CreateJobApplicationDto } from './dto/create-job-application.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { JobPosting } from "../entities/job-posting.entity";
+import { JobApplication } from "../entities/job-application.entity";
+import { CreateJobPostingDto } from "./dto/create-job-posting.dto";
+import { UpdateJobPostingDto } from "./dto/update-job-posting.dto";
+import { CreateJobApplicationDto } from "./dto/create-job-application.dto";
 
 @Injectable()
 export class RecruitmentService {
@@ -17,54 +17,57 @@ export class RecruitmentService {
   ) {}
 
   // Job Postings
-  async createJobPosting(businessId: string, createDto: CreateJobPostingDto) {
+  async createJobPosting(createDto: CreateJobPostingDto) {
     const posting = this.jobPostingRepository.create({
       ...createDto,
-      businessId,
+
       postedDate: new Date(),
     });
     return this.jobPostingRepository.save(posting);
   }
 
-  async findAllJobPostings(businessId: string, status?: string) {
-    const where: any = { businessId };
+  async findAllJobPostings(status?: string) {
+    const where: any = {};
     if (status) {
       where.status = status;
     }
 
     return this.jobPostingRepository.find({
       where,
-      relations: ['department', 'position', 'applications'],
-      order: { postedDate: 'DESC' },
+      relations: ["department", "position", "applications"],
+      order: { postedDate: "DESC" },
     });
   }
 
-  async findOneJobPosting(id: string, businessId: string) {
+  async findOneJobPosting(id: string) {
     const posting = await this.jobPostingRepository.findOne({
-      where: { id, businessId },
-      relations: ['department', 'position', 'applications'],
+      where: { id },
+      relations: ["department", "position", "applications"],
     });
 
     if (!posting) {
-      throw new NotFoundException('Job posting not found');
+      throw new NotFoundException("Job posting not found");
     }
 
     return posting;
   }
 
-  async updateJobPosting(id: string, businessId: string, updateDto: UpdateJobPostingDto) {
-    await this.findOneJobPosting(id, businessId);
+  async updateJobPosting(id: string, updateDto: UpdateJobPostingDto) {
+    await this.findOneJobPosting(id);
     await this.jobPostingRepository.update({ id }, updateDto);
-    return this.findOneJobPosting(id, businessId);
+    return this.findOneJobPosting(id);
   }
 
-  async removeJobPosting(id: string, businessId: string) {
-    await this.findOneJobPosting(id, businessId);
+  async removeJobPosting(id: string) {
+    await this.findOneJobPosting(id);
     await this.jobPostingRepository.delete({ id });
   }
 
   // Job Applications
-  async createApplication(jobPostingId: string, createDto: CreateJobApplicationDto) {
+  async createApplication(
+    jobPostingId: string,
+    createDto: CreateJobApplicationDto,
+  ) {
     const application = this.jobApplicationRepository.create({
       ...createDto,
       jobPostingId,
@@ -92,25 +95,30 @@ export class RecruitmentService {
 
     return this.jobApplicationRepository.find({
       where,
-      relations: ['jobPosting'],
-      order: { createdAt: 'DESC' },
+      relations: ["jobPosting"],
+      order: { createdAt: "DESC" },
     });
   }
 
   async findOneApplication(id: string) {
     const application = await this.jobApplicationRepository.findOne({
       where: { id },
-      relations: ['jobPosting'],
+      relations: ["jobPosting"],
     });
 
     if (!application) {
-      throw new NotFoundException('Job application not found');
+      throw new NotFoundException("Job application not found");
     }
 
     return application;
   }
 
-  async updateApplicationStatus(id: string, status: string, reviewedBy: string, notes?: string) {
+  async updateApplicationStatus(
+    id: string,
+    status: string,
+    reviewedBy: string,
+    notes?: string,
+  ) {
     const application = await this.findOneApplication(id);
     application.status = status;
     application.reviewedBy = reviewedBy;
@@ -121,4 +129,3 @@ export class RecruitmentService {
     return this.jobApplicationRepository.save(application);
   }
 }
-
