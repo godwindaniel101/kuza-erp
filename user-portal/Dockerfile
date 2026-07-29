@@ -15,6 +15,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* is inlined at build time — pass the API URL as a build arg
+# (docker build --build-arg NEXT_PUBLIC_API_URL=...); defaults to the local API.
+ARG NEXT_PUBLIC_API_URL=http://localhost:4001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Set production environment for build
 ENV NODE_ENV=production
 

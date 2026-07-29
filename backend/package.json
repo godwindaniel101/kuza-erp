@@ -23,7 +23,8 @@
     "migration:revert": "npm run typeorm -- migration:revert -d src/config/data-source.ts",
     "migration:generate:landlord": "npm run typeorm -- migration:generate -d src/config/data-source.landlord.ts",
     "migration:run:landlord": "npm run typeorm -- migration:run -d src/config/data-source.landlord.ts",
-    "migration:revert:landlord": "npm run typeorm -- migration:revert -d src/config/data-source.landlord.ts"
+    "migration:revert:landlord": "npm run typeorm -- migration:revert -d src/config/data-source.landlord.ts",
+    "migrate:deploy": "node dist/scripts/run-migrations.js"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^1.9.1",
