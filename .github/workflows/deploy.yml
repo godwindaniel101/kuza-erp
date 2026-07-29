@@ -7,11 +7,13 @@
 #
 # Deploy uses `gcloud run services update --image`, so the env vars, Cloud SQL
 # connection and secrets already set on each service are preserved — the
-# pipeline only swaps the image. The only secrets GitHub needs are the two WIF
-# values (how GitHub authenticates to Google Cloud); everything else is here.
+# pipeline only swaps the image. GitHub authenticates to Google Cloud KEYLESSLY
+# via Workload Identity Federation — set WIF_PROVIDER + WIF_SERVICE_ACCOUNT
+# secrets (no service-account key; the org blocks key creation by policy).
 #
-# To add tests later: add a `test` job and make each deploy job
-# `needs: [changes, test]` so a failing test blocks the deploy.
+# A failed step fails the job, so nothing deploys unless the whole job passes.
+# To add tests: add a `test` job and make each deploy job `needs: [changes, test]`
+# so a failing test blocks every deploy.
 # ─────────────────────────────────────────────────────────────────────────
 name: deploy
 
@@ -22,7 +24,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for Workload Identity Federation
+  id-token: write # required for keyless Workload Identity Federation
 
 env:
   PROJECT_ID: kuza-503911
