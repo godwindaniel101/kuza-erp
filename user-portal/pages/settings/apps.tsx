@@ -231,6 +231,11 @@ export default function AppsPage() {
     }
   };
 
+  // The active vertical (items / rms / shop) is the fixed core workspace. It is
+  // shown as a read-only banner, never as a selectable card — you can't switch
+  // verticals here.
+  const activeVertical = apps?.find((a) => a.group === 'vertical' && a.enabled) ?? null;
+
   return (
     <div className="w-full max-w-5xl space-y-5">
       <PageHeader
@@ -308,18 +313,37 @@ export default function AppsPage() {
         />
       )}
 
+      {!loading && !loadError && apps && activeVertical && (
+        <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-gray-900 shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-gradient text-white">
+            <Icon name={getApp(activeVertical.key)?.icon ?? 'squares-2x2'} size={24} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {t('settings.currentVertical', 'Your business type')}
+            </p>
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {activeVertical.name || getApp(activeVertical.key)?.name || activeVertical.key}
+            </p>
+            <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
+              {t('settings.currentVerticalNote', "Your core workspace. It's always on and can't be switched off here.")}
+            </p>
+          </div>
+        </div>
+      )}
+
       {!loading && !loadError && apps && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {apps
-            /* Verticals are your primary, fixed surface (items ⊕ rms ⊕ shop) —
-               you can't switch between them. Show only your active vertical
-               (locked, always on); hide the other verticals entirely. */
-            .filter((a) => a.group !== 'vertical' || a.enabled)
+            /* Verticals (items ⊕ rms ⊕ shop) are the fixed core surface — you
+               can't switch between them, so they never appear as selectable
+               cards. The active one shows in the read-only banner above; hide
+               ALL verticals from this grid. */
+            .filter((a) => a.group !== 'vertical')
             .map((app) => {
             const def = getApp(app.key);
-            const isVertical = app.group === 'vertical';
             const locked = !app.allowedByPlan;
-            const active = (app.enabled && !locked) || isVertical;
+            const active = app.enabled && !locked;
             return (
               <div
                 key={app.key}
@@ -336,11 +360,7 @@ export default function AppsPage() {
                     <Icon name={def?.icon ?? 'squares-2x2'} size={20} />
                   </span>
 
-                  {isVertical ? (
-                    <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:text-brand-400 ring-1 ring-inset ring-brand-600/20">
-                      {t('settings.yourVertical', 'Included')}
-                    </span>
-                  ) : locked ? (
+                  {locked ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20">
                       <Icon name="lock" size={11} />
                       {t('settings.locked', 'Locked')}
