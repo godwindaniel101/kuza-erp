@@ -15,6 +15,18 @@ import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermissions } from '../../common/guards/permissions.guard';
 import { ExchangeApiTokenDto, IssueApiTokenDto } from './dto/api-token.dto';
 
+/**
+ * FRONTEND_URL is a comma-separated CORS allow-list (e.g.
+ * "http://localhost:5001,http://localhost:5002"). User-facing links must use the
+ * canonical app origin only — the FIRST entry — never the whole list, or the URL
+ * is malformed. CORS in main.ts still consumes the full list (see there).
+ */
+function appOrigin(): string {
+  return (process.env.FRONTEND_URL || 'http://localhost:5001')
+    .split(',')[0]
+    .trim();
+}
+
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -68,7 +80,7 @@ export class AuthController {
   ) {
     const { verifyToken } = await this.authService.signup(dto.email, dto.password);
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5001';
+    const frontendUrl = appOrigin();
     const verifyUrl = `${frontendUrl}/verify-email?token=${verifyToken}`;
     try {
       await this.notificationsService.sendEmail({
@@ -110,7 +122,7 @@ export class AuthController {
       dto.email,
     );
     if (sent && verifyToken) {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5001';
+      const frontendUrl = appOrigin();
       const verifyUrl = `${frontendUrl}/verify-email?token=${verifyToken}`;
       try {
         await this.notificationsService.sendEmail({
@@ -181,7 +193,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   async googleAuthCallback(@Req() req: any, @Res() res: Response) {
     const result = req.user;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5001';
+    const frontendUrl = appOrigin();
 
     // Brand-new Google user (no account yet) → onboarding creates their
     // business + tenant, carrying a signed identity token.
