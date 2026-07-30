@@ -113,15 +113,18 @@ export default function Onboarding() {
 
   // Grab the onboarding token from the URL. Missing token → send back to signup.
   useEffect(() => {
-    if (!router.isReady) return;
-    const qToken = typeof router.query.token === 'string' ? router.query.token : '';
+    // Read straight from the URL — do not gate on router.isReady, which is
+    // referentially stable and can leave this page stuck on its loading spinner.
+    const qToken = new URLSearchParams(window.location.search).get('token') || '';
     if (!qToken) {
       router.replace('/register');
       return;
     }
     setToken(qToken);
     setTokenChecked(true);
-  }, [router]);
+    // Run once on mount; token comes from the URL, not reactive router state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) router.push('/');

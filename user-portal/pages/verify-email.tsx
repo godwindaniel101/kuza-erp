@@ -21,10 +21,15 @@ export default function VerifyEmail() {
   const ran = useRef(false);
 
   useEffect(() => {
-    if (!router.isReady || ran.current) return;
+    if (ran.current) return;
     ran.current = true;
 
-    const token = typeof router.query.token === 'string' ? router.query.token : '';
+    // Read the token straight from the URL. Do NOT gate on router.isReady: the
+    // Next router object is referentially stable, so if isReady is false on the
+    // first render, a later flip to true never re-runs this effect — the page
+    // would spin forever and never send the verify request.
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '';
     if (!token) {
       setStatus('error');
       setMessage(t('auth.invalidVerifyLink', 'This verification link is missing or invalid.'));
@@ -48,7 +53,9 @@ export default function VerifyEmail() {
         );
       }
     })();
-  }, [router, t]);
+    // Run once on mount; token comes from the URL, not reactive router state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
