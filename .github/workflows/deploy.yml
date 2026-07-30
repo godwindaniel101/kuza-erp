@@ -98,10 +98,8 @@ jobs:
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
-          API_URL=$(gcloud run services describe kuza-user-portal --region="$REGION" \
-            --flatten="spec.template.spec.containers[].env[]" \
-            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_API_URL" \
-            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          API_URL=$(gcloud run services describe kuza-user-portal --region="$REGION" --format=json 2>/dev/null \
+            | jq -r '(.spec.template.spec.containers[0].env // [])[] | select(.name=="NEXT_PUBLIC_API_URL") | .value' 2>/dev/null | head -1)
           API_URL="${API_URL:-$(gcloud run services describe kuza-backend --region="$REGION" --format='value(status.url)' 2>/dev/null)}"
           echo "Baking NEXT_PUBLIC_API_URL=$API_URL"
           IMG="$AR/kuza-user-portal:${{ github.sha }}"
@@ -125,10 +123,8 @@ jobs:
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
-          API_URL=$(gcloud run services describe kuza-admin-portal --region="$REGION" \
-            --flatten="spec.template.spec.containers[].env[]" \
-            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_API_URL" \
-            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          API_URL=$(gcloud run services describe kuza-admin-portal --region="$REGION" --format=json 2>/dev/null \
+            | jq -r '(.spec.template.spec.containers[0].env // [])[] | select(.name=="NEXT_PUBLIC_API_URL") | .value' 2>/dev/null | head -1)
           API_URL="${API_URL:-$(gcloud run services describe kuza-backend --region="$REGION" --format='value(status.url)' 2>/dev/null)}"
           echo "Baking NEXT_PUBLIC_API_URL=$API_URL"
           IMG="$AR/kuza-admin-portal:${{ github.sha }}"
@@ -152,10 +148,8 @@ jobs:
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
-          APP_URL=$(gcloud run services describe kuza-website --region="$REGION" \
-            --flatten="spec.template.spec.containers[].env[]" \
-            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_APP_URL" \
-            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          APP_URL=$(gcloud run services describe kuza-website --region="$REGION" --format=json 2>/dev/null \
+            | jq -r '(.spec.template.spec.containers[0].env // [])[] | select(.name=="NEXT_PUBLIC_APP_URL") | .value' 2>/dev/null | head -1)
           APP_URL="${APP_URL:-$(gcloud run services describe kuza-user-portal --region="$REGION" --format='value(status.url)' 2>/dev/null)}"
           echo "Baking NEXT_PUBLIC_APP_URL=$APP_URL"
           IMG="$AR/kuza-website:${{ github.sha }}"
