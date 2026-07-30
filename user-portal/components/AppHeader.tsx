@@ -6,7 +6,7 @@ import { useKuzaStore } from '@/store/kuzaStore';
 import { useUiStore } from '@/store/uiStore';
 import { useSearchStore } from '@/store/searchStore';
 import NotificationBell from './NotificationBell';
-import { getApp, presetFor } from '@/lib/apps';
+import { getApp, presetFor, isVertical } from '@/lib/apps';
 import { availableCoarseApps, appDisplayName, hasAppKey } from '@/lib/appCatalog';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
@@ -44,12 +44,15 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
   // never on Inventory/Sales/Accounting pages (would flip the sidebar to Restaurant).
   const showNewOrder = router.pathname.startsWith('/rms') && (businessType === 'restaurant' || businessType === null);
 
-  // Launcher entries: the coarse apps the tenant can access — the same 7 the
-  // sidebar uses (Restaurant/POS, Inventory, Sales, Accounting, People, Settings),
-  // not granular registry keys.
-  // Settings is reached from the profile menu / gear, not the app launcher grid.
+  // Launcher entries: the coarse apps the tenant can access — the same set the
+  // sidebar uses (Invoicing, Accounting, People, Payments, …), not granular
+  // registry keys. Two exclusions:
+  //  - Settings is reached from the profile menu / gear, not the launcher grid.
+  //  - Verticals (Restaurant/Inventory/Storefront) are the primary business
+  //    surface, reached from the sidebar/home — never a switchable launcher app.
+  //    A coarse app is a vertical when any of its registry appKeys is a vertical.
   const launcherApps = availableCoarseApps(effectiveApps, businessType).filter(
-    (a) => a.id !== 'settings',
+    (a) => a.id !== 'settings' && !(a.appKeys ?? []).some((k) => isVertical(k)),
   );
 
   // Which app is the current route in? Mirrors the sidebar's resolution so the

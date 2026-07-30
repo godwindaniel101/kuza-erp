@@ -12,6 +12,7 @@ import Head from 'next/head';
 const BUSINESS_TYPES: { type: BusinessType; label: string; description: string; icon: IconName }[] = [
   { type: 'hospitality', label: 'Restaurant & Hospitality', description: 'Restaurants, hotels, lounges & bars', icon: 'menu-book' },
   { type: 'retail', label: 'Retail Shop', description: 'Products, checkout & sales', icon: 'building-storefront' },
+  { type: 'ecommerce', label: 'Online Store', description: 'Sell online with a storefront & product links', icon: 'building-storefront' },
   { type: 'accounts', label: 'Accounting & Invoicing', description: 'Books, invoicing & getting paid', icon: 'calculator' },
   { type: 'hr', label: 'People & Payroll', description: 'Employees, leave & attendance', icon: 'users' },
   { type: 'warehouse', label: 'Warehouse & Stock', description: 'Stock, receiving & locations', icon: 'cube' },

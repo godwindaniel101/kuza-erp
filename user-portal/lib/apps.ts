@@ -10,13 +10,27 @@ import type { BusinessType } from '@/store/globalStore';
 export type AppKey =
   | 'items'
   | 'rms'
+  | 'shop'
   | 'invoicing'
   | 'books'
-  | 'people';
+  | 'people'
+  | 'payments';
+
+/**
+ * Packaging group, mirroring the backend registry (common/apps/app-registry.ts):
+ *  - 'vertical' — a primary, mutually-exclusive business surface (Inventory,
+ *    Restaurant, Storefront). Reached from the sidebar/home, never the launcher.
+ *  - 'common'   — a cross-cutting app that stacks on any vertical (Invoicing,
+ *    Accounting, People, Payments).
+ *  - 'assist'   — not directly payable; enhances a common/vertical.
+ */
+export type AppGroup = 'vertical' | 'common' | 'assist';
 
 export interface AppDefinition {
   key: AppKey;
   name: string;
+  /** Packaging group — mirrors the backend registry. */
+  group: AppGroup;
   /** One-line value prop from the registry. */
   description: string;
   icon: IconName;
@@ -31,6 +45,7 @@ export const APP_REGISTRY: AppDefinition[] = [
   {
     key: 'items',
     name: 'Inventory',
+    group: 'vertical',
     description: 'Catalog, stock, receiving and valuation — one source of truth across branches',
     icon: 'cube',
     dependencies: [],
@@ -39,14 +54,25 @@ export const APP_REGISTRY: AppDefinition[] = [
   {
     key: 'rms',
     name: 'Restaurant',
+    group: 'vertical',
     description: 'Sell, plus dine-in tables, menus and a free QR menu',
     icon: 'table-cells',
     dependencies: ['items'],
     homeRoute: '/',
   },
   {
+    key: 'shop',
+    name: 'Storefront',
+    group: 'vertical',
+    description: 'Sell online — a shareable storefront, product links and orders, on your live stock',
+    icon: 'building-storefront',
+    dependencies: [],
+    homeRoute: '/storefront',
+  },
+  {
     key: 'invoicing',
     name: 'Invoicing',
+    group: 'common',
     description: 'Customers, invoices and getting paid — AR tracked automatically',
     icon: 'document-text',
     dependencies: [],
@@ -55,6 +81,7 @@ export const APP_REGISTRY: AppDefinition[] = [
   {
     key: 'books',
     name: 'Accounting',
+    group: 'common',
     description: 'Double-entry accounting that writes itself — no accountant required',
     icon: 'calculator',
     dependencies: [],
@@ -63,10 +90,20 @@ export const APP_REGISTRY: AppDefinition[] = [
   {
     key: 'people',
     name: 'People',
+    group: 'common',
     description: 'Employees, attendance, leave and payroll in one place',
     icon: 'briefcase',
     dependencies: [],
     homeRoute: '/hrms/dashboard',
+  },
+  {
+    key: 'payments',
+    name: 'Payments',
+    group: 'common',
+    description: 'Take payments (bank transfer, card, mobile money) and tie them to sales in real time',
+    icon: 'credit-card',
+    dependencies: [],
+    homeRoute: '/payments',
   },
 ];
 
@@ -76,6 +113,16 @@ const registryByKey = new Map<string, AppDefinition>(APP_REGISTRY.map((a) => [a.
 
 export function getApp(key: string): AppDefinition | undefined {
   return registryByKey.get(key);
+}
+
+/**
+ * True if the key is a vertical app (a primary business surface — Inventory,
+ * Restaurant, Storefront). Mirrors the backend `isVertical`. Unknown keys are
+ * not verticals. Used to keep verticals out of the top-right app launcher — a
+ * vertical is reached from the sidebar/home, never switched to like a common.
+ */
+export function isVertical(key: string): boolean {
+  return registryByKey.get(key)?.group === 'vertical';
 }
 
 /**
@@ -91,6 +138,7 @@ export const VERTICAL_PRESETS: Record<BusinessType, AppKey[]> = {
   retail: ['items', 'invoicing', 'books'],
   hr: ['people'],
   warehouse: ['items'],
+  ecommerce: ['shop', 'payments'],
   // Legacy business types
   restaurant: ['items', 'rms', 'books'],
   services: ['invoicing', 'books', 'people'],

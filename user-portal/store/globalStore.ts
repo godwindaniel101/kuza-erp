@@ -873,7 +873,8 @@ export type BusinessType =
   | 'hospitality'
   | 'accounts'
   | 'hr'
-  | 'warehouse';
+  | 'warehouse'
+  | 'ecommerce';
 
 interface TenantState {
   businessType: BusinessType | null;

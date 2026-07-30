@@ -31,6 +31,8 @@ import {
 const useIsoLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+import BrandMark from "@/components/BrandMark";
+
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 import es from "@/messages/es.json";
@@ -69,12 +71,20 @@ const LocaleContext = createContext<Ctx | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // Cover the first paint with a subtle loader until the locale resolves. Starts
+  // `false` on BOTH server and client (hydration-safe). The children (English by
+  // default) are ALWAYS rendered — so the static HTML still carries the real,
+  // indexable copy for crawlers/no-JS — but a fixed overlay hides them from view
+  // until `ready` flips, so a French visitor never SEES English flash to French
+  // on refresh. Flipped to `true` once the layout effect below resolves.
+  const [ready, setReady] = useState(false);
 
   // Resolve the visitor's locale BEFORE the first paint (layout effect → no
   // English flash): their saved choice if any, otherwise auto-detect from the
   // browser's preferred language (the incoming request). Initial render is `en`
   // (matching the static HTML), so there's no hydration mismatch — the swap only
-  // happens here, before the browser paints.
+  // happens here, before the browser paints. `setReady(true)` runs in every
+  // branch (via finally) so the loader is never left up.
   useIsoLayoutEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -93,6 +103,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       /* localStorage/navigator unavailable — stay on the default locale */
+    } finally {
+      setReady(true);
     }
   }, []);
 
@@ -124,7 +136,28 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+    <LocaleContext.Provider value={value}>
+      {children}
+      {!ready && <LocalePreloader />}
+    </LocaleContext.Provider>
+  );
+}
+
+/**
+ * Subtle, on-brand loader that overlays the page for the single frame before the
+ * locale resolves. Full-viewport on the site's paper background, centred brand
+ * mark with a gentle pulse. It sits ON TOP of the already-rendered content (which
+ * stays in the DOM for SEO), covering the English→locale swap from view.
+ * `motion-safe:` drops the pulse for visitors who prefer reduced motion.
+ */
+function LocalePreloader() {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-paper"
+      aria-hidden="true"
+    >
+      <BrandMark size={44} className="motion-safe:animate-pulse" />
+    </div>
   );
 }
 
