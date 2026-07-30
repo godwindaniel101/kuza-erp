@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { initializeTransactionalContext } from 'typeorm-transactional';
@@ -53,16 +54,38 @@ async function bootstrap() {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  // Diagnostic CORS logging. A `[CORS]` line proves the request reached the app
+  // and shows the decision (ALLOW/DENY + reason). If the browser reports a CORS
+  // error but NO `[CORS]` line appears, the request never reached Nest — that is
+  // an infra problem (proxy/Docker/host stripping headers), not an app block.
+  const corsLogger = new Logger('CORS');
+  corsLogger.log(
+    `Allow-list from FRONTEND_URL (isProd=${isProd}): [${allowedOrigins.join(', ')}]`,
+  );
   app.enableCors({
     origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+      // Decide + log in one place so every decision is greppable as `[CORS]`.
+      const allow = (reason: string) => {
+        corsLogger.log(`origin=${origin ?? '(none)'} -> ALLOW (${reason})`);
+        cb(null, true);
+      };
+      const deny = (reason: string) => {
+        corsLogger.warn(`origin=${origin ?? '(none)'} -> DENY (${reason})`);
+        cb(new Error(`Origin ${origin ?? '(none)'} not allowed by CORS`));
+      };
       // Missing Origin (same-origin, curl, mobile apps) is allowed only outside
       // production; in prod we require an explicit, allow-listed Origin.
-      if (!origin) return cb(isProd ? new Error('Origin required') : null, !isProd);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-        return cb(null, true);
+      if (!origin) {
+        return isProd
+          ? deny('no Origin header; prod requires one')
+          : allow('no Origin header; permitted in non-prod');
       }
-      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+      if (allowedOrigins.includes(origin)) return allow('in FRONTEND_URL allow-list');
+      // Non-prod: reflect ANY origin so a dev host/port/IP never trips CORS while
+      // debugging. Credentials stay working because the exact origin is echoed
+      // back (never the wildcard '*'). Production stays on the strict allow-list.
+      if (!isProd) return allow('non-prod: all origins permitted');
+      return deny('not in allow-list');
     },
     credentials: true,
   });
