@@ -348,7 +348,7 @@ const plans = [
   {
     name: "Growth",
     tag: "Selling across channels",
-    price: "À-la-carte",
+    price: "Pay as you use",
     per: "pay per module",
     pop: true,
     cta: "Start free",
@@ -394,7 +394,7 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "Start with a free 14-day all-access trial. After that you pay à-la-carte — per vertical/common module plus usage — with the AI assists included. Prices shown are illustrative unless stated.",
+    a: "Start with a free 14-day all-access trial. After that you pay only for what you use — per vertical/common module plus usage — with the AI assists included. Prices shown are illustrative unless stated.",
   },
 ];
 
@@ -770,7 +770,7 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-5 py-20 md:px-8 lg:py-28">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-bold text-forest sm:text-4xl">
-              Simple, à-la-carte pricing.
+              Simple, pay-as-you-use pricing.
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-muted">
               Start free for 14 days with everything unlocked. Then pay only for
