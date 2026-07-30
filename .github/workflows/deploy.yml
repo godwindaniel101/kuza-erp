@@ -28,12 +28,14 @@ permissions:
 
 env:
   PROJECT_ID: kuza-503911
-  REGION: africa-south1
-  AR: africa-south1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
-  # Backend public URL — baked into the portals' bundle at build time.
-  NEXT_PUBLIC_API_URL: https://kuza-backend-1017126847769.africa-south1.run.app
-  # Operator-portal origin — the website's Sign in / Start free redirect target.
-  NEXT_PUBLIC_APP_URL: https://kuza.iyenogun.com
+  REGION: europe-west1
+  AR: europe-west1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
+  # NEXT_PUBLIC_* are baked at BUILD time. Each build READS the value from its own
+  # Cloud Run service's env (the .env you manage on GCP), so GCP stays the single
+  # source: set the env var on the service, the next build bakes it. These
+  # DEFAULT_* are used only if the service doesn't have the var set yet.
+  DEFAULT_API_URL: https://kuza-backend-1017126847769.europe-west1.run.app
+  DEFAULT_APP_URL: https://kuza.iyenogun.com
 
 jobs:
   # Per-service change detection — this is the deployment control, in git.
@@ -94,9 +96,14 @@ jobs:
       - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
+          API_URL=$(gcloud run services describe kuza-user-portal --region="$REGION" \
+            --flatten="spec.template.spec.containers[].env[]" \
+            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_API_URL" \
+            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          API_URL="${API_URL:-$DEFAULT_API_URL}"
+          echo "Baking NEXT_PUBLIC_API_URL=$API_URL"
           IMG="$AR/kuza-user-portal:${{ github.sha }}"
-          docker build -f user-portal/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" -t "$IMG" user-portal
+          docker build -f user-portal/Dockerfile --build-arg NEXT_PUBLIC_API_URL="$API_URL" -t "$IMG" user-portal
           docker push "$IMG"
           gcloud run services update kuza-user-portal --image "$IMG" --region "$REGION" --quiet
 
@@ -114,9 +121,14 @@ jobs:
       - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
+          API_URL=$(gcloud run services describe kuza-admin-portal --region="$REGION" \
+            --flatten="spec.template.spec.containers[].env[]" \
+            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_API_URL" \
+            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          API_URL="${API_URL:-$DEFAULT_API_URL}"
+          echo "Baking NEXT_PUBLIC_API_URL=$API_URL"
           IMG="$AR/kuza-admin-portal:${{ github.sha }}"
-          docker build -f admin-portal/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" -t "$IMG" admin-portal
+          docker build -f admin-portal/Dockerfile --build-arg NEXT_PUBLIC_API_URL="$API_URL" -t "$IMG" admin-portal
           docker push "$IMG"
           gcloud run services update kuza-admin-portal --image "$IMG" --region "$REGION" --quiet
 
@@ -134,8 +146,13 @@ jobs:
       - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - name: Build, push & deploy
         run: |
+          APP_URL=$(gcloud run services describe kuza-website --region="$REGION" \
+            --flatten="spec.template.spec.containers[].env[]" \
+            --filter="spec.template.spec.containers.env.name=NEXT_PUBLIC_APP_URL" \
+            --format="value(spec.template.spec.containers.env.value)" 2>/dev/null || true)
+          APP_URL="${APP_URL:-$DEFAULT_APP_URL}"
+          echo "Baking NEXT_PUBLIC_APP_URL=$APP_URL"
           IMG="$AR/kuza-website:${{ github.sha }}"
-          docker build -f website/Dockerfile \
-            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" -t "$IMG" website
+          docker build -f website/Dockerfile --build-arg NEXT_PUBLIC_APP_URL="$APP_URL" -t "$IMG" website
           docker push "$IMG"
           gcloud run services update kuza-website --image "$IMG" --region "$REGION" --quiet

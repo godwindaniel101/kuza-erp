@@ -198,6 +198,22 @@ section.fx-in .stagger-child {
   animation-delay: 0.36s;
 }
 
+/* ---- Language switcher dropdown entrance ---- */
+@keyframes lang-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lang-menu {
+  transform-origin: top;
+  animation: lang-in 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -206,7 +222,8 @@ section.fx-in .stagger-child {
   .demo-row,
   .demo-tick,
   .stagger-child,
-  .hero-rise > * {
+  .hero-rise > *,
+  .lang-menu {
     animation: none;
     opacity: 1;
     transform: none;

@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { LOGIN_URL, REGISTER_URL } from "@/lib/site";
+import { useT } from "@/lib/i18n";
 import BrandMark from "./BrandMark";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const links = [
-  { href: "/features", label: "Features" },
-  { href: "/ai", label: "Kuza AI" },
-  { href: "/industries", label: "Industries" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/features", key: "nav.features" },
+  { href: "/ai", key: "nav.ai" },
+  { href: "/industries", key: "nav.industries" },
+  { href: "/pricing", key: "nav.pricing" },
 ];
 
 function Wordmark() {
@@ -31,6 +33,7 @@ function Wordmark() {
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const t = useT();
 
   return (
     // Solid paper — the same color as the page background — and borderless, so
@@ -49,7 +52,7 @@ export default function Nav() {
                     pathname === l.href ? "text-leaf" : "text-ink"
                   }`}
                 >
-                  {l.label}
+                  {t(l.key)}
                 </Link>
               </li>
             ))}
@@ -57,17 +60,18 @@ export default function Nav() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          <LanguageSwitcher />
           <a
             href={LOGIN_URL}
             className="rounded-full px-4 py-2 text-[0.95rem] font-semibold text-forest transition-colors hover:bg-mint"
           >
-            Log in
+            {t("nav.login")}
           </a>
           <a
             href={REGISTER_URL}
             className="group rounded-full bg-leaf px-5 py-2.5 text-[0.95rem] font-semibold text-white shadow-lift transition-all duration-300 hover:-translate-y-0.5 hover:bg-leaf-dark"
           >
-            Start free
+            {t("nav.startFree")}
           </a>
         </div>
 
@@ -101,23 +105,24 @@ export default function Nav() {
                   onClick={() => setOpen(false)}
                   className="block border-b border-line py-3.5 text-base font-medium text-ink"
                 >
-                  {l.label}
+                  {t(l.key)}
                 </Link>
               </li>
             ))}
           </ul>
           <div className="mt-5 flex flex-col gap-3">
+            <LanguageSwitcher variant="mobile" />
             <a
               href={REGISTER_URL}
               className="rounded-full bg-leaf px-5 py-3 text-center font-semibold text-white"
             >
-              Start free
+              {t("nav.startFree")}
             </a>
             <a
               href={LOGIN_URL}
               className="rounded-full border border-line px-5 py-3 text-center font-semibold text-forest"
             >
-              Log in
+              {t("nav.login")}
             </a>
           </div>
         </div>
