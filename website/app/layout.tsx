@@ -4,6 +4,7 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import ScrollFx from "@/components/ScrollFx";
+import { LocaleProvider } from "@/lib/i18n";
 
 /*
 DIRECTION CONTRACT — Kuza marketing site
@@ -65,10 +66,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bricolage.variable} ${figtree.variable}`}>
       <body>
-        <ScrollFx />
-        <Nav />
-        <main>{children}</main>
-        <Footer />
+        <LocaleProvider>
+          <ScrollFx />
+          <Nav />
+          <main>{children}</main>
+          <Footer />
+        </LocaleProvider>
       </body>
     </html>
   );
