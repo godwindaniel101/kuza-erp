@@ -101,7 +101,7 @@ async function bootstrap() {
     .getHttpAdapter()
     .getInstance()
     .get('/', (_req: Request, res: Response) => {
-      res.status(200).send('Healthy and hearty - 200');
+      res.status(200).send('Kuza Backend - 200');
     });
 
   const port = process.env.PORT || 4001;
