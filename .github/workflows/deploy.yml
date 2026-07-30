@@ -28,13 +28,13 @@ permissions:
 
 env:
   PROJECT_ID: kuza-503911
-  REGION: africa-south1
-  AR: africa-south1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
+  REGION: europe-west1
+  AR: europe-west1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
   # NEXT_PUBLIC_* are baked at BUILD time. Each build READS the value from its own
   # Cloud Run service's env (the .env you manage on GCP), so GCP stays the single
   # source: set the env var on the service, the next build bakes it. These
   # DEFAULT_* are used only if the service doesn't have the var set yet.
-  DEFAULT_API_URL: https://kuza-backend-1017126847769.africa-south1.run.app
+  DEFAULT_API_URL: https://kuza-backend-1017126847769.europe-west1.run.app
   DEFAULT_APP_URL: https://kuza.iyenogun.com
 
 jobs:
