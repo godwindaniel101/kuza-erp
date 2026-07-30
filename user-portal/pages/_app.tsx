@@ -29,7 +29,7 @@ function App({ Component, pageProps }: AppProps) {
   // Initialize dark mode before React hydrates to prevent flash
   useEffect(() => {
     const stored = localStorage.getItem('darkMode');
-    const isDark = stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = stored === 'true';
     
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -69,7 +69,7 @@ function App({ Component, pageProps }: AppProps) {
               (function() {
                 try {
                   const stored = localStorage.getItem('darkMode');
-                  const isDark = stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  const isDark = stored === 'true';
                   if (isDark) {
                     document.documentElement.classList.add('dark');
                   } else {
