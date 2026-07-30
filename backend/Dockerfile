@@ -1,4 +1,4 @@
-# Deployed by GitHub Actions — per-service, keyless via WIF (.github/workflows/deploy.yml)
+# Deployed by GitHub Actions to Cloud Run (pave-504011 · europe-west1) — keyless via WIF (.github/workflows/deploy.yml)
 # Build stage
 FROM node:20-alpine AS builder
 
