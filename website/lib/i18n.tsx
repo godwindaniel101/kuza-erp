@@ -19,10 +19,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+
+// useLayoutEffect on the client (runs BEFORE the browser paints → the locale
+// swap is applied before anything is shown, so no English flash), and useEffect
+// on the server to avoid the "useLayoutEffect does nothing on the server" warning.
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
@@ -63,15 +70,29 @@ const LocaleContext = createContext<Ctx | null>(null);
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
-  // Apply the visitor's stored preference after mount (avoids SSR mismatch).
-  useEffect(() => {
+  // Resolve the visitor's locale BEFORE the first paint (layout effect → no
+  // English flash): their saved choice if any, otherwise auto-detect from the
+  // browser's preferred language (the incoming request). Initial render is `en`
+  // (matching the static HTML), so there's no hydration mismatch — the swap only
+  // happens here, before the browser paints.
+  useIsoLayoutEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (isLocale(stored) && stored !== DEFAULT_LOCALE) {
-        setLocaleState(stored);
+      if (isLocale(stored)) {
+        if (stored !== DEFAULT_LOCALE) setLocaleState(stored);
+        return;
+      }
+      // No saved choice → detect from the browser's language(s), e.g. "fr-FR" → "fr".
+      const nav =
+        (navigator.languages && navigator.languages[0]) ||
+        navigator.language ||
+        "";
+      const code = nav.slice(0, 2).toLowerCase();
+      if (isLocale(code) && code !== DEFAULT_LOCALE) {
+        setLocaleState(code);
       }
     } catch {
-      /* localStorage unavailable (private mode / blocked) — stay on default */
+      /* localStorage/navigator unavailable — stay on the default locale */
     }
   }, []);
 
