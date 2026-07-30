@@ -28,7 +28,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - Inventory Transfers")
 @Controller("ims/transfers")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class TransfersController {
   constructor(private readonly transfersService: TransfersService) {}

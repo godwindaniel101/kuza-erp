@@ -23,7 +23,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - Units of Measure")
 @Controller("ims/uoms")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class UomsController {
   constructor(private readonly uomsService: UomsService) {}

@@ -21,6 +21,8 @@ interface AppState {
   key: string;
   name: string;
   description: string;
+  /** vertical (fixed, can't switch) | common | assist. */
+  group?: 'vertical' | 'common' | 'assist';
   enabled: boolean;
   allowedByPlan: boolean;
   dependencies: string[];
@@ -308,10 +310,16 @@ export default function AppsPage() {
 
       {!loading && !loadError && apps && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {apps.map((app) => {
+          {apps
+            /* Verticals are your primary, fixed surface (items ⊕ rms ⊕ shop) —
+               you can't switch between them. Show only your active vertical
+               (locked, always on); hide the other verticals entirely. */
+            .filter((a) => a.group !== 'vertical' || a.enabled)
+            .map((app) => {
             const def = getApp(app.key);
+            const isVertical = app.group === 'vertical';
             const locked = !app.allowedByPlan;
-            const active = app.enabled && !locked;
+            const active = (app.enabled && !locked) || isVertical;
             return (
               <div
                 key={app.key}
@@ -328,7 +336,11 @@ export default function AppsPage() {
                     <Icon name={def?.icon ?? 'squares-2x2'} size={20} />
                   </span>
 
-                  {locked ? (
+                  {isVertical ? (
+                    <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:text-brand-400 ring-1 ring-inset ring-brand-600/20">
+                      {t('settings.yourVertical', 'Included')}
+                    </span>
+                  ) : locked ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20">
                       <Icon name="lock" size={11} />
                       {t('settings.locked', 'Locked')}

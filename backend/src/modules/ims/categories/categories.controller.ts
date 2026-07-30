@@ -20,7 +20,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - Categories")
 @Controller("ims/categories")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}

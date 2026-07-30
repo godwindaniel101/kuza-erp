@@ -27,7 +27,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("RMS - Orders")
 @Controller("rms/orders")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class OrdersController {
   constructor(

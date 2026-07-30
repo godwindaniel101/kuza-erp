@@ -1293,6 +1293,7 @@ export class BillingService {
       key: app.key,
       name: app.name,
       description: app.description,
+      group: app.group,
       enabled: enabled.has(app.key),
       allowedByPlan: allowed.has(app.key),
       dependencies: app.dependencies,
@@ -1326,6 +1327,14 @@ export class BillingService {
     const app = getApp(key);
     if (!app) {
       throw new BadRequestException(`Unknown app '${key}'`);
+    }
+
+    // A vertical is the business's primary, fixed surface (items ⊕ rms ⊕ shop) —
+    // you can't switch or turn it off. Enforced server-side; the UI hides its toggle.
+    if (!enable && app.group === 'vertical') {
+      throw new BadRequestException(
+        `${app.name} is your business's primary vertical and can't be turned off.`,
+      );
     }
 
     const [subscription, business] = await Promise.all([
@@ -1409,6 +1418,7 @@ export class BillingService {
       key: appDef.key,
       name: appDef.name,
       description: appDef.description,
+      group: appDef.group,
       enabled: current.has(appDef.key),
       allowedByPlan: allowed.has(appDef.key),
       dependencies: appDef.dependencies,

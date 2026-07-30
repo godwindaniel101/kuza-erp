@@ -253,6 +253,17 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     );
   }
 
+  // Not authenticated on a protected page → the redirect effect above is about to
+  // send us to /login (or fetch the user for an existing token). Render the loader,
+  // NOT the dashboard, so the app never flashes the dashboard chrome first.
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-canvas dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
+      </div>
+    );
+  }
+
   const isHRMS = router.pathname.startsWith('/hrms');
   const inferTitle = () => {
     if (title) return title;

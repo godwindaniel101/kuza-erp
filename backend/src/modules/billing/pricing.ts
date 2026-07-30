@@ -30,6 +30,7 @@ type PriceMap = Record<string, number>;
 export const APP_PRICES: Record<string, PriceMap> = {
   items: { NGN: 15000, GHS: 150, KES: 1500, XOF: 6000, USD: 10, GBP: 9, EUR: 9 },
   rms: { NGN: 15000, GHS: 150, KES: 1500, XOF: 6000, USD: 10, GBP: 9, EUR: 9 },
+  shop: { NGN: 15000, GHS: 150, KES: 1500, XOF: 6000, USD: 10, GBP: 9, EUR: 9 },
   people: { NGN: 12000, GHS: 120, KES: 1200, XOF: 4800, USD: 8, GBP: 7, EUR: 7 },
   books: { NGN: 10000, GHS: 105, KES: 1000, XOF: 4200, USD: 7, GBP: 6, EUR: 6 },
   invoicing: { NGN: 7500, GHS: 75, KES: 750, XOF: 3000, USD: 5, GBP: 4, EUR: 5 },

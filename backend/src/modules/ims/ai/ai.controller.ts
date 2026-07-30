@@ -19,7 +19,7 @@ import { FeatureGateGuard, RequireApp } from "../../billing/guards/feature-gate.
 @ApiTags("IMS - AI Analytics")
 @Controller("ims/ai")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class AiController {
   constructor(private readonly aiService: AiService) {}

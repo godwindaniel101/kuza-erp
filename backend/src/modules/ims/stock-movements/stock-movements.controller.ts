@@ -19,7 +19,7 @@ import { UseGuards as UseGuardsDecorator } from "@nestjs/common";
 @ApiTags("IMS - Stock Movements")
 @Controller("ims/stock-movements")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class StockMovementsController {
   constructor(

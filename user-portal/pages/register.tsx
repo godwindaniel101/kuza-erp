@@ -71,12 +71,16 @@ export default function Register() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2.5 mb-3">
+            <a
+              href={process.env.NEXT_PUBLIC_WEBSITE_URL || '/'}
+              className="inline-flex items-center gap-2.5 mb-3 transition-transform hover:-translate-y-px"
+              aria-label={t('auth.backToWebsite', 'Back to the Kuza website')}
+            >
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-lg font-bold text-white shadow-card">
                 K
               </span>
               <span className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Kuza</span>
-            </div>
+            </a>
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('auth.getBusinessSetUp', "Let's get your business set up")}</p>
           </div>
 

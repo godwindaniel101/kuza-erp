@@ -10,6 +10,7 @@
 export type AppKey =
   | 'items'
   | 'rms'
+  | 'shop'
   | 'invoicing'
   | 'books'
   | 'people'
@@ -46,6 +47,7 @@ export const EDITION_KEYS = [
   'retail',
   'hr',
   'warehouse',
+  'ecommerce',
 ] as const;
 export type EditionKey = (typeof EDITION_KEYS)[number];
 
@@ -146,6 +148,21 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
     defaultForBusinessTypes: ['hospitality'],
   },
   {
+    key: 'shop',
+    name: 'Storefront',
+    group: 'vertical',
+    exclusiveGroup: 'operations',
+    description:
+      'Sell online — a shareable storefront, product links and orders, on your live stock',
+    // Like rms, Storefront is a vertical that uses the shared STOCK CORE and
+    // ORDER ENGINE (gated @RequireApp('items','rms','shop')) — never the
+    // standalone Inventory app (items ⊕ rms ⊕ shop). It adds a public shop
+    // (/s/:slug) and an opt-in Kuza Market listing.
+    backendModules: ['storefront'],
+    dependencies: [],
+    defaultForBusinessTypes: ['ecommerce'],
+  },
+  {
     key: 'invoicing',
     name: 'Invoicing',
     group: 'common',
@@ -172,7 +189,7 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
       'Take payments (bank transfer, card, mobile money) and tie them to sales in real time',
     backendModules: ['payments'],
     dependencies: [],
-    defaultForBusinessTypes: ['hospitality', 'retail', 'accounts'],
+    defaultForBusinessTypes: ['hospitality', 'retail', 'accounts', 'ecommerce'],
   },
   {
     key: 'people',

@@ -13,7 +13,7 @@ import { I18nContext, I18n } from "nestjs-i18n";
 @ApiTags("RMS - Reports & Analytics")
 @Controller("rms/reports")
 @UseGuardsDecorator(JwtAuthGuard, PermissionsGuard, FeatureGateGuard)
-@RequireApp("items", "rms")
+@RequireApp("items", "rms", "shop")
 @ApiBearerAuth()
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
