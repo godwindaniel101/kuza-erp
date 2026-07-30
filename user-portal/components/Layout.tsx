@@ -232,10 +232,16 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     }
   }, [isAuthenticated, isLoading, router, fetchUser]);
 
-  // On auth pages, always show children immediately
+  // On auth / pre-session pages, always render children immediately — never the
+  // dashboard chrome or the not-authenticated loader. verify-email and onboarding
+  // run BEFORE a session exists, so they must be here: otherwise the loader below
+  // renders instead of the page, the page's effect never mounts, and (for
+  // verify-email) no verification request is ever sent.
   const isAuthPage =
     router.pathname === '/login' ||
     router.pathname === '/register' ||
+    router.pathname === '/verify-email' ||
+    router.pathname === '/onboarding' ||
     router.pathname === '/auth/callback' ||
     router.pathname === '/invitations/accept' ||
     router.pathname.startsWith('/m/');
