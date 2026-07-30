@@ -30,10 +30,12 @@ env:
   PROJECT_ID: kuza-503911
   REGION: africa-south1
   AR: africa-south1-docker.pkg.dev/kuza-503911/cloud-run-source-deploy
-  # Backend public URL — baked into the portals' bundle at build time.
-  NEXT_PUBLIC_API_URL: https://kuza-backend-1017126847769.africa-south1.run.app
-  # Operator-portal origin — the website's Sign in / Start free redirect target.
-  NEXT_PUBLIC_APP_URL: https://kuza.iyenogun.com
+  # Public URLs are baked into the frontends at BUILD time (NEXT_PUBLIC_*), so the
+  # build must have them. Set them ONCE as GitHub repo Variables
+  # (Settings → Secrets and variables → Actions → Variables). The fallback after
+  # `||` is used only if the Variable isn't set — so you never edit this file.
+  NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://kuza-backend-1017126847769.africa-south1.run.app' }}
+  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://kuza.iyenogun.com' }}
 
 jobs:
   # Per-service change detection — this is the deployment control, in git.
