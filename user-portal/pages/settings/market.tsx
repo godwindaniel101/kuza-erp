@@ -139,6 +139,45 @@ function OptionCard<T extends string>({
   );
 }
 
+/** Consistent section header — stacked title + subtitle, optional right-side hint. */
+function SectionHeader({ title, subtitle, hint }: { title: string; subtitle: string; hint?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+      </div>
+      {hint && (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+          <i className="bx bx-check text-xs"></i> {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** On/off switch, matching the Apps settings page. */
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+        checked ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-150 ${
+          checked ? 'translate-x-[18px]' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
 export default function MarketSettingsPage() {
   const { t } = useTranslation('common');
   const tr = (k: string, d: string) => {
@@ -244,7 +283,7 @@ export default function MarketSettingsPage() {
 
   return (
     <PermissionGuard permission="settings.view">
-      <div className="w-full max-w-2xl space-y-5">
+      <div className="w-full max-w-2xl space-y-8">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <PageHeader
@@ -256,58 +295,53 @@ export default function MarketSettingsPage() {
           ]}
         />
 
-        {/* Your storefront — instant-save toggles (moved from the Market page) */}
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {tr('market.storefront', 'Your storefront')}
-            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
-              · {tr('market.storefrontDesc', 'How your business appears on the marketplace')}
-            </span>
-          </legend>
+        {/* 1 — Your storefront (auto-saved switches) */}
+        <section className="space-y-3">
+          <SectionHeader
+            title={tr('market.storefront', 'Your storefront')}
+            subtitle={tr('market.storefrontDesc', 'How your business appears on the marketplace')}
+            hint={tr('market.autoSaved', 'Saved automatically')}
+          />
+          <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-900">
+            <label className="flex cursor-pointer items-center justify-between gap-4 p-4">
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {tr('market.listAsSupplier', 'List my business as a supplier')}
+                </span>
+                <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                  {tr('market.listAsSupplierDesc', 'Let other businesses discover and buy from you on the market.')}
+                </span>
+              </span>
+              <Switch
+                checked={isSupplier}
+                onChange={(v) => toggleStorefront('isSupplier', v)}
+                label={tr('market.listAsSupplier', 'List my business as a supplier')}
+              />
+            </label>
+            <label className="flex cursor-pointer items-center justify-between gap-4 p-4">
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {tr('market.publicCatalog', 'Show my catalog publicly')}
+                </span>
+                <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                  {tr('market.publicCatalogDesc', 'Anyone browsing the market can see your listed items.')}
+                </span>
+              </span>
+              <Switch
+                checked={publicCatalog}
+                onChange={(v) => toggleStorefront('publicCatalog', v)}
+                label={tr('market.publicCatalog', 'Show my catalog publicly')}
+              />
+            </label>
+          </div>
+        </section>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600 dark:hover:bg-gray-800/50">
-            <input
-              type="checkbox"
-              checked={isSupplier}
-              onChange={(e) => toggleStorefront('isSupplier', e.target.checked)}
-              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 text-brand-600 focus-visible:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
-            />
-            <span className="min-w-0">
-              <span className="block font-medium text-gray-900 dark:text-gray-100">
-                {tr('market.listAsSupplier', 'List my business as a supplier')}
-              </span>
-              <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                {tr('market.listAsSupplierDesc', 'Let other businesses discover and buy from you on the market.')}
-              </span>
-            </span>
-          </label>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600 dark:hover:bg-gray-800/50">
-            <input
-              type="checkbox"
-              checked={publicCatalog}
-              onChange={(e) => toggleStorefront('publicCatalog', e.target.checked)}
-              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 text-brand-600 focus-visible:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
-            />
-            <span className="min-w-0">
-              <span className="block font-medium text-gray-900 dark:text-gray-100">
-                {tr('market.publicCatalog', 'Show my catalog publicly')}
-              </span>
-              <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                {tr('market.publicCatalogDesc', 'Anyone browsing the market can see your listed items.')}
-              </span>
-            </span>
-          </label>
-        </fieldset>
-
-        {/* Availability */}
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {tr('market.availabilityTitle', 'Listing availability')}
-            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
-              · {tr('market.availabilityDesc', 'When is an item offered on the market?')}
-            </span>
-          </legend>
+        {/* 2 — Listing availability */}
+        <section className="space-y-3">
+          <SectionHeader
+            title={tr('market.availabilityTitle', 'Listing availability')}
+            subtitle={tr('market.availabilityDesc', 'When is an item offered on the market?')}
+          />
           {AVAILABILITY_OPTIONS.map((o) => (
             <OptionCard
               key={o.value}
@@ -317,16 +351,14 @@ export default function MarketSettingsPage() {
               onSelect={setAvailabilityMode}
             />
           ))}
-        </fieldset>
+        </section>
 
-        {/* Visibility */}
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            {tr('market.visibilityTitle', 'Listing visibility')}
-            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
-              · {tr('market.visibilityDesc', 'Who can see your listings?')}
-            </span>
-          </legend>
+        {/* 3 — Listing visibility */}
+        <section className="space-y-3">
+          <SectionHeader
+            title={tr('market.visibilityTitle', 'Listing visibility')}
+            subtitle={tr('market.visibilityDesc', 'Who can see your listings?')}
+          />
           {VISIBILITY_OPTIONS.map((o) => (
             <OptionCard
               key={o.value}
@@ -336,10 +368,10 @@ export default function MarketSettingsPage() {
               onSelect={setVisibilityMode}
             />
           ))}
-        </fieldset>
+        </section>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Save — only availability & visibility need it (storefront auto-saves) */}
+        <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
           <span className={`text-sm text-amber-600 dark:text-amber-400 transition-opacity ${dirty ? 'opacity-100' : 'opacity-0'}`}>
             <i className="bx bx-error-circle align-middle"></i> {tr('unsavedChanges', 'You have unsaved changes')}
           </span>

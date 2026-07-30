@@ -52,6 +52,14 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   ...crud('menus', 'menus', 'rms', 'Restaurant'),
   ...crud('reservations', 'reservations', 'rms', 'Restaurant'),
 
+  // ── Storefront (shop) ───────────────────────────────────────────────
+  // Storefront reuses the shared stock-core (inventory.*) and order-engine
+  // (orders.*) permissions by name; these are the storefront-only ones.
+  { name: 'storefront.view', displayName: 'View the storefront', group: 'Storefront', app: 'shop' },
+  { name: 'storefront.manage', displayName: 'Manage storefront settings & products', group: 'Storefront', app: 'shop' },
+  { name: 'storefront.publish', displayName: 'Publish / unpublish the storefront', group: 'Storefront', app: 'shop' },
+  { name: 'storefront.orders', displayName: 'View & fulfil storefront orders', group: 'Storefront', app: 'shop' },
+
   // ── Invoicing ───────────────────────────────────────────────────────
   { name: 'sales.view', displayName: 'View customers & invoices', group: 'Invoicing', app: 'invoicing' },
   { name: 'sales.manage', displayName: 'Manage customers & invoices', group: 'Invoicing', app: 'invoicing' },
