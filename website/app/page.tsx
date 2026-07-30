@@ -286,7 +286,7 @@ export default function Home() {
     <>
       {/* HERO */}
       <section className="relative overflow-hidden bg-paper">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-14 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-24 lg:pt-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-14 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-24">
           <div className="hero-rise">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-leaf shadow-card">
               <Sparkle width={15} height={15} /> {t("home.hero.badge")}
