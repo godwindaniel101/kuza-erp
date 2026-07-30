@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { initializeTransactionalContext } from 'typeorm-transactional';
@@ -45,24 +46,25 @@ async function bootstrap() {
   app.use(require('body-parser').json({ limit: '10mb' }));
   app.use(require('body-parser').urlencoded({ limit: '10mb', extended: true }));
 
-  // Enable CORS. FRONTEND_URL may be a comma-separated allow-list. In non-prod
-  // we also allow any localhost/127.0.0.1 port so a dev port change (e.g. 5001)
-  // never breaks the app with an opaque "Network Error".
-  const isProd = process.env.NODE_ENV === 'production';
-  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:4000')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // Open CORS — reflect ANY origin. Requested to unblock cross-origin calls from
+  // every frontend (deployed portals, previews, dev hosts) without maintaining an
+  // allow-list. The exact request origin is echoed back, never the wildcard '*',
+  // so credentialed requests keep working. Auth here is a Bearer token in the
+  // Authorization header (not an ambient cookie), so reflecting all origins does
+  // not open a classic CSRF hole — revisit this if cookie-based auth is added.
+  // FRONTEND_URL is still logged for reference (it drives verify-email links).
+  const corsLogger = new Logger('CORS');
+  const frontendUrl = process.env.FRONTEND_URL || '(unset)';
+  corsLogger.log(
+    `Open CORS active — reflecting all origins (isProd=${process.env.NODE_ENV === 'production'}). FRONTEND_URL=${frontendUrl}`,
+  );
   app.enableCors({
     origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-      // Missing Origin (same-origin, curl, mobile apps) is allowed only outside
-      // production; in prod we require an explicit, allow-listed Origin.
-      if (!origin) return cb(isProd ? new Error('Origin required') : null, !isProd);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (!isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-        return cb(null, true);
-      }
-      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+      // A `[CORS]` line proves the request reached the app. If a browser reports a
+      // CORS error but NO `[CORS]` line appears, the request never reached Nest —
+      // that is an infra problem (proxy/host stripping headers), not the app.
+      corsLogger.debug(`origin=${origin ?? '(none)'} -> ALLOW (open CORS)`);
+      cb(null, true);
     },
     credentials: true,
   });

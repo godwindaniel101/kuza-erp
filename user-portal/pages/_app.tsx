@@ -26,11 +26,16 @@ const fontBody = Hanken_Grotesk({
 
 function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  // Initialize dark mode before React hydrates to prevent flash
+  // Apply the theme. Light is the default; dark applies only when the user has
+  // explicitly turned it on (darkMode='true'). We no longer follow the OS
+  // preference. A one-time reset (themeResetV1) clears any previously-saved dark
+  // once, so existing users open light — they can still toggle dark afterwards.
   useEffect(() => {
-    const stored = localStorage.getItem('darkMode');
-    const isDark = stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
+    if (!localStorage.getItem('themeResetV1')) {
+      localStorage.removeItem('darkMode');
+      localStorage.setItem('themeResetV1', '1');
+    }
+    const isDark = localStorage.getItem('darkMode') === 'true';
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -68,8 +73,15 @@ function App({ Component, pageProps }: AppProps) {
             __html: `
               (function() {
                 try {
-                  const stored = localStorage.getItem('darkMode');
-                  const isDark = stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  // One-time reset to the new light default: clear any prior dark
+                  // preference once so existing users open light. Dark applies only
+                  // when explicitly turned on afterwards; the OS preference is not
+                  // followed. Runs before paint, so there is no flash.
+                  if (!localStorage.getItem('themeResetV1')) {
+                    localStorage.removeItem('darkMode');
+                    localStorage.setItem('themeResetV1', '1');
+                  }
+                  const isDark = localStorage.getItem('darkMode') === 'true';
                   if (isDark) {
                     document.documentElement.classList.add('dark');
                   } else {
