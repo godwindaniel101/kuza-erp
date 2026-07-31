@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
@@ -27,7 +27,7 @@ const AVAILABILITY_OPTIONS: Option<AvailabilityMode>[] = [
     icon: 'bx-cube',
     tag: 'Recommended',
     description: 'An item is offered on the market whenever it has stock in any branch. Nothing to toggle per item.',
-    example: 'Add stock → it appears on the market; sells out → it drops off automatically.',
+    example: 'Add stock → it appears; sells out → it drops off automatically.',
   },
   {
     value: 'manual',
@@ -66,8 +66,42 @@ const VISIBILITY_OPTIONS: Option<VisibilityMode>[] = [
   },
 ];
 
-/** A selectable card matching the Allocation Method page for consistency. */
-function OptionCard<T extends string>({
+/**
+ * A section container matching the Apps settings cards: a padded header (title,
+ * subtitle, optional right-side hint) over a divided body. Keeps every block on
+ * this page visually consistent instead of mixing boxed and loose sections.
+ */
+function SectionCard({
+  title,
+  subtitle,
+  hint,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
+      <div className="flex items-start justify-between gap-3 px-5 py-4">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+        </div>
+        {hint && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <i className="bx bx-check text-xs"></i> {hint}
+          </span>
+        )}
+      </div>
+      <div className="border-t border-gray-100 dark:border-gray-800">{children}</div>
+    </section>
+  );
+}
+
+/** A single "choose one" option, rendered as a light row inside a SectionCard. */
+function OptionRow<T extends string>({
   option,
   selected,
   name,
@@ -80,10 +114,8 @@ function OptionCard<T extends string>({
 }) {
   return (
     <label
-      className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-all ${
-        selected
-          ? 'border-brand-500 bg-brand-50/60 ring-1 ring-brand-500 dark:border-brand-500 dark:bg-brand-500/10'
-          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600 dark:hover:bg-gray-800/50'
+      className={`group relative flex cursor-pointer items-start gap-3.5 px-5 py-4 transition-colors ${
+        selected ? 'bg-brand-50/60 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
       }`}
     >
       <input
@@ -95,9 +127,8 @@ function OptionCard<T extends string>({
         className="sr-only"
       />
 
-      {/* Icon tile */}
       <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl transition-colors ${
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg transition-colors ${
           selected
             ? 'bg-brand-gradient text-white'
             : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
@@ -108,7 +139,7 @@ function OptionCard<T extends string>({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-gray-900 dark:text-gray-100">{option.name}</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.name}</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
               selected
@@ -119,15 +150,13 @@ function OptionCard<T extends string>({
             {option.tag}
           </span>
         </div>
-        <p className="mt-1 flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <i className="bx bx-right-arrow-alt mt-0.5 shrink-0 text-sm"></i>
-          <span className="italic">
-            {option.description} {option.example}
-          </span>
+        <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">{option.description}</p>
+        <p className="mt-1 flex items-start gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+          <i className="bx bx-right-arrow-alt mt-0.5 shrink-0"></i>
+          <span>{option.example}</span>
         </p>
       </div>
 
-      {/* Selected check */}
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ${
           selected ? 'bg-brand-600 text-white' : 'border border-gray-300 text-transparent dark:border-gray-600'
@@ -136,23 +165,6 @@ function OptionCard<T extends string>({
         <i className="bx bx-check text-sm"></i>
       </span>
     </label>
-  );
-}
-
-/** Consistent section header — stacked title + subtitle, optional right-side hint. */
-function SectionHeader({ title, subtitle, hint }: { title: string; subtitle: string; hint?: string }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
-      </div>
-      {hint && (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-          <i className="bx bx-check text-xs"></i> {hint}
-        </span>
-      )}
-    </div>
   );
 }
 
@@ -175,6 +187,29 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
         }`}
       />
     </button>
+  );
+}
+
+/** A labelled row with a switch, used for the auto-saved storefront toggles. */
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4">
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
+        <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{description}</span>
+      </span>
+      <Switch checked={checked} onChange={onChange} label={label} />
+    </label>
   );
 }
 
@@ -273,9 +308,9 @@ export default function MarketSettingsPage() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-2xl space-y-5">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
+      <div className="w-full max-w-2xl">
+        <div className="py-12 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600"></div>
         </div>
       </div>
     );
@@ -283,7 +318,7 @@ export default function MarketSettingsPage() {
 
   return (
     <PermissionGuard permission="settings.view">
-      <div className="w-full max-w-2xl space-y-8">
+      <div className="w-full max-w-2xl space-y-6">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <PageHeader
@@ -296,83 +331,66 @@ export default function MarketSettingsPage() {
         />
 
         {/* 1 — Your storefront (auto-saved switches) */}
-        <section className="space-y-3">
-          <SectionHeader
-            title={tr('market.storefront', 'Your storefront')}
-            subtitle={tr('market.storefrontDesc', 'How your business appears on the marketplace')}
-            hint={tr('market.autoSaved', 'Saved automatically')}
-          />
-          <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-900">
-            <label className="flex cursor-pointer items-center justify-between gap-4 p-4">
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {tr('market.listAsSupplier', 'List my business as a supplier')}
-                </span>
-                <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                  {tr('market.listAsSupplierDesc', 'Let other businesses discover and buy from you on the market.')}
-                </span>
-              </span>
-              <Switch
-                checked={isSupplier}
-                onChange={(v) => toggleStorefront('isSupplier', v)}
-                label={tr('market.listAsSupplier', 'List my business as a supplier')}
-              />
-            </label>
-            <label className="flex cursor-pointer items-center justify-between gap-4 p-4">
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {tr('market.publicCatalog', 'Show my catalog publicly')}
-                </span>
-                <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                  {tr('market.publicCatalogDesc', 'Anyone browsing the market can see your listed items.')}
-                </span>
-              </span>
-              <Switch
-                checked={publicCatalog}
-                onChange={(v) => toggleStorefront('publicCatalog', v)}
-                label={tr('market.publicCatalog', 'Show my catalog publicly')}
-              />
-            </label>
+        <SectionCard
+          title={tr('market.storefront', 'Your storefront')}
+          subtitle={tr('market.storefrontDesc', 'How your business appears on the marketplace')}
+          hint={tr('market.autoSaved', 'Saved automatically')}
+        >
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ToggleRow
+              label={tr('market.listAsSupplier', 'List my business as a supplier')}
+              description={tr('market.listAsSupplierDesc', 'Let other businesses discover and buy from you on the market.')}
+              checked={isSupplier}
+              onChange={(v) => toggleStorefront('isSupplier', v)}
+            />
+            <ToggleRow
+              label={tr('market.publicCatalog', 'Show my catalog publicly')}
+              description={tr('market.publicCatalogDesc', 'Anyone browsing the market can see your listed items.')}
+              checked={publicCatalog}
+              onChange={(v) => toggleStorefront('publicCatalog', v)}
+            />
           </div>
-        </section>
+        </SectionCard>
 
         {/* 2 — Listing availability */}
-        <section className="space-y-3">
-          <SectionHeader
-            title={tr('market.availabilityTitle', 'Listing availability')}
-            subtitle={tr('market.availabilityDesc', 'When is an item offered on the market?')}
-          />
-          {AVAILABILITY_OPTIONS.map((o) => (
-            <OptionCard
-              key={o.value}
-              option={o}
-              name="availability"
-              selected={availabilityMode === o.value}
-              onSelect={setAvailabilityMode}
-            />
-          ))}
-        </section>
+        <SectionCard
+          title={tr('market.availabilityTitle', 'Listing availability')}
+          subtitle={tr('market.availabilityDesc', 'When is an item offered on the market?')}
+        >
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {AVAILABILITY_OPTIONS.map((o) => (
+              <OptionRow
+                key={o.value}
+                option={o}
+                name="availability"
+                selected={availabilityMode === o.value}
+                onSelect={setAvailabilityMode}
+              />
+            ))}
+          </div>
+        </SectionCard>
 
         {/* 3 — Listing visibility */}
-        <section className="space-y-3">
-          <SectionHeader
-            title={tr('market.visibilityTitle', 'Listing visibility')}
-            subtitle={tr('market.visibilityDesc', 'Who can see your listings?')}
-          />
-          {VISIBILITY_OPTIONS.map((o) => (
-            <OptionCard
-              key={o.value}
-              option={o}
-              name="visibility"
-              selected={visibilityMode === o.value}
-              onSelect={setVisibilityMode}
-            />
-          ))}
-        </section>
+        <SectionCard
+          title={tr('market.visibilityTitle', 'Listing visibility')}
+          subtitle={tr('market.visibilityDesc', 'Who can see your listings?')}
+        >
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {VISIBILITY_OPTIONS.map((o) => (
+              <OptionRow
+                key={o.value}
+                option={o}
+                name="visibility"
+                selected={visibilityMode === o.value}
+                onSelect={setVisibilityMode}
+              />
+            ))}
+          </div>
+        </SectionCard>
 
         {/* Save — only availability & visibility need it (storefront auto-saves) */}
         <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
-          <span className={`text-sm text-amber-600 dark:text-amber-400 transition-opacity ${dirty ? 'opacity-100' : 'opacity-0'}`}>
+          <span className={`text-sm text-amber-600 transition-opacity dark:text-amber-400 ${dirty ? 'opacity-100' : 'opacity-0'}`}>
             <i className="bx bx-error-circle align-middle"></i> {tr('unsavedChanges', 'You have unsaved changes')}
           </span>
           <Button variant="primary" onClick={handleSave} disabled={saving || !dirty}>
