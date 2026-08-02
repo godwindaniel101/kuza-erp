@@ -15,7 +15,6 @@ import { term } from '@/lib/terminology';
 import { RevenueAreaChart, WeeklyBarChart, AreaPoint } from '@/components/ui/charts';
 import { formatMoney, useCurrency } from '@/lib/format';
 import AiInsights from '@/components/AiInsights';
-import GettingStarted from '@/components/GettingStarted';
 import OnboardingModal from '@/components/OnboardingModal';
 
 interface AnalyticsData {
@@ -290,7 +289,6 @@ export default function Dashboard() {
 
         {/* Guided first-run — self-hides once the workspace is set up */}
         <OnboardingModal />
-        <GettingStarted />
 
         {/* KPI row — progressive disclosure by business type */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

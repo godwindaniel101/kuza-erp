@@ -8,8 +8,8 @@ import { useTenantStore } from '@/store/globalStore';
  * a short, visual walkthrough of the key first actions for the tenant's business
  * type — led by "make your first sale". Each step shows a GIF (drop real ones at
  * `public/onboarding/<key>.gif`; a clean animated panel shows until then) plus a
- * CTA that routes straight into that flow. The persistent GettingStarted card
- * still tracks real progress afterward — this is just the splashy intro.
+ * CTA that routes straight into that flow. This modal is the whole first-run
+ * guide — the old persistent dashboard card has been retired.
  */
 
 const SEEN_KEY = 'kuza:onboarding:v1';
