@@ -15,9 +15,7 @@ import { InventorySubcategory } from "../entities/inventory-subcategory.entity";
 import { OrderItem } from "../../rms/entities/order-item.entity";
 import { Order } from "../../rms/entities/order.entity";
 import { InventoryInflowItem } from "../entities/inventory-inflow-item.entity";
-import * as fs from "fs";
-import * as path from "path";
-import * as crypto from "crypto";
+import { StorageService } from "../../../common/storage/storage.service";
 import * as sharp from "sharp";
 
 @Injectable()
@@ -43,7 +41,32 @@ export class InventoryService {
     private orderRepository: Repository<Order>,
     private uomConversionsService: UomConversionsService,
     private dataSource: DataSource,
+    private readonly storageService: StorageService,
   ) {}
+
+  /**
+   * Compress an uploaded image and store it in the configured object store,
+   * returning ONLY the URL to persist on the item. Used by the manual upload
+   * endpoint and the bulk-CSV path.
+   */
+  async uploadItemImage(
+    buffer: Buffer,
+    mimetype: string,
+    schema: string,
+  ): Promise<string> {
+    if (!mimetype || !mimetype.startsWith("image/")) {
+      throw new BadRequestException("File must be an image");
+    }
+    // Normalise to a bounded, orientation-corrected JPEG so the DB only ever
+    // holds a URL to a sanely-sized asset (mirrors processItemImage + menu-sites).
+    const jpeg = await sharp(buffer)
+      .rotate()
+      .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    const key = this.storageService.buildKey(schema, "inventory");
+    return this.storageService.upload(jpeg, key, "image/jpeg");
+  }
 
   async create(
     createDto: CreateInventoryItemDto,
@@ -1075,8 +1098,9 @@ export class InventoryService {
 
   async bulkUpload(
     csv: string,
-  ): Promise<{ 
-    success: number; 
+    schema = "public",
+  ): Promise<{
+    success: number;
     errors: string[]; 
     skipped: number;
     detailedErrors?: Array<{
@@ -1400,7 +1424,7 @@ export class InventoryService {
         // Process image if provided
         if (itemData.imageLink && createdItem && createdItem.id) {
           try {
-            const imageUrl = await this.processItemImage(itemData.imageLink, createdItem.id, itemData.name);
+            const imageUrl = await this.processItemImage(itemData.imageLink, schema);
             if (imageUrl) {
               // Update the item with the processed image URL
               await this.inventoryItemRepository.update(createdItem.id, { frontImage: imageUrl });
@@ -1785,63 +1809,18 @@ export class InventoryService {
   }
 
   /**
-   * Process and store image from URL for inventory item
+   * Download an image from a URL (bulk-CSV "Image Link" column), compress it and
+   * store it in the configured object store, returning the persisted URL. On any
+   * failure the caller falls back to persisting the raw http(s) link as-is.
    */
-  private async processItemImage(imageUrl: string, itemId: string, itemName: string): Promise<string | null> {
-    try {
-      // Download image from URL
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.statusText}`);
-      }
-
-      const imageBuffer = Buffer.from(await response.arrayBuffer());
-      
-      // Generate unique filename
-      const imageHash = crypto.createHash('md5').update(imageBuffer).digest('hex');
-      const fileExtension = this.getImageExtension(response.headers.get('content-type') || 'image/jpeg');
-      const fileName = `${itemId}_${imageHash}${fileExtension}`;
-      
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'inventory');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      
-      const filePath = path.join(uploadsDir, fileName);
-      
-      // Resize and optimize image using Sharp
-      await sharp(imageBuffer)
-        .resize(800, 600, { 
-          fit: 'inside',
-          withoutEnlargement: true 
-        })
-        .jpeg({ quality: 85 })
-        .toFile(filePath);
-      
-      // Return the relative path for storage in database
-      const relativePath = `/uploads/inventory/${fileName}`;
-      return relativePath;
-    } catch (error: any) {
-      throw error;
+  private async processItemImage(imageUrl: string, schema: string): Promise<string | null> {
+    // Download image from URL
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.statusText}`);
     }
-  }
-
-  /**
-   * Get file extension based on content type
-   */
-  private getImageExtension(contentType: string): string {
-    switch (contentType.toLowerCase()) {
-      case 'image/png':
-        return '.png';
-      case 'image/gif':
-        return '.gif';
-      case 'image/webp':
-        return '.webp';
-      case 'image/jpeg':
-      case 'image/jpg':
-      default:
-        return '.jpg';
-    }
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    // Compress + upload through the shared storage path (local | gcs | s3).
+    return this.uploadItemImage(imageBuffer, 'image/jpeg', schema);
   }
 }
