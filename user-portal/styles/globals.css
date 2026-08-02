@@ -138,10 +138,10 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
   html {
     scroll-behavior: smooth;
-    /* Slightly smaller base so the whole (rem-based) UI scales down a touch to
-       match the slimmer 220px sidebar. Mobile inputs keep 16px below to avoid
-       iOS zoom. */
-    font-size: 15px;
+    /* rem base for the whole (rem-based) UI. 15.75px is a ~5% step up from the
+       previous 15px so the dashboard reads a touch larger while keeping every
+       proportion intact. Mobile inputs keep 16px below to avoid iOS focus-zoom. */
+    font-size: 15.75px;
   }
 }
 
