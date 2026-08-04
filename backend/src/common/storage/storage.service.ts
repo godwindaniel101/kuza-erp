@@ -17,10 +17,20 @@ import * as crypto from 'crypto';
  *   - `gcs`   — Google Cloud Storage. Returns a public https URL.
  *   - `s3`    — Amazon S3 (or S3-compatible). Returns a public https URL.
  *
- * The cloud SDKs are `require()`d lazily INSIDE each driver so a `local`
- * (default / dev) install never loads them, and a build/typecheck passes
- * without `@google-cloud/storage` or `@aws-sdk/client-s3` installed.
+ * The cloud SDKs are loaded at RUNTIME via optionalRequire() so a `local`
+ * (default / dev) install never loads them. optionalRequire hides the module
+ * name from webpack's static analysis (nest build/start:dev bundle with
+ * webpack, which would otherwise fail the WHOLE build when a cloud SDK isn't
+ * installed) — so a build/typecheck passes without the SDKs, and the SDK is
+ * only pulled in when its driver is actually selected.
  */
+function optionalRequire(moduleName: string): any {
+  // (0, eval)('require') resolves to Node's real require at runtime; webpack
+  // leaves it untouched, so the missing optional SDK never breaks the bundle.
+  // eslint-disable-next-line no-eval
+  return (0, eval)('require')(moduleName);
+}
+
 @Injectable()
 export class StorageService {
   constructor(private readonly configService: ConfigService) {}
@@ -79,7 +89,7 @@ export class StorageService {
     }
     // Lazy require: the SDK loads only when the gcs driver is actually used.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Storage } = require('@google-cloud/storage');
+    const { Storage } = optionalRequire('@google-cloud/storage');
     const keyFile = this.configService.get<string>('GCS_KEY_FILE');
     // new Storage() uses Application Default Credentials (Cloud Run service
     // account) unless GCS_KEY_FILE points at an explicit key file.
@@ -117,7 +127,7 @@ export class StorageService {
     }
     // Lazy require: SDK loads only when the s3 driver is actually used.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+    const { S3Client, PutObjectCommand } = optionalRequire('@aws-sdk/client-s3');
     // Credentials come from the default provider chain (env vars / instance
     // role) — no static keys in code.
     const client = new S3Client({ region });
