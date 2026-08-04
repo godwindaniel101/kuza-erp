@@ -3,6 +3,7 @@ import {
   newSection,
   HeroSection,
   TextSection,
+  ProductsSection,
   GallerySection,
   CtaSection,
   ContactSection,
@@ -16,6 +17,7 @@ import {
 
 const hero = (o: Partial<HeroSection>): HeroSection => ({ ...(newSection('hero') as HeroSection), ...o });
 const text = (o: Partial<TextSection>): TextSection => ({ ...(newSection('text') as TextSection), ...o });
+const products = (o: Partial<ProductsSection>): ProductsSection => ({ ...(newSection('products') as ProductsSection), ...o });
 const gallery = (o: Partial<GallerySection>): GallerySection => ({ ...(newSection('gallery') as GallerySection), ...o });
 const cta = (o: Partial<CtaSection>): CtaSection => ({ ...(newSection('cta') as CtaSection), ...o });
 const contact = (o: Partial<ContactSection>): ContactSection => ({ ...(newSection('contact') as ContactSection), ...o });
@@ -36,11 +38,11 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
     name: 'Online Shop',
     description: 'Sell online and drive visitors to your store',
     accentColor: '#2563eb',
-    outline: ['hero', 'text', 'gallery', 'cta', 'contact'],
+    outline: ['hero', 'products', 'text', 'cta', 'contact'],
     sections: () => [
       hero({ headline: 'Shop the collection', subtext: 'Quality products, delivered to your door.', ctaLabel: 'Shop now' }),
+      products({ heading: 'Featured products' }),
       text({ heading: 'About us', body: 'Tell your story — who you are and why customers love you.' }),
-      gallery({ heading: 'Featured' }),
       cta({ heading: 'Ready to order?', subtext: 'Browse the full catalog in our store.', buttonLabel: 'Shop now' }),
       contact({ heading: 'Get in touch' }),
     ],

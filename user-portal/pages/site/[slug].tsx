@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { fetchPublicSite, PublicSiteInfo } from '@/lib/site-public';
-import { SiteBlock, ContactBlock, SiteContext } from '@/components/website/SiteBlocks';
+import { fetchPublicSite, fetchStoreProducts, PublicSiteInfo } from '@/lib/site-public';
+import { SiteBlock, ContactBlock, SiteContext, StoreProduct } from '@/components/website/SiteBlocks';
 
 /**
  * Public website renderer — the marketing site a visitor sees at /site/:slug.
@@ -14,13 +14,14 @@ import { SiteBlock, ContactBlock, SiteContext } from '@/components/website/SiteB
 interface Props {
   site: PublicSiteInfo;
   canonicalUrl: string;
+  products: StoreProduct[];
 }
 
 function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-export default function PublicSitePage({ site, canonicalUrl }: Props) {
+export default function PublicSitePage({ site, canonicalUrl, products }: Props) {
   const accent = site.accentColor || '#2563eb';
   const title = site.businessName;
   const description = site.tagline || site.heroSubtext || site.about || site.businessName;
@@ -31,6 +32,9 @@ export default function PublicSitePage({ site, canonicalUrl }: Props) {
     phone: site.phone,
     email: site.email,
     address: site.address,
+    products,
+    storefrontUrl: site.storefrontUrl,
+    currency: site.currency,
   };
   const sections = (site.sections || []).filter((s) => s && s.enabled);
   const useSections = sections.length > 0;
@@ -124,8 +128,16 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, re
   if (!site) {
     return { notFound: true };
   }
+  // If the page has a visible products block and a linked store, pull the store's
+  // live products (SSR) from its public slug (…/s/<storeSlug>).
+  let products: StoreProduct[] = [];
+  const hasProductsBlock = (site.sections || []).some((s) => s?.type === 'products' && s.enabled);
+  const storeSlug = site.storefrontUrl?.match(/\/s\/([a-z0-9-]+)/i)?.[1];
+  if (hasProductsBlock && storeSlug) {
+    products = await fetchStoreProducts(storeSlug);
+  }
   const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
   const host = req.headers.host || '';
   const base = (process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`).replace(/\/$/, '');
-  return { props: { site, canonicalUrl: `${base}/site/${slug}` } };
+  return { props: { site, canonicalUrl: `${base}/site/${slug}`, products } };
 };

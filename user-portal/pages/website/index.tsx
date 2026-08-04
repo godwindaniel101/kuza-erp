@@ -432,6 +432,15 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
       </>
     );
   }
+  if (section.type === 'products') {
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div><span className={labelClass}>How many products</span><input type="number" min={1} max={12} className={inputClass} value={section.limit} onChange={(e) => update({ limit: Math.max(1, Math.min(12, Number(e.target.value) || 6)) })} /></div>
+        <p className="text-[11px] text-gray-400">Pulls live from your Storefront — set the store link in Page settings.</p>
+      </>
+    );
+  }
   if (section.type === 'gallery') {
     const images = section.images || [];
     return (
