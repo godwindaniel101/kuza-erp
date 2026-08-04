@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
 import { heroActionPrimary, heroActionGhost } from '@/components/ui/DashboardHero';
 import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
@@ -153,6 +154,7 @@ export default function SalesDashboardPage() {
       : t('sales.statusCaughtUp', 'You are all caught up — no money owed to you');
 
   return (
+    <PermissionGuard permission="sales.view">
     <div className="kz-stagger space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Link href="/sales/customers" className={heroActionGhost}>
@@ -335,6 +337,7 @@ export default function SalesDashboardPage() {
         </Card>
       </div>
     </div>
+    </PermissionGuard>
   );
 }
 

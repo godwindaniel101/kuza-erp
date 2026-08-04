@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatMoney, formatDateTime } from '@/lib/format';
@@ -51,6 +52,7 @@ export default function WalletPage() {
   const balance = Math.max(0, Number(wallet?.balance ?? 0)); // wallet is never negative
 
   return (
+    <PermissionGuard permission="payments.view">
     <div className="space-y-5">
       <PageHeader title={t('wallet.title', 'Wallet')} subtitle={t('wallet.subtitle', 'Your balance and payment history.')} />
 
@@ -130,6 +132,7 @@ export default function WalletPage() {
         )}
       </section>
     </div>
+    </PermissionGuard>
   );
 }
 

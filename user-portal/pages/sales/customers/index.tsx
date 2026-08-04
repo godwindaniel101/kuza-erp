@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
@@ -249,6 +250,7 @@ export default function CustomersPage() {
   const startIndex = (page - 1) * PAGE_SIZE;
 
   return (
+    <PermissionGuard permission="sales.view">
     <div className="kz-stagger space-y-6">
       <PageHeader
         title={t('customers.title', 'Customers')}
@@ -386,6 +388,7 @@ export default function CustomersPage() {
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
+    </PermissionGuard>
   );
 }
 
