@@ -7,6 +7,7 @@
  */
 
 import type { WebsiteSection } from './website-sections';
+import type { StoreProduct } from '@/components/website/SiteBlocks';
 
 export interface PublicSiteInfo {
   businessName: string;
@@ -50,6 +51,42 @@ function absolutizeSections(sections: unknown): WebsiteSection[] | null {
     }
     return s;
   }) as WebsiteSection[];
+}
+
+function ssrBases(): string[] {
+  const configured =
+    process.env.SSR_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+  const bases = [configured];
+  if (/localhost|127\.0\.0\.1/.test(configured)) {
+    bases.push(configured.replace(/localhost|127\.0\.0\.1/, 'host.docker.internal'));
+  }
+  return bases;
+}
+
+/** Live products from the tenant's Storefront, for the `products` block. */
+export async function fetchStoreProducts(storeSlug: string): Promise<StoreProduct[]> {
+  for (const base of ssrBases()) {
+    try {
+      const res = await fetch(
+        `${base.replace(/\/$/, '')}/api/public/store/${encodeURIComponent(storeSlug)}`,
+        { headers: { Accept: 'application/json' } },
+      );
+      if (!res.ok) continue;
+      const json = await res.json();
+      const products = json?.data?.products;
+      if (json?.success && Array.isArray(products)) {
+        return products.map((p: any) => ({
+          id: String(p.id),
+          name: String(p.name),
+          price: Number(p.price || 0),
+          imageUrl: absImage(p.imageUrl),
+        }));
+      }
+    } catch {
+      // try the next candidate
+    }
+  }
+  return [];
 }
 
 export async function fetchPublicSite(slug: string): Promise<PublicSiteInfo | null> {

@@ -5,7 +5,7 @@
  * All fields are plain strings/arrays so the whole thing round-trips through jsonb.
  */
 
-export type SectionType = 'hero' | 'text' | 'gallery' | 'cta' | 'contact';
+export type SectionType = 'hero' | 'text' | 'products' | 'gallery' | 'cta' | 'contact';
 
 interface BaseSection {
   id: string;
@@ -43,10 +43,17 @@ export interface ContactSection extends BaseSection {
   type: 'contact';
   heading: string;
 }
+export interface ProductsSection extends BaseSection {
+  type: 'products';
+  heading: string;
+  /** How many products to pull from the linked Storefront. */
+  limit: number;
+}
 
 export type WebsiteSection =
   | HeroSection
   | TextSection
+  | ProductsSection
   | GallerySection
   | CtaSection
   | ContactSection;
@@ -54,6 +61,7 @@ export type WebsiteSection =
 export const SECTION_TYPES: { type: SectionType; label: string; icon: string }[] = [
   { type: 'hero', label: 'Hero', icon: 'bx-images' },
   { type: 'text', label: 'Text & image', icon: 'bx-text' },
+  { type: 'products', label: 'Products', icon: 'bx-shopping-bag' },
   { type: 'gallery', label: 'Gallery', icon: 'bx-grid-alt' },
   { type: 'cta', label: 'Call to action', icon: 'bx-pointer' },
   { type: 'contact', label: 'Contact', icon: 'bx-envelope' },
@@ -73,6 +81,8 @@ export function newSection(type: SectionType): WebsiteSection {
       return { ...base, type, headline: '', subtext: '', imageUrl: null, ctaLabel: 'Shop now', ctaHref: '' };
     case 'text':
       return { ...base, type, heading: '', body: '', imageUrl: null };
+    case 'products':
+      return { ...base, type, heading: 'Featured products', limit: 6 };
     case 'gallery':
       return { ...base, type, heading: '', images: [] };
     case 'cta':

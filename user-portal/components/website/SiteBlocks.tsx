@@ -2,10 +2,19 @@ import type {
   WebsiteSection,
   HeroSection,
   TextSection,
+  ProductsSection,
   GallerySection,
   CtaSection,
   ContactSection,
 } from '@/lib/website-sections';
+import { formatMoney } from '@/lib/format';
+
+export interface StoreProduct {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+}
 
 /**
  * Shared, presentational renderers for website builder blocks. Used by BOTH the
@@ -21,6 +30,10 @@ export interface SiteContext {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  /** Live products pulled from the linked Storefront (for the products block). */
+  products?: StoreProduct[];
+  storefrontUrl?: string | null;
+  currency?: string;
 }
 
 export function HeroBlock({ s, accent, site }: { s: HeroSection; accent: string; site: SiteContext }) {
@@ -152,6 +165,51 @@ export function ContactBlock({ s, accent, site }: { s: ContactSection; accent: s
   );
 }
 
+export function ProductsBlock({ s, accent, site }: { s: ProductsSection; accent: string; site: SiteContext }) {
+  const products = (site.products || []).slice(0, s.limit || 6);
+  const shopHref = site.storefrontUrl || undefined;
+  const placeholder = products.length === 0;
+  const cells = placeholder ? Array.from({ length: Math.min(s.limit || 6, 6) }, (_, i) => i) : products;
+  return (
+    <section className="mx-auto max-w-5xl px-5 py-14">
+      {s.heading && <h2 className="mb-6 text-2xl font-bold tracking-tight">{s.heading}</h2>}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {placeholder
+          ? (cells as number[]).map((i) => (
+              <div key={i} className="overflow-hidden rounded-xl ring-1 ring-gray-100">
+                <div className="aspect-square bg-gray-100" />
+                <div className="p-3"><div className="h-3 w-2/3 rounded bg-gray-100" /><div className="mt-2 h-3 w-1/3 rounded bg-gray-100" /></div>
+              </div>
+            ))
+          : (cells as StoreProduct[]).map((p) => (
+              <a key={p.id} href={shopHref} className="group overflow-hidden rounded-xl ring-1 ring-gray-100 transition hover:ring-gray-300">
+                <div className="aspect-square overflow-hidden bg-gray-50">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-gray-300"><i className="bx bx-image text-3xl" /></div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="truncate text-sm font-medium text-gray-900">{p.name}</p>
+                  <p className="mt-0.5 text-sm font-semibold" style={{ color: accent }}>{formatMoney(p.price, site.currency || 'NGN')}</p>
+                </div>
+              </a>
+            ))}
+      </div>
+      {placeholder && (
+        <p className="mt-4 text-center text-xs text-gray-400">Live products from your store appear here once it has stock.</p>
+      )}
+      {!placeholder && shopHref && (
+        <div className="mt-6 text-center">
+          <a href={shopHref} className="inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold text-white" style={{ background: accent }}>View all products</a>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** Render any block by type. */
 export function SiteBlock({ section, accent, site }: { section: WebsiteSection; accent: string; site: SiteContext }) {
   switch (section.type) {
@@ -159,6 +217,8 @@ export function SiteBlock({ section, accent, site }: { section: WebsiteSection; 
       return <HeroBlock s={section} accent={accent} site={site} />;
     case 'text':
       return <TextBlock s={section} />;
+    case 'products':
+      return <ProductsBlock s={section} accent={accent} site={site} />;
     case 'gallery':
       return <GalleryBlock s={section} />;
     case 'cta':
