@@ -183,7 +183,10 @@ export default function Dashboard() {
     return formatted.toString().replace(/\.?0+$/, '');
   };
 
-  const isRestaurant = businessType === 'restaurant' || businessType === null;
+  // 'hospitality' is the canonical restaurant vertical (see appCatalog: ['hospitality','restaurant']);
+  // include it so hospitality tenants get the restaurant dashboard (orders/tables), not the retail one.
+  const isRestaurant =
+    businessType === 'hospitality' || businessType === 'restaurant' || businessType === null;
 
   const compactNumber = (v: number) =>
     Math.abs(v) >= 1_000_000
