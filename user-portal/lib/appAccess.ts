@@ -29,14 +29,17 @@ const ROUTE_RULES: RouteRule[] = [
   { prefix: '/hrms/payroll', keys: ['people'] },
   { prefix: '/hrms', keys: ['people'] },
   { prefix: '/payments', keys: ['payments'] },
-  { prefix: '/pos', keys: ['items', 'rms'] }, // retail POS = Inventory (or POS)
-  { prefix: '/ims', keys: ['items'] },
+  { prefix: '/storefront', keys: ['shop'] }, // Storefront (shop vertical)
+  // Shop sells its live stock via the shared IMS/POS/catalog pages, so those
+  // routes accept 'shop' in addition to 'items'.
+  { prefix: '/pos', keys: ['items', 'rms', 'shop'] }, // retail POS = Inventory (or POS)
+  { prefix: '/ims', keys: ['items', 'shop'] },
   { prefix: '/inventory', keys: ['items'] },
   { prefix: '/sales', keys: ['invoicing'] },
   { prefix: '/accounting', keys: ['books'] },
-  { prefix: '/settings/categories', keys: ['items'] },
-  { prefix: '/settings/uoms', keys: ['items'] },
-  { prefix: '/settings/allocation-method', keys: ['items'] },
+  { prefix: '/settings/categories', keys: ['items', 'shop'] },
+  { prefix: '/settings/uoms', keys: ['items', 'shop'] },
+  { prefix: '/settings/allocation-method', keys: ['items', 'shop'] },
 ];
 
 /**
