@@ -16,7 +16,7 @@ import {
   sectionLabel,
 } from '@/lib/website-sections';
 import { SiteBlock, SiteContext } from '@/components/website/SiteBlocks';
-import { WEBSITE_TEMPLATES } from '@/lib/website-templates';
+import { WEBSITE_TEMPLATES, WebsiteTemplate } from '@/lib/website-templates';
 
 interface WebsiteSite {
   slug: string;
@@ -98,6 +98,7 @@ export default function WebsiteBuilderPage() {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop');
   const [showEntry, setShowEntry] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [previewTpl, setPreviewTpl] = useState<WebsiteTemplate | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const dragId = useRef<string | null>(null);
 
@@ -191,6 +192,14 @@ export default function WebsiteBuilderPage() {
     dragId.current = null;
   };
 
+  // Close the template preview modal on Escape.
+  useEffect(() => {
+    if (!previewTpl) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewTpl(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewTpl]);
+
   const applyTemplate = (tplId: string) => {
     const tpl = WEBSITE_TEMPLATES.find((x) => x.id === tplId);
     if (!tpl) return;
@@ -198,6 +207,7 @@ export default function WebsiteBuilderPage() {
     setAccentColor(tpl.accentColor);
     setShowEntry(false);
     setShowGallery(false);
+    setPreviewTpl(null);
   };
 
   const handleSave = async () => {
@@ -261,24 +271,48 @@ export default function WebsiteBuilderPage() {
         <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Start from a template</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {WEBSITE_TEMPLATES.map((tpl) => {
-            const img = templateHeroImage(tpl);
+            const img = tpl.preview || templateHeroImage(tpl);
+            // A card with a design mockup opens the Preview modal; others apply directly.
+            const onCardClick = () => (tpl.preview ? setPreviewTpl(tpl) : applyTemplate(tpl.id));
             return (
-              <button key={tpl.id} onClick={() => applyTemplate(tpl.id)} className="group overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:-translate-y-0.5 hover:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800">
-                <div className="relative h-32 overflow-hidden">
+              <div
+                key={tpl.id}
+                role="button"
+                tabIndex={0}
+                onClick={onCardClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCardClick(); } }}
+                aria-label={tpl.preview ? `Preview ${tpl.name} template` : `Use ${tpl.name} template`}
+                className="group cursor-pointer overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:-translate-y-0.5 hover:ring-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800"
+              >
+                <div className="relative h-40 overflow-hidden bg-gray-50 dark:bg-gray-800">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                    <img src={img} alt={`${tpl.name} template preview`} className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-105" />
                   ) : (
                     <div className="h-full w-full" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}, ${tpl.accentColor}99)` }} />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
                   <span className="absolute left-3 top-3 h-4 w-4 rounded-full ring-2 ring-white/80" style={{ background: tpl.accentColor }} />
+                  {tpl.preview && (
+                    <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                      <i className="bx bx-search-alt" /> Preview
+                    </span>
+                  )}
                 </div>
-                <div className="p-3">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+                <div className="flex items-start justify-between gap-2 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); applyTemplate(tpl.id); }}
+                    className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-800"
+                  >
+                    Use
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -295,6 +329,46 @@ export default function WebsiteBuilderPage() {
         {showGallery && sections.length > 0 && (
           <div className="mt-6"><Button variant="secondary" onClick={() => setShowGallery(false)}>← Back to editor</Button></div>
         )}
+
+        {/* ── Template preview modal ── */}
+        {previewTpl && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${previewTpl.name} preview`}
+            onClick={() => setPreviewTpl(null)}
+          >
+            <div
+              className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: previewTpl.accentColor }} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{previewTpl.name}</p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{previewTpl.description}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setPreviewTpl(null)} className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="Close preview">
+                  <i className="bx bx-x text-2xl" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto bg-gray-100 p-4 dark:bg-gray-950">
+                {previewTpl.preview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewTpl.preview} alt={`${previewTpl.name} full design`} className="mx-auto w-full max-w-2xl rounded-lg shadow-md" />
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-800">
+                <Button variant="secondary" onClick={() => setPreviewTpl(null)}>Close</Button>
+                <Button variant="primary" onClick={() => applyTemplate(previewTpl.id)}>Use this template</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     );

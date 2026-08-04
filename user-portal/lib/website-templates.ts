@@ -48,6 +48,12 @@ export interface WebsiteTemplate {
   accentColor: string;
   /** Optional styling hints (backward compatible — older callers ignore it). */
   theme?: WebsiteTheme;
+  /**
+   * Optional path to a full-page design mockup (served from public/templates/).
+   * When set, the gallery card previews this real design and the Preview modal
+   * shows it full-size. Backward compatible — older callers ignore it.
+   */
+  preview?: string;
   /** The ordered block types, for the card thumbnail preview. */
   outline: string[];
   sections: () => WebsiteSection[];
@@ -86,30 +92,35 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
     ],
   },
 
-  /* ── 2. Electronics Store ────────────────────────────────────────────── */
+  /* ── 2. Electronics & Audio (premium, minimal) ───────────────────────── */
   {
     id: 'electronics',
-    name: 'Electronics Store',
-    description: 'Gadgets and tech with a bold full-bleed hero',
-    accentColor: '#2563eb',
-    theme: { heroStyle: 'fullbleed', surface: 'light' },
-    outline: ['hero', 'products', 'text', 'cta', 'contact'],
+    name: 'Electronics & Audio',
+    description: 'Premium audio & gadgets — minimal, silver, split hero',
+    accentColor: '#1F2937',
+    theme: { heroStyle: 'split', surface: 'light' },
+    preview: '/templates/0238647e47e4c4e8352c7204a525bce4.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
     sections: () => [
       hero({
-        variant: 'fullbleed',
-        headline: 'Tech that keeps up with you',
-        subtext: 'Phones, audio and accessories from the brands you trust — genuine stock, real warranties, next-day delivery.',
-        imageUrl: U('1498049794561-7780e7231661'),
-        ctaLabel: 'Shop gadgets',
+        variant: 'split',
+        headline: 'Crafted for focus, designed for life',
+        subtext: 'Headphones, earbuds and wearables engineered for pure sound — a timeless silhouette that fits seamlessly into your day.',
+        imageUrl: U('1505740420928-5e560c06d30e'),
+        ctaLabel: 'Explore the experience',
         ctaHref: '#',
       }),
-      products({ heading: 'Trending this week' }),
+      products({ heading: 'The lineup' }),
       text({
-        heading: 'Only the real thing',
-        body: 'Every device is sourced directly from official distributors and comes sealed, with a manufacturer warranty and our own 7-day swap guarantee. No refurbished units sold as new — ever.',
-        imageUrl: U('1526738549149-8e07eca6c147', 1200),
+        heading: 'Engineered for pure performance',
+        body: 'Every detail is precisely tuned to deliver exceptional sound, comfort and clarity. Advanced acoustic architecture, intelligent noise control, and a minimal design built to last for years, not seasons.',
+        imageUrl: U('1484704849700-f032a568e944', 1200),
       }),
-      cta({ heading: 'Need it today?', subtext: 'Order before 2pm for same-day delivery across the city.', buttonLabel: 'Start shopping', buttonHref: '#' }),
+      gallery({
+        heading: 'In your world',
+        images: [U('1546435770-a3e426bf472b', 1200), U('1583394838336-acd977736f90', 1200), U('1618366712010-f4ae9c647dcb', 1200)],
+      }),
+      cta({ heading: 'Sound that inspires. Design that lasts.', subtext: 'Join the future of premium audio — genuine stock, real warranties, next-day delivery.', buttonLabel: 'Discover more', buttonHref: '#' }),
       contact({ heading: 'Visit our store' }),
     ],
   },
@@ -178,21 +189,22 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
     ],
   },
 
-  /* ── 5. Sneakers / Streetwear ────────────────────────────────────────── */
+  /* ── 5. Sneakers / Streetwear (Urban Fit) ────────────────────────────── */
   {
     id: 'sneakers',
     name: 'Sneakers & Streetwear',
-    description: 'High-energy drop culture with a bold hero',
-    accentColor: '#F97316',
+    description: 'Bold streetwear drop culture — black, tan, editorial hero',
+    accentColor: '#B08D57',
     theme: { heroStyle: 'fullbleed', surface: 'dark' },
+    preview: '/templates/0c6260b6ee78857f703c363e6118939e.jpg',
     outline: ['hero', 'products', 'gallery', 'text', 'cta', 'contact'],
     sections: () => [
       hero({
         variant: 'fullbleed',
-        headline: 'Cop the drop before it’s gone',
-        subtext: 'Limited pairs, authenticated grails and exclusive colourways — restocked every Friday at noon.',
+        headline: 'Summer essentials — drop now live',
+        subtext: 'The new collection has landed. Hoodies, sneakers and outerwear built for the street — up to 50% off launch week only.',
         imageUrl: U('1552346154-21d32810aba3'),
-        ctaLabel: 'Shop the latest drop',
+        ctaLabel: 'Shop now',
         ctaHref: '#',
       }),
       products({ heading: 'This week’s heat' }),
@@ -278,8 +290,9 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
     id: 'cafe',
     name: 'Café & Bakery',
     description: 'Warm, cosy centered hero for coffee & bakes',
-    accentColor: '#B45309',
+    accentColor: '#8B5E3C',
     theme: { heroStyle: 'centered', surface: 'warm' },
+    preview: '/templates/06538f5beec0636d3bac7fe52b901cbf.jpg',
     outline: ['hero', 'gallery', 'text', 'cta', 'contact'],
     sections: () => [
       hero({
@@ -308,17 +321,18 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
   {
     id: 'food-delivery',
     name: 'Food Delivery',
-    description: 'Order-online kitchen with a split hero',
-    accentColor: '#EA580C',
+    description: 'Order-online kitchen with a warm split hero',
+    accentColor: '#C87F3A',
     theme: { heroStyle: 'split', surface: 'warm' },
+    preview: '/templates/a55f4c867c1d2af6a57616d3a21c915d.jpg',
     outline: ['hero', 'products', 'text', 'cta', 'contact'],
     sections: () => [
       hero({
         variant: 'split',
-        headline: 'Hot meals, at your door in 30',
-        subtext: 'Chef-made bowls, wraps and sides — cooked to order and delivered while they’re still steaming.',
+        headline: 'Today is special — order now',
+        subtext: 'Chef-made plates cooked to order and delivered while they’re still steaming. Easy to order, fast delivery, secured payment.',
         imageUrl: U('1543168256-418811576931'),
-        ctaLabel: 'Order now',
+        ctaLabel: 'Get now',
         ctaHref: '#',
       }),
       products({ heading: 'Today’s menu' }),
@@ -484,6 +498,270 @@ export const WEBSITE_TEMPLATES: WebsiteTemplate[] = [
       }),
       cta({ heading: 'Have a brief?', subtext: 'Tell us what you’re building and we’ll come back within a day.', buttonLabel: 'Book a call', buttonHref: '#' }),
       contact({ heading: 'Work with us' }),
+    ],
+  },
+
+  /* ── 15. Patisserie / Dessert Café (dusty rose) ──────────────────────── */
+  {
+    id: 'patisserie',
+    name: 'Patisserie & Desserts',
+    description: 'Dusty-rose dessert café with a soft, sweet hero',
+    accentColor: '#8C6A6A',
+    theme: { heroStyle: 'centered', surface: 'warm' },
+    preview: '/templates/4e09c45e262c596f7a12833f581f5d9c.jpg',
+    outline: ['hero', 'products', 'gallery', 'text', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'centered',
+        headline: 'Sweet moments start here',
+        subtext: 'Hand-finished cakes, pastries and slow-poured coffee — made fresh each morning in our little corner of the city.',
+        imageUrl: U('1509440159596-0249088772ff'),
+        ctaLabel: 'See the menu',
+        ctaHref: '#',
+      }),
+      products({ heading: 'Today’s bakes' }),
+      gallery({
+        heading: 'From the counter',
+        images: [U('1550439062-609e1531270e', 1200), U('1571260899304-425eee4c7efc', 1200), U('1467003909585-2f8a72700288', 1200)],
+      }),
+      text({
+        heading: 'Made by hand, every single day',
+        body: 'We bake in small batches with real butter, seasonal fruit and single-origin chocolate — nothing frozen, nothing rushed. Pull up a chair, order a slice, and let the afternoon slow right down.',
+        imageUrl: U('1442512595331-e89e73853f31', 1200),
+      }),
+      cta({ heading: 'Order a celebration cake', subtext: 'Custom cakes for birthdays, weddings and everything worth marking.', buttonLabel: 'Enquire now', buttonHref: '#' }),
+      contact({ heading: 'Find the café' }),
+    ],
+  },
+
+  /* ── 16. Coffee House (dark, navy) ───────────────────────────────────── */
+  {
+    id: 'coffee-house',
+    name: 'Coffee House',
+    description: 'Deep-navy coffee brand with a bold full-bleed hero',
+    accentColor: '#2563EB',
+    theme: { heroStyle: 'fullbleed', surface: 'dark' },
+    preview: '/templates/aae276f58aba66811c153b4b8e5247a1.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'fullbleed',
+        headline: 'Coffee, done properly',
+        subtext: 'Signature blends, iced classics and rich mochas — pulled fresh, served fast, and made to be your daily ritual.',
+        imageUrl: U('1495474472287-4d71bcdd2085'),
+        ctaLabel: 'Order ahead',
+        ctaHref: '#',
+      }),
+      products({ heading: 'The menu' }),
+      text({
+        heading: 'Beans we’re proud of',
+        body: 'We roast in small lots and dial in every shot, so your cup tastes the same whether it’s your first of the day or your fourth. Ethically sourced, freshly ground, never bitter.',
+        imageUrl: U('1502741224143-90386d7f8c82', 1200),
+      }),
+      gallery({
+        heading: 'In the cup',
+        images: [U('1509440159596-0249088772ff', 1200), U('1467003909585-2f8a72700288', 1200), U('1442512595331-e89e73853f31', 1200)],
+      }),
+      cta({ heading: 'Grab yours to go', subtext: 'Order from the app and skip the queue — your usual, ready when you are.', buttonLabel: 'Start an order', buttonHref: '#' }),
+      contact({ heading: 'Opening hours' }),
+    ],
+  },
+
+  /* ── 17. Specialty Coffee (sage green) ───────────────────────────────── */
+  {
+    id: 'specialty-coffee',
+    name: 'Specialty Coffee',
+    description: 'Calm sage-green specialty roaster with a split hero',
+    accentColor: '#5E7C5E',
+    theme: { heroStyle: 'split', surface: 'warm' },
+    preview: '/templates/ae4caa9abfa790a32a147688a32c76e2.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'split',
+        headline: 'Coffee you’ll fall for from the first sip',
+        subtext: 'Specialty beans, fresh bakes and a calm space in the heart of the city. 100% arabica, roasted in small batches every week.',
+        imageUrl: U('1495474472287-4d71bcdd2085'),
+        ctaLabel: 'View the menu',
+        ctaHref: '#',
+      }),
+      products({ heading: 'Popular drinks' }),
+      text({
+        heading: 'Beans we’re proud of',
+        body: 'We travel, we taste, we choose the best — then roast with care to bring out the flavour in every cup. Direct from the farm, roasted to order, and fresh in every bag.',
+        imageUrl: U('1442512595331-e89e73853f31', 1200),
+      }),
+      gallery({
+        heading: 'Recommended to try',
+        images: [U('1467003909585-2f8a72700288', 1200), U('1502741224143-90386d7f8c82', 1200), U('1509440159596-0249088772ff', 1200)],
+      }),
+      cta({ heading: 'Reserve a table', subtext: 'Bright, quiet and welcoming — your new favourite spot to work or unwind.', buttonLabel: 'Book a table', buttonHref: '#' }),
+      contact({ heading: 'Visit us' }),
+    ],
+  },
+
+  /* ── 18. Sneaker Lab / Collab Drop (playful) ─────────────────────────── */
+  {
+    id: 'sneaker-lab',
+    name: 'Sneaker Lab',
+    description: 'Playful primary-colour hype for limited collab drops',
+    accentColor: '#E4002B',
+    theme: { heroStyle: 'centered', surface: 'light' },
+    preview: '/templates/ed2c4b9a350631b70270f9c14b38ed3a.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'centered',
+        headline: 'You’re never too old to play',
+        subtext: 'A limited collaboration drop — playful colourways, archival silhouettes and instantly recognisable design. Once they’re gone, they’re gone.',
+        imageUrl: U('1552346154-21d32810aba3'),
+        ctaLabel: 'Shop the collab',
+        ctaHref: '#',
+      }),
+      products({ heading: 'The collection' }),
+      text({
+        heading: 'Built to be noticed',
+        body: 'Every pair pairs a heritage silhouette with a bold, block-colour build — premium suede, chunky soles and details that turn heads. Numbered, boxed and shipped worldwide.',
+        imageUrl: U('1595950653106-6c9ebd614d3a', 1200),
+      }),
+      gallery({
+        heading: 'On feet',
+        images: [U('1460353581641-37baddab0fa2', 1200), U('1600185365483-26d7a4cc7519', 1200), U('1556742049-0cfed4f6a45d', 1200)],
+      }),
+      cta({ heading: 'Join the raffle', subtext: 'Limited stock, one pair per person. Enter now for your shot at the drop.', buttonLabel: 'Enter the raffle', buttonHref: '#' }),
+      contact({ heading: 'Stockist & support' }),
+    ],
+  },
+
+  /* ── 19. E-Learning / Education (forest green) ───────────────────────── */
+  {
+    id: 'education',
+    name: 'E-Learning',
+    description: 'Friendly forest-green platform for courses & training',
+    accentColor: '#2E7D5B',
+    theme: { heroStyle: 'split', surface: 'light' },
+    preview: '/templates/1600928881d270ac98ad36f04f9a286c.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'split',
+        headline: 'Learn at your pace, from beginner to advanced',
+        subtext: 'Self-paced courses, live support and downloadable materials — a clear pathway from your first lesson to real, job-ready skills.',
+        imageUrl: U('1523240795612-9a054b0db644'),
+        ctaLabel: 'Start learning',
+        ctaHref: '#',
+      }),
+      products({ heading: 'Featured courses' }),
+      text({
+        heading: 'A pathway, not just a playlist',
+        body: 'Every track is structured beginner-to-advanced with quizzes, projects and mentor feedback. Learn on any device, pick up where you left off, and earn a certificate you can share.',
+        imageUrl: U('1524178232363-1fb2b075b655', 1200),
+      }),
+      gallery({
+        heading: 'Inside the platform',
+        images: [U('1517048676732-d65bc937f952', 1200), U('1522202176988-66273c2fd55f', 1200), U('1434030216411-0b793f4b4173', 1200)],
+      }),
+      cta({ heading: 'Try your first course free', subtext: 'No card required — start today and upgrade only when you’re ready.', buttonLabel: 'Get started', buttonHref: '#' }),
+      contact({ heading: 'Talk to our team' }),
+    ],
+  },
+
+  /* ── 20. SaaS / Digital Product (violet) ─────────────────────────────── */
+  {
+    id: 'saas',
+    name: 'SaaS & Software',
+    description: 'Modern violet product site with a centered hero',
+    accentColor: '#6D5EF6',
+    theme: { heroStyle: 'centered', surface: 'light' },
+    preview: '/templates/3ac8da5a7b98b519737d1f32c8a800de.jpg',
+    outline: ['hero', 'text', 'products', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'centered',
+        headline: 'Grow your business with smart digital solutions',
+        subtext: 'One platform to manage, automate and scale — powerful tools, a clean dashboard and insights that actually move the numbers.',
+        imageUrl: U('1551288049-bebda4e38f71'),
+        ctaLabel: 'Get started',
+        ctaHref: '#',
+      }),
+      text({
+        heading: 'Everything in one place',
+        body: 'Connect your tools, track what matters and automate the busywork. Real-time analytics, secure by default, and built to scale from your first customer to your millionth.',
+        imageUrl: U('1460925895917-afdab827c52f', 1200),
+      }),
+      products({ heading: 'Plans & pricing' }),
+      gallery({
+        heading: 'Inside the product',
+        images: [U('1517245386807-bb43f82c33c4', 1200), U('1531973576160-7125cd663d86', 1200), U('1519389950473-47ba0277781c', 1200)],
+      }),
+      cta({ heading: 'Ready to get started?', subtext: 'Free 14-day trial, no credit card. Cancel any time.', buttonLabel: 'Start free trial', buttonHref: '#' }),
+      contact({ heading: 'Contact sales' }),
+    ],
+  },
+
+  /* ── 21. Business / Corporate Services (yellow & black) ──────────────── */
+  {
+    id: 'business',
+    name: 'Business & Consulting',
+    description: 'Bold yellow-on-black corporate services site',
+    accentColor: '#F5B301',
+    theme: { heroStyle: 'fullbleed', surface: 'dark' },
+    preview: '/templates/5f26f27889573194ef6b17740f29d8ef.jpg',
+    outline: ['hero', 'text', 'products', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'fullbleed',
+        headline: 'Solutions that move your business forward',
+        subtext: 'Strategy, operations and growth consulting for ambitious teams — a clear plan, measurable results and a partner who stays in it with you.',
+        imageUrl: U('1454165804606-c3d57bc86b40'),
+        ctaLabel: 'Book a consultation',
+        ctaHref: '#',
+      }),
+      text({
+        heading: 'A proven process, end to end',
+        body: 'We research, plan, execute and measure — five clear steps from where you are to where you want to be. No jargon, no guesswork, just a roadmap and the hands to deliver it.',
+        imageUrl: U('1552581234-26160f608093', 1200),
+      }),
+      products({ heading: 'Our services' }),
+      gallery({
+        heading: 'The team at work',
+        images: [U('1531403009284-440f080d1e12', 1200), U('1600880292089-90a7e086ee0c', 1200), U('1497215728101-856f4ea42174', 1200)],
+      }),
+      cta({ heading: 'Let’s talk about your goals', subtext: 'Book a free 30-minute strategy call and leave with three things to action.', buttonLabel: 'Schedule a call', buttonHref: '#' }),
+      contact({ heading: 'Get in touch' }),
+    ],
+  },
+
+  /* ── 22. Plant Shop / Garden (green, dark) ───────────────────────────── */
+  {
+    id: 'plants',
+    name: 'Plant Shop',
+    description: 'Lush green plant store with an immersive dark hero',
+    accentColor: '#3F6B3F',
+    theme: { heroStyle: 'fullbleed', surface: 'dark' },
+    preview: '/templates/84d2610706125d9ee89afb3c340c7e4b.jpg',
+    outline: ['hero', 'products', 'text', 'gallery', 'cta', 'contact'],
+    sections: () => [
+      hero({
+        variant: 'fullbleed',
+        headline: 'Bring the outside in',
+        subtext: 'Easy-care houseplants, statement greenery and everything they need to thrive — delivered potted and ready to grow.',
+        imageUrl: U('1485955900006-10f4d324d411'),
+        ctaLabel: 'Shop plants',
+        ctaHref: '#',
+      }),
+      products({ heading: 'Bestselling plants' }),
+      text({
+        heading: 'Chosen to thrive, not just survive',
+        body: 'Every plant is nursery-grown, hand-picked and matched to your light and space. We ship them carefully potted with a care card, and our team is one message away if a leaf ever looks unsure.',
+        imageUrl: U('1416879595882-3373a0480b5b', 1200),
+      }),
+      gallery({
+        heading: 'The collection',
+        images: [U('1466692476868-aef1dfb1e735', 1200), U('1512428813834-c702c7702b78', 1200), U('1462530260150-162092dbf011', 1200)],
+      }),
+      cta({ heading: 'New to plants?', subtext: 'Take our two-minute quiz and we’ll match you with hard-to-kill greenery.', buttonLabel: 'Find my plant', buttonHref: '#' }),
+      contact({ heading: 'Visit the nursery' }),
     ],
   },
 ];
