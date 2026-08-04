@@ -5,6 +5,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
 import type { BusinessType } from '@/store/globalStore';
+import { useTenantStore } from '@/store/globalStore';
 import { AppKey, getApp, presetFor, withDependencies } from '@/lib/apps';
 import Icon, { IconName } from '@/components/ui/Icon';
 import Head from 'next/head';
@@ -162,7 +163,24 @@ export default function Onboarding() {
         country,
         enabledApps: businessType ? withDependencies(presetFor(businessType)) : undefined,
       });
-      router.push('/');
+      // Load the fresh tenant context so the destination resolves to the right
+      // workspace immediately — otherwise '/' shows the default Inventory
+      // workspace until a manual refresh. Then route to the vertical's home
+      // (mirrors the login landing resolver).
+      try {
+        await useTenantStore.getState().fetchTenantContext(true);
+      } catch {
+        /* non-fatal — the destination page fetches context on mount too */
+      }
+      const dest =
+        businessType === 'ecommerce'
+          ? '/storefront'
+          : businessType === 'accounts'
+          ? '/sales'
+          : businessType === 'hr'
+          ? '/hrms/dashboard'
+          : '/';
+      router.push(dest);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || t('auth.onboardingFailed', 'Could not finish setup'));
       setLoading(false);

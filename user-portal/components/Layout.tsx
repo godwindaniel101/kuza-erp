@@ -6,6 +6,7 @@ import { useTenantStore } from '@/store/globalStore';
 import { useUiStore } from '@/store/uiStore';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
+import OnboardingModal from './OnboardingModal';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -436,6 +437,9 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
         </div>
 
         {/* Page Content - Scrollable */}
+        {/* First-run guide — app-wide so it shows on whichever vertical home a
+            new tenant lands on (not just the '/' dashboard). Self-gates via localStorage. */}
+        <OnboardingModal />
         <main className="dashboard-main bg-canvas dark:bg-gray-950">
           <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
             {isPathAllowed(router.pathname, effectiveApps) ? (
