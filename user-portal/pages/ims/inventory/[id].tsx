@@ -110,6 +110,16 @@ export default function InventoryItemViewPage() {
     }
   };
 
+  // While the item is still loading, show a spinner — NOT the "Item not found"
+  // error (which flashed its red text + blue link before the details arrived).
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600"></div>
+      </div>
+    );
+  }
+
   if (!itemStats || !itemStats.item) {
     return (
       <div className="py-8">
