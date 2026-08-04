@@ -12,6 +12,8 @@ import DataTable, { type DataTableColumn } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatNumber, downloadCsv } from '@/lib/format';
+import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 
 type MovementType = 'INFLOW' | 'SALE' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT' | 'WRITE_OFF' | 'RETURN';
 
@@ -67,6 +69,7 @@ function TypeBadge({ type }: { type: MovementType }) {
 
 export default function StockMovementsPage() {
   const { t } = useTranslation('common');
+  const { businessType } = useTenantStore();
   const [tab, setTab] = useState<'ledger' | 'reconciliation'>('ledger');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
@@ -269,7 +272,7 @@ export default function StockMovementsPage() {
       <PageHeader
         title={t('stock.ledgerTitle', 'Stock Ledger')}
         subtitle={t('stock.ledgerSubtitle', 'Every stock movement, and reconciliation against current stock')}
-        breadcrumbs={[{ label: t('stock.ims', 'IMS'), href: '/ims/inventory' }, { label: t('stock.ledgerTitle', 'Stock Ledger') }]}
+        breadcrumbs={[{ label: term(businessType, 'inventorySection'), href: '/ims/inventory' }, { label: t('stock.ledgerTitle', 'Stock Ledger') }]}
         actions={
           tab === 'ledger' ? (
             movements.length > 0 ? (

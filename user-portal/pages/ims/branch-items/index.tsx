@@ -10,6 +10,8 @@ import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import Modal from '@/components/Modal';
 import { downloadCsv } from '@/lib/format';
+import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 import { usePageSearch } from '@/store/searchStore';
 
 type TabKey = 'stock' | 'expiring';
@@ -35,6 +37,7 @@ function isBranchLow(branchStock: any): boolean {
 
 export default function BranchItemsPage() {
   const { t } = useTranslation('common');
+  const { businessType } = useTenantStore();
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,10 +318,10 @@ export default function BranchItemsPage() {
           />
         )}
         <PageHeader
-          title={t('branchItems') || 'Branch Items'}
+          title={term(businessType, 'branchStock')}
           count={loading || activeTab !== 'stock' ? undefined : filteredItems.length}
           subtitle={t('viewItemsAcrossBranches') || 'View items across all branches'}
-          breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: t('branchItems') || 'Branch Items' }]}
+          breadcrumbs={[{ label: t('inventory') || 'Inventory' }, { label: term(businessType, 'branchStock') }]}
           actions={
             activeTab === 'stock' && !loading && filteredItems.length > 0 ? (
               <Button size="sm" variant="secondary" onClick={handleExportCsv}>

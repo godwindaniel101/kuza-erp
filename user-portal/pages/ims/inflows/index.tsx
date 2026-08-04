@@ -232,8 +232,8 @@ export default function PurchasesPage() {
       <PageHeader
         title={
           currentBranch
-            ? `${t('nav.purchases', 'Purchases')} — ${currentBranch.name}`
-            : t('nav.purchases', 'Purchases')
+            ? `${term(businessType, 'goodsIn')} — ${currentBranch.name}`
+            : term(businessType, 'goodsIn')
         }
         count={loading ? undefined : filteredRows.length}
         subtitle={
@@ -245,7 +245,7 @@ export default function PurchasesPage() {
         }
         breadcrumbs={[
           { label: term(businessType, 'inventorySection') },
-          { label: t('nav.purchases', 'Purchases') },
+          { label: term(businessType, 'goodsIn') },
         ]}
         actions={
           <>

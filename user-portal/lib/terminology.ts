@@ -24,6 +24,7 @@ export type TermKey =
   | 'sellNav' // the single sell/records nav item: 'Sales' (retail) vs 'Orders' (restaurant)
   | 'posSection' // sidebar SECTION label for the pos/orders group
   | 'inventorySection' // sidebar SECTION label for the items group
+  | 'branchStock' // per-branch stock levels (nav leaf + page title)
   | 'customers'
   | 'suppliers'
   | 'emptyItems'; // empty-state copy on the catalog list
@@ -41,6 +42,7 @@ const NEUTRAL: Record<TermKey, string> = {
   sellNav: 'Sales',
   posSection: 'Point of Sale',
   inventorySection: 'Inventory',
+  branchStock: 'Branch Stock',
   customers: 'Customers',
   suppliers: 'Suppliers',
   emptyItems: 'No items yet. Add your first item to get started.',
@@ -93,6 +95,7 @@ const OVERRIDES: Record<string, Partial<Record<TermKey, string>>> = {
     recordGoodsIn: 'Record purchase',
     goodsInDescription: 'Stock received, from whom, and at what cost',
     inventorySection: 'Catalog',
+    branchStock: 'Product Stock',
     emptyItems: 'No products yet. Add your first product to get started.',
   },
   services: {

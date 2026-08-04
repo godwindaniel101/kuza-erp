@@ -11,6 +11,7 @@ import Receipt from '@/components/Receipt';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useCurrency } from '@/lib/format';
 import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 import { useUiStore } from '@/store/uiStore';
 import { OrderIcon, BranchIcon, PaymentIcon } from '@/components/icons';
 import {
@@ -57,7 +58,7 @@ const EMPTY_META: OrderMeta = {
 export default function PosPage() {
   const { t } = useTranslation('common');
   const currency = useCurrency();
-  const { businessName } = useTenantStore();
+  const { businessName, businessType } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<PosBranch[]>([]);
   const [branchId, setBranchId] = useState('');
@@ -578,7 +579,7 @@ export default function PosPage() {
             </span>
             <div>
               <h1 className="font-display text-sm font-semibold leading-tight tracking-tight text-gray-900 dark:text-gray-100">
-                {t('pos.title', 'Point of Sale')}
+                {term(businessType, 'pos')}
               </h1>
             </div>
           </div>
