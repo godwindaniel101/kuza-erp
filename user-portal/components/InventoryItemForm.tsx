@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import { api } from '@/lib/api';
+import { uploadImage } from '@/lib/uploadImage';
 import { resolveImageUrl, formatMoney, useCurrency } from '@/lib/format';
 import Toast from '@/components/Toast';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -112,6 +113,11 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
   const [frontImagePreview, setFrontImagePreview] = useState<string>('');
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
   const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([]);
+  // True while an image is being uploaded to object storage. The Save button is
+  // disabled during an upload so an item can't be saved with a half-uploaded image.
+  const [uploadingFront, setUploadingFront] = useState(false);
+  const [uploadingAdditional, setUploadingAdditional] = useState(0);
+  const isUploadingImage = uploadingFront || uploadingAdditional > 0;
 
   useEffect(() => {
     Promise.all([loadUoms(), loadCategories()]);
@@ -416,77 +422,54 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     }
   };
 
-  const compressImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          // Calculate new dimensions
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-          resolve(compressedBase64);
-        };
-        img.onerror = (error) => reject(error);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleImageSelect = async (file: File, isFrontImage: boolean) => {
     if (!file.type.startsWith('image/')) {
       setToast({ message: t('pleaseSelectImage') || 'Please select an image file', type: 'error' });
       return;
     }
 
-    // Check file size (10MB limit before compression)
-    if (file.size > 10 * 1024 * 1024) {
-      setToast({ message: t('imageTooLarge') || 'Image is too large. Please select an image smaller than 10MB', type: 'error' });
+    // 5MB limit — matches the backend upload guard. The server compresses.
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ message: t('imageTooLarge') || 'Image is too large. Please select an image smaller than 5MB', type: 'error' });
       return;
     }
 
-    try {
-      const base64String = await compressImage(file);
-      
-      if (isFrontImage) {
-        setFrontImagePreview(base64String);
-        setFrontImageFile(file);
-        setFormData({ ...formData, frontImage: base64String });
-      } else {
-        setAdditionalImagePreviews((prev) => [...prev, base64String]);
-        setAdditionalImageFiles((prev) => [...prev, file]);
-        setFormData({ ...formData, additionalImages: [...formData.additionalImages, base64String] });
+    // Instant local preview while the file uploads. The DB only ever stores the
+    // URL returned by the server, never this blob URL or any base64.
+    const previewUrl = URL.createObjectURL(file);
+
+    if (isFrontImage) {
+      setFrontImagePreview(previewUrl);
+      setFrontImageFile(file);
+      setUploadingFront(true);
+      try {
+        const url = await uploadImage(file);
+        setFormData((prev) => ({ ...prev, frontImage: url }));
+      } catch (error) {
+        console.error('Image upload error:', error);
+        setToast({ message: t('failedToProcessImage') || 'Failed to upload image. Please try another image.', type: 'error' });
+        setFrontImagePreview('');
+        setFrontImageFile(null);
+      } finally {
+        setUploadingFront(false);
+        URL.revokeObjectURL(previewUrl);
       }
-    } catch (error) {
-      console.error('Image compression error:', error);
-      setToast({ message: t('failedToProcessImage') || 'Failed to process image. Please try another image.', type: 'error' });
+    } else {
+      setAdditionalImagePreviews((prev) => [...prev, previewUrl]);
+      setAdditionalImageFiles((prev) => [...prev, file]);
+      setUploadingAdditional((n) => n + 1);
+      try {
+        const url = await uploadImage(file);
+        setFormData((prev) => ({ ...prev, additionalImages: [...prev.additionalImages, url] }));
+      } catch (error) {
+        console.error('Image upload error:', error);
+        setToast({ message: t('failedToProcessImage') || 'Failed to upload image. Please try another image.', type: 'error' });
+        setAdditionalImagePreviews((prev) => prev.filter((p) => p !== previewUrl));
+        setAdditionalImageFiles((prev) => prev.filter((f) => f !== file));
+      } finally {
+        setUploadingAdditional((n) => Math.max(0, n - 1));
+        URL.revokeObjectURL(previewUrl);
+      }
     }
   };
 

@@ -39,6 +39,7 @@ import { CommonModule } from './common/common.module';
 import { LandlordModule } from './common/landlord/landlord.module';
 import { TenantModule } from './common/tenant/tenant.module';
 import { BranchScopeModule } from './common/branch-scope/branch-scope.module';
+import { StorageModule } from './common/storage/storage.module';
 import { TenantGuard } from './common/tenant/tenant.guard';
 import { TrialLockGuard } from './modules/billing/guards/trial-lock.guard';
 import { TenantTransactionInterceptor } from './common/tenant/tenant-transaction.interceptor';
@@ -83,6 +84,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     LandlordModule,
     TenantModule,
     BranchScopeModule,
+    StorageModule,
     CommonModule,
     AuthModule,
     UsersModule,

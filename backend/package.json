@@ -27,6 +27,8 @@
     "migrate:deploy": "node dist/scripts/run-migrations.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.658.0",
+    "@google-cloud/storage": "^7.13.0",
     "@nestjs-modules/mailer": "^1.9.1",
     "@nestjs/common": "^10.2.10",
     "@nestjs/config": "^3.1.1",

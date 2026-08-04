@@ -9,12 +9,23 @@ import {
   Query,
   ParseUUIDPipe,
   Request,
+  BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from "@nestjs/swagger";
 import { I18n, I18nContext } from "nestjs-i18n";
 import { InventoryService } from "./inventory.service";
 import { CreateInventoryItemDto } from "./dto/create-inventory-item.dto";
 import { UpdateInventoryItemDto } from "./dto/update-inventory-item.dto";
+import { UploadImageDto, UploadedImageFile } from "./dto/upload-image.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import {
   RequirePermissions,
@@ -208,11 +219,44 @@ export class InventoryController {
     };
   }
 
+  @Post("upload-image")
+  @RequirePermissions("inventory.create")
+  @ApiOperation({ summary: "Upload an item image; returns the stored URL" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({ type: UploadImageDto })
+  @UseInterceptors(FileInterceptor("file"))
+  async uploadImage(
+    @UploadedFile() file: UploadedImageFile,
+    @Request() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException("No file uploaded");
+    }
+    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+      throw new BadRequestException("File must be an image");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException("Image must be 5MB or smaller");
+    }
+    const schema = req.tenant?.schemaName ?? "public";
+    const url = await this.inventoryService.uploadItemImage(
+      file.buffer,
+      file.mimetype,
+      schema,
+    );
+    return { success: true, data: { url } };
+  }
+
   @Post("bulk-upload")
   @RequirePermissions("inventory.create")
   @ApiOperation({ summary: "Bulk upload inventory items from CSV" })
-  async bulkUpload(@Body() body: { csv: string }, @I18n() i18n: I18nContext) {
-    const results = await this.inventoryService.bulkUpload(body.csv);
+  async bulkUpload(
+    @Body() body: { csv: string },
+    @I18n() i18n: I18nContext,
+    @Request() req: any,
+  ) {
+    const schema = req.tenant?.schemaName ?? "public";
+    const results = await this.inventoryService.bulkUpload(body.csv, schema);
 
     // Return enhanced response with detailed error information
     return {
