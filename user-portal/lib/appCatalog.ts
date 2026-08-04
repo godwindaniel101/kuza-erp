@@ -42,6 +42,7 @@ export const COARSE_APPS: CoarseApp[] = [
   { id: 'inventory', name: 'Inventory', icon: 'cube', blurb: 'Track stock, receive goods and value your inventory', home: '/ims', moduleKeys: ['ims'], appKeys: ['items'], businessTypes: ['retail', 'warehouse', 'general', 'services', 'accounts', 'hr'] },
   { id: 'sales', name: 'Invoicing', icon: 'banknotes', blurb: 'Customers, invoices and getting paid', home: '/sales', moduleKeys: ['sales'], appKeys: ['invoicing'] },
   { id: 'accounting', name: 'Accounting', icon: 'calculator', blurb: 'Double-entry books, ledger and financial reports', home: '/accounting', moduleKeys: ['accounting'], appKeys: ['books'] },
+  { id: 'website', name: 'Website', icon: 'globe-alt', blurb: 'A simple website for your business that links to your store', home: '/website', moduleKeys: ['website'], appKeys: ['website'] },
   { id: 'hr', name: 'People', icon: 'users', blurb: 'Employees, attendance, leave and payroll', home: '/hrms/dashboard', moduleKeys: ['hrms'], appKeys: ['people'] },
   { id: 'payments', name: 'Payments', icon: 'credit-card', blurb: 'Take payments and tie them to sales in real time', home: '/payments', moduleKeys: ['payments'], appKeys: ['payments'] },
   { id: 'ai', name: 'Kuza AI', icon: 'sparkles', blurb: 'AI agents that sell and serve across your channels', home: '/ai', moduleKeys: ['ai'], appKeys: ['ai'] },

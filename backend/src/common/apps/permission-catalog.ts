@@ -60,6 +60,11 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   { name: 'storefront.publish', displayName: 'Publish / unpublish the storefront', group: 'Storefront', app: 'shop' },
   { name: 'storefront.orders', displayName: 'View & fulfil storefront orders', group: 'Storefront', app: 'shop' },
 
+  // ── Website (marketing site builder) ────────────────────────────────
+  { name: 'website.view', displayName: 'View the website', group: 'Website', app: 'website' },
+  { name: 'website.manage', displayName: 'Manage website settings & content', group: 'Website', app: 'website' },
+  { name: 'website.publish', displayName: 'Publish / unpublish the website', group: 'Website', app: 'website' },
+
   // ── Invoicing ───────────────────────────────────────────────────────
   { name: 'sales.view', displayName: 'View customers & invoices', group: 'Invoicing', app: 'invoicing' },
   { name: 'sales.manage', displayName: 'Manage customers & invoices', group: 'Invoicing', app: 'invoicing' },

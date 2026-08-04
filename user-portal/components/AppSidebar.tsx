@@ -197,6 +197,11 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
     // catalog/stock an online seller manages lives on the shared IMS pages, so
     // reuse that nav here (Stock Items, Branch Stock, Categories) to keep the
     // workspace functional. Per-item listing toggles / orders come in Phase 2/3.
+    // WEBSITE (common) — a simple marketing site builder. Phase 1 is a single
+    // overview/settings page; the section editor arrives in Phase 2.
+    website: [
+      { items: [{ href: '/website', label: tr('nav.overview', 'Overview'), icon: 'globe-alt', exact: true }] },
+    ],
     storefront: [
       { items: [{ href: '/storefront', label: tr('nav.overview', 'Overview'), icon: 'building-storefront', exact: true }] },
       {
@@ -494,6 +499,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         return apps.find((a) => a.id === 'payments-config')!;
       if (path.startsWith('/payments')) return apps.find((a) => a.id === 'payments')!;
       if (path.startsWith('/storefront')) return apps.find((a) => a.id === 'storefront')!;
+      if (path.startsWith('/website')) return apps.find((a) => a.id === 'website')!;
       if (
         path.startsWith('/hrms/departments') ||
         path.startsWith('/hrms/positions') ||

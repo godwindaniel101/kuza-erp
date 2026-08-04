@@ -16,7 +16,8 @@ export type AppKey =
   | 'people'
   | 'payments'
   | 'ai'
-  | 'market';
+  | 'market'
+  | 'website';
 
 /**
  * How an app is packaged (founder direction, 2026-07):
@@ -190,6 +191,16 @@ export const APP_REGISTRY: readonly AppDefinition[] = [
     backendModules: ['payments'],
     dependencies: [],
     defaultForBusinessTypes: ['hospitality', 'retail', 'accounts', 'ecommerce'],
+  },
+  {
+    key: 'website',
+    name: 'Website',
+    group: 'common',
+    description:
+      'Build a simple website for your business that links to your online store',
+    backendModules: ['website'],
+    dependencies: [],
+    defaultForBusinessTypes: ['ecommerce'],
   },
   {
     key: 'people',
