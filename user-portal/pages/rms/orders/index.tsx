@@ -4,6 +4,7 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import Modal from '@/components/Modal';
 import PageHeader from '@/components/ui/PageHeader';
@@ -436,6 +437,7 @@ export default function SalesPage() {
   const pageRows = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
+    <PermissionGuard permission="orders.view">
     <div className="kz-stagger space-y-6">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
@@ -628,6 +630,7 @@ export default function SalesPage() {
       </Modal>
 
     </div>
+    </PermissionGuard>
   );
 }
 

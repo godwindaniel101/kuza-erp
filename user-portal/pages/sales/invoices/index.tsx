@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
+import PermissionGuard from '@/components/PermissionGuard';
 import Toast from '@/components/Toast';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
@@ -216,6 +217,7 @@ export default function InvoicesPage() {
   const hasFilters = !!status || !!customerId || !!debouncedSearch;
 
   return (
+    <PermissionGuard permission="sales.view">
     <div className="kz-stagger space-y-6">
       <PageHeader
         title={t('invoices.invoices', 'Invoices')}
@@ -323,6 +325,7 @@ export default function InvoicesPage() {
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
+    </PermissionGuard>
   );
 }
 
