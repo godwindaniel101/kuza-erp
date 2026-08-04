@@ -82,6 +82,19 @@ const OVERRIDES: Record<string, Partial<Record<TermKey, string>>> = {
     posSection: 'Point of Sale',
     emptyItems: 'No products yet. Add your first product to get started.',
   },
+  // Online store (Storefront vertical) — sells on live stock, thinks in "products".
+  ecommerce: {
+    items: 'Products',
+    itemsNav: 'Products',
+    itemSingular: 'product',
+    addItem: 'Add product',
+    itemsDescription: 'Everything you sell online, priced and tracked',
+    goodsIn: 'Purchases',
+    recordGoodsIn: 'Record purchase',
+    goodsInDescription: 'Stock received, from whom, and at what cost',
+    inventorySection: 'Catalog',
+    emptyItems: 'No products yet. Add your first product to get started.',
+  },
   services: {
     items: 'Services & Items',
     itemsNav: 'Services & Items',
