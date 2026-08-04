@@ -13,6 +13,9 @@ interface BaseSection {
   enabled: boolean;
 }
 
+/** Visual treatment for the hero block. Optional — defaults to 'fullbleed'. */
+export type HeroVariant = 'fullbleed' | 'split' | 'centered';
+
 export interface HeroSection extends BaseSection {
   type: 'hero';
   headline: string;
@@ -20,6 +23,8 @@ export interface HeroSection extends BaseSection {
   imageUrl: string | null;
   ctaLabel: string;
   ctaHref: string;
+  /** Layout style. Backward compatible: absent ⇒ 'fullbleed' (today's behaviour). */
+  variant?: HeroVariant;
 }
 export interface TextSection extends BaseSection {
   type: 'text';

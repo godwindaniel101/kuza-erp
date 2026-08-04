@@ -76,6 +76,12 @@ function ImageUpload({ value, onChange, label }: { value: string | null; onChang
   );
 }
 
+/** The first hero image in a template, for its gallery preview card. */
+function templateHeroImage(tpl: (typeof WEBSITE_TEMPLATES)[number]): string | null {
+  const hero = tpl.sections().find((s) => s.type === 'hero') as { imageUrl?: string | null } | undefined;
+  return hero?.imageUrl ?? null;
+}
+
 export default function WebsiteBuilderPage() {
   const { t } = useTranslation('common');
 
@@ -254,19 +260,27 @@ export default function WebsiteBuilderPage() {
 
         <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Start from a template</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {WEBSITE_TEMPLATES.map((tpl) => (
-            <button key={tpl.id} onClick={() => applyTemplate(tpl.id)} className="group overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800">
-              <div className="flex h-28 flex-col justify-end gap-1 p-3" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}22, ${tpl.accentColor}05)` }}>
-                {tpl.outline.map((b, i) => (
-                  <div key={i} className="h-2.5 rounded" style={{ width: `${60 + ((i * 13) % 40)}%`, background: `${tpl.accentColor}${i === 0 ? '' : '66'}` }} />
-                ))}
-              </div>
-              <div className="p-3">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
-              </div>
-            </button>
-          ))}
+          {WEBSITE_TEMPLATES.map((tpl) => {
+            const img = templateHeroImage(tpl);
+            return (
+              <button key={tpl.id} onClick={() => applyTemplate(tpl.id)} className="group overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:-translate-y-0.5 hover:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800">
+                <div className="relative h-32 overflow-hidden">
+                  {img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={img} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="h-full w-full" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}, ${tpl.accentColor}99)` }} />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                  <span className="absolute left-3 top-3 h-4 w-4 rounded-full ring-2 ring-white/80" style={{ background: tpl.accentColor }} />
+                </div>
+                <div className="p-3">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or</h2>
