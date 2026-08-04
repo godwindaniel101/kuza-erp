@@ -1,6 +1,7 @@
 import type {
   WebsiteSection,
   HeroSection,
+  HeroVariant,
   TextSection,
   ProductsSection,
   GallerySection,
@@ -36,7 +37,66 @@ export interface SiteContext {
   currency?: string;
 }
 
+/** Primary hero call-to-action button, shared across the three hero variants. */
+function HeroCta({ s, accent, onLight }: { s: HeroSection; accent: string; onLight?: boolean }) {
+  if (!(s.ctaHref && s.ctaLabel)) return null;
+  return (
+    <a
+      href={s.ctaHref}
+      className={`group inline-flex h-12 items-center gap-2 rounded-xl px-7 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5 ${
+        onLight ? 'text-white' : 'text-white'
+      }`}
+      style={{ background: accent, boxShadow: `0 12px 30px -12px ${accent}` }}
+    >
+      {s.ctaLabel}
+      <i className="bx bx-right-arrow-alt text-lg transition group-hover:translate-x-0.5" aria-hidden="true" />
+    </a>
+  );
+}
+
 export function HeroBlock({ s, accent, site }: { s: HeroSection; accent: string; site: SiteContext }) {
+  const variant: HeroVariant = s.variant || 'fullbleed';
+  const headline = s.headline || site.businessName;
+
+  /* ── Split: text beside image ── */
+  if (variant === 'split') {
+    return (
+      <section className="grid items-stretch md:grid-cols-2">
+        <div className="flex flex-col justify-center px-6 py-16 sm:px-10 md:px-14 md:py-24">
+          <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-gray-900 sm:text-5xl">{headline}</h1>
+          {s.subtext && <p className="mt-5 max-w-md text-lg leading-relaxed text-gray-600">{s.subtext}</p>}
+          <div className="mt-8"><HeroCta s={s} accent={accent} /></div>
+        </div>
+        <div className="relative min-h-[300px] overflow-hidden md:min-h-[560px]">
+          {s.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={s.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}99)` }} />
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  /* ── Centered: text on a soft accent gradient, optional framed image ── */
+  if (variant === 'centered') {
+    return (
+      <section className="relative overflow-hidden" style={{ background: `linear-gradient(180deg, ${accent}1f, ${accent}08 45%, transparent)` }}>
+        <div className="relative mx-auto max-w-3xl px-5 pb-16 pt-20 text-center sm:pt-28">
+          <h1 className="mx-auto max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight text-gray-900 sm:text-6xl">{headline}</h1>
+          {s.subtext && <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-gray-600">{s.subtext}</p>}
+          <div className="mt-8 flex justify-center"><HeroCta s={s} accent={accent} /></div>
+          {s.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={s.imageUrl} alt="" className="mt-14 aspect-[16/9] w-full rounded-3xl object-cover shadow-2xl ring-1 ring-black/5" />
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  /* ── Full-bleed (default): image + overlay, or plain when no image ── */
   const hasImg = !!s.imageUrl;
   return (
     <section className="relative overflow-hidden">
@@ -44,17 +104,13 @@ export function HeroBlock({ s, accent, site }: { s: HeroSection; accent: string;
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={s.imageUrl!} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-black/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/20" />
         </>
       )}
-      <div className={`relative mx-auto max-w-5xl px-5 ${hasImg ? 'py-24 text-white' : 'py-20'}`}>
-        <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">{s.headline || site.businessName}</h1>
-        {s.subtext && <p className={`mt-4 max-w-xl text-lg ${hasImg ? 'text-white/85' : 'text-gray-600'}`}>{s.subtext}</p>}
-        {s.ctaHref && s.ctaLabel && (
-          <a href={s.ctaHref} className="mt-8 inline-flex h-11 items-center rounded-lg px-6 text-sm font-semibold text-white shadow-sm" style={{ background: accent }}>
-            {s.ctaLabel}
-          </a>
-        )}
+      <div className={`relative mx-auto max-w-5xl px-5 ${hasImg ? 'py-32 text-white sm:py-40' : 'py-24'}`}>
+        <h1 className={`max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl ${hasImg ? '' : 'text-gray-900'}`}>{headline}</h1>
+        {s.subtext && <p className={`mt-5 max-w-xl text-lg leading-relaxed ${hasImg ? 'text-white/90' : 'text-gray-600'}`}>{s.subtext}</p>}
+        <div className="mt-8"><HeroCta s={s} accent={accent} onLight={hasImg} /></div>
       </div>
     </section>
   );
@@ -62,15 +118,15 @@ export function HeroBlock({ s, accent, site }: { s: HeroSection; accent: string;
 
 export function TextBlock({ s }: { s: TextSection }) {
   return (
-    <section className="mx-auto max-w-5xl px-5 py-14">
-      <div className={`grid items-center gap-8 ${s.imageUrl ? 'md:grid-cols-2' : ''}`}>
+    <section className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+      <div className={`grid items-center gap-10 ${s.imageUrl ? 'md:grid-cols-2' : 'max-w-3xl'}`}>
         <div>
-          {s.heading && <h2 className="text-2xl font-bold tracking-tight">{s.heading}</h2>}
-          {s.body && <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-gray-600">{s.body}</p>}
+          {s.heading && <h2 className="text-3xl font-bold leading-tight tracking-tight text-gray-900">{s.heading}</h2>}
+          {s.body && <p className="mt-5 whitespace-pre-line text-base leading-relaxed text-gray-600">{s.body}</p>}
         </div>
         {s.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.imageUrl} alt="" className="w-full rounded-2xl object-cover" />
+          <img src={s.imageUrl} alt="" className="aspect-[4/3] w-full rounded-3xl object-cover shadow-xl ring-1 ring-black/5" />
         )}
       </div>
     </section>
@@ -80,19 +136,21 @@ export function TextBlock({ s }: { s: TextSection }) {
 export function GalleryBlock({ s }: { s: GallerySection }) {
   const imgs = (s.images || []).filter(Boolean);
   return (
-    <section className="mx-auto max-w-5xl px-5 py-14">
-      {s.heading && <h2 className="mb-6 text-2xl font-bold tracking-tight">{s.heading}</h2>}
+    <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+      {s.heading && <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900">{s.heading}</h2>}
       {imgs.length === 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="aspect-square w-full rounded-xl bg-gray-100" />
+            <div key={i} className="aspect-square w-full rounded-2xl bg-gray-100" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {imgs.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={src} alt="" className="aspect-square w-full rounded-xl object-cover" />
+            <div key={i} className="group overflow-hidden rounded-2xl ring-1 ring-black/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105" />
+            </div>
           ))}
         </div>
       )}
@@ -102,15 +160,22 @@ export function GalleryBlock({ s }: { s: GallerySection }) {
 
 export function CtaBlock({ s, accent }: { s: CtaSection; accent: string }) {
   return (
-    <section className="px-5 py-14">
-      <div className="mx-auto max-w-3xl rounded-3xl px-8 py-12 text-center text-white" style={{ background: accent }}>
-        {s.heading && <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{s.heading}</h2>}
-        {s.subtext && <p className="mx-auto mt-3 max-w-xl text-white/85">{s.subtext}</p>}
-        {s.buttonHref && s.buttonLabel && (
-          <a href={s.buttonHref} className="mt-6 inline-flex h-11 items-center rounded-lg bg-white px-6 text-sm font-semibold shadow-sm" style={{ color: accent }}>
-            {s.buttonLabel}
-          </a>
-        )}
+    <section className="px-5 py-16 sm:py-20">
+      <div
+        className="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] px-8 py-16 text-center text-white shadow-2xl"
+        style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+      >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-white/10" />
+        <div className="relative">
+          {s.heading && <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{s.heading}</h2>}
+          {s.subtext && <p className="mx-auto mt-4 max-w-xl text-lg text-white/90">{s.subtext}</p>}
+          {s.buttonHref && s.buttonLabel && (
+            <a href={s.buttonHref} className="mt-8 inline-flex h-12 items-center rounded-xl bg-white px-7 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5" style={{ color: accent }}>
+              {s.buttonLabel}
+            </a>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -171,18 +236,18 @@ export function ProductsBlock({ s, accent, site }: { s: ProductsSection; accent:
   const placeholder = products.length === 0;
   const cells = placeholder ? Array.from({ length: Math.min(s.limit || 6, 6) }, (_, i) => i) : products;
   return (
-    <section className="mx-auto max-w-5xl px-5 py-14">
-      {s.heading && <h2 className="mb-6 text-2xl font-bold tracking-tight">{s.heading}</h2>}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+      {s.heading && <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900">{s.heading}</h2>}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {placeholder
           ? (cells as number[]).map((i) => (
-              <div key={i} className="overflow-hidden rounded-xl ring-1 ring-gray-100">
+              <div key={i} className="overflow-hidden rounded-2xl ring-1 ring-gray-100">
                 <div className="aspect-square bg-gray-100" />
                 <div className="p-3"><div className="h-3 w-2/3 rounded bg-gray-100" /><div className="mt-2 h-3 w-1/3 rounded bg-gray-100" /></div>
               </div>
             ))
           : (cells as StoreProduct[]).map((p) => (
-              <a key={p.id} href={shopHref} className="group overflow-hidden rounded-xl ring-1 ring-gray-100 transition hover:ring-gray-300">
+              <a key={p.id} href={shopHref} className="group overflow-hidden rounded-2xl ring-1 ring-gray-100 transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-gray-200">
                 <div className="aspect-square overflow-hidden bg-gray-50">
                   {p.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
