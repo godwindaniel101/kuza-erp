@@ -31,6 +31,7 @@ import { AgentsModule } from './modules/agents/agents.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { MenuSitesModule } from './modules/menu-sites/menu-sites.module';
 import { StorefrontModule } from './modules/storefront/storefront.module';
+import { WebsiteModule } from './modules/website/website.module';
 import { NetworkModule } from './modules/network/network.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReservationsModule } from './modules/rms/reservations/reservations.module';
@@ -104,6 +105,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     IntegrationsModule,
     MenuSitesModule,
     StorefrontModule,
+    WebsiteModule,
     NetworkModule,
     PaymentsModule,
     ReservationsModule,

@@ -14,6 +14,7 @@ import { PricingConfig } from '../../modules/billing/entities/pricing-config.ent
 import { LandlordWebhookRoute } from '../../modules/integrations/entities/landlord-webhook-route.entity';
 import { MenuSlugRoute } from '../../modules/menu-sites/entities/menu-slug-route.entity';
 import { StorefrontSlugRoute } from '../../modules/storefront/entities/storefront-slug-route.entity';
+import { WebsiteSlugRoute } from '../../modules/website/entities/website-slug-route.entity';
 import { NetworkBusiness } from '../../modules/network/entities/network-business.entity';
 import { TradePartnership } from '../../modules/network/entities/trade-partnership.entity';
 import { NetworkOrder } from '../../modules/network/entities/network-order.entity';
@@ -48,6 +49,7 @@ import { NetworkWalletEntry } from '../../modules/network/entities/network-walle
             LandlordWebhookRoute,
             MenuSlugRoute,
             StorefrontSlugRoute,
+            WebsiteSlugRoute,
             NetworkBusiness,
             TradePartnership,
             NetworkOrder,

@@ -35,6 +35,7 @@ export const APP_PRICES: Record<string, PriceMap> = {
   books: { NGN: 10000, GHS: 105, KES: 1000, XOF: 4200, USD: 7, GBP: 6, EUR: 6 },
   invoicing: { NGN: 7500, GHS: 75, KES: 750, XOF: 3000, USD: 5, GBP: 4, EUR: 5 },
   payments: { NGN: 6000, GHS: 60, KES: 600, XOF: 2400, USD: 4, GBP: 3, EUR: 4 },
+  website: { NGN: 6000, GHS: 60, KES: 600, XOF: 2400, USD: 4, GBP: 3, EUR: 4 },
   ai: { NGN: 0, GHS: 0, KES: 0, XOF: 0, USD: 0, GBP: 0, EUR: 0 },
   market: { NGN: 0, GHS: 0, KES: 0, XOF: 0, USD: 0, GBP: 0, EUR: 0 },
 };
