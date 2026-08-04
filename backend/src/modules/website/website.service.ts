@@ -37,6 +37,7 @@ export interface WebsiteInfoPayload {
   storefrontUrl: string | null;
   currency: string;
   slug: string;
+  sections: unknown[] | null;
 }
 
 function slugify(text: string): string {
@@ -211,6 +212,7 @@ export class WebsiteService {
       'address',
       'storefrontUrl',
       'currency',
+      'sections',
     ];
     for (const key of assignable) {
       if (dto[key] !== undefined) {
@@ -300,6 +302,7 @@ export class WebsiteService {
       storefrontUrl: site.storefrontUrl || null,
       currency: site.currency || 'NGN',
       slug: site.slug,
+      sections: (site.sections as unknown[]) || null,
     };
   }
 }

@@ -11,6 +11,14 @@ import Toast from '@/components/Toast';
 import EmptyState from '@/components/ui/EmptyState';
 import PermissionGuard from '@/components/PermissionGuard';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import {
+  WebsiteSection,
+  SectionType,
+  SECTION_TYPES,
+  newSection,
+  starterSections,
+  sectionLabel,
+} from '@/lib/website-sections';
 
 /**
  * Website overview + builder — the home of the `website` common app. Reads the
@@ -43,6 +51,7 @@ interface WebsiteSite {
   address: string | null;
   storefrontUrl: string | null;
   currency: string;
+  sections?: WebsiteSection[] | null;
   publicUrl?: string;
 }
 
@@ -183,6 +192,161 @@ function ImageField({
   );
 }
 
+function AddSectionMenu({ onAdd }: { onAdd: (t: SectionType) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-gray-400">Add block:</span>
+      {SECTION_TYPES.map((st) => (
+        <button
+          key={st.type}
+          type="button"
+          onClick={() => onAdd(st.type)}
+          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          <i className={`bx ${st.icon}`} aria-hidden="true" /> {st.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function GalleryEditor({
+  section,
+  set,
+}: {
+  section: { heading: string; images: string[] };
+  set: (patch: any) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const images = section.images || [];
+  const addImage = async (file: File) => {
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return;
+    setBusy(true);
+    try {
+      set({ images: [...images, await uploadWebsiteImage(file)] });
+    } catch {
+      /* ignore — user can retry */
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3">
+      <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
+      <div className="flex flex-wrap gap-2">
+        {images.map((src, i) => (
+          <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={resolveImageUrl(src)} alt="" className="h-full w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => set({ images: images.filter((_, k) => k !== i) })}
+              className="absolute right-0.5 top-0.5 rounded bg-black/50 p-0.5 leading-none text-white"
+              aria-label="Remove image"
+            >
+              <i className="bx bx-x text-sm" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 dark:border-gray-700"
+          aria-label="Add image"
+        >
+          {busy ? <i className="bx bx-loader-alt bx-spin" /> : <i className="bx bx-plus text-xl" />}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) addImage(f);
+            e.target.value = '';
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SectionEditor({
+  section,
+  index,
+  total,
+  onChange,
+  onMove,
+  onRemove,
+}: {
+  section: WebsiteSection;
+  index: number;
+  total: number;
+  onChange: (id: string, patch: any) => void;
+  onMove: (id: string, dir: -1 | 1) => void;
+  onRemove: (id: string) => void;
+}) {
+  const set = (patch: any) => onChange(section.id, patch);
+  return (
+    <div className={`rounded-xl border border-gray-200 p-4 dark:border-gray-700 ${section.enabled ? '' : 'opacity-60'}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+            {sectionLabel(section.type)}
+          </span>
+          <label className="flex items-center gap-1.5 text-xs text-gray-500">
+            <input type="checkbox" checked={section.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600" />
+            Visible
+          </label>
+        </div>
+        <div className="flex items-center gap-1">
+          <button type="button" disabled={index === 0} onClick={() => onMove(section.id, -1)} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-800" aria-label="Move up"><i className="bx bx-chevron-up" /></button>
+          <button type="button" disabled={index === total - 1} onClick={() => onMove(section.id, 1)} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-800" aria-label="Move down"><i className="bx bx-chevron-down" /></button>
+          <button type="button" onClick={() => onRemove(section.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20" aria-label="Remove"><i className="bx bx-trash" /></button>
+        </div>
+      </div>
+
+      {section.type === 'hero' && (
+        <div className="space-y-3">
+          <input className={inputClass} placeholder="Headline" value={section.headline} onChange={(e) => set({ headline: e.target.value })} />
+          <input className={inputClass} placeholder="Subtext" value={section.subtext} onChange={(e) => set({ subtext: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <input className={inputClass} placeholder="Button label" value={section.ctaLabel} onChange={(e) => set({ ctaLabel: e.target.value })} />
+            <input className={inputClass} placeholder="Button link" value={section.ctaHref} onChange={(e) => set({ ctaHref: e.target.value })} />
+          </div>
+          <ImageField label="Background image" value={section.imageUrl} aspect="wide" onUploaded={(url) => set({ imageUrl: url })} />
+        </div>
+      )}
+      {section.type === 'text' && (
+        <div className="space-y-3">
+          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
+          <textarea rows={3} className={`${inputClass} h-auto py-2`} placeholder="Body" value={section.body} onChange={(e) => set({ body: e.target.value })} />
+          <ImageField label="Image (optional)" value={section.imageUrl} aspect="wide" onUploaded={(url) => set({ imageUrl: url })} />
+        </div>
+      )}
+      {section.type === 'gallery' && <GalleryEditor section={section} set={set} />}
+      {section.type === 'cta' && (
+        <div className="space-y-3">
+          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
+          <input className={inputClass} placeholder="Subtext" value={section.subtext} onChange={(e) => set({ subtext: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <input className={inputClass} placeholder="Button label" value={section.buttonLabel} onChange={(e) => set({ buttonLabel: e.target.value })} />
+            <input className={inputClass} placeholder="Button link" value={section.buttonHref} onChange={(e) => set({ buttonHref: e.target.value })} />
+          </div>
+        </div>
+      )}
+      {section.type === 'contact' && (
+        <div className="space-y-2">
+          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
+          <p className="text-xs text-gray-400">Shows your WhatsApp, Instagram, phone, email and address from the Contact settings above.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WebsiteBuilderPage() {
   const { t } = useTranslation('common');
 
@@ -193,6 +357,7 @@ export default function WebsiteBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publicBase, setPublicBase] = useState('');
+  const [sections, setSections] = useState<WebsiteSection[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => {
@@ -209,6 +374,7 @@ export default function WebsiteBuilderPage() {
       if (res.success && res.data) {
         setSite(res.data);
         setForm(toForm(res.data));
+        setSections(Array.isArray(res.data.sections) ? res.data.sections : []);
       } else {
         setLoadError(true);
       }
@@ -225,6 +391,21 @@ export default function WebsiteBuilderPage() {
 
   const setField = <K extends keyof SiteForm>(key: K, value: SiteForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  // ── Section editor helpers ──
+  const updateSection = (id: string, patch: Partial<WebsiteSection>) =>
+    setSections((list) => list.map((s) => (s.id === id ? ({ ...s, ...patch } as WebsiteSection) : s)));
+  const removeSection = (id: string) => setSections((list) => list.filter((s) => s.id !== id));
+  const addSection = (type: SectionType) => setSections((list) => [...list, newSection(type)]);
+  const moveSection = (id: string, dir: -1 | 1) =>
+    setSections((list) => {
+      const i = list.findIndex((s) => s.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= list.length) return list;
+      const next = [...list];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
 
   // Image uploads persist immediately (they return a URL to save with the rest).
   const saveImage = async (field: 'logoUrl' | 'heroImageUrl', url: string) => {
@@ -255,11 +436,13 @@ export default function WebsiteBuilderPage() {
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
         address: form.address.trim() || null,
+        sections,
       };
       const res = await api.put<{ success: boolean; data: WebsiteSite }>('/website', payload);
       if (res.success && res.data) {
         setSite(res.data);
         setForm(toForm(res.data));
+        setSections(Array.isArray(res.data.sections) ? res.data.sections : []);
         setToast({ message: t('website.saved', 'Website saved'), type: 'success' });
       }
     } catch (err: any) {
@@ -490,6 +673,38 @@ export default function WebsiteBuilderPage() {
                   <input id="address" className={inputClass} value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder={t('website.addressPlaceholder', 'Street, city')} />
                 </div>
               </div>
+            </Card>
+
+            {/* Page sections (blocks) */}
+            <Card title={t('website.sections', 'Page sections')} subtitle={t('website.sectionsHint', 'The blocks that make up your page, top to bottom')}>
+              {sections.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 py-8 text-center dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('website.noSections', 'No blocks yet.')}</p>
+                  <div className="mt-3 flex flex-col items-center gap-3">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setSections(starterSections())}>
+                      <i className="bx bx-magic-wand" aria-hidden="true" /> {t('website.useStarter', 'Use starter layout')}
+                    </Button>
+                    <AddSectionMenu onAdd={addSection} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sections.map((s, i) => (
+                    <SectionEditor
+                      key={s.id}
+                      section={s}
+                      index={i}
+                      total={sections.length}
+                      onChange={updateSection}
+                      onMove={moveSection}
+                      onRemove={removeSection}
+                    />
+                  ))}
+                  <div className="pt-1">
+                    <AddSectionMenu onAdd={addSection} />
+                  </div>
+                </div>
+              )}
             </Card>
 
             <div className="flex justify-end">
