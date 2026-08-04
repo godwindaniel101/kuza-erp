@@ -119,7 +119,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       {
         label: tr('nav.menu', 'Menu'),
         items: [
-          { href: '/rms/items', label: tr('nav.items', 'Items'), icon: 'cube', permission: 'inventory.view' },
+          { href: '/rms/items', label: term(businessType, 'itemsNav'), icon: 'cube', permission: 'inventory.view' },
           { href: '/rms/menus', label: tr('nav.menus', 'Menus'), icon: 'menu-book', permission: 'menus.view', also: ['/menu-studio'] },
           { href: '/rms/reservations', label: tr('reservations', 'Reservations'), icon: 'calendar', permission: 'reservations.view' },
         ],
@@ -164,7 +164,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         label: tr('nav.stock', 'Stock'),
         items: [
           { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
-          { href: '/ims/inventory', label: tr('nav.stockItems', 'Stock Items'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+          { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
           { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
           { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
           { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
@@ -202,7 +202,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       {
         label: tr('nav.catalog', 'Catalog'),
         items: [
-          { href: '/ims/inventory', label: tr('nav.stockItems', 'Stock Items'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+          { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
           { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
           { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
         ],
