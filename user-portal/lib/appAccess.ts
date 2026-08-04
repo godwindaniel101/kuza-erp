@@ -19,7 +19,7 @@ interface RouteRule {
 
 // Ordered most-specific first — the first matching prefix wins.
 const ROUTE_RULES: RouteRule[] = [
-  { prefix: '/rms/suppliers', keys: ['items'] }, // purchasing lives in Inventory
+  { prefix: '/rms/suppliers', keys: ['items', 'rms', 'shop'] }, // purchasing — reachable from every stock-owning vertical
   { prefix: '/rms/menus', keys: ['rms'] },
   { prefix: '/rms/reservations', keys: ['rms'] },
   { prefix: '/menu-studio', keys: ['rms'] },
@@ -37,9 +37,10 @@ const ROUTE_RULES: RouteRule[] = [
   { prefix: '/inventory', keys: ['items'] },
   { prefix: '/sales', keys: ['invoicing'] },
   { prefix: '/accounting', keys: ['books'] },
-  { prefix: '/settings/categories', keys: ['items', 'shop'] },
-  { prefix: '/settings/uoms', keys: ['items', 'shop'] },
-  { prefix: '/settings/allocation-method', keys: ['items', 'shop'] },
+  { prefix: '/ai', keys: ['ai'] }, // AI assist — was fail-open (no rule) → reachable by URL without the app
+  { prefix: '/settings/categories', keys: ['items', 'shop', 'rms'] },
+  { prefix: '/settings/uoms', keys: ['items', 'shop', 'rms'] },
+  { prefix: '/settings/allocation-method', keys: ['items', 'shop', 'rms'] },
 ];
 
 /**
