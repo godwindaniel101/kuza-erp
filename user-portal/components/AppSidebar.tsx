@@ -54,6 +54,13 @@ interface AppSidebarProps {
   collapsed?: boolean;
 }
 
+/**
+ * The VERTICAL apps (one per tenant, by businessType). The `/` workspace must
+ * always resolve to one of these — never a common app (payments/invoicing/
+ * accounting/people) — so a tenant lands in its real product, not a bolt-on.
+ */
+const VERTICAL_APP_IDS = ['storefront', 'inventory', 'restaurant'];
+
 /** Plan-module vocabulary is fuzzy across backends — match by alias substring. */
 const MODULE_ALIASES: Record<string, string[]> = {
   rms: ['rms', 'restaurant', 'hospitality', 'menu', 'order', 'table', 'pos'],
@@ -183,6 +190,28 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
             permission: 'branches.view',
             also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'],
           },
+        ],
+      },
+    ],
+    // STOREFRONT (shop vertical) — sell online on the tenant's live stock. The
+    // catalog/stock an online seller manages lives on the shared IMS pages, so
+    // reuse that nav here (Stock Items, Branch Stock, Categories) to keep the
+    // workspace functional. Per-item listing toggles / orders come in Phase 2/3.
+    storefront: [
+      { items: [{ href: '/storefront', label: tr('nav.overview', 'Overview'), icon: 'building-storefront', exact: true }] },
+      {
+        label: tr('nav.catalog', 'Catalog'),
+        items: [
+          { href: '/ims/inventory', label: tr('nav.stockItems', 'Stock Items'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
+          { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
+          { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
+        ],
+      },
+      {
+        label: tr('nav.stock', 'Stock'),
+        items: [
+          { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
+          { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
         ],
       },
     ],
@@ -443,6 +472,15 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
 
   const appForPath = useCallback(
     (path: string): AppDef => {
+      // The tenant's vertical app, derived from its actual businessType:
+      // ecommerce → Storefront, hospitality → Restaurant, everything else →
+      // Inventory. This is the app the `/` workspace resolves to.
+      const verticalAppId =
+        businessType === 'ecommerce'
+          ? 'storefront'
+          : businessType === 'hospitality' || businessType === 'restaurant'
+          ? 'restaurant'
+          : 'inventory';
       // Shared-config subpaths live in the dedicated Setup workspace (its own
       // left rail), not Settings or a module app — so it's reachable from both
       // Inventory and Restaurant without cross-jumping into either.
@@ -456,6 +494,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       )
         return apps.find((a) => a.id === 'payments-config')!;
       if (path.startsWith('/payments')) return apps.find((a) => a.id === 'payments')!;
+      if (path.startsWith('/storefront')) return apps.find((a) => a.id === 'storefront')!;
       if (
         path.startsWith('/hrms/departments') ||
         path.startsWith('/hrms/positions') ||
@@ -488,9 +527,12 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
           const a = businessApps.find((x) => x.id === sticky);
           if (a) return a;
         }
-        const sellingAppId =
-          businessType === 'hospitality' || businessType === 'restaurant' ? 'restaurant' : 'inventory';
-        return businessApps.find((a) => a.id === sellingAppId) ?? businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
+        return (
+          businessApps.find((a) => a.id === verticalAppId) ??
+          businessApps.find((a) => VERTICAL_APP_IDS.includes(a.id)) ??
+          businessApps[0] ??
+          apps.find((a) => a.id === 'settings')!
+        );
       }
       // Kuza Network lives in the Inventory app (feeds purchasing).
       // Restaurant surfaces: items catalog, dine-in tables, menus, QR menu.
@@ -506,12 +548,16 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       // app — Restaurant for hospitality, Inventory otherwise (POS is no longer a
       // separate app). Fall back to the first available app if neither is enabled.
       if (path === '/' || path.startsWith('/pos') || path.startsWith('/rms')) {
-        const sellingAppId =
-          businessType === 'hospitality' || businessType === 'restaurant'
-            ? 'restaurant'
-            : 'inventory';
-        const selling = businessApps.find((a) => a.id === sellingAppId);
-        return selling ?? businessApps[0] ?? apps.find((a) => a.id === 'settings')!;
+        const selling = businessApps.find((a) => a.id === verticalAppId);
+        if (selling) return selling;
+        // Never masquerade a common app (payments/invoicing/…) as the vertical
+        // `/` workspace: prefer ANY available vertical app, else fall back to
+        // Settings. Tenants with no vertical (accounts/hr) are redirected away
+        // from `/` by the login landing resolver, so this is a safe last resort.
+        return (
+          businessApps.find((a) => VERTICAL_APP_IDS.includes(a.id)) ??
+          apps.find((a) => a.id === 'settings')!
+        );
       }
       // Fallback: first available business app, else settings.
       return businessApps[0] ?? apps.find((a) => a.id === 'settings')!;

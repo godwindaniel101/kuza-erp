@@ -35,6 +35,10 @@ export const COARSE_APPS: CoarseApp[] = [
   // tenant only ever sees the one matching its businessType, never both — even
   // when effectiveApps hasn't loaded (the vertical gate runs before that check).
   { id: 'restaurant', name: 'Restaurant', icon: 'table-cells', blurb: 'Sell, dine-in tables, menus and QR menu', home: '/', moduleKeys: ['rms'], appKeys: ['rms'], businessTypes: ['hospitality', 'restaurant'] },
+  // Storefront (shop) is a THIRD vertical alongside Restaurant/Inventory — an
+  // ecommerce tenant sees this, never the others. It sells the tenant's live
+  // stock online (catalog/stock managed via the shared IMS pages).
+  { id: 'storefront', name: 'Storefront', icon: 'building-storefront', blurb: 'Sell online on your live stock', home: '/storefront', moduleKeys: ['storefront'], appKeys: ['shop'], businessTypes: ['ecommerce'] },
   { id: 'inventory', name: 'Inventory', icon: 'cube', blurb: 'Track stock, receive goods and value your inventory', home: '/ims', moduleKeys: ['ims'], appKeys: ['items'], businessTypes: ['retail', 'warehouse', 'general', 'services', 'accounts', 'hr'] },
   { id: 'sales', name: 'Invoicing', icon: 'banknotes', blurb: 'Customers, invoices and getting paid', home: '/sales', moduleKeys: ['sales'], appKeys: ['invoicing'] },
   { id: 'accounting', name: 'Accounting', icon: 'calculator', blurb: 'Double-entry books, ledger and financial reports', home: '/accounting', moduleKeys: ['accounting'], appKeys: ['books'] },

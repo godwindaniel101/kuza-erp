@@ -4,6 +4,7 @@ import { GetServerSideProps } from 'next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { useTranslation } from 'next-i18next';
 import { useAuthStore } from '@/store/authStore';
+import { useTenantStore } from '@/store/globalStore';
 import { authService } from '@/lib/auth';
 import { api } from '@/lib/api';
 import Cookies from 'js-cookie';
@@ -38,7 +39,13 @@ export default function Login() {
   };
 
   // Compute the default landing (no returnTo, no hrms service cookie). Employees
-  // without management access go to /employee/dashboard; everyone else to '/'.
+  // without management access go to /employee/dashboard. Everyone else lands on
+  // their tenant's proper home, derived from its vertical/apps:
+  //   ecommerce (shop)     → /storefront
+  //   hospitality (rms)    → /            (the dashboard suits them)
+  //   retail/warehouse…    → /            (Inventory dashboard)
+  //   accounts (no vertical, has invoicing) → /sales
+  //   hr       (no vertical, has people)    → /hrms/dashboard
   // `employeeId` is dropped by the auth normalizer, so read it from raw /auth/me.
   const resolveDefaultLanding = async (): Promise<string> => {
     try {
@@ -49,8 +56,25 @@ export default function Login() {
       if (employeeId && !isManagementUser(storeUser)) {
         return '/employee/dashboard';
       }
+
+      // Resolve the tenant context (businessType + effectiveApps) to pick the
+      // right home. force=true so a fresh login never reads a stale cache.
+      await useTenantStore.getState().fetchTenantContext(true);
+      const { businessType, effectiveApps } = useTenantStore.getState();
+      const has = (key: string) => !!effectiveApps && effectiveApps.includes(key);
+
+      if (businessType === 'ecommerce' || has('shop')) return '/storefront';
+      if (businessType === 'accounts') return '/sales';
+      if (businessType === 'hr') return '/hrms/dashboard';
+      // Non-vertical tenants whose businessType is unset but whose apps reveal
+      // the edition — route them to the app they actually have.
+      if (!businessType || businessType === 'general') {
+        if (has('invoicing') || has('books')) return '/sales';
+        if (has('people')) return '/hrms/dashboard';
+      }
+      // hospitality / retail / warehouse / services → the dashboard suits them.
     } catch {
-      // Fall back to the generic dashboard on any failure.
+      // Never break login — fall back to the generic dashboard on any failure.
     }
     return '/';
   };
