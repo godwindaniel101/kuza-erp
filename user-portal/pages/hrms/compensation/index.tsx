@@ -84,7 +84,7 @@ export default function CompensationPage() {
               <i className="bx bx-download"></i>
               {t('export') === 'export' ? 'Export' : t('export')}
             </Button>
-            <PermissionGuard permission="compensation.structures.create">
+            <PermissionGuard permission="compensation.create">
               <Button href="/hrms/compensation/structures/create" size="sm">
                 <i className="bx bx-plus"></i>
                 {t('create')} {t('compensation')} {t('structure')}

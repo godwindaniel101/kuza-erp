@@ -106,7 +106,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       {
         label: tr('nav.sell', 'Sell'),
         items: [
-          { href: '/pos', label: tr('nav.pos', 'POS'), icon: 'building-storefront', permission: 'orders.create', exact: true },
+          { href: '/pos', label: term(businessType, 'pos'), icon: 'building-storefront', permission: 'orders.create', exact: true },
           { href: '/rms/orders', label: tr('nav.sales', 'Sales'), icon: 'receipt', permission: 'orders.view', exclude: ['/rms/orders/create'] },
         ],
       },
@@ -156,16 +156,16 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       {
         label: tr('nav.sell', 'Sell'),
         items: [
-          { href: '/pos', label: tr('nav.pos', 'POS'), icon: 'building-storefront' as IconName, permission: 'orders.create', exact: true },
+          { href: '/pos', label: term(businessType, 'pos'), icon: 'building-storefront' as IconName, permission: 'orders.create', exact: true },
           { href: '/rms/orders', label: tr('nav.sales', 'Sales'), icon: 'receipt' as IconName, permission: 'orders.view', exclude: ['/rms/orders/create'] },
         ],
       },
       {
         label: tr('nav.stock', 'Stock'),
         items: [
-          { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
+          { href: '/ims/branch-items', label: term(businessType, 'branchStock'), icon: 'building-storefront' },
           { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
-          { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left' },
+          { href: '/ims/transfers', label: tr('transfers', 'Transfers'), icon: 'arrows-right-left', permission: 'inventory.view' },
           { href: '/ims/adjustments', label: tr('adjustments', 'Adjustments'), icon: 'adjustments' },
           { href: '/ims/stock-movements', label: tr('stockLedger', 'Stock Ledger'), icon: 'arrows-right-left' },
         ],
@@ -203,7 +203,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         label: tr('nav.catalog', 'Catalog'),
         items: [
           { href: '/ims/inventory', label: term(businessType, 'itemsNav'), icon: 'cube', permission: 'inventory.view', also: ['/inventory'] },
-          { href: '/ims/branch-items', label: tr('nav.branchStock', 'Branch Stock'), icon: 'building-storefront' },
+          { href: '/ims/branch-items', label: term(businessType, 'branchStock'), icon: 'building-storefront', permission: 'inventory.view' },
           { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
         ],
       },
@@ -322,11 +322,11 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       },
     ],
     payments: [
-      { items: [{ href: '/payments', label: tr('paymentMethods', 'Payment methods'), icon: 'credit-card', exact: true }] },
-      { items: [{ href: '/payments/transactions', label: tr('transactions', 'Transactions'), icon: 'receipt' }] },
-      { items: [{ href: '/payments/wallet', label: tr('nav.wallet', 'Wallet'), icon: 'wallet' }] },
+      { items: [{ href: '/payments', label: tr('paymentMethods', 'Payment methods'), icon: 'credit-card', exact: true, permission: 'payments.view' }] },
+      { items: [{ href: '/payments/transactions', label: tr('transactions', 'Transactions'), icon: 'receipt', permission: 'payments.view' }] },
+      { items: [{ href: '/payments/wallet', label: tr('nav.wallet', 'Wallet'), icon: 'wallet', permission: 'payments.view' }] },
       // Single entry into the Payments Configuration workspace (its own rail).
-      { items: [{ href: '/payments/settlement', label: tr('configuration', 'Configuration'), icon: 'cog', also: ['/payments/security', '/payments/setup'] }] },
+      { items: [{ href: '/payments/settlement', label: tr('configuration', 'Configuration'), icon: 'cog', permission: 'payments.view', also: ['/payments/security', '/payments/settlement'] }] },
     ],
     // Payments configuration — its own left rail, entered from Payments → Configuration.
     'payments-config': [
@@ -416,7 +416,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       name: 'Configuration',
       icon: 'cog',
       blurb: 'Payments configuration',
-      home: '/payments/setup',
+      home: '/payments/settlement',
       appKeys: null,
       groups: groupsByApp['payments-config'] ?? [],
     } as AppDef,
@@ -489,8 +489,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
 
       if (
         path.startsWith('/payments/settlement') ||
-        path.startsWith('/payments/security') ||
-        path.startsWith('/payments/setup')
+        path.startsWith('/payments/security')
       )
         return apps.find((a) => a.id === 'payments-config')!;
       if (path.startsWith('/payments')) return apps.find((a) => a.id === 'payments')!;

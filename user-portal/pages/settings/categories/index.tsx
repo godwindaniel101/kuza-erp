@@ -10,9 +10,12 @@ import SearchableSelect from '@/components/SearchableSelect';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
+import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 
 export default function CategoriesSettingsPage() {
   const { t } = useTranslation('common');
+  const { businessType } = useTenantStore();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -158,7 +161,7 @@ export default function CategoriesSettingsPage() {
 
       <PageHeader
         title={t('categories') || 'Categories'}
-        subtitle={t('settings.categoriesSubtitle', 'How your items are grouped')}
+        subtitle={`How your ${term(businessType, 'items').toLowerCase()} are grouped`}
         count={loading ? undefined : categories.length}
         breadcrumbs={[{ label: t('settings') || 'Settings' }, { label: t('categories') || 'Categories' }]}
         actions={

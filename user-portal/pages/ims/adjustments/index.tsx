@@ -14,6 +14,8 @@ import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import { formatDate, downloadCsv } from '@/lib/format';
+import { useTenantStore } from '@/store/globalStore';
+import { term } from '@/lib/terminology';
 
 type AdjustmentReason = 'DAMAGE' | 'THEFT' | 'COUNT' | 'EXPIRY' | 'OTHER';
 type AdjustmentStatus = 'DRAFT' | 'APPROVED' | 'REJECTED';
@@ -63,6 +65,7 @@ const PAGE_SIZE = 10;
 
 export default function AdjustmentsPage() {
   const { t } = useTranslation('common');
+  const { businessType } = useTenantStore();
   const router = useRouter();
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [total, setTotal] = useState(0);
@@ -186,7 +189,7 @@ export default function AdjustmentsPage() {
         title={t('adjustments.title', 'Stock Adjustments')}
         count={loading ? undefined : total}
         subtitle={t('adjustments.subtitle', 'Correct stock levels for damage, theft, counts and more')}
-        breadcrumbs={[{ label: t('adjustments.ims', 'IMS'), href: '/ims/inventory' }, { label: t('adjustments.breadcrumb', 'Adjustments') }]}
+        breadcrumbs={[{ label: term(businessType, 'inventorySection'), href: '/ims/inventory' }, { label: t('adjustments.breadcrumb', 'Adjustments') }]}
         actions={
           <>
             {!loading && adjustments.length > 0 && (

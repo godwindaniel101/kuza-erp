@@ -42,7 +42,7 @@ export default function BenefitsPage() {
         count={loading ? undefined : plans.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('benefits') }]}
         actions={
-          <PermissionGuard permission="benefits.plans.create">
+          <PermissionGuard permission="benefits.create">
             <Button href="/hrms/benefits/plans/create" size="sm">
               <i className="bx bx-plus"></i>
               {t('create')} {t('benefit')} {t('plan')}

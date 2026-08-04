@@ -42,7 +42,7 @@ export default function LearningPage() {
         count={loading ? undefined : courses.length}
         breadcrumbs={[{ label: 'HR', href: '/hrms/dashboard' }, { label: t('learning') }]}
         actions={
-          <PermissionGuard permission="learning.courses.create">
+          <PermissionGuard permission="learning.create">
             <Button href="/hrms/learning/courses/create" size="sm">
               <i className="bx bx-plus"></i>
               {t('create')} {t('course')}
