@@ -6,6 +6,8 @@
  * API origin so they load from the public page.
  */
 
+import type { WebsiteSection } from './website-sections';
+
 export interface PublicSiteInfo {
   businessName: string;
   tagline: string | null;
@@ -24,6 +26,7 @@ export interface PublicSiteInfo {
   storefrontUrl: string | null;
   currency: string;
   slug: string;
+  sections: WebsiteSection[] | null;
 }
 
 const PUBLIC_API_ORIGIN =
@@ -33,6 +36,20 @@ function absImage(src?: string | null): string | null {
   if (!src) return null;
   if (/^(https?:|data:|blob:)/i.test(src)) return src;
   return `${PUBLIC_API_ORIGIN}${src.startsWith('/') ? '' : '/'}${src}`;
+}
+
+/** Absolutize image URLs inside the ordered sections (hero/text/gallery). */
+function absolutizeSections(sections: unknown): WebsiteSection[] | null {
+  if (!Array.isArray(sections)) return null;
+  return sections.map((s: any) => {
+    if (s && (s.type === 'hero' || s.type === 'text') && s.imageUrl) {
+      return { ...s, imageUrl: absImage(s.imageUrl) };
+    }
+    if (s && s.type === 'gallery' && Array.isArray(s.images)) {
+      return { ...s, images: s.images.map((i: string) => absImage(i)).filter(Boolean) };
+    }
+    return s;
+  }) as WebsiteSection[];
 }
 
 export async function fetchPublicSite(slug: string): Promise<PublicSiteInfo | null> {
@@ -57,6 +74,7 @@ export async function fetchPublicSite(slug: string): Promise<PublicSiteInfo | nu
           ...site,
           logoUrl: absImage(site.logoUrl),
           heroImageUrl: absImage(site.heroImageUrl),
+          sections: absolutizeSections(site.sections),
         } as PublicSiteInfo;
       }
     } catch {

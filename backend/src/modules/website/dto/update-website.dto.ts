@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEmail,
   IsIn,
   IsOptional,
@@ -102,4 +103,10 @@ export class UpdateWebsiteDto {
   @IsString()
   @MaxLength(8)
   currency?: string;
+
+  /** Ordered page blocks (jsonb). The builder owns the shape; see
+   *  user-portal/lib/website-sections.ts. Capped to keep the payload sane. */
+  @IsOptional()
+  @IsArray()
+  sections?: any[];
 }
