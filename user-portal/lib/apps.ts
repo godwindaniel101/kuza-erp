@@ -14,7 +14,8 @@ export type AppKey =
   | 'invoicing'
   | 'books'
   | 'people'
-  | 'payments';
+  | 'payments'
+  | 'website';
 
 /**
  * Packaging group, mirroring the backend registry (common/apps/app-registry.ts):
@@ -105,6 +106,15 @@ export const APP_REGISTRY: AppDefinition[] = [
     dependencies: [],
     homeRoute: '/payments',
   },
+  {
+    key: 'website',
+    name: 'Website',
+    group: 'common',
+    description: 'Build a simple website for your business that links to your online store',
+    icon: 'globe-alt',
+    dependencies: [],
+    homeRoute: '/website',
+  },
 ];
 
 export const APP_KEYS: AppKey[] = APP_REGISTRY.map((a) => a.key);
@@ -138,7 +148,7 @@ export const VERTICAL_PRESETS: Record<BusinessType, AppKey[]> = {
   retail: ['items', 'invoicing', 'books'],
   hr: ['people'],
   warehouse: ['items'],
-  ecommerce: ['shop', 'payments'],
+  ecommerce: ['shop', 'payments', 'website'],
   // Legacy business types
   restaurant: ['items', 'rms', 'books'],
   services: ['invoicing', 'books', 'people'],

@@ -37,6 +37,7 @@ const ROUTE_RULES: RouteRule[] = [
   { prefix: '/inventory', keys: ['items'] },
   { prefix: '/sales', keys: ['invoicing'] },
   { prefix: '/accounting', keys: ['books'] },
+  { prefix: '/website', keys: ['website'] },
   { prefix: '/ai', keys: ['ai'] }, // AI assist — was fail-open (no rule) → reachable by URL without the app
   { prefix: '/settings/categories', keys: ['items', 'shop', 'rms'] },
   { prefix: '/settings/uoms', keys: ['items', 'shop', 'rms'] },
