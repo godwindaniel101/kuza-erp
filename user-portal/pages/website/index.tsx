@@ -1,348 +1,77 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment, DragEvent } from 'react';
 import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { api } from '@/lib/api';
 import { resolveImageUrl } from '@/lib/format';
-import PageHeader from '@/components/ui/PageHeader';
-import Card from '@/components/Card';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/Toast';
 import EmptyState from '@/components/ui/EmptyState';
 import PermissionGuard from '@/components/PermissionGuard';
-import { CardSkeleton } from '@/components/ui/Skeleton';
 import {
   WebsiteSection,
   SectionType,
   SECTION_TYPES,
   newSection,
-  starterSections,
   sectionLabel,
 } from '@/lib/website-sections';
-
-/**
- * Website overview + builder — the home of the `website` common app. Reads the
- * tenant's single site (GET /website, auto-created on first read), lets the owner
- * edit its brand/hero/about/contact (PUT /website), upload a logo + hero image,
- * publish/unpublish it, and share the public link (/site/:slug). A "Shop now"
- * link is driven by the `storefrontUrl` field, so the site points at their store.
- *
- * Phase 1 scope: single settings page (no section editor yet — that's Phase 2).
- */
-
-const TEMPLATE_KEYS = ['classic', 'bold', 'minimal'] as const;
+import { SiteBlock, SiteContext } from '@/components/website/SiteBlocks';
+import { WEBSITE_TEMPLATES } from '@/lib/website-templates';
 
 interface WebsiteSite {
   slug: string;
   isPublished: boolean;
   businessName: string;
   tagline: string | null;
-  about: string | null;
   logoUrl: string | null;
-  heroImageUrl: string | null;
-  heroHeadline: string | null;
-  heroSubtext: string | null;
   accentColor: string | null;
-  templateKey: string;
   whatsapp: string | null;
   instagram: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
   storefrontUrl: string | null;
-  currency: string;
   sections?: WebsiteSection[] | null;
+  currency: string;
   publicUrl?: string;
-}
-
-interface SiteForm {
-  businessName: string;
-  slug: string;
-  tagline: string;
-  heroHeadline: string;
-  heroSubtext: string;
-  about: string;
-  templateKey: string;
-  accentColor: string;
-  storefrontUrl: string;
-  whatsapp: string;
-  instagram: string;
-  phone: string;
-  email: string;
-  address: string;
-}
-
-const emptyForm: SiteForm = {
-  businessName: '',
-  slug: '',
-  tagline: '',
-  heroHeadline: '',
-  heroSubtext: '',
-  about: '',
-  templateKey: 'classic',
-  accentColor: '',
-  storefrontUrl: '',
-  whatsapp: '',
-  instagram: '',
-  phone: '',
-  email: '',
-  address: '',
-};
-
-function toForm(site: WebsiteSite): SiteForm {
-  return {
-    businessName: site.businessName || '',
-    slug: site.slug || '',
-    tagline: site.tagline || '',
-    heroHeadline: site.heroHeadline || '',
-    heroSubtext: site.heroSubtext || '',
-    about: site.about || '',
-    templateKey: site.templateKey || 'classic',
-    accentColor: site.accentColor || '',
-    storefrontUrl: site.storefrontUrl || '',
-    whatsapp: site.whatsapp || '',
-    instagram: site.instagram || '',
-    phone: site.phone || '',
-    email: site.email || '',
-    address: site.address || '',
-  };
 }
 
 async function uploadWebsiteImage(file: File): Promise<string> {
   const fd = new FormData();
   fd.append('file', file);
-  const res = await api.post<{ success: boolean; data: { url: string } }>(
-    '/website/upload-image',
-    fd,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
-  );
+  const res = await api.post<{ success: boolean; data: { url: string } }>('/website/upload-image', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return res.data.url;
 }
 
 const inputClass =
-  'h-10 w-full !max-w-none px-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-transparent';
-const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5';
+  'h-9 w-full !max-w-none px-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500';
+const labelClass = 'block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1';
 
-function ImageField({
-  label,
-  value,
-  onUploaded,
-  aspect,
-}: {
-  label: string;
-  value: string | null;
-  onUploaded: (url: string) => void;
-  aspect: 'square' | 'wide';
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
+/* ── inline image upload button ── */
+function ImageUpload({ value, onChange, label }: { value: string | null; onChange: (url: string | null) => void; label: string }) {
+  const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-
   const pick = async (file: File) => {
-    if (!file.type.startsWith('image/')) return setErr('Please choose an image');
-    if (file.size > 5 * 1024 * 1024) return setErr('Image must be 5MB or smaller');
-    setErr('');
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return;
     setBusy(true);
-    try {
-      onUploaded(await uploadWebsiteImage(file));
-    } catch {
-      setErr('Upload failed — try another image');
-    } finally {
-      setBusy(false);
-    }
+    try { onChange(await uploadWebsiteImage(file)); } catch { /* retry */ } finally { setBusy(false); }
   };
-
   return (
     <div>
       <span className={labelClass}>{label}</span>
-      <div className="flex items-center gap-3">
-        <div
-          className={`relative overflow-hidden rounded-lg bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 ${
-            aspect === 'square' ? 'h-16 w-16' : 'h-16 w-28'
-          }`}
-        >
-          {value ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={resolveImageUrl(value)} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-300 dark:text-gray-600">
-              <i className="bx bx-image text-2xl" aria-hidden="true" />
-            </div>
-          )}
-        </div>
-        <div>
-          <Button type="button" variant="secondary" size="sm" loading={busy} onClick={() => inputRef.current?.click()}>
-            <i className="bx bx-upload" aria-hidden="true" /> {value ? 'Replace' : 'Upload'}
-          </Button>
-          {err && <p className="mt-1 text-xs text-red-500">{err}</p>}
-        </div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) pick(f);
-            e.target.value = '';
-          }}
-        />
+      <div className="flex items-center gap-2">
+        {value && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={resolveImageUrl(value)} alt="" className="h-10 w-14 rounded object-cover ring-1 ring-gray-200" />
+        )}
+        <Button type="button" variant="secondary" size="sm" loading={busy} onClick={() => ref.current?.click()}>
+          <i className="bx bx-upload" aria-hidden="true" /> {value ? 'Replace' : 'Upload'}
+        </Button>
+        {value && <button type="button" onClick={() => onChange(null)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>}
+        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ''; }} />
       </div>
-    </div>
-  );
-}
-
-function AddSectionMenu({ onAdd }: { onAdd: (t: SectionType) => void }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-gray-400">Add block:</span>
-      {SECTION_TYPES.map((st) => (
-        <button
-          key={st.type}
-          type="button"
-          onClick={() => onAdd(st.type)}
-          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-        >
-          <i className={`bx ${st.icon}`} aria-hidden="true" /> {st.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function GalleryEditor({
-  section,
-  set,
-}: {
-  section: { heading: string; images: string[] };
-  set: (patch: any) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const images = section.images || [];
-  const addImage = async (file: File) => {
-    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return;
-    setBusy(true);
-    try {
-      set({ images: [...images, await uploadWebsiteImage(file)] });
-    } catch {
-      /* ignore — user can retry */
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="space-y-3">
-      <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
-      <div className="flex flex-wrap gap-2">
-        {images.map((src, i) => (
-          <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={resolveImageUrl(src)} alt="" className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => set({ images: images.filter((_, k) => k !== i) })}
-              className="absolute right-0.5 top-0.5 rounded bg-black/50 p-0.5 leading-none text-white"
-              aria-label="Remove image"
-            >
-              <i className="bx bx-x text-sm" />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 dark:border-gray-700"
-          aria-label="Add image"
-        >
-          {busy ? <i className="bx bx-loader-alt bx-spin" /> : <i className="bx bx-plus text-xl" />}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) addImage(f);
-            e.target.value = '';
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SectionEditor({
-  section,
-  index,
-  total,
-  onChange,
-  onMove,
-  onRemove,
-}: {
-  section: WebsiteSection;
-  index: number;
-  total: number;
-  onChange: (id: string, patch: any) => void;
-  onMove: (id: string, dir: -1 | 1) => void;
-  onRemove: (id: string) => void;
-}) {
-  const set = (patch: any) => onChange(section.id, patch);
-  return (
-    <div className={`rounded-xl border border-gray-200 p-4 dark:border-gray-700 ${section.enabled ? '' : 'opacity-60'}`}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-            {sectionLabel(section.type)}
-          </span>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500">
-            <input type="checkbox" checked={section.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600" />
-            Visible
-          </label>
-        </div>
-        <div className="flex items-center gap-1">
-          <button type="button" disabled={index === 0} onClick={() => onMove(section.id, -1)} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-800" aria-label="Move up"><i className="bx bx-chevron-up" /></button>
-          <button type="button" disabled={index === total - 1} onClick={() => onMove(section.id, 1)} className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-800" aria-label="Move down"><i className="bx bx-chevron-down" /></button>
-          <button type="button" onClick={() => onRemove(section.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20" aria-label="Remove"><i className="bx bx-trash" /></button>
-        </div>
-      </div>
-
-      {section.type === 'hero' && (
-        <div className="space-y-3">
-          <input className={inputClass} placeholder="Headline" value={section.headline} onChange={(e) => set({ headline: e.target.value })} />
-          <input className={inputClass} placeholder="Subtext" value={section.subtext} onChange={(e) => set({ subtext: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
-            <input className={inputClass} placeholder="Button label" value={section.ctaLabel} onChange={(e) => set({ ctaLabel: e.target.value })} />
-            <input className={inputClass} placeholder="Button link" value={section.ctaHref} onChange={(e) => set({ ctaHref: e.target.value })} />
-          </div>
-          <ImageField label="Background image" value={section.imageUrl} aspect="wide" onUploaded={(url) => set({ imageUrl: url })} />
-        </div>
-      )}
-      {section.type === 'text' && (
-        <div className="space-y-3">
-          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
-          <textarea rows={3} className={`${inputClass} h-auto py-2`} placeholder="Body" value={section.body} onChange={(e) => set({ body: e.target.value })} />
-          <ImageField label="Image (optional)" value={section.imageUrl} aspect="wide" onUploaded={(url) => set({ imageUrl: url })} />
-        </div>
-      )}
-      {section.type === 'gallery' && <GalleryEditor section={section} set={set} />}
-      {section.type === 'cta' && (
-        <div className="space-y-3">
-          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
-          <input className={inputClass} placeholder="Subtext" value={section.subtext} onChange={(e) => set({ subtext: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
-            <input className={inputClass} placeholder="Button label" value={section.buttonLabel} onChange={(e) => set({ buttonLabel: e.target.value })} />
-            <input className={inputClass} placeholder="Button link" value={section.buttonHref} onChange={(e) => set({ buttonHref: e.target.value })} />
-          </div>
-        </div>
-      )}
-      {section.type === 'contact' && (
-        <div className="space-y-2">
-          <input className={inputClass} placeholder="Heading" value={section.heading} onChange={(e) => set({ heading: e.target.value })} />
-          <p className="text-xs text-gray-400">Shows your WhatsApp, Instagram, phone, email and address from the Contact settings above.</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -353,12 +82,31 @@ export default function WebsiteBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [site, setSite] = useState<WebsiteSite | null>(null);
-  const [form, setForm] = useState<SiteForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [publicBase, setPublicBase] = useState('');
+
   const [sections, setSections] = useState<WebsiteSection[]>([]);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<'desktop' | 'mobile'>('desktop');
+  const [showEntry, setShowEntry] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragId = useRef<string | null>(null);
+
+  // Editable site-level fields
+  const [businessName, setBusinessName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [accentColor, setAccentColor] = useState('#2563eb');
+  const [storefrontUrl, setStorefrontUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [tagline, setTagline] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
 
   useEffect(() => {
     const configured = process.env.NEXT_PUBLIC_SITE_URL;
@@ -366,18 +114,31 @@ export default function WebsiteBuilderPage() {
     setPublicBase((configured || origin).replace(/\/+$/, ''));
   }, []);
 
+  const syncFrom = (s: WebsiteSite) => {
+    setSite(s);
+    setBusinessName(s.businessName || '');
+    setSlug(s.slug || '');
+    setAccentColor(s.accentColor || '#2563eb');
+    setStorefrontUrl(s.storefrontUrl || '');
+    setLogoUrl(s.logoUrl || null);
+    setTagline(s.tagline || '');
+    setWhatsapp(s.whatsapp || '');
+    setInstagram(s.instagram || '');
+    setPhone(s.phone || '');
+    setEmail(s.email || '');
+    setAddress(s.address || '');
+    const secs = Array.isArray(s.sections) ? s.sections : [];
+    setSections(secs);
+    setShowEntry(secs.length === 0);
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
     try {
       const res = await api.get<{ success: boolean; data: WebsiteSite }>('/website');
-      if (res.success && res.data) {
-        setSite(res.data);
-        setForm(toForm(res.data));
-        setSections(Array.isArray(res.data.sections) ? res.data.sections : []);
-      } else {
-        setLoadError(true);
-      }
+      if (res.success && res.data) syncFrom(res.data);
+      else setLoadError(true);
     } catch {
       setLoadError(true);
     } finally {
@@ -385,75 +146,76 @@ export default function WebsiteBuilderPage() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  const setField = <K extends keyof SiteForm>(key: K, value: SiteForm[K]) =>
-    setForm((f) => ({ ...f, [key]: value }));
+  const siteCtx: SiteContext = { businessName: businessName || 'My Business', whatsapp, instagram, phone, email, address };
 
-  // ── Section editor helpers ──
-  const updateSection = (id: string, patch: Partial<WebsiteSection>) =>
+  // ── section ops ──
+  const updateSection = (id: string, patch: any) =>
     setSections((list) => list.map((s) => (s.id === id ? ({ ...s, ...patch } as WebsiteSection) : s)));
-  const removeSection = (id: string) => setSections((list) => list.filter((s) => s.id !== id));
-  const addSection = (type: SectionType) => setSections((list) => [...list, newSection(type)]);
-  const moveSection = (id: string, dir: -1 | 1) =>
-    setSections((list) => {
-      const i = list.findIndex((s) => s.id === id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= list.length) return list;
-      const next = [...list];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
+  const removeSection = (id: string) => { setSections((l) => l.filter((s) => s.id !== id)); if (selectedId === id) setSelectedId(null); };
+  const duplicateSection = (id: string) =>
+    setSections((l) => {
+      const i = l.findIndex((s) => s.id === id);
+      if (i < 0) return l;
+      const copy = { ...l[i], id: `sec_${l[i].type}_${Math.random().toString(36).slice(2, 9)}` } as WebsiteSection;
+      return [...l.slice(0, i + 1), copy, ...l.slice(i + 1)];
     });
+  const moveSection = (id: string, dir: -1 | 1) =>
+    setSections((l) => { const i = l.findIndex((s) => s.id === id); const j = i + dir; if (i < 0 || j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j], n[i]]; return n; });
+  const addSection = (type: SectionType, at?: number) =>
+    setSections((l) => { const s = newSection(type); if (at === undefined || at >= l.length) return [...l, s]; return [...l.slice(0, at), s, ...l.slice(at)]; });
 
-  // Image uploads persist immediately (they return a URL to save with the rest).
-  const saveImage = async (field: 'logoUrl' | 'heroImageUrl', url: string) => {
-    try {
-      const res = await api.put<{ success: boolean; data: WebsiteSite }>('/website', { [field]: url });
-      if (res.success && res.data) setSite(res.data);
-    } catch {
-      setToast({ message: t('website.imageSaveFailed', 'Uploaded, but could not save it'), type: 'error' });
+  // ── native DnD ──
+  const onDrop = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOver(null);
+    let data: any = null;
+    try { data = JSON.parse(e.dataTransfer.getData('application/json')); } catch { return; }
+    if (data?.kind === 'new' && data.type) { addSection(data.type, index); return; }
+    if (data?.kind === 'move' && data.id) {
+      setSections((l) => {
+        const from = l.findIndex((s) => s.id === data.id);
+        if (from < 0) return l;
+        const without = l.filter((s) => s.id !== data.id);
+        const to = index > from ? index - 1 : index;
+        return [...without.slice(0, to), l[from], ...without.slice(to)];
+      });
     }
+    dragId.current = null;
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const applyTemplate = (tplId: string) => {
+    const tpl = WEBSITE_TEMPLATES.find((x) => x.id === tplId);
+    if (!tpl) return;
+    setSections(tpl.sections());
+    setAccentColor(tpl.accentColor);
+    setShowEntry(false);
+    setShowGallery(false);
+  };
+
+  const handleSave = async () => {
     setSaving(true);
     try {
       const payload = {
-        businessName: form.businessName.trim(),
-        slug: form.slug.trim(),
-        tagline: form.tagline.trim() || null,
-        heroHeadline: form.heroHeadline.trim() || null,
-        heroSubtext: form.heroSubtext.trim() || null,
-        about: form.about.trim() || null,
-        templateKey: form.templateKey,
-        accentColor: form.accentColor.trim() || null,
-        storefrontUrl: form.storefrontUrl.trim() || null,
-        whatsapp: form.whatsapp.trim() || null,
-        instagram: form.instagram.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
-        address: form.address.trim() || null,
+        businessName: businessName.trim() || 'My Business',
+        slug: slug.trim(),
+        tagline: tagline.trim() || null,
+        accentColor: accentColor.trim() || null,
+        storefrontUrl: storefrontUrl.trim() || null,
+        logoUrl: logoUrl || null,
+        whatsapp: whatsapp.trim() || null,
+        instagram: instagram.trim() || null,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        address: address.trim() || null,
         sections,
       };
       const res = await api.put<{ success: boolean; data: WebsiteSite }>('/website', payload);
-      if (res.success && res.data) {
-        setSite(res.data);
-        setForm(toForm(res.data));
-        setSections(Array.isArray(res.data.sections) ? res.data.sections : []);
-        setToast({ message: t('website.saved', 'Website saved'), type: 'success' });
-      }
+      if (res.success && res.data) { syncFrom(res.data); setToast({ message: 'Saved', type: 'success' }); }
     } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setToast({
-        message: typeof msg === 'string' ? msg : t('website.saveFailed', 'Could not save your website'),
-        type: 'error',
-      });
-    } finally {
-      setSaving(false);
-    }
+      setToast({ message: err?.response?.data?.message || 'Could not save', type: 'error' });
+    } finally { setSaving(false); }
   };
 
   const handlePublishToggle = async () => {
@@ -461,266 +223,254 @@ export default function WebsiteBuilderPage() {
     const next = !site.isPublished;
     setPublishing(true);
     try {
-      const res = await api.post<{ success: boolean; data: WebsiteSite }>(
-        next ? '/website/publish' : '/website/unpublish',
-      );
-      if (res.success && res.data) {
-        setSite(res.data);
-        setForm(toForm(res.data));
-        setToast({
-          message: next ? t('website.published', 'Your website is live') : t('website.unpublished', 'Your website is offline'),
-          type: 'success',
-        });
-      }
+      const res = await api.post<{ success: boolean; data: WebsiteSite }>(next ? '/website/publish' : '/website/unpublish');
+      if (res.success && res.data) { syncFrom(res.data); setToast({ message: next ? 'Your website is live' : 'Website taken offline', type: 'success' }); }
     } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setToast({
-        message: typeof msg === 'string' ? msg : t('website.publishFailed', 'Could not update publish status'),
-        type: 'error',
-      });
-    } finally {
-      setPublishing(false);
-    }
+      setToast({ message: err?.response?.data?.message || 'Could not update publish status', type: 'error' });
+    } finally { setPublishing(false); }
   };
 
   const publicLink = site?.slug ? `${publicBase}/site/${site.slug}` : '';
   const published = !!site?.isPublished;
+  const selected = sections.find((s) => s.id === selectedId) || null;
 
-  const copyLink = async () => {
-    if (!publicLink) return;
-    try {
-      await navigator.clipboard.writeText(publicLink);
-      setToast({ message: t('website.linkCopied', 'Link copied'), type: 'success' });
-    } catch {
-      setToast({ message: t('website.copyFailed', 'Could not copy the link'), type: 'error' });
-    }
-  };
+  if (loading) {
+    return <div className="flex items-center justify-center py-24"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-600" /></div>;
+  }
+  if (loadError || !site) {
+    return (
+      <div className="p-6">
+        <EmptyState icon="bx-globe" title="Set up your website" description="We couldn't load your website. Refresh to try again." actions={<Button variant="primary" onClick={load}>Try again</Button>} />
+      </div>
+    );
+  }
+
+  /* ── Entry screen ── */
+  if (showEntry || showGallery) {
+    return (
+      <div className="mx-auto max-w-4xl px-5 py-10">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Build your website</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start from a template, or build your own with drag-and-drop.</p>
+
+        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Start from a template</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {WEBSITE_TEMPLATES.map((tpl) => (
+            <button key={tpl.id} onClick={() => applyTemplate(tpl.id)} className="group overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800">
+              <div className="flex h-28 flex-col justify-end gap-1 p-3" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}22, ${tpl.accentColor}05)` }}>
+                {tpl.outline.map((b, i) => (
+                  <div key={i} className="h-2.5 rounded" style={{ width: `${60 + ((i * 13) % 40)}%`, background: `${tpl.accentColor}${i === 0 ? '' : '66'}` }} />
+                ))}
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or</h2>
+        <button onClick={() => { setSections([]); setShowEntry(false); setShowGallery(false); }} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-5 text-left transition hover:border-brand-500 dark:border-gray-700">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-gradient text-white"><i className="bx bx-plus text-2xl" /></span>
+          <span>
+            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Build your own</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">Start blank and drag blocks onto the page</span>
+          </span>
+        </button>
+
+        {showGallery && sections.length > 0 && (
+          <div className="mt-6"><Button variant="secondary" onClick={() => setShowGallery(false)}>← Back to editor</Button></div>
+        )}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </div>
+    );
+  }
+
+  /* ── Editor ── */
+  const canvasWidth = view === 'mobile' ? 'max-w-[420px]' : 'max-w-4xl';
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('website.title', 'Website')}
-        subtitle={t('website.subtitle', 'A simple website for your business')}
-        actions={
-          site && (
-            <PermissionGuard permission="website.publish">
-              <Button variant={published ? 'secondary' : 'primary'} loading={publishing} onClick={handlePublishToggle}>
-                <i className={`bx ${published ? 'bx-cloud-download' : 'bx-cloud-upload'}`} aria-hidden="true" />
-                {published ? t('website.unpublish', 'Unpublish') : t('website.publish', 'Publish')}
-              </Button>
-            </PermissionGuard>
-          )
-        }
-      />
-
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+    <div className="flex h-[calc(100dvh_-_3.5rem)] flex-col">
+      {/* Top bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-40 rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-gray-900 hover:border-gray-300 focus:border-brand-500 focus:outline-none dark:text-gray-100" placeholder="Business name" />
+          <button onClick={() => setShowGallery(true)} className="rounded-lg px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><i className="bx bx-layout" /> Templates</button>
         </div>
-      ) : loadError || !site ? (
-        <EmptyState
-          icon="bx-globe"
-          title={t('website.setupTitle', 'Set up your website')}
-          description={t(
-            'website.setupDescription',
-            "We couldn't load your website just yet. Refresh to try again — it's created automatically the first time it loads.",
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+            <button onClick={() => setView('desktop')} className={`rounded px-2 py-1 text-xs ${view === 'desktop' ? 'bg-white shadow-sm dark:bg-gray-700' : 'text-gray-500'}`} aria-label="Desktop"><i className="bx bx-desktop" /></button>
+            <button onClick={() => setView('mobile')} className={`rounded px-2 py-1 text-xs ${view === 'mobile' ? 'bg-white shadow-sm dark:bg-gray-700' : 'text-gray-500'}`} aria-label="Mobile"><i className="bx bx-mobile" /></button>
+          </div>
+          {published && publicLink && (
+            <a href={publicLink} target="_blank" rel="noopener noreferrer" className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400"><i className="bx bx-link-external" /> Preview</a>
           )}
-          actions={
-            <Button variant="primary" onClick={load}>
-              <i className="bx bx-refresh" aria-hidden="true" /> {t('website.retry', 'Try again')}
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <Card>
-            <div className="flex items-center gap-3">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  published
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                }`}
+          <PermissionGuard permission="website.manage"><Button size="sm" variant="secondary" loading={saving} onClick={handleSave}>Save</Button></PermissionGuard>
+          <PermissionGuard permission="website.publish"><Button size="sm" variant={published ? 'secondary' : 'primary'} loading={publishing} onClick={handlePublishToggle}>{published ? 'Unpublish' : 'Publish'}</Button></PermissionGuard>
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        {/* Palette */}
+        <aside className="hidden w-44 shrink-0 overflow-y-auto border-r border-gray-200 p-3 dark:border-gray-800 md:block">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Blocks</p>
+          <div className="space-y-1.5">
+            {SECTION_TYPES.map((st) => (
+              <div
+                key={st.type}
+                draggable
+                onDragStart={(e) => { e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'new', type: st.type })); e.dataTransfer.effectAllowed = 'copy'; }}
+                onClick={() => addSection(st.type)}
+                className="flex cursor-grab items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:border-brand-400 hover:bg-brand-50 active:cursor-grabbing dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${published ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                {published ? t('website.statusLive', 'Published') : t('website.statusDraft', 'Draft')}
-              </span>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {published
-                  ? t('website.liveHint', 'Your website is live.')
-                  : t('website.draftHint', 'Publish to put your website online.')}
-              </p>
-            </div>
+                <i className={`bx ${st.icon} text-base`} /> {st.label}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-4 text-gray-400">Drag onto the page, or click to add.</p>
+        </aside>
 
-            {published && publicLink && (
-              <div className="mt-4 flex flex-col gap-2 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/60 sm:flex-row sm:items-center">
-                <code className="min-w-0 flex-1 truncate text-[13px] text-gray-700 dark:text-gray-300">{publicLink}</code>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={copyLink}>
-                    <i className="bx bx-copy" aria-hidden="true" /> {t('website.copyLink', 'Copy')}
-                  </Button>
-                  <a
-                    href={publicLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
+        {/* Canvas */}
+        <main className="min-w-0 flex-1 overflow-y-auto bg-gray-100 p-4 dark:bg-gray-950">
+          <div className={`mx-auto ${canvasWidth} overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200`} onClick={() => setSelectedId(null)}>
+            {sections.length === 0 ? (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(0); }}
+                onDrop={(e) => onDrop(e, 0)}
+                className={`m-6 flex h-48 items-center justify-center rounded-xl border-2 border-dashed text-sm text-gray-400 ${dragOver === 0 ? 'border-brand-500 bg-brand-50' : 'border-gray-300'}`}
+              >
+                Drag a block here to start, or pick one from the left.
+              </div>
+            ) : (
+              sections.map((s, i) => (
+                <Fragment key={s.id}>
+                  <div onDragOver={(e) => { e.preventDefault(); setDragOver(i); }} onDrop={(e) => onDrop(e, i)} className={`h-1 ${dragOver === i ? 'bg-brand-500' : ''}`} />
+                  <div
+                    draggable
+                    onDragStart={(e) => { dragId.current = s.id; e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'move', id: s.id })); e.dataTransfer.effectAllowed = 'move'; }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); }}
+                    className={`group relative ${selectedId === s.id ? 'ring-2 ring-brand-500 ring-inset' : ''} ${s.enabled ? '' : 'opacity-40'}`}
                   >
-                    <i className="bx bx-link-external" aria-hidden="true" /> {t('website.visit', 'Visit')}
-                  </a>
-                </div>
-              </div>
+                    {/* toolbar */}
+                    <div className="absolute right-2 top-2 z-10 hidden items-center gap-0.5 rounded-lg bg-gray-900/85 px-1 py-0.5 text-white group-hover:flex">
+                      <span className="cursor-grab px-1"><i className="bx bx-move" /></span>
+                      <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, -1); }} disabled={i === 0} className="px-1 disabled:opacity-30" aria-label="Up"><i className="bx bx-chevron-up" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, 1); }} disabled={i === sections.length - 1} className="px-1 disabled:opacity-30" aria-label="Down"><i className="bx bx-chevron-down" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); duplicateSection(s.id); }} className="px-1" aria-label="Duplicate"><i className="bx bx-copy" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); removeSection(s.id); }} className="px-1 hover:text-red-400" aria-label="Delete"><i className="bx bx-trash" /></button>
+                    </div>
+                    <div className="pointer-events-none select-none">
+                      <SiteBlock section={s} accent={accentColor} site={siteCtx} />
+                    </div>
+                  </div>
+                </Fragment>
+              ))
             )}
-          </Card>
+            {sections.length > 0 && (
+              <div onDragOver={(e) => { e.preventDefault(); setDragOver(sections.length); }} onDrop={(e) => onDrop(e, sections.length)} className={`h-6 ${dragOver === sections.length ? 'bg-brand-500/20' : ''}`} />
+            )}
+          </div>
+        </main>
 
-          <form onSubmit={handleSave} className="space-y-6">
-            {/* Brand + hero */}
-            <Card title={t('website.brand', 'Brand & hero')} subtitle={t('website.brandHint', 'The first thing visitors see')}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <ImageField label={t('website.logo', 'Logo')} value={site.logoUrl} aspect="square" onUploaded={(url) => saveImage('logoUrl', url)} />
-                  <ImageField label={t('website.heroImage', 'Hero image')} value={site.heroImageUrl} aspect="wide" onUploaded={(url) => saveImage('heroImageUrl', url)} />
-                </div>
-                <div>
-                  <label htmlFor="businessName" className={labelClass}>{t('website.businessName', 'Business name')}</label>
-                  <input id="businessName" className={inputClass} value={form.businessName} onChange={(e) => setField('businessName', e.target.value)} placeholder="My Business" />
-                </div>
-                <div>
-                  <label htmlFor="tagline" className={labelClass}>{t('website.tagline', 'Tagline')}</label>
-                  <input id="tagline" className={inputClass} value={form.tagline} onChange={(e) => setField('tagline', e.target.value)} placeholder={t('website.taglinePlaceholder', 'A short line about what you do')} />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="heroHeadline" className={labelClass}>{t('website.heroHeadline', 'Hero headline')}</label>
-                    <input id="heroHeadline" className={inputClass} value={form.heroHeadline} onChange={(e) => setField('heroHeadline', e.target.value)} placeholder={t('website.heroHeadlinePlaceholder', 'Welcome to …')} />
-                  </div>
-                  <div>
-                    <label htmlFor="heroSubtext" className={labelClass}>{t('website.heroSubtext', 'Hero subtext')}</label>
-                    <input id="heroSubtext" className={inputClass} value={form.heroSubtext} onChange={(e) => setField('heroSubtext', e.target.value)} placeholder={t('website.heroSubtextPlaceholder', 'One sentence that invites them in')} />
-                  </div>
-                </div>
+        {/* Properties */}
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-l border-gray-200 p-4 dark:border-gray-800 lg:block">
+          {selected ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{sectionLabel(selected.type)}</p>
+                <label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={selected.enabled} onChange={(e) => updateSection(selected.id, { enabled: e.target.checked })} className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600" /> Visible</label>
               </div>
-            </Card>
-
-            {/* Link to store */}
-            <Card title={t('website.store', 'Link to your store')} subtitle={t('website.storeHint', 'The "Shop now" button on your site points here')}>
-              <div>
-                <label htmlFor="storefrontUrl" className={labelClass}>{t('website.storefrontUrl', 'Storefront link')}</label>
-                <input id="storefrontUrl" className={inputClass} value={form.storefrontUrl} onChange={(e) => setField('storefrontUrl', e.target.value)} placeholder={`${publicBase}/s/your-store`} />
-                <p className="mt-1 text-xs text-gray-400">{t('website.storefrontUrlHint', 'Paste your Storefront link so visitors can shop. Leave blank to hide the button.')}</p>
-              </div>
-            </Card>
-
-            {/* About + look */}
-            <Card title={t('website.about', 'About')} subtitle={t('website.aboutHint', 'Tell your story')}>
-              <div className="space-y-4">
-                <textarea
-                  rows={4}
-                  className={`${inputClass} h-auto py-2`}
-                  value={form.about}
-                  onChange={(e) => setField('about', e.target.value)}
-                  placeholder={t('website.aboutPlaceholder', 'Who you are, what you sell, why customers trust you')}
-                />
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="templateKey" className={labelClass}>{t('website.template', 'Theme')}</label>
-                    <select id="templateKey" className={inputClass} value={form.templateKey} onChange={(e) => setField('templateKey', e.target.value)}>
-                      {TEMPLATE_KEYS.map((k) => (
-                        <option key={k} value={k}>{t(`website.template.${k}`, k.charAt(0).toUpperCase() + k.slice(1))}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="accentColor" className={labelClass}>{t('website.accentColor', 'Accent color')}</label>
-                    <input id="accentColor" className={inputClass} value={form.accentColor} onChange={(e) => setField('accentColor', e.target.value)} placeholder="#2563eb" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Contact + address + link */}
-            <Card title={t('website.contact', 'Contact')} subtitle={t('website.contactHint', 'How visitors reach you')}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="slug" className={labelClass}>{t('website.slug', 'Website link')}</label>
-                  <div className="flex items-center gap-2">
-                    <span className="shrink-0 text-[13px] text-gray-400">{publicBase}/site/</span>
-                    <input id="slug" className={inputClass} value={form.slug} onChange={(e) => setField('slug', e.target.value)} placeholder="my-business" />
-                  </div>
-                  <p className="mt-1 text-xs text-gray-400">{t('website.slugHint', 'Lowercase letters, numbers and hyphens only.')}</p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="whatsapp" className={labelClass}>{t('website.whatsapp', 'WhatsApp')}</label>
-                    <input id="whatsapp" className={inputClass} value={form.whatsapp} onChange={(e) => setField('whatsapp', e.target.value)} placeholder="+234…" />
-                  </div>
-                  <div>
-                    <label htmlFor="instagram" className={labelClass}>{t('website.instagram', 'Instagram')}</label>
-                    <input id="instagram" className={inputClass} value={form.instagram} onChange={(e) => setField('instagram', e.target.value)} placeholder="@yourbusiness" />
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className={labelClass}>{t('website.phone', 'Phone')}</label>
-                    <input id="phone" className={inputClass} value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="+234…" />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className={labelClass}>{t('website.email', 'Email')}</label>
-                    <input id="email" type="email" className={inputClass} value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="hello@business.com" />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="address" className={labelClass}>{t('website.address', 'Address')}</label>
-                  <input id="address" className={inputClass} value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder={t('website.addressPlaceholder', 'Street, city')} />
-                </div>
-              </div>
-            </Card>
-
-            {/* Page sections (blocks) */}
-            <Card title={t('website.sections', 'Page sections')} subtitle={t('website.sectionsHint', 'The blocks that make up your page, top to bottom')}>
-              {sections.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-300 py-8 text-center dark:border-gray-700">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('website.noSections', 'No blocks yet.')}</p>
-                  <div className="mt-3 flex flex-col items-center gap-3">
-                    <Button type="button" variant="secondary" size="sm" onClick={() => setSections(starterSections())}>
-                      <i className="bx bx-magic-wand" aria-hidden="true" /> {t('website.useStarter', 'Use starter layout')}
-                    </Button>
-                    <AddSectionMenu onAdd={addSection} />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {sections.map((s, i) => (
-                    <SectionEditor
-                      key={s.id}
-                      section={s}
-                      index={i}
-                      total={sections.length}
-                      onChange={updateSection}
-                      onMove={moveSection}
-                      onRemove={removeSection}
-                    />
-                  ))}
-                  <div className="pt-1">
-                    <AddSectionMenu onAdd={addSection} />
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            <div className="flex justify-end">
-              <PermissionGuard permission="website.manage">
-                <Button type="submit" variant="primary" loading={saving}>
-                  {t('website.save', 'Save changes')}
-                </Button>
-              </PermissionGuard>
+              <SectionFields section={selected} update={(patch) => updateSection(selected.id, patch)} />
             </div>
-          </form>
-        </>
-      )}
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Page settings</p>
+              <ImageUpload label="Logo" value={logoUrl} onChange={setLogoUrl} />
+              <div><span className={labelClass}>Tagline</span><input className={inputClass} value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="What you do, in a line" /></div>
+              <div><span className={labelClass}>Theme accent</span><input className={inputClass} value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#2563eb" /></div>
+              <div><span className={labelClass}>Store link (Shop now)</span><input className={inputClass} value={storefrontUrl} onChange={(e) => setStorefrontUrl(e.target.value)} placeholder={`${publicBase}/s/your-store`} /></div>
+              <div><span className={labelClass}>Website link</span><div className="flex items-center gap-1"><span className="text-[11px] text-gray-400">{publicBase}/site/</span><input className={inputClass} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="my-business" /></div></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className={labelClass}>WhatsApp</span><input className={inputClass} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+234…" /></div>
+                <div><span className={labelClass}>Instagram</span><input className={inputClass} value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@you" /></div>
+                <div><span className={labelClass}>Phone</span><input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234…" /></div>
+                <div><span className={labelClass}>Email</span><input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hello@…" /></div>
+              </div>
+              <div><span className={labelClass}>Address</span><input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, city" /></div>
+              <p className="pt-1 text-[11px] text-gray-400">Click a block on the page to edit it.</p>
+            </div>
+          )}
+        </aside>
+      </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
+}
+
+/* ── per-type field editors for the properties panel ── */
+function SectionFields({ section, update }: { section: WebsiteSection; update: (patch: any) => void }) {
+  if (section.type === 'hero') {
+    return (
+      <>
+        <div><span className={labelClass}>Headline</span><input className={inputClass} value={section.headline} onChange={(e) => update({ headline: e.target.value })} /></div>
+        <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><span className={labelClass}>Button label</span><input className={inputClass} value={section.ctaLabel} onChange={(e) => update({ ctaLabel: e.target.value })} /></div>
+          <div><span className={labelClass}>Button link</span><input className={inputClass} value={section.ctaHref} onChange={(e) => update({ ctaHref: e.target.value })} /></div>
+        </div>
+        <ImageUpload label="Background image" value={section.imageUrl} onChange={(url) => update({ imageUrl: url })} />
+      </>
+    );
+  }
+  if (section.type === 'text') {
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div><span className={labelClass}>Body</span><textarea rows={4} className={`${inputClass} h-auto py-2`} value={section.body} onChange={(e) => update({ body: e.target.value })} /></div>
+        <ImageUpload label="Image (optional)" value={section.imageUrl} onChange={(url) => update({ imageUrl: url })} />
+      </>
+    );
+  }
+  if (section.type === 'gallery') {
+    const images = section.images || [];
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div className="flex flex-wrap gap-1.5">
+          {images.map((src, i) => (
+            <div key={i} className="relative h-12 w-12 overflow-hidden rounded ring-1 ring-gray-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={resolveImageUrl(src)} alt="" className="h-full w-full object-cover" />
+              <button type="button" onClick={() => update({ images: images.filter((_, k) => k !== i) })} className="absolute right-0 top-0 rounded bg-black/50 px-0.5 text-white" aria-label="Remove"><i className="bx bx-x text-xs" /></button>
+            </div>
+          ))}
+        </div>
+        <ImageUpload label="Add image" value={null} onChange={(url) => { if (url) update({ images: [...images, url] }); }} />
+      </>
+    );
+  }
+  if (section.type === 'cta') {
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><span className={labelClass}>Button label</span><input className={inputClass} value={section.buttonLabel} onChange={(e) => update({ buttonLabel: e.target.value })} /></div>
+          <div><span className={labelClass}>Button link</span><input className={inputClass} value={section.buttonHref} onChange={(e) => update({ buttonHref: e.target.value })} /></div>
+        </div>
+      </>
+    );
+  }
+  if (section.type === 'contact') {
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <p className="text-[11px] text-gray-400">Shows your contact details from Page settings.</p>
+      </>
+    );
+  }
+  return null;
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
