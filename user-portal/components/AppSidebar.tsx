@@ -143,7 +143,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
             label: tr('configuration', 'Configuration'),
             icon: 'cog',
             permission: 'branches.view',
-            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'],
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers'],
           },
         ],
       },
@@ -188,7 +188,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
             label: tr('configuration', 'Configuration'),
             icon: 'cog',
             permission: 'branches.view',
-            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'],
+            also: ['/settings/categories', '/settings/uoms', '/settings/allocation-method', '/rms/suppliers'],
           },
         ],
       },
@@ -354,17 +354,6 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         ],
       },
       {
-        // Team invite + access control — reuses the existing settings pages,
-        // surfaced here so it's reachable from Restaurant/Inventory Configuration.
-        label: tr('nav.teamAccess', 'Team & access'),
-        items: [
-          { href: '/settings/invitations', label: tr('nav.inviteTeam', 'Invite team'), icon: 'envelope', permission: 'invitations.view' },
-          { href: '/settings/users', label: tr('users', 'Users'), icon: 'user', permission: 'users.view' },
-          { href: '/settings/roles', label: tr('roles', 'Roles'), icon: 'shield', permission: 'roles.view' },
-          { href: '/settings/permissions', label: tr('permissions', 'Permissions'), icon: 'lock', permission: 'roles.view' },
-        ],
-      },
-      {
         label: tr('nav.purchasing', 'Purchasing'),
         items: [
           { href: '/rms/suppliers', label: tr('suppliers', 'Suppliers'), icon: 'truck', permission: 'suppliers.view' },
@@ -489,7 +478,10 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       // Shared-config subpaths live in the dedicated Setup workspace (its own
       // left rail), not Settings or a module app — so it's reachable from both
       // Inventory and Restaurant without cross-jumping into either.
-      const setupPaths = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method', '/settings/market', '/rms/suppliers', '/settings/invitations', '/settings/users', '/settings/roles', '/settings/permissions'];
+      // Team & access (users/roles/permissions/invitations) is org-wide — it lives
+      // in the Settings app, NOT here. The Configuration workspace owns only
+      // stock/operations config, so clicking Roles never bounces you into it.
+      const setupPaths = ['/settings/branches', '/settings/categories', '/settings/uoms', '/settings/allocation-method', '/settings/market', '/rms/suppliers'];
       if (setupPaths.some((p) => path.startsWith(p))) return apps.find((a) => a.id === 'setup')!;
 
       if (
