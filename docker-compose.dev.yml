@@ -51,6 +51,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000,http://localhost:4002}
+      # Promotes the matching landlord user to super-admin on boot (see SuperAdminSeeder).
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
       # Optional integrations — passed through when set in your .env, else blank.
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

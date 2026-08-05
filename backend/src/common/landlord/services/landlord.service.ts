@@ -287,7 +287,13 @@ export class LandlordService {
     if (!email) {
       return 'not-found';
     }
-    const user = await this.landlordUserRepository.findOne({ where: { email } });
+    // Match case-insensitively + trimmed: SUPER_ADMIN_EMAIL casing must not have
+    // to exactly equal the case the user typed at signup (emails are stored
+    // verbatim, so 'Godwin@x.com' would otherwise never match 'godwin@x.com').
+    const user = await this.landlordUserRepository
+      .createQueryBuilder('u')
+      .where('LOWER(u.email) = LOWER(:email)', { email: email.trim() })
+      .getOne();
     if (!user) {
       return 'not-found';
     }
