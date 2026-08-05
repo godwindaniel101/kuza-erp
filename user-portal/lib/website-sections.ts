@@ -5,12 +5,21 @@
  * All fields are plain strings/arrays so the whole thing round-trips through jsonb.
  */
 
-export type SectionType = 'hero' | 'text' | 'products' | 'gallery' | 'cta' | 'contact';
+export type SectionType = 'hero' | 'text' | 'features' | 'products' | 'gallery' | 'cta' | 'contact';
+
+/**
+ * Background treatment a block paints for itself. Lets a template mix light,
+ * warm (cream), dark (near-black) and tint (soft accent wash) sections so the
+ * page reads as designed rather than uniformly white. Absent ⇒ 'light'.
+ */
+export type Surface = 'light' | 'warm' | 'dark' | 'tint';
 
 interface BaseSection {
   id: string;
   type: SectionType;
   enabled: boolean;
+  /** Section background treatment. Backward compatible: absent ⇒ 'light'. */
+  bg?: Surface;
 }
 
 /** Visual treatment for the hero block. Optional — defaults to 'fullbleed'. */
@@ -25,6 +34,8 @@ export interface HeroSection extends BaseSection {
   ctaHref: string;
   /** Layout style. Backward compatible: absent ⇒ 'fullbleed' (today's behaviour). */
   variant?: HeroVariant;
+  /** Small label above the headline (e.g. "New collection"). Optional. */
+  eyebrow?: string;
 }
 export interface TextSection extends BaseSection {
   type: 'text';
@@ -55,9 +66,25 @@ export interface ProductsSection extends BaseSection {
   limit: number;
 }
 
+/** One row/card in a features block. `icon` is a Boxicons class (e.g. 'bx-bolt'). */
+export interface FeatureItem {
+  title: string;
+  body: string;
+  icon?: string;
+}
+export interface FeaturesSection extends BaseSection {
+  type: 'features';
+  heading: string;
+  subtext: string;
+  /** numbered (01/02/03 rows), icons (icon grid), or cards. Absent ⇒ 'cards'. */
+  layout?: 'numbered' | 'icons' | 'cards';
+  items: FeatureItem[];
+}
+
 export type WebsiteSection =
   | HeroSection
   | TextSection
+  | FeaturesSection
   | ProductsSection
   | GallerySection
   | CtaSection
@@ -66,6 +93,7 @@ export type WebsiteSection =
 export const SECTION_TYPES: { type: SectionType; label: string; icon: string }[] = [
   { type: 'hero', label: 'Hero', icon: 'bx-images' },
   { type: 'text', label: 'Text & image', icon: 'bx-text' },
+  { type: 'features', label: 'Features', icon: 'bx-list-check' },
   { type: 'products', label: 'Products', icon: 'bx-shopping-bag' },
   { type: 'gallery', label: 'Gallery', icon: 'bx-grid-alt' },
   { type: 'cta', label: 'Call to action', icon: 'bx-pointer' },
@@ -86,6 +114,15 @@ export function newSection(type: SectionType): WebsiteSection {
       return { ...base, type, headline: '', subtext: '', imageUrl: null, ctaLabel: 'Shop now', ctaHref: '' };
     case 'text':
       return { ...base, type, heading: '', body: '', imageUrl: null };
+    case 'features':
+      return {
+        ...base, type, heading: 'Why choose us', subtext: '', layout: 'cards',
+        items: [
+          { title: 'Fast delivery', body: 'Orders out the door the same day.', icon: 'bx-package' },
+          { title: 'Fair prices', body: 'Honest pricing, no surprises.', icon: 'bx-purchase-tag' },
+          { title: 'Real support', body: 'Talk to a human when you need one.', icon: 'bx-support' },
+        ],
+      };
     case 'products':
       return { ...base, type, heading: 'Featured products', limit: 6 };
     case 'gallery':

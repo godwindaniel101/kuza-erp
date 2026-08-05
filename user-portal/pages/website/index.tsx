@@ -268,7 +268,15 @@ export default function WebsiteBuilderPage() {
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Build your website</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start from a template, or build your own with drag-and-drop.</p>
 
-        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Start from a template</h2>
+        <button onClick={() => { setSections([]); setShowEntry(false); setShowGallery(false); }} className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-5 text-left transition hover:border-brand-500 dark:border-gray-700">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-gradient text-white"><i className="bx bx-plus text-2xl" /></span>
+          <span>
+            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Build your own</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">Start blank and drag blocks onto the page</span>
+          </span>
+        </button>
+
+        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or start from a template</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {WEBSITE_TEMPLATES.map((tpl) => {
             const img = tpl.preview || templateHeroImage(tpl);
@@ -316,15 +324,6 @@ export default function WebsiteBuilderPage() {
             );
           })}
         </div>
-
-        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or</h2>
-        <button onClick={() => { setSections([]); setShowEntry(false); setShowGallery(false); }} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-5 text-left transition hover:border-brand-500 dark:border-gray-700">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-gradient text-white"><i className="bx bx-plus text-2xl" /></span>
-          <span>
-            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Build your own</span>
-            <span className="block text-xs text-gray-500 dark:text-gray-400">Start blank and drag blocks onto the page</span>
-          </span>
-        </button>
 
         {showGallery && sections.length > 0 && (
           <div className="mt-6"><Button variant="secondary" onClick={() => setShowGallery(false)}>← Back to editor</Button></div>
@@ -468,6 +467,21 @@ export default function WebsiteBuilderPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{sectionLabel(selected.type)}</p>
                 <label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={selected.enabled} onChange={(e) => updateSection(selected.id, { enabled: e.target.checked })} className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600" /> Visible</label>
               </div>
+              <div>
+                <span className={labelClass}>Background</span>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['light', 'warm', 'dark', 'tint'] as const).map((bg) => (
+                    <button
+                      key={bg}
+                      type="button"
+                      onClick={() => updateSection(selected.id, { bg })}
+                      className={`rounded-lg py-1.5 text-[11px] font-medium capitalize ring-1 transition ${((selected.bg || 'light') === bg) ? 'ring-brand-500 text-brand-600 dark:text-brand-400' : 'ring-gray-200 text-gray-500 hover:ring-gray-300 dark:ring-gray-700'}`}
+                    >
+                      {bg}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <SectionFields section={selected} update={(patch) => updateSection(selected.id, patch)} />
             </div>
           ) : (
@@ -501,6 +515,7 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
   if (section.type === 'hero') {
     return (
       <>
+        <div><span className={labelClass}>Eyebrow (small label)</span><input className={inputClass} value={section.eyebrow || ''} onChange={(e) => update({ eyebrow: e.target.value })} placeholder="New collection" /></div>
         <div><span className={labelClass}>Headline</span><input className={inputClass} value={section.headline} onChange={(e) => update({ headline: e.target.value })} /></div>
         <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
@@ -517,6 +532,39 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
         <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
         <div><span className={labelClass}>Body</span><textarea rows={4} className={`${inputClass} h-auto py-2`} value={section.body} onChange={(e) => update({ body: e.target.value })} /></div>
         <ImageUpload label="Image (optional)" value={section.imageUrl} onChange={(url) => update({ imageUrl: url })} />
+      </>
+    );
+  }
+  if (section.type === 'features') {
+    const items = section.items || [];
+    const patchItem = (i: number, p: Partial<{ title: string; body: string; icon: string }>) =>
+      update({ items: items.map((it, k) => (k === i ? { ...it, ...p } : it)) });
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.layout || 'cards'} onChange={(e) => update({ layout: e.target.value })}>
+            <option value="cards">Cards</option>
+            <option value="numbered">Numbered rows</option>
+            <option value="icons">Icon grid</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          {items.map((it, i) => (
+            <div key={i} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-gray-400">Item {i + 1}</span>
+                <button type="button" onClick={() => update({ items: items.filter((_, k) => k !== i) })} className="text-[11px] text-red-500 hover:underline">Remove</button>
+              </div>
+              <input className={`${inputClass} mb-1`} placeholder="Title" value={it.title} onChange={(e) => patchItem(i, { title: e.target.value })} />
+              <input className={`${inputClass} mb-1`} placeholder="Body" value={it.body} onChange={(e) => patchItem(i, { body: e.target.value })} />
+              <input className={inputClass} placeholder="Icon (e.g. bx-bolt)" value={it.icon || ''} onChange={(e) => patchItem(i, { icon: e.target.value })} />
+            </div>
+          ))}
+          <button type="button" onClick={() => update({ items: [...items, { title: 'New feature', body: '', icon: 'bx-check' }] })} className="w-full rounded-lg border border-dashed border-gray-300 py-1.5 text-[11px] font-medium text-gray-500 hover:border-brand-500 dark:border-gray-700">+ Add item</button>
+        </div>
       </>
     );
   }
