@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Fragment, DragEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment, DragEvent } from 'react';
 import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -210,6 +210,12 @@ export default function WebsiteBuilderPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [previewTpl]);
 
+  // Build the preview blocks once per opened template (stable ids → no flicker).
+  const previewSections = useMemo(
+    () => (previewTpl ? previewTpl.sections().filter((s) => s.enabled) : []),
+    [previewTpl],
+  );
+
   const applyTemplate = (tplId: string) => {
     const tpl = WEBSITE_TEMPLATES.find((x) => x.id === tplId);
     if (!tpl) return;
@@ -289,7 +295,7 @@ export default function WebsiteBuilderPage() {
         <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or start from a template</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {WEBSITE_TEMPLATES.map((tpl) => {
-            const img = tpl.preview || templateHeroImage(tpl);
+            const img = templateHeroImage(tpl);
             // Clicking the card USES (applies) the template; the button opens Preview.
             const onCardClick = () => applyTemplate(tpl.id);
             return (
@@ -320,7 +326,6 @@ export default function WebsiteBuilderPage() {
                     <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
                     <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
                   </div>
-                  {tpl.preview && (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setPreviewTpl(tpl); }}
@@ -328,7 +333,6 @@ export default function WebsiteBuilderPage() {
                   >
                     <i className="bx bx-search-alt" /> Preview
                   </button>
-                  )}
                 </div>
               </div>
             );
@@ -349,14 +353,14 @@ export default function WebsiteBuilderPage() {
             onClick={() => setPreviewTpl(null)}
           >
             <div
-              className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+              className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: previewTpl.accentColor }} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{previewTpl.name}</p>
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{previewTpl.name} — live preview</p>
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">{previewTpl.description}</p>
                   </div>
                 </div>
@@ -364,11 +368,16 @@ export default function WebsiteBuilderPage() {
                   <i className="bx bx-x text-2xl" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto bg-gray-100 p-4 dark:bg-gray-950">
-                {previewTpl.preview && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewTpl.preview} alt={`${previewTpl.name} full design`} className="mx-auto w-full max-w-2xl rounded-lg shadow-md" />
-                )}
+              {/* Live render of the actual template blocks — exactly what the editor builds. */}
+              <div className="min-h-0 flex-1 overflow-y-auto bg-white dark:bg-gray-950">
+                {previewSections.map((s) => (
+                  <SiteBlock
+                    key={s.id}
+                    section={s}
+                    accent={previewTpl.accentColor}
+                    site={{ businessName: previewTpl.name, whatsapp: '+234 800 000 0000', instagram: '@yourbrand', email: 'hello@yourbrand.com', address: '12 Market Street, Lagos', products: [], currency: 'NGN' }}
+                  />
+                ))}
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-800">
                 <Button variant="secondary" onClick={() => setPreviewTpl(null)}>Close</Button>
