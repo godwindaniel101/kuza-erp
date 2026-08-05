@@ -65,7 +65,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${bricolage.variable} ${figtree.variable}`}>
-      <body>
+      {/* Grammarly & similar extensions inject attributes on <body> before React
+          hydrates; suppress the resulting warning (this element's attributes only). */}
+      <body suppressHydrationWarning>
         <LocaleProvider>
           <ScrollFx />
           <Nav />

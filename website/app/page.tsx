@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import HeroDemo from "@/components/HeroDemo";
 import { LOGIN_URL, REGISTER_URL } from "@/lib/site";
@@ -252,17 +253,33 @@ const proofStats = [
   { n: "14", base: "stat4" },
 ];
 
-const modules = [
-  { Icon: Inventory, base: "inventory" },
-  { Icon: Restaurant, base: "restaurant" },
-  { Icon: Store, base: "storefront" },
-  { Icon: Globe, base: "website" },
-  { Icon: Invoice, base: "invoicing" },
-  { Icon: Accounting, base: "accounting" },
-  { Icon: People, base: "people" },
-  { Icon: Payments, base: "payments" },
-  { Icon: Tag, base: "marketplace" },
-  { Icon: Copilot, base: "copilot" },
+const moduleGroups = [
+  {
+    key: "run",
+    items: [
+      { Icon: Inventory, base: "inventory" },
+      { Icon: Restaurant, base: "restaurant" },
+      { Icon: Store, base: "storefront" },
+    ],
+  },
+  {
+    key: "stack",
+    items: [
+      { Icon: Globe, base: "website" },
+      { Icon: Invoice, base: "invoicing" },
+      { Icon: Accounting, base: "accounting" },
+      { Icon: People, base: "people" },
+      { Icon: Payments, base: "payments" },
+    ],
+  },
+  {
+    key: "free",
+    badge: true,
+    items: [
+      { Icon: Tag, base: "marketplace" },
+      { Icon: Copilot, base: "copilot" },
+    ],
+  },
 ];
 
 const industriesGrid = [
@@ -286,6 +303,8 @@ const faqs = ["q1", "q2", "q3", "q4", "q5"];
 
 export default function Home() {
   const t = useT();
+  const [tier, setTier] = useState(moduleGroups[0].key);
+  const activeGroup = moduleGroups.find((g) => g.key === tier) ?? moduleGroups[0];
 
   return (
     <>
@@ -469,19 +488,61 @@ export default function Home() {
               {t("home.modules.body")}
             </p>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {modules.map(({ Icon, base }, i) => (
+          {/* Segmented tier switcher — one tier shows at a time, so the section
+              stays compact however many modules we add to a tier. */}
+          <div
+            role="tablist"
+            aria-label={t("home.modules.title")}
+            className="mt-10 inline-flex flex-wrap gap-1 rounded-full border border-line bg-white p-1 shadow-card"
+          >
+            {moduleGroups.map((group) => {
+              const active = group.key === tier;
+              return (
+                <button
+                  key={group.key}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTier(group.key)}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                    active
+                      ? "bg-leaf text-white shadow-sm"
+                      : "text-muted hover:text-forest"
+                  }`}
+                >
+                  {t(`home.modules.group.${group.key}.label`)}
+                  <span
+                    className={`rounded-full px-1.5 py-px text-[0.7rem] font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-mint text-leaf"
+                    }`}
+                  >
+                    {group.items.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 text-[0.95rem] text-muted">
+            {t(`home.modules.group.${activeGroup.key}.hint`)}
+          </p>
+
+          <div className="mt-6 grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {activeGroup.items.map(({ Icon, base }, i) => (
               <div
-                key={base}
+                key={`${activeGroup.key}-${base}`}
                 className="stagger-child"
-                style={{ transitionDelay: `${i * 70}ms` }}
+                style={{ transitionDelay: `${i * 60}ms` }}
               >
-                <div className="card-lift group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-white p-6 shadow-card hover:border-leaf/30 hover:shadow-lift">
-                  {/* soft blue glow that warms up on hover */}
+                <div className="card-lift group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white p-6 shadow-card hover:border-leaf/30 hover:shadow-lift">
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-mint opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
                   />
+                  {activeGroup.badge && (
+                    <span className="absolute right-4 top-4 rounded-full bg-mint px-2.5 py-0.5 text-[0.7rem] font-semibold text-leaf ring-1 ring-inset ring-leaf/15">
+                      {t("home.modules.free.badge")}
+                    </span>
+                  )}
                   <span className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-mint text-leaf ring-1 ring-inset ring-leaf/10 transition-all duration-300 group-hover:bg-leaf group-hover:text-white group-hover:ring-transparent">
                     <Icon width={22} height={22} />
                   </span>
@@ -491,10 +552,9 @@ export default function Home() {
                   <p className="relative mt-2 text-[0.95rem] leading-relaxed text-muted">
                     {t(`home.modules.${base}.desc`)}
                   </p>
-                  {/* thin brand rule that draws in on hover */}
                   <span
                     aria-hidden="true"
-                    className="mt-auto h-px w-8 rounded-full bg-gradient-to-r from-leaf to-transparent opacity-40 transition-all duration-300 group-hover:w-16 group-hover:opacity-100"
+                    className="mt-5 h-px w-8 rounded-full bg-gradient-to-r from-leaf to-transparent opacity-40 transition-all duration-300 group-hover:w-16 group-hover:opacity-100"
                   />
                 </div>
               </div>

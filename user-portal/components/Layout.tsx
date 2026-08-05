@@ -106,6 +106,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/site/') ||
+      router.pathname.startsWith('/s/') ||
       router.pathname.startsWith('/reserve/');
 
     if (isAuthenticated && user) {
@@ -192,7 +193,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     // Only update cookie, don't redirect
     if (path.startsWith('/hrms')) {
       Cookies.set('service', 'hrms', { expires: 7 });
-    } else if (path !== '/login' && path !== '/register' && path !== '/verify-email' && path !== '/onboarding' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/site/') && !path.startsWith('/reserve/')) {
+    } else if (path !== '/login' && path !== '/register' && path !== '/verify-email' && path !== '/onboarding' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/site/') && !path.startsWith('/s/') && !path.startsWith('/reserve/')) {
       // Only set RMS cookie if not on auth pages
       Cookies.set('service', 'rms', { expires: 7 });
     }
@@ -209,6 +210,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname === '/invitations/accept' ||
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/site/') ||
+      router.pathname.startsWith('/s/') ||
       router.pathname.startsWith('/reserve/');
     if (isAuthPage) return; // Don't redirect if already on auth page
 

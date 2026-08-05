@@ -499,10 +499,16 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
       )
         return apps.find((a) => a.id === 'hr-config')!;
       if (path.startsWith('/hrms')) return apps.find((a) => a.id === 'hr')!;
-      // Purchases order detail (buyer) is reached from the Purchases list; it
-      // resolves to Inventory just like /ims/inflows so the workspace chrome stays.
+      // Shared stock/catalog UI (/ims, /inventory, /purchases) is owned by the
+      // tenant's VERTICAL, not the standalone Inventory app. A Storefront or
+      // Restaurant tenant manages stock inside its own workspace and must never be
+      // bounced into Inventory (the verticals are mutually exclusive). Inventory
+      // tenants keep resolving here to Inventory because verticalAppId === 'inventory'.
       if (path.startsWith('/ims') || path.startsWith('/inventory') || path.startsWith('/purchases'))
-        return apps.find((a) => a.id === 'inventory')!;
+        return (
+          businessApps.find((a) => a.id === verticalAppId) ??
+          apps.find((a) => a.id === 'inventory')!
+        );
       // Invoice customization lives under /settings but belongs to the Sales app.
       if (path.startsWith('/settings/invoicing')) return apps.find((a) => a.id === 'sales')!;
       if (path.startsWith('/sales')) return apps.find((a) => a.id === 'sales')!;
@@ -520,7 +526,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         path.startsWith('/rms/orders')
       ) {
         const sticky = lastAppIdRef.current;
-        if (sticky === 'inventory' || sticky === 'restaurant') {
+        if (sticky && VERTICAL_APP_IDS.includes(sticky)) {
           const a = businessApps.find((x) => x.id === sticky);
           if (a) return a;
         }
@@ -575,7 +581,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
   // Remember the current selling app so shared surfaces (Market, network orders)
   // stick to it instead of cross-jumping.
   useEffect(() => {
-    if (activeApp.id === 'inventory' || activeApp.id === 'restaurant') {
+    if (VERTICAL_APP_IDS.includes(activeApp.id)) {
       lastAppIdRef.current = activeApp.id;
     }
   }, [activeApp.id]);
