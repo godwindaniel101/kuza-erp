@@ -5,7 +5,7 @@ import { REGISTER_URL } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Features — Kuza",
   description:
-    "The full Kuza catalog: stock, POS, invoicing, payments, marketplace, accounting, people and the platform underneath — module by module, honestly.",
+    "The full Kuza catalog: stock, selling, storefront, website, invoicing, payments, marketplace, accounting, people and the platform underneath — module by module, honestly.",
 };
 
 type Feature = { name: string; body: string; flag?: string };
@@ -76,6 +76,50 @@ const modules: Module[] = [
       {
         name: "Order lifecycle",
         body: "Mark paid with method and mode, edit, void — with diagnostics when something looks off.",
+      },
+    ],
+  },
+  {
+    id: "storefront",
+    nav: "Storefront",
+    title: "Storefront — sell online",
+    lead: "A hosted online store on the same stock your counter sells from. One catalog, one truth, orders in the same pipe.",
+    features: [
+      {
+        name: "Your store, your brand",
+        body: "A public storefront with your logo, colors and products — pulled live from the same stock, so online and in-store never disagree.",
+      },
+      {
+        name: "Orders in the one pipe",
+        body: "A storefront order is a pending sale on the shared order engine — it fulfils, posts to receivables and depletes stock like any other order.",
+      },
+      {
+        name: "Products stay in sync",
+        body: "List an item once. Price, images and availability follow your inventory automatically — no second catalog to keep.",
+      },
+    ],
+  },
+  {
+    id: "website",
+    nav: "Website",
+    title: "Website builder — a real site, no code",
+    lead: "Drag-and-drop pages with ready-made templates, published to your own address. Link your store and your products show up on their own.",
+    features: [
+      {
+        name: "Blocks and templates",
+        body: "Start from a template or a blank page, then drag blocks — hero, features, gallery, menu, products, testimonials — into place. What you edit is what visitors see.",
+      },
+      {
+        name: "Themed, not generic",
+        body: "Light, warm and dark section moods, plus layouts like statement, masonry, menu list and stats — so two sites built in Kuza don't look the same.",
+      },
+      {
+        name: "Products from your store",
+        body: "Add a products block and it pulls live from your Storefront — no re-typing, no drift.",
+      },
+      {
+        name: "Publish to your address",
+        body: "One click to publish; the page renders on the server for speed and search.",
       },
     ],
   },

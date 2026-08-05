@@ -24,6 +24,7 @@ const steps = [
 
 const composition = [
   { item: "Restaurant vertical", note: "POS, tables, QR menus, reservations", price: "₦25,000" },
+  { item: "Website builder", note: "Drag-and-drop site + templates, linked to your store", price: "₦8,000" },
   { item: "Accounting", note: "Books, posting engine, reports", price: "₦12,000" },
   { item: "People & payroll", note: "Attendance, leave, payroll runs", price: "₦12,000" },
   { item: "Extra branch × 2", note: "Beyond the included branch", price: "₦10,000" },
@@ -41,7 +42,7 @@ const faqs = [
   },
   {
     q: "Can I run both a shop and a restaurant?",
-    a: "A business runs one vertical — Inventory or Restaurant — as its primary surface. Both sell through the same stock core, and you can stack any shared modules on top.",
+    a: "A business runs one vertical — Inventory, Restaurant or Storefront — as its primary surface. They all sell through the same stock core, and you can stack any shared module (Invoicing, Accounting, Payments, People, Website) on top.",
   },
   {
     q: "How do I pay?",

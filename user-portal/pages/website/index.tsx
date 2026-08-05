@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Fragment, DragEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment, DragEvent } from 'react';
 import { GetServerSideProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -16,7 +16,7 @@ import {
   sectionLabel,
 } from '@/lib/website-sections';
 import { SiteBlock, SiteContext } from '@/components/website/SiteBlocks';
-import { WEBSITE_TEMPLATES } from '@/lib/website-templates';
+import { WEBSITE_TEMPLATES, WebsiteTemplate } from '@/lib/website-templates';
 
 interface WebsiteSite {
   slug: string;
@@ -76,10 +76,20 @@ function ImageUpload({ value, onChange, label }: { value: string | null; onChang
   );
 }
 
-/** The first hero image in a template, for its gallery preview card. */
+/**
+ * A representative image for a template's gallery card — the first real image
+ * anywhere in its sections (hero, then gallery, then text/feature imagery), so
+ * the card reflects the actual page even when the hero is image-less (minimal).
+ */
 function templateHeroImage(tpl: (typeof WEBSITE_TEMPLATES)[number]): string | null {
-  const hero = tpl.sections().find((s) => s.type === 'hero') as { imageUrl?: string | null } | undefined;
-  return hero?.imageUrl ?? null;
+  for (const s of tpl.sections()) {
+    if ((s.type === 'hero' || s.type === 'text') && s.imageUrl) return s.imageUrl;
+    if (s.type === 'gallery' && s.images?.length) return s.images[0];
+    if (s.type === 'features' && s.items?.some((i) => i.image)) {
+      return s.items.find((i) => i.image)!.image!;
+    }
+  }
+  return null;
 }
 
 export default function WebsiteBuilderPage() {
@@ -98,6 +108,7 @@ export default function WebsiteBuilderPage() {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop');
   const [showEntry, setShowEntry] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [previewTpl, setPreviewTpl] = useState<WebsiteTemplate | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const dragId = useRef<string | null>(null);
 
@@ -191,6 +202,20 @@ export default function WebsiteBuilderPage() {
     dragId.current = null;
   };
 
+  // Close the template preview modal on Escape.
+  useEffect(() => {
+    if (!previewTpl) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewTpl(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewTpl]);
+
+  // Build the preview blocks once per opened template (stable ids → no flicker).
+  const previewSections = useMemo(
+    () => (previewTpl ? previewTpl.sections().filter((s) => s.enabled) : []),
+    [previewTpl],
+  );
+
   const applyTemplate = (tplId: string) => {
     const tpl = WEBSITE_TEMPLATES.find((x) => x.id === tplId);
     if (!tpl) return;
@@ -198,6 +223,7 @@ export default function WebsiteBuilderPage() {
     setAccentColor(tpl.accentColor);
     setShowEntry(false);
     setShowGallery(false);
+    setPreviewTpl(null);
   };
 
   const handleSave = async () => {
@@ -258,33 +284,7 @@ export default function WebsiteBuilderPage() {
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Build your website</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start from a template, or build your own with drag-and-drop.</p>
 
-        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Start from a template</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {WEBSITE_TEMPLATES.map((tpl) => {
-            const img = templateHeroImage(tpl);
-            return (
-              <button key={tpl.id} onClick={() => applyTemplate(tpl.id)} className="group overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:-translate-y-0.5 hover:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800">
-                <div className="relative h-32 overflow-hidden">
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                  ) : (
-                    <div className="h-full w-full" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}, ${tpl.accentColor}99)` }} />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
-                  <span className="absolute left-3 top-3 h-4 w-4 rounded-full ring-2 ring-white/80" style={{ background: tpl.accentColor }} />
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or</h2>
-        <button onClick={() => { setSections([]); setShowEntry(false); setShowGallery(false); }} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-5 text-left transition hover:border-brand-500 dark:border-gray-700">
+        <button onClick={() => { setSections([]); setShowEntry(false); setShowGallery(false); }} className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-5 text-left transition hover:border-brand-500 dark:border-gray-700">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-gradient text-white"><i className="bx bx-plus text-2xl" /></span>
           <span>
             <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Build your own</span>
@@ -292,9 +292,101 @@ export default function WebsiteBuilderPage() {
           </span>
         </button>
 
+        <h2 className="mt-8 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Or start from a template</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {WEBSITE_TEMPLATES.map((tpl) => {
+            const img = templateHeroImage(tpl);
+            // Clicking the card USES (applies) the template; the button opens Preview.
+            const onCardClick = () => applyTemplate(tpl.id);
+            return (
+              <div
+                key={tpl.id}
+                role="button"
+                tabIndex={0}
+                onClick={onCardClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCardClick(); } }}
+                aria-label={`Use ${tpl.name} template`}
+                className="group cursor-pointer overflow-hidden rounded-2xl bg-white text-left shadow-card ring-1 ring-gray-950/[0.04] transition hover:-translate-y-0.5 hover:ring-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-gray-900 dark:ring-gray-800"
+              >
+                <div className="relative h-40 overflow-hidden bg-gray-50 dark:bg-gray-800">
+                  {img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={img} alt={`${tpl.name} template preview`} className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="h-full w-full" style={{ background: `linear-gradient(160deg, ${tpl.accentColor}, ${tpl.accentColor}99)` }} />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                  <span className="absolute left-3 top-3 h-4 w-4 rounded-full ring-2 ring-white/80" style={{ background: tpl.accentColor }} />
+                  <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                    <i className="bx bx-plus" /> Use this template
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tpl.name}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{tpl.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setPreviewTpl(tpl); }}
+                    className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-gray-800"
+                  >
+                    <i className="bx bx-search-alt" /> Preview
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {showGallery && sections.length > 0 && (
           <div className="mt-6"><Button variant="secondary" onClick={() => setShowGallery(false)}>← Back to editor</Button></div>
         )}
+
+        {/* ── Template preview modal ── */}
+        {previewTpl && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${previewTpl.name} preview`}
+            onClick={() => setPreviewTpl(null)}
+          >
+            <div
+              className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: previewTpl.accentColor }} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{previewTpl.name} — live preview</p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{previewTpl.description}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setPreviewTpl(null)} className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="Close preview">
+                  <i className="bx bx-x text-2xl" />
+                </button>
+              </div>
+              {/* Live render of the actual template blocks — exactly what the editor builds. */}
+              <div className="min-h-0 flex-1 overflow-y-auto bg-white dark:bg-gray-950">
+                {previewSections.map((s) => (
+                  <SiteBlock
+                    key={s.id}
+                    section={s}
+                    accent={previewTpl.accentColor}
+                    site={{ businessName: previewTpl.name, whatsapp: '+234 800 000 0000', instagram: '@yourbrand', email: 'hello@yourbrand.com', address: '12 Market Street, Lagos', products: [], currency: 'NGN' }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-800">
+                <Button variant="secondary" onClick={() => setPreviewTpl(null)}>Close</Button>
+                <Button variant="primary" onClick={() => applyTemplate(previewTpl.id)}>Use this template</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     );
@@ -394,6 +486,21 @@ export default function WebsiteBuilderPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{sectionLabel(selected.type)}</p>
                 <label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={selected.enabled} onChange={(e) => updateSection(selected.id, { enabled: e.target.checked })} className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600" /> Visible</label>
               </div>
+              <div>
+                <span className={labelClass}>Background</span>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['light', 'warm', 'dark', 'tint'] as const).map((bg) => (
+                    <button
+                      key={bg}
+                      type="button"
+                      onClick={() => updateSection(selected.id, { bg })}
+                      className={`rounded-lg py-1.5 text-[11px] font-medium capitalize ring-1 transition ${((selected.bg || 'light') === bg) ? 'ring-brand-500 text-brand-600 dark:text-brand-400' : 'ring-gray-200 text-gray-500 hover:ring-gray-300 dark:ring-gray-700'}`}
+                    >
+                      {bg}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <SectionFields section={selected} update={(patch) => updateSection(selected.id, patch)} />
             </div>
           ) : (
@@ -427,6 +534,16 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
   if (section.type === 'hero') {
     return (
       <>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.variant || 'fullbleed'} onChange={(e) => update({ variant: e.target.value })}>
+            <option value="fullbleed">Full-bleed image</option>
+            <option value="split">Split (text + image)</option>
+            <option value="centered">Centered</option>
+            <option value="minimal">Minimal (big type)</option>
+          </select>
+        </div>
+        <div><span className={labelClass}>Eyebrow (small label)</span><input className={inputClass} value={section.eyebrow || ''} onChange={(e) => update({ eyebrow: e.target.value })} placeholder="New collection" /></div>
         <div><span className={labelClass}>Headline</span><input className={inputClass} value={section.headline} onChange={(e) => update({ headline: e.target.value })} /></div>
         <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
@@ -440,18 +557,136 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
   if (section.type === 'text') {
     return (
       <>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.variant || (section.imageUrl ? 'image-right' : 'statement')} onChange={(e) => update({ variant: e.target.value })}>
+            <option value="image-right">Image right</option>
+            <option value="image-left">Image left</option>
+            <option value="statement">Statement (big centered)</option>
+            <option value="quote">Quote</option>
+          </select>
+        </div>
         <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
         <div><span className={labelClass}>Body</span><textarea rows={4} className={`${inputClass} h-auto py-2`} value={section.body} onChange={(e) => update({ body: e.target.value })} /></div>
         <ImageUpload label="Image (optional)" value={section.imageUrl} onChange={(url) => update({ imageUrl: url })} />
       </>
     );
   }
-  if (section.type === 'products') {
+  if (section.type === 'features') {
+    const items = section.items || [];
+    const patchItem = (i: number, p: Partial<{ title: string; body: string; icon: string }>) =>
+      update({ items: items.map((it, k) => (k === i ? { ...it, ...p } : it)) });
     return (
       <>
         <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.layout || 'cards'} onChange={(e) => update({ layout: e.target.value })}>
+            <option value="cards">Cards</option>
+            <option value="numbered">Numbered rows</option>
+            <option value="icons">Icon grid</option>
+            <option value="split">Split (heading + list)</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          {items.map((it, i) => (
+            <div key={i} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-gray-400">Item {i + 1}</span>
+                <button type="button" onClick={() => update({ items: items.filter((_, k) => k !== i) })} className="text-[11px] text-red-500 hover:underline">Remove</button>
+              </div>
+              <input className={`${inputClass} mb-1`} placeholder="Title" value={it.title} onChange={(e) => patchItem(i, { title: e.target.value })} />
+              <input className={`${inputClass} mb-1`} placeholder="Body" value={it.body} onChange={(e) => patchItem(i, { body: e.target.value })} />
+              <input className={inputClass} placeholder="Icon (e.g. bx-bolt)" value={it.icon || ''} onChange={(e) => patchItem(i, { icon: e.target.value })} />
+            </div>
+          ))}
+          <button type="button" onClick={() => update({ items: [...items, { title: 'New feature', body: '', icon: 'bx-check' }] })} className="w-full rounded-lg border border-dashed border-gray-300 py-1.5 text-[11px] font-medium text-gray-500 hover:border-brand-500 dark:border-gray-700">+ Add item</button>
+        </div>
+      </>
+    );
+  }
+  if (section.type === 'products') {
+    return (
+      <>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.variant || 'grid'} onChange={(e) => update({ variant: e.target.value })}>
+            <option value="grid">Grid</option>
+            <option value="showcase">Showcase (1 big + grid)</option>
+            <option value="list">List (rows)</option>
+          </select>
+        </div>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
         <div><span className={labelClass}>How many products</span><input type="number" min={1} max={12} className={inputClass} value={section.limit} onChange={(e) => update({ limit: Math.max(1, Math.min(12, Number(e.target.value) || 6)) })} /></div>
         <p className="text-[11px] text-gray-400">Pulls live from your Storefront — set the store link in Page settings.</p>
+      </>
+    );
+  }
+  if (section.type === 'stats') {
+    const items = section.items || [];
+    const patchItem = (i: number, p: Partial<{ value: string; label: string }>) =>
+      update({ items: items.map((it, k) => (k === i ? { ...it, ...p } : it)) });
+    return (
+      <>
+        <div><span className={labelClass}>Heading (optional)</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div className="space-y-2">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input className={`${inputClass} w-20`} placeholder="10k+" value={it.value} onChange={(e) => patchItem(i, { value: e.target.value })} />
+              <input className={inputClass} placeholder="Happy customers" value={it.label} onChange={(e) => patchItem(i, { label: e.target.value })} />
+              <button type="button" onClick={() => update({ items: items.filter((_, k) => k !== i) })} className="shrink-0 text-red-500" aria-label="Remove"><i className="bx bx-x" /></button>
+            </div>
+          ))}
+          <button type="button" onClick={() => update({ items: [...items, { value: '', label: '' }] })} className="w-full rounded-lg border border-dashed border-gray-300 py-1.5 text-[11px] font-medium text-gray-500 hover:border-brand-500 dark:border-gray-700">+ Add stat</button>
+        </div>
+      </>
+    );
+  }
+  if (section.type === 'menu') {
+    const groups = section.groups || [];
+    const patchGroup = (gi: number, p: Partial<{ title: string; items: any[] }>) =>
+      update({ groups: groups.map((g, k) => (k === gi ? { ...g, ...p } : g)) });
+    const patchMenuItem = (gi: number, ii: number, p: Partial<{ name: string; description: string; price: string }>) =>
+      patchGroup(gi, { items: groups[gi].items.map((it, k) => (k === ii ? { ...it, ...p } : it)) });
+    return (
+      <>
+        <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
+        <div className="space-y-3">
+          {groups.map((g, gi) => (
+            <div key={gi} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <input className={inputClass} placeholder="Group (e.g. Mains)" value={g.title} onChange={(e) => patchGroup(gi, { title: e.target.value })} />
+                <button type="button" onClick={() => update({ groups: groups.filter((_, k) => k !== gi) })} className="shrink-0 text-red-500" aria-label="Remove group"><i className="bx bx-trash" /></button>
+              </div>
+              <div className="space-y-1.5">
+                {g.items.map((it, ii) => (
+                  <div key={ii} className="rounded border border-gray-100 p-1.5 dark:border-gray-800">
+                    <div className="flex gap-1.5">
+                      <input className={inputClass} placeholder="Dish" value={it.name} onChange={(e) => patchMenuItem(gi, ii, { name: e.target.value })} />
+                      <input className={`${inputClass} w-20`} placeholder="₦0" value={it.price} onChange={(e) => patchMenuItem(gi, ii, { price: e.target.value })} />
+                      <button type="button" onClick={() => patchGroup(gi, { items: g.items.filter((_, k) => k !== ii) })} className="shrink-0 text-red-500" aria-label="Remove item"><i className="bx bx-x" /></button>
+                    </div>
+                    <input className={`${inputClass} mt-1`} placeholder="Description" value={it.description} onChange={(e) => patchMenuItem(gi, ii, { description: e.target.value })} />
+                  </div>
+                ))}
+                <button type="button" onClick={() => patchGroup(gi, { items: [...g.items, { name: '', description: '', price: '' }] })} className="w-full rounded border border-dashed border-gray-300 py-1 text-[11px] text-gray-500 hover:border-brand-500 dark:border-gray-700">+ Item</button>
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={() => update({ groups: [...groups, { title: 'New group', items: [{ name: '', description: '', price: '' }] }] })} className="w-full rounded-lg border border-dashed border-gray-300 py-1.5 text-[11px] font-medium text-gray-500 hover:border-brand-500 dark:border-gray-700">+ Add group</button>
+        </div>
+      </>
+    );
+  }
+  if (section.type === 'testimonial') {
+    return (
+      <>
+        <div><span className={labelClass}>Quote</span><textarea rows={3} className={`${inputClass} h-auto py-2`} value={section.quote} onChange={(e) => update({ quote: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><span className={labelClass}>Author</span><input className={inputClass} value={section.author} onChange={(e) => update({ author: e.target.value })} /></div>
+          <div><span className={labelClass}>Role</span><input className={inputClass} value={section.role} onChange={(e) => update({ role: e.target.value })} /></div>
+        </div>
       </>
     );
   }
@@ -459,6 +694,15 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
     const images = section.images || [];
     return (
       <>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.variant || 'grid'} onChange={(e) => update({ variant: e.target.value })}>
+            <option value="grid">Grid</option>
+            <option value="masonry">Masonry</option>
+            <option value="wide">Wide (2-up)</option>
+            <option value="strip">Strip (scroll)</option>
+          </select>
+        </div>
         <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
         <div className="flex flex-wrap gap-1.5">
           {images.map((src, i) => (
@@ -476,6 +720,14 @@ function SectionFields({ section, update }: { section: WebsiteSection; update: (
   if (section.type === 'cta') {
     return (
       <>
+        <div>
+          <span className={labelClass}>Layout</span>
+          <select className={inputClass} value={section.variant || 'card'} onChange={(e) => update({ variant: e.target.value })}>
+            <option value="card">Card (accent panel)</option>
+            <option value="banner">Banner (full width)</option>
+            <option value="split">Split (text + button)</option>
+          </select>
+        </div>
         <div><span className={labelClass}>Heading</span><input className={inputClass} value={section.heading} onChange={(e) => update({ heading: e.target.value })} /></div>
         <div><span className={labelClass}>Subtext</span><input className={inputClass} value={section.subtext} onChange={(e) => update({ subtext: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">

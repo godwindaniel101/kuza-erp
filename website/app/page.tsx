@@ -20,6 +20,7 @@ import {
   People,
   Payments,
   Store,
+  Globe,
   Truck,
   Briefcase,
   Tag,
@@ -254,10 +255,14 @@ const proofStats = [
 const modules = [
   { Icon: Inventory, base: "inventory" },
   { Icon: Restaurant, base: "restaurant" },
+  { Icon: Store, base: "storefront" },
+  { Icon: Globe, base: "website" },
   { Icon: Invoice, base: "invoicing" },
   { Icon: Accounting, base: "accounting" },
   { Icon: People, base: "people" },
   { Icon: Payments, base: "payments" },
+  { Icon: Tag, base: "marketplace" },
+  { Icon: Copilot, base: "copilot" },
 ];
 
 const industriesGrid = [
