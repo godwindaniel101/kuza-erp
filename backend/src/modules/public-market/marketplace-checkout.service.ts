@@ -191,6 +191,18 @@ export class MarketplaceCheckoutService {
         amount: Number(r.amount),
         currency: r.currency,
         status,
+        // Include the virtual account so the payment page works from the
+        // reference alone (new device / cleared tab) — the buyer can always
+        // retrieve where to pay. Failed sellers have no account.
+        virtualAccount:
+          r.status === 'failed'
+            ? null
+            : {
+                accountNumber: r.accountNumber,
+                bankName: r.bankName,
+                accountName: r.accountName,
+              },
+        paymentReference: r.paymentReference ?? null,
       });
     }
 

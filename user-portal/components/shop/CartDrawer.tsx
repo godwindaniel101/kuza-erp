@@ -5,8 +5,8 @@ import { ShopCartItem } from './useShopCart';
 /**
  * Slide-in cart drawer for the public marketplace. Items are grouped by seller
  * (multi-seller cart) with a per-store subtotal + grand total. Checkout is
- * intentionally DISABLED — Phase 2 (in-market checkout + per-seller order split
- * + payment) is money-path and not built yet.
+ * Phase 2: the button navigates to the guest checkout (via onCheckout); the
+ * frontend only DISPLAYS payment instructions — there is no payment logic here.
  */
 
 interface Props {
@@ -16,9 +16,10 @@ interface Props {
   setQty: (id: string, qty: number) => void;
   remove: (id: string) => void;
   total: number;
+  onCheckout: () => void;
 }
 
-export default function CartDrawer({ open, onClose, items, setQty, remove, total }: Props) {
+export default function CartDrawer({ open, onClose, items, setQty, remove, total, onCheckout }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -114,10 +115,14 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, total
               <span className="text-sm text-gray-500">Total</span>
               <span className="text-xl font-bold tracking-tight text-gray-900">{formatMoney(total, currency)}</span>
             </div>
-            <button type="button" disabled className="w-full cursor-not-allowed rounded-xl bg-gray-200 py-3 text-sm font-semibold text-gray-500">
-              Checkout
+            <button
+              type="button"
+              onClick={onCheckout}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gradient py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
+            >
+              Checkout <i className="bx bx-right-arrow-alt text-lg" />
             </button>
-            <p className="mt-2 text-center text-xs text-gray-400">Checkout is coming soon.</p>
+            <p className="mt-2 text-center text-xs text-gray-400">You&apos;ll get a bank account to pay each store directly.</p>
           </div>
         )}
       </div>

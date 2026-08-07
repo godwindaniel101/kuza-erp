@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { formatMoney, ITEM_PLACEHOLDER, onItemImageError } from '@/lib/format';
 import { useShopCart } from '@/components/shop/useShopCart';
 import CartDrawer from '@/components/shop/CartDrawer';
@@ -27,6 +28,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 const LIMIT = 24;
 
 export default function ShopPage() {
+  const router = useRouter();
   const cart = useShopCart();
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -209,7 +211,15 @@ export default function ShopPage() {
         </footer>
       </div>
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} items={cart.items} setQty={cart.setQty} remove={cart.remove} total={cart.total} />
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cart.items}
+        setQty={cart.setQty}
+        remove={cart.remove}
+        total={cart.total}
+        onCheckout={() => { setCartOpen(false); router.push('/shop/checkout'); }}
+      />
     </>
   );
 }
