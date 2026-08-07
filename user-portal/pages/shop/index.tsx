@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { formatMoney, ITEM_PLACEHOLDER, onItemImageError } from '@/lib/format';
 import { useShopCart } from '@/components/shop/useShopCart';
 import CartDrawer from '@/components/shop/CartDrawer';
@@ -90,10 +91,10 @@ export default function ShopPage() {
         {/* Top bar */}
         <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6">
-            <a href="/shop" className="flex shrink-0 items-center gap-2">
+            <Link href="/shop" className="flex shrink-0 items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white"><i className="bx bxs-store-alt text-lg" /></span>
               <span className="hidden text-lg font-bold tracking-tight sm:inline">Kuza Market</span>
-            </a>
+            </Link>
             <div className="relative flex-1">
               <i className="bx bx-search pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
               <input
