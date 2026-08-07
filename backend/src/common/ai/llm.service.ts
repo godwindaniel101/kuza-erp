@@ -22,7 +22,7 @@ export interface LlmChatResult {
 }
 
 /** Providers the abstraction can dispatch to. Add new ids here and to `handlers`. */
-type ProviderId = 'ollama' | 'openai' | 'anthropic';
+type ProviderId = 'ollama' | 'openai' | 'anthropic' | 'gemini';
 
 /**
  * Provider-agnostic LLM gateway. The provider is chosen entirely by env
@@ -38,6 +38,8 @@ type ProviderId = 'ollama' | 'openai' | 'anthropic';
  *     OPENAI_MODEL (default gpt-4o-mini), OPENAI_BASE_URL.
  *   - 'anthropic' : Claude — ANTHROPIC_API_KEY, ANTHROPIC_MODEL (default
  *     claude-sonnet-5).
+ *   - 'gemini' : Google Gemini via its OpenAI-compatible endpoint —
+ *     GEMINI_API_KEY, GEMINI_MODEL (default gemini-2.0-flash), GEMINI_BASE_URL.
  *
  * chat() NEVER throws: any misconfiguration, timeout, transport error, or
  * unparseable response degrades to { text: '', available: false } so callers
@@ -58,6 +60,7 @@ export class LlmService {
     ollama: (params) => this.callOllama(params),
     openai: (params) => this.callOpenAi(params),
     anthropic: (params) => this.callAnthropic(params),
+    gemini: (params) => this.callGemini(params),
   };
 
   async chat(params: LlmChatParams): Promise<LlmChatResult> {
@@ -97,6 +100,21 @@ export class LlmService {
     }
     const baseUrl = process.env.OPENAI_BASE_URL || process.env.AI_BASE_URL || 'https://api.openai.com/v1';
     const model = process.env.OPENAI_MODEL || process.env.AI_MODEL || 'gpt-4o-mini';
+    return this.chatCompletions(baseUrl, model, apiKey, params, LlmService.DEFAULT_TIMEOUT_MS);
+  }
+
+  /** Google Gemini via its OpenAI-compatible endpoint — requires an API key. */
+  private async callGemini(params: LlmChatParams): Promise<LlmChatResult> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
+    if (!apiKey) {
+      this.logger.warn('AI_PROVIDER=gemini but GEMINI_API_KEY is not set');
+      return { text: '', available: false };
+    }
+    const baseUrl =
+      process.env.GEMINI_BASE_URL ||
+      process.env.AI_BASE_URL ||
+      'https://generativelanguage.googleapis.com/v1beta/openai';
+    const model = process.env.GEMINI_MODEL || process.env.AI_MODEL || 'gemini-2.0-flash';
     return this.chatCompletions(baseUrl, model, apiKey, params, LlmService.DEFAULT_TIMEOUT_MS);
   }
 
