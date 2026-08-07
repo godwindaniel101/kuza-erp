@@ -107,7 +107,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/site/') ||
       router.pathname.startsWith('/s/') ||
-      router.pathname.startsWith('/reserve/');
+      router.pathname.startsWith('/reserve/') ||
+      router.pathname.startsWith('/shop');
 
     if (isAuthenticated && user) {
       if (!hasFetchedUserRef.current) {
@@ -193,7 +194,7 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     // Only update cookie, don't redirect
     if (path.startsWith('/hrms')) {
       Cookies.set('service', 'hrms', { expires: 7 });
-    } else if (path !== '/login' && path !== '/register' && path !== '/verify-email' && path !== '/onboarding' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/site/') && !path.startsWith('/s/') && !path.startsWith('/reserve/')) {
+    } else if (path !== '/login' && path !== '/register' && path !== '/verify-email' && path !== '/onboarding' && path !== '/auth/callback' && !path.startsWith('/m/') && !path.startsWith('/site/') && !path.startsWith('/s/') && !path.startsWith('/reserve/') && !path.startsWith('/shop')) {
       // Only set RMS cookie if not on auth pages
       Cookies.set('service', 'rms', { expires: 7 });
     }
@@ -211,7 +212,8 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
       router.pathname.startsWith('/m/') ||
       router.pathname.startsWith('/site/') ||
       router.pathname.startsWith('/s/') ||
-      router.pathname.startsWith('/reserve/');
+      router.pathname.startsWith('/reserve/') ||
+      router.pathname.startsWith('/shop');
     if (isAuthPage) return; // Don't redirect if already on auth page
 
     // Check if we have a token - if yes, wait for auth state to resolve
@@ -250,7 +252,10 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
     router.pathname === '/auth/callback' ||
     router.pathname === '/invitations/accept' ||
     router.pathname.startsWith('/m/') ||
-    router.pathname.startsWith('/site/');
+    router.pathname.startsWith('/site/') ||
+    router.pathname.startsWith('/s/') ||
+    router.pathname.startsWith('/reserve/') ||
+    router.pathname.startsWith('/shop');
 
   if (isAuthPage) {
     return <>{children}</>;

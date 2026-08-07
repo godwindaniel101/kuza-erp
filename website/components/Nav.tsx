@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { LOGIN_URL, REGISTER_URL } from "@/lib/site";
+import { LOGIN_URL, REGISTER_URL, SHOP_URL } from "@/lib/site";
 import { useT } from "@/lib/i18n";
 import BrandMark from "./BrandMark";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -56,6 +56,14 @@ export default function Nav() {
                 </Link>
               </li>
             ))}
+            <li>
+              <a
+                href={SHOP_URL}
+                className="text-[0.95rem] font-medium text-ink transition-colors hover:text-leaf"
+              >
+                {t("nav.shop")}
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -109,6 +117,15 @@ export default function Nav() {
                 </Link>
               </li>
             ))}
+            <li>
+              <a
+                href={SHOP_URL}
+                onClick={() => setOpen(false)}
+                className="block border-b border-line py-3.5 text-base font-medium text-ink"
+              >
+                {t("nav.shop")}
+              </a>
+            </li>
           </ul>
           <div className="mt-5 flex flex-col gap-3">
             <LanguageSwitcher variant="mobile" />
