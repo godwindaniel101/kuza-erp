@@ -43,6 +43,19 @@ function App({ Component, pageProps }: AppProps) {
     }
   }, []);
 
+  // The app font CSS variables (--font-display / --font-body) are set on a
+  // wrapper <div> around the page. Modals render via createPortal(document.body)
+  // — a SIBLING of that wrapper — so they don't inherit the variables and fall
+  // back to a system font. Mirror the font variables (+ font-sans) onto <body>
+  // so portaled UI (modals, receipts) uses the same fonts as the rest of the app.
+  useEffect(() => {
+    const classes = `${fontDisplay.variable} ${fontBody.variable} font-sans`
+      .split(' ')
+      .filter(Boolean);
+    document.body.classList.add(...classes);
+    return () => document.body.classList.remove(...classes);
+  }, []);
+
   // Ensure locale matches cookie preference on first load
   useEffect(() => {
     const cookieLang = Cookies.get('lang');
