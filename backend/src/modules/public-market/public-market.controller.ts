@@ -1,7 +1,9 @@
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { PublicMarketService } from './public-market.service';
+import { MarketplaceCheckoutService } from './marketplace-checkout.service';
+import { CreateCheckoutDto } from './dto/create-checkout.dto';
 
 /**
  * UNAUTHENTICATED cross-tenant retail marketplace (Phase 1 — browse only).
@@ -18,7 +20,10 @@ import { PublicMarketService } from './public-market.service';
 @Public()
 @Controller('public/market')
 export class PublicMarketController {
-  constructor(private readonly publicMarketService: PublicMarketService) {}
+  constructor(
+    private readonly publicMarketService: PublicMarketService,
+    private readonly checkoutService: MarketplaceCheckoutService,
+  ) {}
 
   @Get()
   @Header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
@@ -51,6 +56,32 @@ export class PublicMarketController {
   })
   async getCategories() {
     const data = await this.publicMarketService.getCategories();
+    return { success: true, data };
+  }
+
+  /**
+   * Guest multi-seller checkout (Phase 2 — per-seller payment). Splits the cart
+   * into one pending order + one awaiting bank-transfer payment per seller and
+   * returns per-seller payment instructions. Idempotent on `idempotencyKey`.
+   */
+  @Post('checkout')
+  @ApiOperation({
+    summary: 'Split a guest cart into one order + payment per seller',
+  })
+  async checkout(@Body() dto: CreateCheckoutDto) {
+    const data = await this.checkoutService.checkout({
+      idempotencyKey: dto.idempotencyKey,
+      buyer: dto.buyer,
+      items: dto.items,
+    });
+    return { success: true, data };
+  }
+
+  /** Guest checkout status — live per-seller order status (awaiting/paid/completed). */
+  @Get('checkout/:reference')
+  @ApiOperation({ summary: 'Live status of a guest marketplace checkout' })
+  async checkoutStatus(@Param('reference') reference: string) {
+    const data = await this.checkoutService.getStatus(reference);
     return { success: true, data };
   }
 }

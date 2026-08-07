@@ -22,6 +22,8 @@ import { NetworkOrderItem } from '../../modules/network/entities/network-order-i
 import { NetworkCatalogItem } from '../../modules/network/entities/network-catalog-item.entity';
 import { NetworkWallet } from '../../modules/network/entities/network-wallet.entity';
 import { NetworkWalletEntry } from '../../modules/network/entities/network-wallet-entry.entity';
+import { MarketplaceCheckout } from '../../modules/public-market/entities/marketplace-checkout.entity';
+import { MarketplaceCheckoutSeller } from '../../modules/public-market/entities/marketplace-checkout-seller.entity';
 
 /**
  * Landlord module - handles tenant authentication and management
@@ -57,6 +59,8 @@ import { NetworkWalletEntry } from '../../modules/network/entities/network-walle
             NetworkCatalogItem,
             NetworkWallet,
             NetworkWalletEntry,
+            MarketplaceCheckout,
+            MarketplaceCheckoutSeller,
           ],
         };
       },
