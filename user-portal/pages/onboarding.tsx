@@ -180,7 +180,12 @@ export default function Onboarding() {
           : businessType === 'hr'
           ? '/hrms/dashboard'
           : '/';
-      router.push(dest);
+      // Full navigation (not SPA router.push): the app shell / sidebar reads app
+      // entitlements + businessType that a client-side transition doesn't reliably
+      // pick up right after onboarding — so it showed all apps / Inventory until a
+      // manual refresh. A hard load re-initialises everything with the new tenant.
+      window.location.assign(dest);
+      return;
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || t('auth.onboardingFailed', 'Could not finish setup'));
       setLoading(false);

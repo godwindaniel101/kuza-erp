@@ -148,7 +148,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 @layer components {
   /* Single canonical focus ring — apply to every interactive element. */
   .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900;
+    @apply focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900;
   }
 }
 
@@ -290,6 +290,14 @@ select {
   white-space: nowrap;
   box-sizing: border-box;
   width: 100%;
+}
+
+/* Thin focus ring on selects — never the heavy native outline. Form selects
+   that already declare a Tailwind ring keep theirs (higher specificity wins). */
+select:focus,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 select option {

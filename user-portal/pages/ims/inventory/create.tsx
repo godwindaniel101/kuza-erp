@@ -13,7 +13,7 @@ export default function CreateInventoryItemPage() {
 
   return (
     <PermissionGuard permission="inventory.create">
-      <div className="w-full max-w-3xl space-y-6 kz-stagger">
+      <div className="w-full max-w-6xl space-y-6 kz-stagger">
         <PageHeader
           title={<>{t('add')} {t('item')}</>}
           subtitle={t('inventory.createSubtitle', 'Add a new item to your catalog')}
