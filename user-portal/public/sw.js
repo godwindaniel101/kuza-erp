@@ -10,7 +10,11 @@
  *  - Non-GET requests are NEVER intercepted — writes always hit the network;
  *    offline write-queueing is layer 2, handled in-app, not here.
  */
-const VERSION = 'kuza-sw-v1';
+// Bump this on every deploy that must invalidate cached assets — the activate
+// handler deletes any cache whose key doesn't start with the current VERSION,
+// so a returning browser drops stale /_next/static chunks and picks up the new
+// build (fixes: old JS bundle served after a deploy).
+const VERSION = 'kuza-sw-v2';
 const STATIC_CACHE = `${VERSION}-static`;
 const DATA_CACHE = `${VERSION}-data`;
 const OFFLINE_URL = '/offline.html';
