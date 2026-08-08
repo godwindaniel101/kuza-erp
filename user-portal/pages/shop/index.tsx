@@ -89,7 +89,7 @@ export default function ShopPage() {
         <meta name="description" content="Browse and buy products from businesses across Kuza." />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
         {/* Top bar */}
         <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6">
@@ -137,7 +137,7 @@ export default function ShopPage() {
         </header>
 
         {/* Grid */}
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {loading ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 10 }).map((_, i) => (
