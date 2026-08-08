@@ -57,15 +57,39 @@ export class InventoryService {
     if (!mimetype || !mimetype.startsWith("image/")) {
       throw new BadRequestException("File must be an image");
     }
-    // Normalise to a bounded, orientation-corrected JPEG so the DB only ever
-    // holds a URL to a sanely-sized asset (mirrors processItemImage + menu-sites).
-    const jpeg = await sharp(buffer)
-      .rotate()
-      .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    const key = this.storageService.buildKey(schema, "inventory");
-    return this.storageService.upload(jpeg, key, "image/jpeg");
+    // Normalise to a bounded, orientation-corrected JPEG. `sharp` is a NATIVE
+    // module; if it fails at runtime (missing/incompatible binary under the
+    // bundled build), fall back to the ORIGINAL bytes so image processing can
+    // never block an upload — and log the reason so the cause is diagnosable.
+    let outBuffer = buffer;
+    let outType = mimetype;
+    let ext = (mimetype.split("/")[1] || "jpg").replace("jpeg", "jpg");
+    try {
+      outBuffer = await sharp(buffer)
+        .rotate()
+        .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      outType = "image/jpeg";
+      ext = "jpg";
+    } catch (err) {
+      console.error(
+        `[uploadItemImage] sharp compression failed; uploading original bytes: ${
+          (err as Error)?.message
+        }`,
+      );
+    }
+    const key = this.storageService.buildKey(schema, "inventory", ext);
+    try {
+      return await this.storageService.upload(outBuffer, key, outType);
+    } catch (err) {
+      console.error(
+        `[uploadItemImage] storage upload failed (driver=${process.env.STORAGE_DRIVER || "local"}): ${
+          (err as Error)?.message
+        }`,
+      );
+      throw err;
+    }
   }
 
   async create(
