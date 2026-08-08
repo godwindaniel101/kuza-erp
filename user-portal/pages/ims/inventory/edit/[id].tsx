@@ -61,7 +61,7 @@ export default function EditInventoryItemPage() {
 
   return (
     <PermissionGuard permission="inventory.edit">
-      <div className="w-full max-w-3xl space-y-6 kz-stagger">
+      <div className="w-full max-w-6xl space-y-6 kz-stagger">
         <PageHeader
           title={<>{t('edit')} {t('item')}: {item.name}</>}
           subtitle={t('inventory.editSubtitle', "Update this item's details and pricing")}

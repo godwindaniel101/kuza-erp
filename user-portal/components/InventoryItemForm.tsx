@@ -649,9 +649,12 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* LEFT: main form card */}
+          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 p-6 space-y-6">
         {/* Basic Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -727,7 +730,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         </div>
 
         {/* UOM Section - 1/3 width grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Base UOM */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -962,7 +965,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         </div>
 
         {/* Pricing, Stock, and Trackable */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Sale Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1015,7 +1018,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('isTrackable')}
             </label>
-            <div className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
+            <div className="w-full min-h-[36px] px-3 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
               <input
                 type="checkbox"
                 checked={formData.isTrackable}
@@ -1050,7 +1053,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Sell at POS
             </label>
-            <div className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
+            <div className="w-full min-h-[36px] px-3 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
               <input
                 type="checkbox"
                 checked={formData.sellAtPos}
@@ -1171,7 +1174,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
         {/* Minimum and Maximum Stock - Only show if trackable and not a make-up item */}
         {formData.isTrackable && !hasMakeUp && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('minimumStock')}
@@ -1210,78 +1213,110 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           </div>
         )}
 
-        {/* Images */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('images')}</label>
-            <button
-              type="button"
-              onClick={() => setShowImageUpload(true)}
-              className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline"
-            >
-              {t('uploadImages') || 'Upload Images'}
-            </button>
           </div>
 
-          {/* Images Section - Front Image (1/6) + Additional Images (5/6) */}
-          {(frontImagePreview || additionalImagePreviews.length > 0) && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('images')}</label>
-              <div className="flex gap-4">
-                {/* Front Image - 1/6 width, bordered and rounded */}
-                {frontImagePreview && (
-                  <div className="w-1/6">
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('frontImage')}</label>
-                    <div className="relative">
+          {/* RIGHT: product images card */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 p-6 space-y-5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <i className="bx bx-image text-lg"></i>
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('productImages') || 'Product images'}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('productImagesHelp') || 'Add a front image and extra shots'}</p>
+                </div>
+              </div>
+
+              {/* Front image */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('frontImage')} <span className="text-gray-400 dark:text-gray-500">({t('optional')})</span>
+                </label>
+                {frontImagePreview ? (
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={frontImagePreview}
+                      alt="Front"
+                      className="w-full aspect-square object-cover rounded-xl ring-1 ring-gray-200 dark:ring-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeFrontImage}
+                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 shadow-sm hover:bg-red-700"
+                      aria-label={t('remove') || 'Remove'}
+                    >
+                      <i className="bx bx-x text-lg"></i>
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/60 hover:bg-brand-50/40 hover:border-brand-300 dark:hover:bg-gray-800 transition-colors">
+                    <i className="bx bx-cloud-upload text-4xl text-gray-400 dark:text-gray-500 mb-2"></i>
+                    <p className="px-4 text-center text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-semibold text-brand-600 dark:text-brand-400">{t('clickToUpload') || 'Click to upload'}</span> {t('or') || 'or'} {t('dragAndDrop') || 'drag and drop'}
+                    </p>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file, true);
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Additional images */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('additionalImages')} <span className="text-gray-400 dark:text-gray-500">({t('optional')})</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {additionalImagePreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={frontImagePreview}
-                        alt="Front"
-                        className="w-full aspect-square object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                        src={preview}
+                        alt={`Additional ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg ring-1 ring-gray-200 dark:ring-gray-700"
                       />
                       <button
                         type="button"
-                        onClick={removeFrontImage}
-                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                        onClick={() => removeAdditionalImage(index)}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5 shadow-sm hover:bg-red-700"
+                        aria-label={t('remove') || 'Remove'}
                       >
-                        <i className="bx bx-x text-lg"></i>
+                        <i className="bx bx-x text-xs"></i>
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {/* Additional Images - 5/6 width, all wrapped in one border */}
-                {additionalImagePreviews.length > 0 && (
-                  <div className={`${frontImagePreview ? 'flex-1 w-5/6' : 'w-full'}`}>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('additionalImages')}</label>
-                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                      <div className="grid grid-cols-5 gap-2">
-                        {additionalImagePreviews.map((preview, index) => (
-                          <div key={index} className="relative aspect-square">
-                            <img
-                              src={preview}
-                              alt={`Additional ${index + 1}`}
-                              className="w-full h-full object-cover rounded"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeAdditionalImage(index)}
-                              className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
-                            >
-                              <i className="bx bx-x text-xs"></i>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  ))}
+                  {additionalImagePreviews.length < 10 && (
+                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/60 hover:bg-brand-50/40 hover:border-brand-300 dark:hover:bg-gray-800 transition-colors">
+                      <i className="bx bx-plus text-2xl text-gray-400 dark:text-gray-500"></i>
+                      <span className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{t('addMoreImages') || 'Add more'}</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          files.forEach((file) => handleImageSelect(file, false));
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
+        {/* Action bar */}
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="secondary"
