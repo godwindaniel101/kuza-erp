@@ -57,6 +57,9 @@ export class InventoryService {
     if (!mimetype || !mimetype.startsWith("image/")) {
       throw new BadRequestException("File must be an image");
     }
+    console.log(
+      `[uploadItemImage] start driver=${process.env.STORAGE_DRIVER || "local"} bucket=${process.env.GCS_BUCKET || "-"} type=${mimetype} bytes=${buffer?.length ?? 0}`,
+    );
     // Normalise to a bounded, orientation-corrected JPEG. `sharp` is a NATIVE
     // module; if it fails at runtime (missing/incompatible binary under the
     // bundled build), fall back to the ORIGINAL bytes so image processing can

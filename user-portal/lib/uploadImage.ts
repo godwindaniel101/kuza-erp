@@ -8,10 +8,15 @@ import { api } from '@/lib/api';
 export async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
+  // Do NOT force a Content-Type here. The axios instance defaults to
+  // application/json; a hard 'multipart/form-data' has no boundary parameter,
+  // so the server's multer parser finds no file and the controller 400s with
+  // "No file uploaded". Setting it to undefined lets the browser emit
+  // `multipart/form-data; boundary=…` itself, which multer can parse.
   const res = await api.post<{ success: boolean; data: { url: string } }>(
     '/ims/inventory/upload-image',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
   return res.data.url;
 }
