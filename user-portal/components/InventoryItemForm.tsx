@@ -1095,11 +1095,20 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
           </div>
 
           <div className="mt-3 space-y-2">
+            {components.length > 0 && (
+              <div className="flex items-center gap-3 px-1 text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <span className="min-w-0 flex-1">Ingredient</span>
+                <span className="w-24 shrink-0">Qty</span>
+                <span className="w-28 shrink-0">Unit</span>
+                <span className="w-24 shrink-0 text-right">Cost</span>
+                <span className="w-9 shrink-0" />
+              </div>
+            )}
             {components.map((c, idx) => {
               const opt = optionsById.get(c.componentItemId);
               const uoms = opt?.uoms ?? [];
               return (
-                <div key={idx} className="flex items-center gap-2">
+                <div key={idx} className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <SearchableSelect
                       options={ingredientSelectOptions}
@@ -1115,14 +1124,14 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                     step="any"
                     value={c.quantity}
                     onChange={(e) => updateComponent(idx, { quantity: Number(e.target.value) })}
-                    className="h-9 w-16 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                    className="h-9 w-24 shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                     aria-label="Quantity"
                   />
                   <select
                     value={c.uomId}
                     onChange={(e) => updateComponent(idx, { uomId: e.target.value })}
                     disabled={!opt}
-                    className="h-9 w-24 shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-2 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:opacity-50"
+                    className="h-9 w-28 shrink-0 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 px-3 text-[13px] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:opacity-50"
                     aria-label="Unit"
                   >
                     {uoms.length === 0 && <option value="">unit</option>}
@@ -1130,7 +1139,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
                       <option key={u.id} value={u.id}>{u.abbreviation || u.name}</option>
                     ))}
                   </select>
-                  <span className="w-20 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                  <span className="w-24 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
                     {opt ? formatMoney(componentCost(c), currency) : '—'}
                   </span>
                   <button
