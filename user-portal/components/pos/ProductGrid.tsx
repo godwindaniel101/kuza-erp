@@ -157,64 +157,64 @@ export default function ProductGrid({
             }
           />
         ) : (
-          /* Bordered table: each category is a column (header cell + item cells).
-             Columns share the width evenly; padded with placeholder columns to a
-             minimum of 6 so it always reads as a full table (except while
-             searching, where only matching categories show). */
-          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-            <div className="flex divide-x divide-gray-200 dark:divide-gray-800">
-              {grouped.map(([category, items]) => (
-                <div
-                  key={category}
-                  className="flex min-w-0 flex-1 basis-0 flex-col divide-y divide-gray-100 dark:divide-gray-800/70"
+          /* 6×6 board: each category is a column (header + item cards). Every cell
+             is a shadowed card — real items are tappable, empty slots are faint
+             placeholder cards. Columns + rows pad to 6 (skipped while searching). */
+          <div className="flex gap-2.5">
+            {grouped.map(([category, items]) => (
+              <div key={category} className="flex min-w-0 flex-1 basis-0 flex-col gap-2">
+                {/* Category header */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
+                  }
+                  title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
+                  className="truncate border-b-2 border-accent/40 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:text-gray-200"
                 >
-                  {/* Header cell */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
-                    }
-                    title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
-                    className="truncate bg-gray-50 px-2 py-2 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:bg-gray-800/70 dark:text-gray-200"
-                  >
-                    {category}
-                  </button>
-                  {/* Item cells */}
-                  {items.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      inCart={cartCounts[product.id] || 0}
-                      onAdd={onAdd}
+                  {category}
+                </button>
+                {/* Item cards */}
+                {items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    inCart={cartCounts[product.id] || 0}
+                    onAdd={onAdd}
+                  />
+                ))}
+                {/* Empty placeholder cards to pad rows to 6 (not while searching) */}
+                {!search.trim() &&
+                  items.length < 6 &&
+                  Array.from({ length: 6 - items.length }).map((_, r) => (
+                    <div
+                      key={`empty-${r}`}
+                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
                     />
                   ))}
-                  {/* Pad rows to a minimum of 6 with empty cells (not while searching) */}
-                  {!search.trim() &&
-                    items.length < 6 &&
-                    Array.from({ length: 6 - items.length }).map((_, r) => (
-                      <div key={`empty-${r}`} className="min-h-[76px] bg-gray-50/40 dark:bg-gray-900/30" />
-                    ))}
+              </div>
+            ))}
+            {/* Placeholder columns to pad to 6 (not while searching) */}
+            {!search.trim() &&
+              grouped.length > 0 &&
+              grouped.length < 6 &&
+              Array.from({ length: 6 - grouped.length }).map((_, i) => (
+                <div
+                  key={`placeholder-${i}`}
+                  aria-hidden="true"
+                  className="hidden min-w-0 flex-1 basis-0 flex-col gap-2 md:flex"
+                >
+                  <div className="truncate border-b-2 border-dashed border-gray-200 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:border-gray-800 dark:text-gray-700">
+                    —
+                  </div>
+                  {Array.from({ length: 6 }).map((_, r) => (
+                    <div
+                      key={r}
+                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
+                    />
+                  ))}
                 </div>
               ))}
-              {/* Placeholder columns keep the table full (min 6) — not while searching */}
-              {!search.trim() &&
-                grouped.length > 0 &&
-                grouped.length < 6 &&
-                Array.from({ length: 6 - grouped.length }).map((_, i) => (
-                  <div
-                    key={`placeholder-${i}`}
-                    aria-hidden="true"
-                    className="hidden min-w-0 flex-1 basis-0 flex-col divide-y divide-gray-100 dark:divide-gray-800/70 md:flex"
-                  >
-                    <div className="bg-gray-50/60 px-2 py-2 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:bg-gray-800/40 dark:text-gray-700">
-                      —
-                    </div>
-                    {Array.from({ length: 6 }).map((_, r) => (
-                      <div key={r} className="min-h-[76px] bg-gray-50/40 dark:bg-gray-900/30" />
-                    ))}
-                  </div>
-                ))}
-            </div>
           </div>
         )}
       </div>
