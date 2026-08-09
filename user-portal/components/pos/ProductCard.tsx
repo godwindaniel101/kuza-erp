@@ -19,11 +19,11 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
   const price = product.uomPrices?.[product.defaultUomId] ?? product.price ?? 0;
   const available = availableInUom(product.stock, product.uomToBase, product.defaultUomId);
   const soldOut = available <= 0 && !product.unlimited;
-  // Split the currency symbol from the amount so the symbol can render smaller.
-  const priceStr = formatNaira(price);
-  const priceMatch = priceStr.match(/^(\D*)(.*)$/);
-  const priceSymbol = priceMatch?.[1] ?? '';
-  const priceAmount = priceMatch?.[2] ?? priceStr;
+  // Amount without a currency symbol (currency shows on the cart totals).
+  const priceAmount = price.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   return (
     <button
@@ -31,7 +31,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       onClick={() => onAdd(product)}
       disabled={soldOut}
       aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
-      className={`group relative flex min-h-[84px] w-full flex-col justify-between gap-1 rounded-lg border px-2.5 py-2 text-left shadow-sm transition
+      className={`group relative flex min-h-[84px] w-full flex-col gap-1 rounded-lg border px-2.5 pb-2 pt-1.5 text-left shadow-sm transition
         focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
         focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
         ${
@@ -46,25 +46,27 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
         </span>
       )}
 
-      <span className="line-clamp-2 text-[12.5px] font-medium leading-tight text-gray-900 dark:text-gray-100">
+      {/* stock / count — pinned at the top */}
+      {soldOut ? (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-danger-600 dark:text-danger-400">
+          {t('pos.soldOut', 'Sold out')}
+        </span>
+      ) : product.unlimited ? (
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('pos.inStock', 'In stock')}</span>
+      ) : (
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+          {formatQty(available)} {product.unit}
+        </span>
+      )}
+
+      {/* name */}
+      <span className="line-clamp-2 flex-1 text-[12.5px] font-medium leading-tight text-gray-900 dark:text-gray-100">
         {product.name}
       </span>
-      <span className="flex items-baseline gap-1.5">
-        <span className="flex items-baseline font-mono">
-          <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500">{priceSymbol}</span>
-          <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">{priceAmount}</span>
-        </span>
-        {soldOut ? (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-danger-600 dark:text-danger-400">
-            {t('pos.soldOut', 'Sold out')}
-          </span>
-        ) : product.unlimited ? (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('pos.inStock', 'In stock')}</span>
-        ) : (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">
-            {formatQty(available)} {product.unit}
-          </span>
-        )}
+
+      {/* amount — no currency symbol */}
+      <span className="font-mono text-[13px] font-bold text-gray-900 dark:text-gray-100">
+        {priceAmount}
       </span>
     </button>
   );
