@@ -31,12 +31,13 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       onClick={() => onAdd(product)}
       disabled={soldOut}
       aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
-      className={`group relative flex min-h-[76px] w-full flex-col justify-between gap-1 px-2 py-2 text-left transition
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500
+      className={`group relative flex min-h-[84px] w-full flex-col justify-between gap-1 rounded-lg border px-2.5 py-2 text-left shadow-sm transition
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
+        focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
         ${
           soldOut
-            ? 'cursor-not-allowed bg-gray-50 opacity-50 dark:bg-gray-900'
-            : 'bg-white hover:bg-brand-50/70 active:bg-brand-100/70 dark:bg-gray-900 dark:hover:bg-brand-500/10'
+            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60 dark:border-gray-800 dark:bg-gray-900'
+            : 'border-gray-200 bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md active:translate-y-0 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700'
         }`}
     >
       {inCart > 0 && (
@@ -57,11 +58,13 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
           <span className="text-[10px] font-semibold uppercase tracking-wide text-danger-600 dark:text-danger-400">
             {t('pos.soldOut', 'Sold out')}
           </span>
-        ) : !product.unlimited ? (
+        ) : product.unlimited ? (
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('pos.inStock', 'In stock')}</span>
+        ) : (
           <span className="text-[10px] text-gray-400 dark:text-gray-500">
             {formatQty(available)} {product.unit}
           </span>
-        ) : null}
+        )}
       </span>
     </button>
   );
