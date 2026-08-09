@@ -126,7 +126,7 @@ export default function ProductGrid({
       {/* Body */}
       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 py-2">
         {loading ? (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 9 }).map((_, i) => (
               <div
                 key={i}
@@ -166,11 +166,11 @@ export default function ProductGrid({
             }
           />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-3.5">
             {grouped.map(([category, items]) => (
               <section key={category}>
                 {/* Category header — sticks to the top of the scroll area */}
-                <div className="sticky top-0 z-[1] -mx-0.5 mb-2 flex items-center gap-2 bg-canvas px-0.5 py-1.5 dark:bg-gray-950">
+                <div className="sticky top-0 z-[1] -mx-0.5 mb-1.5 flex items-center gap-2 bg-canvas px-0.5 py-1 dark:bg-gray-950">
                   <button
                     type="button"
                     onClick={() =>
@@ -183,7 +183,7 @@ export default function ProductGrid({
                   </button>
                   <span className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
                 </div>
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {items.map((product) => (
                     <ProductCard
                       key={product.id}
