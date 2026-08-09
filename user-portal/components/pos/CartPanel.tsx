@@ -203,7 +203,7 @@ export default function CartPanel({
           type="button"
           onClick={onSubmit}
           disabled={empty || saving}
-          className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-gradient text-[15px] font-semibold text-white transition
+          className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-brand-gradient text-[13px] font-semibold text-white transition
             hover:bg-brand-gradient-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
         >
           {saving ? (
