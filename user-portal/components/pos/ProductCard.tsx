@@ -31,13 +31,12 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       onClick={() => onAdd(product)}
       disabled={soldOut}
       aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
-      className={`group relative flex w-full flex-col gap-0.5 rounded-lg border px-2 py-1.5 text-left transition
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
-        focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
+      className={`group relative flex min-h-[76px] w-full flex-col justify-between gap-1 px-2 py-2 text-left transition
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500
         ${
           soldOut
-            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60 dark:border-gray-800 dark:bg-gray-900'
-            : 'border-gray-200 bg-white hover:border-brand-300 hover:shadow-card active:scale-[0.99] dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-700'
+            ? 'cursor-not-allowed bg-gray-50 opacity-50 dark:bg-gray-900'
+            : 'bg-white hover:bg-brand-50/70 active:bg-brand-100/70 dark:bg-gray-900 dark:hover:bg-brand-500/10'
         }`}
     >
       {inCart > 0 && (

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'next-i18next';
 import { SearchIcon, InventoryIcon } from '@/components/icons';
 import EmptyState from '@/components/ui/EmptyState';
+import SearchableSelect from '@/components/SearchableSelect';
 import ProductCard from './ProductCard';
 import type { PosProduct } from './types';
 
@@ -79,49 +80,39 @@ export default function ProductGrid({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Search */}
-      <div className="relative mb-3">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
-          <SearchIcon size={18} />
-        </span>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          disabled={disabled}
-          placeholder={t('pos.searchProducts', 'Search products…')}
-          className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900 shadow-sm
-            placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
-            focus-visible:border-transparent disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-        />
-      </div>
-
-      {/* Category chips */}
-      {categories.length > 0 && (
-        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {[{ key: ALL, label: t('pos.all', 'All') }, ...categories.map((c) => ({ key: c, label: c }))].map(
-            (chip) => {
-              const active = activeCategory === chip.key;
-              return (
-                <button
-                  key={chip.key}
-                  type="button"
-                  onClick={() => onCategory(chip.key)}
-                  disabled={disabled}
-                  className={`h-9 shrink-0 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition
-                    ${
-                      active
-                        ? 'bg-brand-600 text-white shadow-sm'
-                        : 'bg-white text-gray-600 ring-1 ring-inset ring-gray-200 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-800'
-                    }`}
-                >
-                  {chip.label}
-                </button>
-              );
-            },
-          )}
+      {/* Search + category filter (searchable select) side by side */}
+      <div className="mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+            <SearchIcon size={18} />
+          </span>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            disabled={disabled}
+            placeholder={t('pos.searchProducts', 'Search products…')}
+            className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900 shadow-sm
+              placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+              focus-visible:border-transparent disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          />
         </div>
-      )}
+        {categories.length > 0 && (
+          <div className="w-40 shrink-0 sm:w-48">
+            <SearchableSelect
+              options={[
+                { value: ALL, label: t('pos.allCategories', 'All categories') },
+                ...categories.map((c) => ({ value: c, label: c })),
+              ]}
+              value={activeCategory === '' ? ALL : activeCategory}
+              onChange={onCategory}
+              disabled={disabled}
+              placeholder={t('pos.category', 'Category')}
+              searchPlaceholder={t('pos.searchCategory', 'Search category…')}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Body */}
       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 py-2">
@@ -166,27 +157,29 @@ export default function ProductGrid({
             }
           />
         ) : (
-          /* Category-column board: each category is a column (header + its items
-             stacked). Columns wrap and grow to fill; a category with no matching
-             items simply isn't rendered, so search removes empty columns. */
-          <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
-            {grouped.map(([category, items]) => (
-              <div key={category} className="flex min-w-0 flex-col">
-                {/* Column header = category (tap to show only this category) */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
-                  }
-                  title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
-                  className="group sticky top-0 z-[1] mb-2 flex items-center border-b-2 border-accent/40 bg-canvas pb-1.5 pt-0.5 text-left dark:bg-gray-950"
+          /* Bordered table: each category is a column (header cell + item cells).
+             Columns share the width evenly; padded with placeholder columns to a
+             minimum of 6 so it always reads as a full table (except while
+             searching, where only matching categories show). */
+          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="flex divide-x divide-gray-200 dark:divide-gray-800">
+              {grouped.map(([category, items]) => (
+                <div
+                  key={category}
+                  className="flex min-w-0 flex-1 basis-0 flex-col divide-y divide-gray-100 dark:divide-gray-800/70"
                 >
-                  <span className="truncate text-[12px] font-bold uppercase tracking-wide text-gray-700 transition group-hover:text-accent dark:text-gray-200">
+                  {/* Header cell */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
+                    }
+                    title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
+                    className="truncate bg-gray-50 px-2 py-2 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:bg-gray-800/70 dark:text-gray-200"
+                  >
                     {category}
-                  </span>
-                </button>
-                {/* Items under the category */}
-                <div className="space-y-1.5">
+                  </button>
+                  {/* Item cells */}
                   {items.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -196,8 +189,23 @@ export default function ProductGrid({
                     />
                   ))}
                 </div>
-              </div>
-            ))}
+              ))}
+              {/* Placeholder columns keep the table full (min 6) — not while searching */}
+              {!search.trim() &&
+                grouped.length > 0 &&
+                grouped.length < 6 &&
+                Array.from({ length: 6 - grouped.length }).map((_, i) => (
+                  <div
+                    key={`placeholder-${i}`}
+                    aria-hidden="true"
+                    className="hidden min-w-0 flex-1 basis-0 flex-col divide-y divide-gray-100 dark:divide-gray-800/70 md:flex"
+                  >
+                    <div className="bg-gray-50/60 px-2 py-2 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:bg-gray-800/40 dark:text-gray-700">
+                      —
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
         )}
       </div>
