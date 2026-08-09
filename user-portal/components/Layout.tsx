@@ -9,6 +9,7 @@ import AppSidebar from './AppSidebar';
 import OnboardingModal from './OnboardingModal';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
+import Head from 'next/head';
 import { api } from '@/lib/api';
 import { isPathAllowed, requiredAppKeys } from '@/lib/appAccess';
 import { getApp } from '@/lib/apps';
@@ -359,6 +360,30 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
   const layoutHeader = inferTitle();
   const layoutSubheader = inferSubtitle();
 
+  // SEO/browser-tab title: "Kuza | <Module> - <Page>" (e.g. "Kuza | Restaurant
+  // - Reservations"). Module comes from inferTitle(); the page is the last
+  // static route segment, humanized. Overrides the default <title>Kuza</title>.
+  const documentTitle = (() => {
+    const moduleName = (t(layoutHeader) || layoutHeader || '').toString();
+    const mod = moduleName === 'Home' ? '' : moduleName;
+    if (router.pathname === '/') return 'Kuza | Dashboard';
+    const parts = router.pathname.split('/').filter(Boolean);
+    let last = parts[parts.length - 1] || '';
+    if (last.startsWith('[')) last = parts[parts.length - 2] || '';
+    let page = '';
+    if (last && !last.startsWith('[')) {
+      page = last
+        .replace(/-/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    // Drop the page when it's redundant with the module or is just a short
+    // route prefix (rms / ims / hr / pos).
+    if (page && (page.toLowerCase() === mod.toLowerCase() || page.length <= 3)) page = '';
+    const tail = [mod, page].filter(Boolean).join(' - ');
+    return tail ? `Kuza | ${tail}` : 'Kuza';
+  })();
+
   // App key the current (blocked) route needs — request the first required key.
   const requestKey = requiredAppKeys(router.pathname)?.[0] ?? null;
   const requestAppName = requestKey ? getApp(requestKey)?.name ?? requestKey : null;
@@ -404,6 +429,9 @@ export default function Layout({ children, title, subtitle }: LayoutProps) {
 
   return (
     <div className="flex h-dvh md:h-screen overflow-hidden app-container" data-app={accentApp}>
+      <Head>
+        <title>{documentTitle}</title>
+      </Head>
       {/* Desktop Sidebar — collapsible via the header toggle / POS full screen.
           Kept mounted so it slides (animated) instead of snapping in/out. */}
       <AppSidebar collapsed={sidebarCollapsed} />
