@@ -197,9 +197,13 @@ export default function ProductGrid({
           )}
         </div>
       ) : (
-        <>
-          {/* Fixed category header row (outside the scroll) */}
-          <div className="flex shrink-0 gap-2.5 pr-0.5">
+        /* One scroll area: sticky category-header row (stays on vertical scroll,
+           scrolls sideways WITH the body) + item columns. Columns keep a minimum
+           width and grow to fill; when there are too many they scroll
+           horizontally instead of shrinking. */
+        <div className="min-h-0 flex-1 overflow-auto pr-0.5 [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5">
+          {/* sticky header row */}
+          <div className="sticky top-0 z-[1] flex gap-2.5 bg-canvas pt-0.5 dark:bg-gray-950">
             {grouped.map(([category]) => (
               <button
                 key={category}
@@ -208,7 +212,7 @@ export default function ProductGrid({
                   onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
                 }
                 title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
-                className="min-w-0 flex-1 basis-0 truncate border-b-2 border-accent/40 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:text-gray-200"
+                className="min-w-[8.5rem] flex-1 basis-[8.5rem] truncate border-b-2 border-accent/40 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:text-gray-200"
               >
                 {category}
               </button>
@@ -219,55 +223,53 @@ export default function ProductGrid({
                 <div
                   key={`ph-head-${i}`}
                   aria-hidden="true"
-                  className="hidden min-w-0 flex-1 basis-0 truncate border-b-2 border-dashed border-gray-200 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:border-gray-800 dark:text-gray-700 md:block"
+                  className="hidden min-w-[8.5rem] flex-1 basis-[8.5rem] truncate border-b-2 border-dashed border-gray-200 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:border-gray-800 dark:text-gray-700 md:block"
                 >
                   —
                 </div>
               ))}
           </div>
 
-          {/* Scrollable item body (thin scrollbar) */}
-          <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 pt-2 [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar]:w-1.5">
-            <div className="flex gap-2.5">
-              {grouped.map(([category, items]) => (
-                <div key={category} className="flex min-w-0 flex-1 basis-0 flex-col gap-2">
-                  {items.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      inCart={cartCounts[product.id] || 0}
-                      onAdd={onAdd}
+          {/* item columns */}
+          <div className="flex gap-2.5 pt-2">
+            {grouped.map(([category, items]) => (
+              <div key={category} className="flex min-w-[8.5rem] flex-1 basis-[8.5rem] flex-col gap-2">
+                {items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    inCart={cartCounts[product.id] || 0}
+                    onAdd={onAdd}
+                  />
+                ))}
+                {!search.trim() &&
+                  items.length < 6 &&
+                  Array.from({ length: 6 - items.length }).map((_, r) => (
+                    <div
+                      key={`empty-${r}`}
+                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
                     />
                   ))}
-                  {!search.trim() &&
-                    items.length < 6 &&
-                    Array.from({ length: 6 - items.length }).map((_, r) => (
-                      <div
-                        key={`empty-${r}`}
-                        className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
-                      />
-                    ))}
+              </div>
+            ))}
+            {!search.trim() &&
+              grouped.length < 6 &&
+              Array.from({ length: 6 - grouped.length }).map((_, i) => (
+                <div
+                  key={`ph-col-${i}`}
+                  aria-hidden="true"
+                  className="hidden min-w-[8.5rem] flex-1 basis-[8.5rem] flex-col gap-2 md:flex"
+                >
+                  {Array.from({ length: 6 }).map((_, r) => (
+                    <div
+                      key={r}
+                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
+                    />
+                  ))}
                 </div>
               ))}
-              {!search.trim() &&
-                grouped.length < 6 &&
-                Array.from({ length: 6 - grouped.length }).map((_, i) => (
-                  <div
-                    key={`ph-col-${i}`}
-                    aria-hidden="true"
-                    className="hidden min-w-0 flex-1 basis-0 flex-col gap-2 md:flex"
-                  >
-                    {Array.from({ length: 6 }).map((_, r) => (
-                      <div
-                        key={r}
-                        className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
-                      />
-                    ))}
-                  </div>
-                ))}
-            </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Count footer */}
