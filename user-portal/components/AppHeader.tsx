@@ -377,7 +377,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
               <div
                 role="menu"
                 aria-label="Create new"
-                className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
+                className="fixed right-2 top-[calc(var(--header-height)+0.5rem)] z-50 max-w-[calc(100vw-1rem)] sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:max-w-none w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
               >
                 <p className="px-2.5 pb-1 pt-1 text-2xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   Create
@@ -418,7 +418,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
               <div
                 role="menu"
                 aria-label="Apps"
-                className="absolute right-0 mt-2 w-72 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-popover"
+                className="fixed right-2 top-[calc(var(--header-height)+0.5rem)] z-50 max-w-[calc(100vw-1rem)] sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:max-w-none w-72 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-popover"
               >
                 <div className="grid grid-cols-3 gap-1 p-2 max-h-80 overflow-y-auto">
                   {launcherApps.map((app) => {
@@ -509,7 +509,7 @@ export default function AppHeader({ title = 'dashboard', subtitle }: AppHeaderPr
             {userMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
+                className="fixed right-2 top-[calc(var(--header-height)+0.5rem)] z-50 max-w-[calc(100vw-1rem)] sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:max-w-none w-56 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-1.5 shadow-popover"
               >
                 <div className="border-b border-gray-100 dark:border-gray-800 px-2.5 pb-2.5 pt-1.5">
                   <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{user?.name || 'User'}</p>
