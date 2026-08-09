@@ -125,13 +125,6 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         ],
       },
       {
-        // Market stays within the Restaurant module (resolves to this app, like POS).
-        label: tr('nav.purchasing', 'Purchasing'),
-        items: [
-          { href: '/market', label: tr('nav.market', 'Market'), icon: 'squares-2x2' },
-        ],
-      },
-      {
         label: tr('nav.insights', 'Insights'),
         items: [{ href: '/rms/reports', label: tr('analytics', 'Analytics'), icon: 'chart-bar', permission: 'reports.view' }],
       },
@@ -366,13 +359,19 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
           { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
         ],
       },
-      {
-        label: tr('nav.stockRules', 'Stock rules'),
-        items: [
-          { href: '/settings/market', label: tr('nav.marketSetup', 'Market Setup'), icon: 'squares-2x2', permission: 'settings.view' },
-          { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
-        ],
-      },
+      // Stock rules (Market Setup + Allocation) are hidden for Restaurant/
+      // Hospitality — they sell menu items, not marketplace stock.
+      ...(businessType === 'restaurant' || businessType === 'hospitality'
+        ? []
+        : ([
+            {
+              label: tr('nav.stockRules', 'Stock rules'),
+              items: [
+                { href: '/settings/market', label: tr('nav.marketSetup', 'Market Setup'), icon: 'squares-2x2', permission: 'settings.view' },
+                { href: '/settings/allocation-method', label: tr('allocationMethod', 'Allocation Method'), icon: 'adjustments', permission: 'settings.view' },
+              ],
+            },
+          ] as NavGroup[])),
     ],
   };
 
