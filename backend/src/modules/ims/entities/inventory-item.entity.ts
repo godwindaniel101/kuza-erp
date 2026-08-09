@@ -83,11 +83,11 @@ export class InventoryItem extends TenantEntity {
   baseUom: Uom;
 
   @ManyToOne(() => InventoryCategory, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'categoryId' })
+  @JoinColumn({ name: 'category_id' })
   category: InventoryCategory;
 
   @ManyToOne(() => InventorySubcategory, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'subcategoryId' })
+  @JoinColumn({ name: 'subcategory_id' })
   subcategory: InventorySubcategory;
 
   @OneToMany(() => BranchInventoryItem, (item) => item.inventoryItem, { cascade: true })
