@@ -59,6 +59,9 @@ export default function InventoryPage() {
   const base = router.pathname.startsWith('/rms/items') ? '/rms/items' : '/ims/inventory';
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  // Subcategories of the currently-selected category (cascading filter). Empty
+  // until a category is chosen.
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   // Marketplace listing: which item is being listed/edited, and a map of
@@ -76,11 +79,34 @@ export default function InventoryPage() {
 
   // Filter state (config-driven via FilterBar). Text search now comes from the
   // top-nav search box (usePageSearch); category/location stay as page filters.
-  const [filters, setFilters] = useState<FilterValues>({ category: '', location: '' });
+  const [filters, setFilters] = useState<FilterValues>({ category: '', subcategory: '', location: '', stockStatus: '' });
   const searchQuery = usePageSearch(t('searchItems') || 'Search items…');
   const selectedCategoryId = (filters.category as string) || '';
+  const selectedSubcategory = (filters.subcategory as string) || '';
+  const stockStatus = (filters.stockStatus as string) || '';
   const locationQuery = (filters.location as string) || '';
   const isWarehouse = businessType === 'warehouse';
+
+  // Cascade: load subcategories for the selected category (and clear the list
+  // when no category is picked). Filtering matches on subcategory name.
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setSubcategories([]);
+      return;
+    }
+    let cancelled = false;
+    api
+      .get<{ success: boolean; data: any[] }>(`/ims/categories/${selectedCategoryId}/subcategories`)
+      .then((res) => {
+        if (!cancelled && res.success) setSubcategories(res.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setSubcategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategoryId]);
 
   useEffect(() => {
     loadItems();
@@ -167,6 +193,17 @@ export default function InventoryPage() {
   const filterFn = useCallback(
     (item: InventoryItem) => {
       if (selectedCategoryId && item.categoryId !== selectedCategoryId) return false;
+      if (selectedSubcategory && item.subcategory !== selectedSubcategory) return false;
+      // Stock-status filter (over/under/in/out) derived from current vs min/max.
+      if (stockStatus) {
+        const cur = Number(item.currentStock || 0);
+        const min = Number(item.minimumStock || 0);
+        const max = Number(item.maximumStock || 0);
+        if (stockStatus === 'in' && !(cur > 0)) return false;
+        if (stockStatus === 'out' && cur > 0) return false;
+        if (stockStatus === 'under' && !(cur <= min)) return false; // at/below reorder point
+        if (stockStatus === 'over' && !(max > 0 && cur >= max)) return false;
+      }
       if (locationQuery && !(item.binLocation || '').toLowerCase().includes(locationQuery.toLowerCase())) {
         return false;
       }
@@ -182,7 +219,7 @@ export default function InventoryPage() {
           (item.baseUom?.abbreviation || item.uom?.abbreviation)?.toLowerCase().includes(query),
       );
     },
-    [searchQuery, selectedCategoryId, locationQuery],
+    [searchQuery, selectedCategoryId, selectedSubcategory, stockStatus, locationQuery],
   );
 
   // Sort accessor for fields that don't map 1:1 to top-level props.
@@ -211,7 +248,7 @@ export default function InventoryPage() {
   useEffect(() => {
     table.setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCategoryId, locationQuery]);
+  }, [searchQuery, selectedCategoryId, selectedSubcategory, stockStatus, locationQuery]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm.itemId) return;
@@ -446,18 +483,54 @@ export default function InventoryPage() {
               : []),
             {
               key: 'category',
-              type: 'select',
+              type: 'select' as const,
               placeholder: t('allCategories') || 'All Categories',
-              className: 'w-full sm:w-64',
+              className: 'w-full sm:w-56',
               options: [
                 { value: '', label: t('allCategories') || 'All Categories' },
                 ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
               ],
             },
+            // Subcategory cascades off category — only shown once a category with
+            // subcategories is selected.
+            ...(selectedCategoryId && subcategories.length > 0
+              ? [
+                  {
+                    key: 'subcategory',
+                    type: 'select' as const,
+                    placeholder: t('allSubcategories') || 'All Subcategories',
+                    className: 'w-full sm:w-56',
+                    options: [
+                      { value: '', label: t('allSubcategories') || 'All Subcategories' },
+                      ...subcategories.map((sc) => ({ value: sc.name, label: sc.name })),
+                    ],
+                  },
+                ]
+              : []),
+            {
+              key: 'stockStatus',
+              type: 'select' as const,
+              placeholder: t('stockStatus') || 'Stock status',
+              className: 'w-full sm:w-44',
+              options: [
+                { value: '', label: t('allStock') || 'All stock' },
+                { value: 'in', label: t('inStock') || 'In stock' },
+                { value: 'under', label: t('understock') || 'Understock' },
+                { value: 'over', label: t('overstock') || 'Overstock' },
+                { value: 'out', label: t('outOfStock') || 'Out of stock' },
+              ],
+            },
           ]}
           values={filters}
-          onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
-          onClear={() => setFilters({ category: '', location: '' })}
+          onChange={(key, value) =>
+            setFilters((prev) => ({
+              ...prev,
+              [key]: value,
+              // Changing the category invalidates the current subcategory pick.
+              ...(key === 'category' ? { subcategory: '' } : {}),
+            }))
+          }
+          onClear={() => setFilters({ category: '', subcategory: '', location: '', stockStatus: '' })}
         />
       )}
 
