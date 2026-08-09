@@ -117,12 +117,19 @@ export default function ProductGrid({
       {/* Body */}
       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 py-2">
         {loading ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[104px] animate-pulse rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800/60"
-              />
+          /* Skeleton mirrors the 6-column card board: each column a header bar
+             + a stack of card placeholders. */
+          <div className="flex gap-2.5">
+            {Array.from({ length: 6 }).map((_, c) => (
+              <div key={c} className="flex flex-1 basis-0 flex-col gap-2">
+                <div className="h-4 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
+                {Array.from({ length: 5 }).map((_, r) => (
+                  <div
+                    key={r}
+                    className="h-[84px] animate-pulse rounded-lg border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-800/60"
+                  />
+                ))}
+              </div>
             ))}
           </div>
         ) : error ? (
