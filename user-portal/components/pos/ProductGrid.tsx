@@ -128,7 +128,7 @@ export default function ProductGrid({
             />
           </div>
         )}
-        {subcategories.length > 0 && (
+        {categories.length > 0 && (
           <div className="w-40 shrink-0">
             <SearchableSelect
               options={[
@@ -137,7 +137,7 @@ export default function ProductGrid({
               ]}
               value={activeSubcategory}
               onChange={setActiveSubcategory}
-              disabled={disabled}
+              disabled={disabled || subcategories.length === 0}
               placeholder={t('pos.subcategory', 'Subcategory')}
               searchPlaceholder={t('pos.searchSubcategory', 'Search subcategory…')}
             />
@@ -208,7 +208,7 @@ export default function ProductGrid({
                     onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
                   }
                   title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
-                  className="truncate border-b-2 border-accent/40 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:text-gray-200"
+                  className="sticky top-0 z-[1] truncate border-b-2 border-accent/40 bg-canvas pb-1.5 pt-0.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-600 transition hover:text-accent dark:bg-gray-950 dark:text-gray-200"
                 >
                   {category}
                 </button>
@@ -242,7 +242,7 @@ export default function ProductGrid({
                   aria-hidden="true"
                   className="hidden min-w-0 flex-1 basis-0 flex-col gap-2 md:flex"
                 >
-                  <div className="truncate border-b-2 border-dashed border-gray-200 pb-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:border-gray-800 dark:text-gray-700">
+                  <div className="sticky top-0 z-[1] truncate border-b-2 border-dashed border-gray-200 bg-canvas pb-1.5 pt-0.5 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-700">
                     —
                   </div>
                   {Array.from({ length: 6 }).map((_, r) => (
