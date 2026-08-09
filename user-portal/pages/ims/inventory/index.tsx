@@ -412,7 +412,11 @@ export default function InventoryPage() {
     downloadCsv(`inventory-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
 
-  // Row click opens the item; the kebab keeps only Edit + Delete.
+  // Restaurant / Hospitality sell menu items, not marketplace stock — no
+  // "List on market" action there.
+  const isRestaurantVertical = businessType === 'restaurant' || businessType === 'hospitality';
+
+  // Row click opens the item; the kebab keeps Edit + (List on market) + Delete.
   const rowActions: RowAction<InventoryItem>[] = [
     {
       label: t('edit'),
@@ -420,12 +424,16 @@ export default function InventoryPage() {
       iconColor: 'text-accent',
       onClick: (item) => router.push(`${base}/edit/${item.id}`),
     },
-    {
-      label: t('inventory.listOnMarket', 'List on market'),
-      icon: 'bx-store',
-      iconColor: 'text-emerald-600',
-      onClick: (item) => setListingModalItem(item),
-    },
+    ...(isRestaurantVertical
+      ? []
+      : [
+          {
+            label: t('inventory.listOnMarket', 'List on market'),
+            icon: 'bx-store' as const,
+            iconColor: 'text-emerald-600',
+            onClick: (item: InventoryItem) => setListingModalItem(item),
+          },
+        ]),
     {
       label: t('delete'),
       icon: 'bx-trash',
