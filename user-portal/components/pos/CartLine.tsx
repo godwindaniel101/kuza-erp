@@ -70,7 +70,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
           ))}
         </select>
       ) : (
-        <span className="w-12 shrink-0 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
+        <span className="w-8 shrink-0 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
           {line.uoms[0]?.abbreviation || line.uoms[0]?.name}
         </span>
       )}
