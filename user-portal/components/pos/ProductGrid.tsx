@@ -166,24 +166,27 @@ export default function ProductGrid({
             }
           />
         ) : (
-          <div className="space-y-3.5">
+          /* Category-column board: each category is a column (header + its items
+             stacked). Columns wrap and grow to fill; a category with no matching
+             items simply isn't rendered, so search removes empty columns. */
+          <div className="flex flex-wrap items-start gap-2.5">
             {grouped.map(([category, items]) => (
-              <section key={category}>
-                {/* Category header — sticks to the top of the scroll area */}
-                <div className="sticky top-0 z-[1] -mx-0.5 mb-1.5 flex items-center gap-2 bg-canvas px-0.5 py-1 dark:bg-gray-950">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
-                    }
-                    className="text-xs font-semibold uppercase tracking-wide text-gray-500 transition hover:text-accent dark:text-gray-400"
-                    title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
-                  >
+              <div key={category} className="flex min-w-[136px] flex-1 basis-[150px] flex-col">
+                {/* Column header = category (tap to show only this category) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
+                  }
+                  title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
+                  className="group sticky top-0 z-[1] mb-2 flex items-center border-b-2 border-accent/40 bg-canvas pb-1.5 pt-0.5 text-left dark:bg-gray-950"
+                >
+                  <span className="truncate text-[12px] font-bold uppercase tracking-wide text-gray-700 transition group-hover:text-accent dark:text-gray-200">
                     {category}
-                  </button>
-                  <span className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  </span>
+                </button>
+                {/* Items under the category */}
+                <div className="space-y-1.5">
                   {items.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -193,7 +196,7 @@ export default function ProductGrid({
                     />
                   ))}
                 </div>
-              </section>
+              </div>
             ))}
           </div>
         )}
