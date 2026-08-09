@@ -70,12 +70,12 @@ export default function InventoryPage() {
   const [listingByItem, setListingByItem] = useState<Map<string, CatalogListing>>(new Map());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currency, setCurrency] = useState<string>('NGN');
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; itemId: string | null; itemName: string }>({
+  const [archiveConfirm, setArchiveConfirm] = useState<{ isOpen: boolean; itemId: string | null; itemName: string }>({
     isOpen: false,
     itemId: null,
     itemName: '',
   });
-  const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   // Filter state (config-driven via FilterBar). Text search now comes from the
   // top-nav search box (usePageSearch); category/location stay as page filters.
@@ -250,20 +250,20 @@ export default function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategoryId, selectedSubcategory, stockStatus, locationQuery]);
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.itemId) return;
-    setDeleting(true);
+  const handleArchiveConfirm = async () => {
+    if (!archiveConfirm.itemId) return;
+    setArchiving(true);
     try {
-      await api.delete(`/ims/inventory/${deleteConfirm.itemId}`);
-      setToast({ message: t('deletedSuccessfully') || 'Item deleted successfully', type: 'success' });
-      setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' });
+      await api.patch(`/ims/inventory/${archiveConfirm.itemId}/archive`, {});
+      setToast({ message: t('inventory.archivedSuccessfully', 'Item archived'), type: 'success' });
+      setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' });
       await loadItems();
     } catch (err: any) {
-      console.error('Failed to delete item:', err);
-      const errorMessage = err.response?.data?.message || err.message || t('deleteFailed') || 'Failed to delete item';
+      console.error('Failed to archive item:', err);
+      const errorMessage = err.response?.data?.message || err.message || t('inventory.archiveFailed', 'Failed to archive item');
       setToast({ message: errorMessage, type: 'error' });
     } finally {
-      setDeleting(false);
+      setArchiving(false);
     }
   };
 
@@ -416,7 +416,9 @@ export default function InventoryPage() {
   // "List on market" action there.
   const isRestaurantVertical = businessType === 'restaurant' || businessType === 'hospitality';
 
-  // Row click opens the item; the kebab keeps Edit + (List on market) + Delete.
+  // Row click opens the item; the kebab keeps Edit | Archive | (Show in Market).
+  // Archive replaces hard delete — items are hidden but restorable from
+  // Configuration → Archived items.
   const rowActions: RowAction<InventoryItem>[] = [
     {
       label: t('edit'),
@@ -424,23 +426,22 @@ export default function InventoryPage() {
       iconColor: 'text-accent',
       onClick: (item) => router.push(`${base}/edit/${item.id}`),
     },
+    {
+      label: t('inventory.archive', 'Archive'),
+      icon: 'bx-archive-in',
+      iconColor: 'text-amber-600',
+      onClick: (item) => setArchiveConfirm({ isOpen: true, itemId: item.id, itemName: item.name || '' }),
+    },
     ...(isRestaurantVertical
       ? []
       : [
           {
-            label: t('inventory.listOnMarket', 'List on market'),
+            label: t('inventory.showInMarket', 'Show in Market'),
             icon: 'bx-store' as const,
             iconColor: 'text-emerald-600',
             onClick: (item: InventoryItem) => setListingModalItem(item),
           },
         ]),
-    {
-      label: t('delete'),
-      icon: 'bx-trash',
-      iconColor: 'text-red-600',
-      danger: true,
-      onClick: (item) => setDeleteConfirm({ isOpen: true, itemId: item.id, itemName: item.name || '' }),
-    },
   ];
 
   return (
@@ -639,35 +640,37 @@ export default function InventoryPage() {
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Delete Confirmation Modal */}
+      {/* Archive Confirmation Modal */}
       <Modal
-        isOpen={deleteConfirm.isOpen}
-        onClose={() => setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })}
-        title={t('confirmDelete') || 'Confirm Delete'}
+        isOpen={archiveConfirm.isOpen}
+        onClose={() => setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' })}
+        title={t('inventory.confirmArchive', 'Archive item')}
         maxWidth="md"
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">
-            {t('areYouSureDelete') || 'Are you sure you want to delete'}{' '}
-            <strong className="text-gray-900 dark:text-gray-100">{deleteConfirm.itemName}</strong>?
+            {t('inventory.areYouSureArchive', 'Archive')}{' '}
+            <strong className="text-gray-900 dark:text-gray-100">{archiveConfirm.itemName}</strong>?
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">{t('deleteWarning') || 'This action cannot be undone.'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            {t('inventory.archiveWarning', 'It will be hidden from your active items but keeps all history. You can restore it any time from Configuration → Archived items.')}
+          </p>
           <div className="flex justify-end space-x-3 pt-4">
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })}
-              disabled={deleting}
+              onClick={() => setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' })}
+              disabled={archiving}
             >
               {t('cancel') || 'Cancel'}
             </Button>
             <Button
               type="button"
-              variant="danger"
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
+              variant="primary"
+              onClick={handleArchiveConfirm}
+              disabled={archiving}
             >
-              {deleting ? (
+              {archiving ? (
                 <>
                   <svg
                     className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -682,12 +685,12 @@ export default function InventoryPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  {t('deleting') || 'Deleting...'}
+                  {t('inventory.archiving', 'Archiving…')}
                 </>
               ) : (
                 <>
-                  <i className="bx bx-trash mr-2"></i>
-                  {t('delete') || 'Delete'}
+                  <i className="bx bx-archive-in mr-2"></i>
+                  {t('inventory.archive', 'Archive')}
                 </>
               )}
             </Button>

@@ -357,6 +357,7 @@ export default function AppSidebar({ mobile = false, onNavigate, collapsed = fal
         items: [
           { href: '/settings/categories', label: tr('categories', 'Categories'), icon: 'folder', permission: 'inventory.view' },
           { href: '/settings/uoms', label: tr('uoms', 'Units of Measure'), icon: 'scale', permission: 'uoms.view' },
+          { href: '/settings/archived-items', label: tr('inventory.archivedItems', 'Archived items'), icon: 'archive-box', permission: 'inventory.view' },
         ],
       },
       // Stock rules (Market Setup + Allocation) are hidden for Restaurant/
