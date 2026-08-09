@@ -32,7 +32,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       onClick={() => onAdd(product)}
       disabled={soldOut}
       aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
-      className={`group relative flex h-full flex-col items-start gap-2 rounded-xl border p-3 text-left transition
+      className={`group relative flex h-full flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition
         focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
         focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
         ${
@@ -49,7 +49,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
 
       <div className="flex w-full items-start justify-between gap-2">
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold"
           style={{ backgroundColor: accent.fill, color: accent.ink }}
           aria-hidden="true"
         >
@@ -70,18 +70,11 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
-          {product.name}
-        </p>
-        {product.category && (
-          <p className="mt-0.5 truncate text-xs text-gray-400 dark:text-gray-500">
-            {product.category}
-          </p>
-        )}
-      </div>
+      <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-semibold leading-snug text-gray-900 dark:text-gray-100">
+        {product.name}
+      </p>
 
-      <p className="font-mono text-[15px] font-bold text-gray-900 dark:text-gray-100">
+      <p className="font-mono text-sm font-bold text-gray-900 dark:text-gray-100">
         {formatNaira(price)}
       </p>
     </button>
