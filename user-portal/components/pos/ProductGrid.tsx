@@ -171,12 +171,16 @@ export default function ProductGrid({
               <section key={category}>
                 {/* Category header — sticks to the top of the scroll area */}
                 <div className="sticky top-0 z-[1] -mx-0.5 mb-2 flex items-center gap-2 bg-canvas px-0.5 py-1.5 dark:bg-gray-950">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCategory(category === t('pos.uncategorized', 'Uncategorised') ? '' : category)
+                    }
+                    className="text-xs font-semibold uppercase tracking-wide text-gray-500 transition hover:text-accent dark:text-gray-400"
+                    title={t('pos.showAllInCategory', 'Show all {{category}}', { category })}
+                  >
                     {category}
-                  </h3>
-                  <span className="rounded-full bg-gray-100 px-1.5 text-[11px] font-medium tabular-nums text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                    {items.length}
-                  </span>
+                  </button>
                   <span className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
                 </div>
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
