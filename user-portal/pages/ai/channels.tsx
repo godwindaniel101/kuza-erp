@@ -162,7 +162,7 @@ export default function AiChannelsPage() {
   };
 
   return (
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader title="Channels" subtitle="Connect the social and web channels your agents talk on. Credentials are encrypted at rest — never shown here." />
 
       {loading ? (

@@ -218,7 +218,7 @@ export default function InvoicesPage() {
 
   return (
     <PermissionGuard permission="sales.view">
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader
         title={t('invoices.invoices', 'Invoices')}
         count={loading ? undefined : total}

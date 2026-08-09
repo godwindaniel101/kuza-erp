@@ -156,7 +156,7 @@ export default function ProfitLossPage() {
       />
 
       {loading ? (
-        <div className="w-full max-w-5xl space-y-6">
+        <div className="w-full max-w-5xl space-y-4">
           <TableSkeleton rows={4} columns={2} />
           <TableSkeleton rows={4} columns={2} />
         </div>
@@ -170,7 +170,7 @@ export default function ProfitLossPage() {
         <div className="space-y-6 max-w-4xl">
           {/* Net profit banner */}
           <div
-            className={`px-6 py-4 rounded-xl ring-1 flex items-center justify-between ${
+            className={`px-4 py-4 rounded-xl ring-1 flex items-center justify-between ${
               profitable
                 ? 'bg-emerald-50 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-800'
                 : 'bg-red-50 dark:bg-red-500/10 ring-red-200 dark:ring-red-800'

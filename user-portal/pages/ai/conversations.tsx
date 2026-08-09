@@ -98,7 +98,7 @@ export default function AiConversationsPage() {
   };
 
   return (
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader title="Conversations" subtitle="Customer threads your agents are handling. Take over any time; money-path actions wait for your approval." />
 
       {pending.length > 0 && (

@@ -149,7 +149,7 @@ export default function NewInvoicePage() {
   };
 
   return (
-    <div className="kz-stagger w-full max-w-3xl space-y-6">
+    <div className="kz-stagger w-full max-w-3xl space-y-4">
       <PageHeader
         title={t('invoices.newInvoice', 'New Invoice')}
         subtitle={t('invoices.newSubtitle', 'Pick items from inventory or add free-text lines')}

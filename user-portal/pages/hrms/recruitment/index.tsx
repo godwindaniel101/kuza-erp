@@ -93,7 +93,7 @@ export default function RecruitmentPage() {
           <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-display text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">{t('jobPostings')}</h2>

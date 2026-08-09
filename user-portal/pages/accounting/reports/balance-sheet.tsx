@@ -190,7 +190,7 @@ export default function BalanceSheetPage() {
       )}
 
       {loading ? (
-        <div className="w-full max-w-5xl space-y-6">
+        <div className="w-full max-w-5xl space-y-4">
           <TableSkeleton rows={3} columns={2} />
           <TableSkeleton rows={3} columns={2} />
           <TableSkeleton rows={3} columns={2} />

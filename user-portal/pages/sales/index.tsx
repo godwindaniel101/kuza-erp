@@ -155,7 +155,7 @@ export default function SalesDashboardPage() {
 
   return (
     <PermissionGuard permission="sales.view">
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Link href="/sales/customers" className={heroActionGhost}>
           <i className="bx bx-user-plus" aria-hidden="true" /> {t('sales.newCustomer', 'New Customer')}

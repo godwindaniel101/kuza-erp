@@ -229,7 +229,7 @@ export default function StorefrontOverviewPage() {
   const published = !!site?.isPublished;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title={t('storefront.title', 'Storefront')}
         subtitle={t('storefront.subtitle', 'Sell online on your live stock')}

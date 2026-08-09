@@ -146,7 +146,7 @@ export default function ReportsPage() {
 
   return (
     <PermissionGuard permission="reports.view">
-      <div className="kz-stagger space-y-6">
+      <div className="kz-stagger space-y-4">
         <PageHeader
           title={tt('analytics', 'Analytics')}
           subtitle={tt('analyticsSubtitle', "What's driving your numbers")}

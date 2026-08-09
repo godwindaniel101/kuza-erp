@@ -649,10 +649,10 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* LEFT: main form card */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 p-6 space-y-6">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 p-6 space-y-4">
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Name */}
@@ -1499,7 +1499,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
       {/* Image Upload Modal */}
       <Modal isOpen={showImageUpload} onClose={() => setShowImageUpload(false)} title={t('uploadImages') || 'Upload Images'}>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Front Image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

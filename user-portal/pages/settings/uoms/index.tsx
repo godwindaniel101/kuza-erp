@@ -166,7 +166,7 @@ export default function UomsSettingsPage() {
   }, [conversionForm.fromUomId, conversionForm.toUomId, conversionForm.multiplier, uoms]);
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       {toast && (
         <Toast
           message={toast.message}

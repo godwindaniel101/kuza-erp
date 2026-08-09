@@ -213,7 +213,7 @@ export default function EditMenuPage() {
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="kz-stagger max-w-7xl mx-auto space-y-6">
+      <div className="kz-stagger max-w-7xl mx-auto space-y-4">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
@@ -238,7 +238,7 @@ export default function EditMenuPage() {
                 </h2>
 
                 {/* Branch Selection */}
-                <div className="mb-5">
+                <div className="mb-4">
                   <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('branch')} <span className="text-red-500">*</span>
                   </label>
@@ -264,7 +264,7 @@ export default function EditMenuPage() {
                   value={formData.name}
                   onChange={(value) => setFormData({ ...formData, name: value })}
                   placeholder={t('menu.menuNamePlaceholder', 'e.g., Lunch Menu, Drinks Menu')}
-                  className="mb-5"
+                  className="mb-4"
                 />
 
                 {/* Selected Items Summary */}

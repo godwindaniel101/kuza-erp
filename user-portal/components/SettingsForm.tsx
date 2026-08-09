@@ -116,7 +116,7 @@ export default function SettingsForm({
         breadcrumbs={breadcrumbs || [{ label: 'Settings', href: '/settings' }, { label: 'General' }]}
       />
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={showAddress || showPhone || showEmail ? 'md:col-span-1' : 'md:col-span-2'}>
               <FormField

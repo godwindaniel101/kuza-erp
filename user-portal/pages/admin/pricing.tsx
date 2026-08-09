@@ -186,7 +186,7 @@ function AdminPricingInner() {
           Loading pricing…
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* App prices, grouped */}
           {GROUP_ORDER.map((group) => {
             const apps = appsByGroup[group] ?? [];

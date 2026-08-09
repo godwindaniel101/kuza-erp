@@ -101,7 +101,7 @@ export default function MenuTemplatesPage() {
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="kz-stagger max-w-7xl mx-auto space-y-6">
+      <div className="kz-stagger max-w-7xl mx-auto space-y-4">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}

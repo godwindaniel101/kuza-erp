@@ -189,7 +189,7 @@ export default function BistroTemplate({ data, theme }: TemplateProps) {
             </div>
 
             {/* Dish rows, grouped by subcategory */}
-            <div key={activeId} className="menu-stagger mt-5 space-y-6">
+            <div key={activeId} className="menu-stagger mt-5 space-y-4">
               {subGroups(activeCategory.items).map((group, gi) => (
                 <div key={group.name ?? `__nogroup-${gi}`} className="space-y-3.5">
                   {group.name && (

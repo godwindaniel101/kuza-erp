@@ -718,11 +718,11 @@ export default function InflowDetailsPage() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100"
+                        className="px-4 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100"
                       >
                         {t("grandTotal") || "Grand Total"}:
                       </td>
-                      <td className="px-6 py-4 text-right text-sm font-bold text-red-600 dark:text-red-400">
+                      <td className="px-4 py-4 text-right text-sm font-bold text-red-600 dark:text-red-400">
                         {formatCurrency(
                           totalAmount || inflow.totalAmount || 0,
                           inflow.currency,

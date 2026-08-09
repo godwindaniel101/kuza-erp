@@ -64,7 +64,7 @@ export default function AiTrainingPage() {
   };
 
   return (
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader title="Training" subtitle="Teach your agents your FAQ, policies and product facts. Agents read this to answer — they never change it." />
 
       <section className={SURFACE}>

@@ -239,7 +239,7 @@ export default function ChartOfAccountsPage() {
           }
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {TYPE_ORDER.map((type) => {
             const rows = grouped[type];
             if (rows.length === 0) return null;

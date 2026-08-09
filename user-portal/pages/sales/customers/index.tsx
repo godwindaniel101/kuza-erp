@@ -251,7 +251,7 @@ export default function CustomersPage() {
 
   return (
     <PermissionGuard permission="sales.view">
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader
         title={t('customers.title', 'Customers')}
         count={loading ? undefined : total}

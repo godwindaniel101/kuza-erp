@@ -188,7 +188,7 @@ export default function InvoiceDetailPage() {
     !!(settings.bankName || settings.accountNumber || settings.paymentInstructions);
 
   return (
-    <div className="kz-stagger w-full max-w-4xl space-y-6">
+    <div className="kz-stagger w-full max-w-4xl space-y-4">
       {/* Print CSS: hide chrome, show only the invoice document */}
       <style jsx global>{`
         @media print {

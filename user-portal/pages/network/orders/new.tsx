@@ -146,7 +146,7 @@ export default function NewOrderPage() {
         breadcrumbs={[{ label: t('orders.title', 'Purchase orders'), href: '/network/orders' }, { label: t('orders.newRequest', 'New request') }]}
       />
 
-      <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
         {/* Supplier + meta */}
         <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

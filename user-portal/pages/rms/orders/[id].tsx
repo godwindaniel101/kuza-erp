@@ -136,7 +136,7 @@ export default function OrderViewPage() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-5xl space-y-6">
+      <div className="w-full max-w-5xl space-y-4">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto"></div>
           <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{t('loading') || 'Loading...'}</p>
@@ -148,7 +148,7 @@ export default function OrderViewPage() {
   if (!order) {
     return (
       <PermissionGuard permission="orders.view">
-        <div className="w-full max-w-5xl space-y-6">
+        <div className="w-full max-w-5xl space-y-4">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">{t('orderNotFound') || 'Order not found'}</p>
             <Link href="/rms/orders" className="mt-4 inline-block text-accent hover:text-accent-hover transition-colors">
@@ -168,7 +168,7 @@ export default function OrderViewPage() {
 
   return (
     <PermissionGuard permission="orders.view">
-      <div className="kz-stagger w-full max-w-5xl space-y-6">
+      <div className="kz-stagger w-full max-w-5xl space-y-4">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
@@ -474,7 +474,7 @@ export default function OrderViewPage() {
                               style={{ cursor: hasBreakdown ? 'pointer' : 'default' }}
                               onClick={() => hasBreakdown && toggleRow(index)}
                             >
-                              <td className="px-6 py-4">
+                              <td className="px-4 py-4">
                                 <div className="flex items-center space-x-2">
                                   {hasBreakdown && (
                                     <i className={`bx text-lg text-gray-400 ${isExpanded ? 'bx-chevron-down' : 'bx-chevron-right'}`}></i>
@@ -505,7 +505,7 @@ export default function OrderViewPage() {
                             {/* Batch breakdown row - show individual batch/inflow details */}
                             {isExpanded && hasBreakdown && item.batches && (
                               <tr>
-                                <td colSpan={6} className="px-6 py-4">
+                                <td colSpan={6} className="px-4 py-4">
                                   <div className="ml-7 text-xs">
                                     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
                                       <div className="flex items-center justify-between mb-3">
@@ -593,26 +593,26 @@ export default function OrderViewPage() {
                     </tbody>
                     <tfoot className="bg-gray-50 dark:bg-gray-700 sticky bottom-0">
                       <tr>
-                        <td colSpan={3} className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <td colSpan={3} className="px-4 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {t('totals') || 'Totals'}:
                         </td>
-                        <td className="px-6 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-400">{formatCurrency(totalCost)}</td>
-                        <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalSale)}</td>
-                        <td className={`px-6 py-4 text-right text-sm font-bold ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        <td className="px-4 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-400">{formatCurrency(totalCost)}</td>
+                        <td className="px-4 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(totalSale)}</td>
+                        <td className={`px-4 py-4 text-right text-sm font-bold ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
                         </td>
                       </tr>
                       {order.tax > 0 && (
                         <tr>
-                          <td colSpan={4} className="px-6 py-4 text-right text-sm font-medium text-gray-600 dark:text-gray-400">{t('vat') || 'VAT'}</td>
-                          <td className="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(order.tax || 0)}</td>
-                          <td className="px-6 py-4"></td>
+                          <td colSpan={4} className="px-4 py-4 text-right text-sm font-medium text-gray-600 dark:text-gray-400">{t('vat') || 'VAT'}</td>
+                          <td className="px-4 py-4 text-right text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(order.tax || 0)}</td>
+                          <td className="px-4 py-4"></td>
                         </tr>
                       )}
                       <tr>
-                        <td colSpan={4} className="px-6 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{t('total')}</td>
-                        <td className="px-6 py-4 text-right text-sm font-bold text-red-600 dark:text-red-400">{formatCurrency(order.totalAmount || 0)}</td>
-                        <td className="px-6 py-4"></td>
+                        <td colSpan={4} className="px-4 py-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{t('total')}</td>
+                        <td className="px-4 py-4 text-right text-sm font-bold text-red-600 dark:text-red-400">{formatCurrency(order.totalAmount || 0)}</td>
+                        <td className="px-4 py-4"></td>
                       </tr>
                     </tfoot>
                   </table>

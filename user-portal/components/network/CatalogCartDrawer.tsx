@@ -140,7 +140,7 @@ export default function CatalogCartDrawer({
               <p className="mt-2 text-sm">{t('cart.empty', 'Your cart is empty')}</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {groups.map((g) => {
                 const cur = groupCurrency(g);
                 return (

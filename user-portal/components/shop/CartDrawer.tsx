@@ -67,7 +67,7 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, total
               <p className="mt-3 text-sm">Your cart is empty.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {groups.map((g) => (
                 <div key={g.storeName}>
                   <div className="mb-2 flex items-center justify-between">

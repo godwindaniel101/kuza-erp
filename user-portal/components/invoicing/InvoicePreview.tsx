@@ -249,7 +249,7 @@ export default function InvoicePreview({ settings }: InvoicePreviewProps) {
       </div>
 
       <div className="mb-4">{linesTable}</div>
-      <div className="mb-5">{totals}</div>
+      <div className="mb-4">{totals}</div>
       {paymentBlock}
       {footer}
     </div>

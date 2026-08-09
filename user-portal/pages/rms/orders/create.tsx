@@ -541,7 +541,7 @@ export default function CreateOrderPage() {
 
   return (
     <PermissionGuard permission="orders.create">
-      <div className="space-y-6">
+      <div className="space-y-4">
         {toast && (
           <Toast
             message={toast.message}
@@ -550,7 +550,7 @@ export default function CreateOrderPage() {
           />
         )}
 
-        <form onSubmit={handleSubmit} className="kz-stagger space-y-6">
+        <form onSubmit={handleSubmit} className="kz-stagger space-y-4">
           {/* Main Layout: Left 70% Input Entry, Right 30% Order Summary */}
           <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
             {/* Left Side - Input Entry (70%) */}
@@ -1285,7 +1285,7 @@ export default function CreateOrderPage() {
             </div>
 
             {/* Right Side - Order Summary & Actions (30%) */}
-            <div className="xl:col-span-3 space-y-6">
+            <div className="xl:col-span-3 space-y-4">
               {/* Order Summary - Always visible */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 xl:sticky xl:top-6">
                 <button

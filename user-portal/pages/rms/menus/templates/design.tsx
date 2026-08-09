@@ -121,7 +121,7 @@ export default function TemplateDesignerPage() {
 
   return (
     <PermissionGuard permission="menus.edit">
-      <div className="kz-stagger max-w-4xl mx-auto space-y-6">
+      <div className="kz-stagger max-w-4xl mx-auto space-y-4">
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
@@ -138,7 +138,7 @@ export default function TemplateDesignerPage() {
 
         {template && menu ? (
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-5">
-            <div className="mb-5">
+            <div className="mb-4">
               <h2 className="font-display tracking-tight text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-2">{template.name}</h2>
               <p className="text-[13px] text-gray-500 dark:text-gray-400">{template.description}</p>
             </div>
