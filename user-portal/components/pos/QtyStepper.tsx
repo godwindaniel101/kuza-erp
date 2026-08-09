@@ -58,7 +58,7 @@ export default function QtyStepper({
   const atMax = max != null && value >= max;
 
   return (
-    <div className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700">
+    <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700">
       <button
         type="button"
         onClick={() => onChange(clamp(value - 1))}
@@ -77,7 +77,7 @@ export default function QtyStepper({
         onFocus={(e) => e.currentTarget.select()}
         disabled={disabled}
         aria-label={t('pos.quantity', 'Quantity')}
-        className={`${field} border-x border-gray-300 bg-transparent text-center font-mono font-semibold
+        className={`${field} border-x border-gray-200 bg-transparent text-center font-mono font-semibold
           text-gray-900 focus:outline-none dark:border-gray-700 dark:text-gray-100
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
       />

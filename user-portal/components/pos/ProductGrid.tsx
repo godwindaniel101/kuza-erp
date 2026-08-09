@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { SearchIcon, InventoryIcon } from '@/components/icons';
 import EmptyState from '@/components/ui/EmptyState';
@@ -41,6 +41,11 @@ export default function ProductGrid({
   disabled = false,
 }: ProductGridProps) {
   const { t } = useTranslation('common');
+  // Subcategory sub-filter — cascades off the selected category, resets when it
+  // changes. Only meaningful when a single category is active.
+  const [activeSubcategory, setActiveSubcategory] = useState('');
+  useEffect(() => setActiveSubcategory(''), [activeCategory]);
+
   const categories = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => {
@@ -49,16 +54,27 @@ export default function ProductGrid({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [products]);
 
+  // Subcategories available within the currently-selected category.
+  const subcategories = useMemo(() => {
+    if (activeCategory === ALL || activeCategory === '') return [];
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.category === activeCategory && p.subcategory) set.add(p.subcategory);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [products, activeCategory]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
       const matchesCat =
         activeCategory === ALL ||
         (activeCategory === '' ? !p.category : p.category === activeCategory);
+      const matchesSub = !activeSubcategory || p.subcategory === activeSubcategory;
       const matchesSearch = !q || p.name.toLowerCase().includes(q);
-      return matchesCat && matchesSearch;
+      return matchesCat && matchesSub && matchesSearch;
     });
-  }, [products, search, activeCategory]);
+  }, [products, search, activeCategory, activeSubcategory]);
 
   // Group the visible products by category so the grid reads like a sectioned
   // table (category header, then its items). Sorted A→Z; uncategorised last.
@@ -92,7 +108,7 @@ export default function ProductGrid({
             onChange={(e) => onSearch(e.target.value)}
             disabled={disabled}
             placeholder={t('pos.searchProducts', 'Search products…')}
-            className="h-9 w-full rounded-md border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900
+            className="h-9 w-full rounded-md border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-900
               placeholder:text-gray-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500
               focus-visible:border-transparent disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
@@ -109,6 +125,21 @@ export default function ProductGrid({
               disabled={disabled}
               placeholder={t('pos.category', 'Category')}
               searchPlaceholder={t('pos.searchCategory', 'Search category…')}
+            />
+          </div>
+        )}
+        {subcategories.length > 0 && (
+          <div className="w-40 shrink-0">
+            <SearchableSelect
+              options={[
+                { value: '', label: t('pos.allSubcategories', 'All subcategories') },
+                ...subcategories.map((s) => ({ value: s, label: s })),
+              ]}
+              value={activeSubcategory}
+              onChange={setActiveSubcategory}
+              disabled={disabled}
+              placeholder={t('pos.subcategory', 'Subcategory')}
+              searchPlaceholder={t('pos.searchSubcategory', 'Search subcategory…')}
             />
           </div>
         )}
