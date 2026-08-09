@@ -22,9 +22,9 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
   const hasMultipleUoms = line.uoms.length > 1;
 
   return (
-    <div className="py-2">
+    <div className="p-2">
       <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <p className="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-gray-100">
           {line.name}
         </p>
         <button
@@ -50,7 +50,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
               value={line.uomId}
               onChange={(e) => onUom(line.productId, e.target.value)}
               aria-label={t('pos.unit', 'Unit')}
-              className="h-7 max-w-[7.5rem] rounded-md border border-gray-300 bg-white px-1.5 text-xs text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              className="h-7 max-w-[7.5rem] rounded-md border border-gray-200 bg-white px-1.5 text-xs text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
             >
               {line.uoms.map((uom) => (
                 <option key={uom.id} value={uom.id}>
