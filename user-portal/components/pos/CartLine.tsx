@@ -61,7 +61,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
           value={line.uomId}
           onChange={(e) => onUom(line.productId, e.target.value)}
           aria-label={t('pos.unit', 'Unit')}
-          className="h-7 w-16 shrink-0 rounded-md border border-gray-200 bg-white px-1 text-[11px] text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          className="h-7 w-12 shrink-0 rounded-md border border-gray-200 bg-white px-1 text-[11px] text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
         >
           {line.uoms.map((uom) => (
             <option key={uom.id} value={uom.id}>
@@ -70,7 +70,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
           ))}
         </select>
       ) : (
-        <span className="w-16 shrink-0 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
+        <span className="w-12 shrink-0 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
           {line.uoms[0]?.abbreviation || line.uoms[0]?.name}
         </span>
       )}
