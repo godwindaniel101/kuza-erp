@@ -77,7 +77,7 @@ export default function QtyStepper({
         onFocus={(e) => e.currentTarget.select()}
         disabled={disabled}
         aria-label={t('pos.quantity', 'Quantity')}
-        className={`${field} border-x border-gray-200 bg-transparent text-center font-mono font-semibold
+        className={`${field} border-x border-gray-200 bg-transparent text-center font-mono font-medium
           text-gray-900 focus:outline-none dark:border-gray-700 dark:text-gray-100
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
       />
