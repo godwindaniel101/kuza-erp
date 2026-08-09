@@ -169,13 +169,13 @@ export default function InventoryItemViewPage() {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-8">
+          <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <nav className="-mb-px flex gap-6 whitespace-nowrap">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  className={`shrink-0 py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                     activeTab === tab.id
                       ? 'border-accent text-accent'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
@@ -232,7 +232,7 @@ export default function InventoryItemViewPage() {
 const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => {
   const frontImageUrl = resolveImageUrl(item.frontImage) || '/img/item-placeholder.svg';
   return (
-  <div className="w-full max-w-5xl space-y-6">
+  <div className="w-full max-w-5xl space-y-4">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Item Image */}
       <div className="lg:col-span-1">
@@ -361,7 +361,7 @@ const GeneralInformationTab = ({ item, formatCurrency, formatDate, t }: any) => 
 };
 
 const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, t }: any) => (
-  <div className="w-full max-w-5xl space-y-6">
+  <div className="w-full max-w-5xl space-y-4">
     {loading ? (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto"></div>
@@ -435,7 +435,7 @@ const InflowHistoryTab = ({ inflowHistory, loading, formatCurrency, formatDate, 
 );
 
 const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t }: any) => (
-  <div className="w-full max-w-5xl space-y-6">
+  <div className="w-full max-w-5xl space-y-4">
     {loading ? (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto"></div>
@@ -503,7 +503,7 @@ const SalesHistoryTab = ({ salesHistory, loading, formatCurrency, formatDate, t 
 );
 
 const BranchInventoryTab = ({ branchStocks, salesByBranch, item, formatCurrency, formatDate, t }: any) => (
-  <div className="w-full max-w-5xl space-y-6">
+  <div className="w-full max-w-5xl space-y-4">
     {/* Branch Stock Distribution */}
     <div>
       {branchStocks && branchStocks.length > 0 ? (
