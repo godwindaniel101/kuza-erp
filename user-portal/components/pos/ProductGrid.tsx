@@ -188,6 +188,12 @@ export default function ProductGrid({
                       onAdd={onAdd}
                     />
                   ))}
+                  {/* Pad rows to a minimum of 6 with empty cells (not while searching) */}
+                  {!search.trim() &&
+                    items.length < 6 &&
+                    Array.from({ length: 6 - items.length }).map((_, r) => (
+                      <div key={`empty-${r}`} className="min-h-[76px] bg-gray-50/40 dark:bg-gray-900/30" />
+                    ))}
                 </div>
               ))}
               {/* Placeholder columns keep the table full (min 6) — not while searching */}
@@ -203,6 +209,9 @@ export default function ProductGrid({
                     <div className="bg-gray-50/60 px-2 py-2 text-center text-[12px] font-bold uppercase tracking-wide text-gray-300 dark:bg-gray-800/40 dark:text-gray-700">
                       —
                     </div>
+                    {Array.from({ length: 6 }).map((_, r) => (
+                      <div key={r} className="min-h-[76px] bg-gray-50/40 dark:bg-gray-900/30" />
+                    ))}
                   </div>
                 ))}
             </div>
