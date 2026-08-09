@@ -28,7 +28,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
   };
 
   return (
-    <div className="flex items-center gap-2 py-1.5">
+    <div className="flex items-center gap-2 py-1">
       {/* delete */}
       <button
         type="button"
@@ -39,44 +39,44 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
         <DeleteIcon size={15} />
       </button>
 
-      {/* item name */}
+      {/* item name (only flexible column) */}
       <p className="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-gray-100">{line.name}</p>
 
-      {/* quantity - unit */}
-      <div className="flex shrink-0 items-center gap-1">
-        <input
-          type="number"
-          inputMode="decimal"
-          value={line.quantity || ''}
-          onChange={(e) => onQty(line.productId, clampQty(Number(e.target.value)))}
-          onFocus={(e) => e.currentTarget.select()}
-          aria-label={t('pos.quantity', 'Quantity')}
-          className="h-7 w-11 rounded-md border border-gray-200 bg-white text-center font-mono text-[13px] text-gray-900
-            focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100
-            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        />
-        {hasMultipleUoms ? (
-          <select
-            value={line.uomId}
-            onChange={(e) => onUom(line.productId, e.target.value)}
-            aria-label={t('pos.unit', 'Unit')}
-            className="h-7 max-w-[4.5rem] rounded-md border border-gray-200 bg-white px-1 text-[11px] text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-          >
-            {line.uoms.map((uom) => (
-              <option key={uom.id} value={uom.id}>
-                {uom.abbreviation || uom.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
-            {line.uoms[0]?.abbreviation || line.uoms[0]?.name}
-          </span>
-        )}
-      </div>
+      {/* quantity — fixed width */}
+      <input
+        type="number"
+        inputMode="decimal"
+        value={line.quantity || ''}
+        onChange={(e) => onQty(line.productId, clampQty(Number(e.target.value)))}
+        onFocus={(e) => e.currentTarget.select()}
+        aria-label={t('pos.quantity', 'Quantity')}
+        className="h-7 w-11 shrink-0 rounded-md border border-gray-200 bg-white text-center font-mono text-[13px] text-gray-900
+          focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100
+          [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
 
-      {/* amount (no currency symbol — currency shows on the totals below) */}
-      <span className="shrink-0 font-mono text-[13px] tabular-nums text-gray-900 dark:text-gray-100">
+      {/* unit — fixed width */}
+      {hasMultipleUoms ? (
+        <select
+          value={line.uomId}
+          onChange={(e) => onUom(line.productId, e.target.value)}
+          aria-label={t('pos.unit', 'Unit')}
+          className="h-7 w-16 shrink-0 rounded-md border border-gray-200 bg-white px-1 text-[11px] text-gray-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        >
+          {line.uoms.map((uom) => (
+            <option key={uom.id} value={uom.id}>
+              {uom.abbreviation || uom.name}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span className="w-16 shrink-0 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
+          {line.uoms[0]?.abbreviation || line.uoms[0]?.name}
+        </span>
+      )}
+
+      {/* amount — fixed width, right-aligned (currency shows on the totals below) */}
+      <span className="w-20 shrink-0 text-right font-mono text-[13px] tabular-nums text-gray-900 dark:text-gray-100">
         {lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
     </div>
