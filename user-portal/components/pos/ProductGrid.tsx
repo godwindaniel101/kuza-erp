@@ -92,13 +92,13 @@ export default function ProductGrid({
             onChange={(e) => onSearch(e.target.value)}
             disabled={disabled}
             placeholder={t('pos.searchProducts', 'Search products…')}
-            className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900 shadow-sm
-              placeholder:text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+            className="h-9 w-full rounded-md border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900
+              placeholder:text-gray-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500
               focus-visible:border-transparent disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
         </div>
         {categories.length > 0 && (
-          <div className="w-40 shrink-0 sm:w-48">
+          <div className="w-40 shrink-0">
             <SearchableSelect
               options={[
                 { value: ALL, label: t('pos.allCategories', 'All categories') },
