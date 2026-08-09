@@ -22,7 +22,7 @@ export default function CartLine({ line, onQty, onUom, onRemove }: CartLineProps
   const hasMultipleUoms = line.uoms.length > 1;
 
   return (
-    <div className="py-3">
+    <div className="py-2">
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
           {line.name}
