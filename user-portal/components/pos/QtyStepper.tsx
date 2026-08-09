@@ -44,9 +44,9 @@ export default function QtyStepper({
   const { t } = useTranslation('common');
   const btn =
     size === 'sm'
-      ? 'h-8 w-8'
+      ? 'h-6 w-6'
       : 'h-10 w-10';
-  const field = size === 'sm' ? 'h-8 w-10 text-sm' : 'h-10 w-12 text-base';
+  const field = size === 'sm' ? 'h-6 w-9 text-[13px]' : 'h-10 w-12 text-base';
 
   const clamp = (n: number) => {
     let next = Number.isFinite(n) ? n : min;

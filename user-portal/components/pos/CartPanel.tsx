@@ -142,7 +142,7 @@ export default function CartPanel({
       </div>
 
       {/* Lines */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar]:w-1.5">
         {empty ? (
           <div className="flex h-full flex-col items-center justify-center py-10 text-center">
             <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
