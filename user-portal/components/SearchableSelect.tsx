@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Option {
   value: string;
@@ -34,6 +35,9 @@ export default function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  // Dropdown is portalled to <body> and fixed-positioned from the trigger's
+  // rect, so it can never be clipped by a card's overflow-hidden.
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -49,24 +53,45 @@ export default function SearchableSelect({
   const checkColor = 'text-accent';
 
   useEffect(() => {
+    if (!isOpen) {
+      setCoords(null);
+      return;
+    }
+    // Position the portalled dropdown just under the trigger, and keep it there
+    // while the page scrolls/resizes.
+    const updateCoords = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCoords({ top: r.bottom + 6, left: r.left, width: r.width });
+    };
+    updateCoords();
+
+    // Close only when the click is outside BOTH the trigger and the (portalled)
+    // dropdown — the dropdown is no longer a DOM child of the trigger.
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
         setSearchTerm('');
         setHighlightedIndex(0);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      // Focus search input when dropdown opens
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', updateCoords, true);
+    window.addEventListener('resize', updateCoords);
+    setTimeout(() => searchInputRef.current?.focus(), 100);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', updateCoords, true);
+      window.removeEventListener('resize', updateCoords);
     };
   }, [isOpen]);
 
@@ -163,10 +188,11 @@ export default function SearchableSelect({
         <i className={`bx bx-chevron-${isOpen ? 'up' : 'down'} text-xl text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0`}></i>
       </button>
 
-      {isOpen && (
+      {isOpen && coords && createPortal(
         <div
           ref={dropdownRef}
-          className="absolute z-[9999] w-full mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-popover max-h-64 overflow-hidden"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width }}
+          className="z-[9999] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-popover max-h-64 overflow-hidden"
           role="listbox"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -232,7 +258,8 @@ export default function SearchableSelect({
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Hidden select for form submission */}
