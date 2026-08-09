@@ -169,9 +169,9 @@ export default function ProductGrid({
           /* Category-column board: each category is a column (header + its items
              stacked). Columns wrap and grow to fill; a category with no matching
              items simply isn't rendered, so search removes empty columns. */
-          <div className="flex flex-wrap items-start gap-2.5">
+          <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {grouped.map(([category, items]) => (
-              <div key={category} className="flex min-w-[136px] flex-1 basis-[150px] flex-col">
+              <div key={category} className="flex min-w-0 flex-col">
                 {/* Column header = category (tap to show only this category) */}
                 <button
                   type="button"
