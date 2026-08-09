@@ -31,7 +31,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       onClick={() => onAdd(product)}
       disabled={soldOut}
       aria-label={t('pos.addProduct', 'Add {{name}} — {{price}}', { name: product.name, price: formatNaira(price) })}
-      className={`group relative flex h-[92px] w-full flex-col gap-1 overflow-hidden rounded-lg border px-2.5 pb-2 pt-1.5 text-left shadow-sm transition
+      className={`group relative flex h-[92px] w-full flex-col gap-1 rounded-lg border px-2.5 pb-2 pt-1.5 text-left shadow-sm transition
         focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1
         focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
         ${
@@ -60,7 +60,7 @@ export default function ProductCard({ product, inCart, onAdd }: ProductCardProps
       )}
 
       {/* name */}
-      <span className="line-clamp-2 flex-1 text-[12.5px] font-medium leading-tight text-gray-900 dark:text-gray-100">
+      <span className="line-clamp-2 min-h-0 flex-1 overflow-hidden text-[12.5px] font-medium leading-tight text-gray-900 dark:text-gray-100">
         {product.name}
       </span>
 
