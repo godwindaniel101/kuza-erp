@@ -263,6 +263,30 @@ export default function ReservationsPage() {
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Tables for the optional "Table" picker on the reservation form.
+  const [tables, setTables] = useState<any[]>([]);
+
+  // Restore the active view + date across refreshes so a reload doesn't snap
+  // back to the month calendar. sessionStorage → survives refresh, resets on a
+  // new tab/session. Runs once, after mount (avoids SSR hydration mismatch).
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem('rms:resView');
+      if (v === 'day' || v === 'calendar') setViewMode(v);
+      const d = sessionStorage.getItem('rms:resDate');
+      if (d) setSelectedDate(d);
+    } catch {
+      /* sessionStorage unavailable — ignore */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('rms:resView', viewMode);
+      sessionStorage.setItem('rms:resDate', selectedDate);
+    } catch {
+      /* ignore */
+    }
+  }, [viewMode, selectedDate]);
 
   // Load branches once
   useEffect(() => {
@@ -272,6 +296,18 @@ export default function ReservationsPage() {
         if (res.success) setBranches(res.data);
       } catch (err) {
         console.error('Failed to load branches:', err);
+      }
+    })();
+  }, []);
+
+  // Load tables once (for the reservation form's optional table picker).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get<{ success: boolean; data: any[] }>('/rms/tables');
+        if (res.success) setTables(res.data || []);
+      } catch {
+        /* tables optional — ignore if unavailable */
       }
     })();
   }, []);
@@ -535,6 +571,33 @@ export default function ReservationsPage() {
     [branches, t],
   );
 
+  // Optional table picker for the form: tables for the chosen branch (tables
+  // without a branch always show), plus a "No table" option and the current
+  // value if it isn't a known table (e.g. a free-typed label on an old record).
+  const tableOptions = useMemo(() => {
+    const opts = (tables || [])
+      .filter((tb) => !form.branchId || !tb?.branchId || tb.branchId === form.branchId)
+      .map((tb) => ({ value: String(tb?.name ?? ''), label: String(tb?.name ?? '') }))
+      .filter((o) => o.value);
+    if (form.tableLabel && !opts.some((o) => o.value === form.tableLabel)) {
+      opts.unshift({ value: form.tableLabel, label: form.tableLabel });
+    }
+    return [{ value: '', label: t('noTable') || 'No table' }, ...opts];
+  }, [tables, form.branchId, form.tableLabel, t]);
+
+  // Same table picker for the confirm modal, scoped to the target's branch.
+  const confirmTableOptions = useMemo(() => {
+    const bId = confirmTarget?.branchId;
+    const opts = (tables || [])
+      .filter((tb) => !bId || !tb?.branchId || tb.branchId === bId)
+      .map((tb) => ({ value: String(tb?.name ?? ''), label: String(tb?.name ?? '') }))
+      .filter((o) => o.value);
+    if (confirmTable && !opts.some((o) => o.value === confirmTable)) {
+      opts.unshift({ value: confirmTable, label: confirmTable });
+    }
+    return [{ value: '', label: t('noTable') || 'No table' }, ...opts];
+  }, [tables, confirmTarget, confirmTable, t]);
+
   const shiftDay = (delta: number) => {
     const d = new Date(`${selectedDate}T00:00:00`);
     d.setDate(d.getDate() + delta);
@@ -550,8 +613,10 @@ export default function ReservationsPage() {
     const bName = branchName(r.branchId);
     return (
       <div
-        className={`flex flex-col gap-2 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
-          r.status === 'pending' ? 'bg-amber-50/40 dark:bg-amber-500/[0.04]' : ''
+        className={`flex flex-col gap-2 rounded-xl px-4 py-3 shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 sm:flex-row sm:items-center sm:justify-between ${
+          r.status === 'pending'
+            ? 'bg-amber-50/70 dark:bg-amber-500/[0.06]'
+            : 'bg-white dark:bg-gray-900'
         }`}
       >
         {/* Left: time + details */}
@@ -670,7 +735,7 @@ export default function ReservationsPage() {
 
   return (
     <PermissionGuard permission="reservations.view">
-      <div className="kz-stagger space-y-6">
+      <div className="kz-stagger space-y-4">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <PageHeader
@@ -912,7 +977,7 @@ export default function ReservationsPage() {
                 }
               />
             ) : (
-              <div className="bg-white dark:bg-gray-900 ring-1 ring-gray-950/[0.04] dark:ring-gray-800 shadow-card rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="space-y-2.5">
                 {sorted.map((r) => (
                   <Row key={r.id} r={r} />
                 ))}
@@ -1035,14 +1100,19 @@ export default function ReservationsPage() {
               onChange={(v) => setField('durationMins', v)}
               placeholder="90"
             />
-            <FormField
-              name="tableLabel"
-              type="text"
-              label={t('tableLabel') || 'Table'}
-              value={form.tableLabel}
-              onChange={(v) => setField('tableLabel', v)}
-              placeholder={t('tableLabelPlaceholder') || 'e.g. T4'}
-            />
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                {t('tableLabel') || 'Table'}{' '}
+                <span className="font-normal text-gray-400 dark:text-gray-500">({t('optional') || 'optional'})</span>
+              </label>
+              <SearchableSelect
+                options={tableOptions}
+                value={form.tableLabel}
+                onChange={(v) => setField('tableLabel', v)}
+                placeholder={t('selectTable') || 'Select a table'}
+                searchPlaceholder={t('searchTable') || 'Search tables...'}
+              />
+            </div>
           </div>
 
           <FormField
@@ -1086,14 +1156,18 @@ export default function ReservationsPage() {
               {confirmTarget.partySize} {t('guests') || 'guests'}
             </p>
           )}
-          <FormField
-            name="confirmTable"
-            type="text"
-            label={t('assignTableOptional') || 'Assign table (optional)'}
-            value={confirmTable}
-            onChange={setConfirmTable}
-            placeholder={t('tableLabelPlaceholder') || 'e.g. T4'}
-          />
+          <div className="space-y-1.5">
+            <label className="block text-[13px] font-medium text-gray-700 dark:text-gray-300">
+              {t('assignTableOptional') || 'Assign table (optional)'}
+            </label>
+            <SearchableSelect
+              options={confirmTableOptions}
+              value={confirmTable}
+              onChange={setConfirmTable}
+              placeholder={t('selectTable') || 'Select a table'}
+              searchPlaceholder={t('searchTable') || 'Search tables...'}
+            />
+          </div>
           <div className="flex items-center justify-end gap-2 pt-1">
             <Button
               type="button"
