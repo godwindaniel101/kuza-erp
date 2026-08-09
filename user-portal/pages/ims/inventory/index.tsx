@@ -47,6 +47,10 @@ interface InventoryItem {
   earliestExpiry?: string | null;
   /** How many batches expire within 30 days. */
   expiringSoonCount?: number;
+  /** Soft-archive state (archived items are hidden from the active list). */
+  isArchived?: boolean;
+  /** Opted in to the public marketplace (/shop). */
+  listedOnMarket?: boolean;
 }
 
 export default function InventoryPage() {
@@ -70,12 +74,14 @@ export default function InventoryPage() {
   const [listingByItem, setListingByItem] = useState<Map<string, CatalogListing>>(new Map());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currency, setCurrency] = useState<string>('NGN');
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; itemId: string | null; itemName: string }>({
+  const [archiveConfirm, setArchiveConfirm] = useState<{ isOpen: boolean; itemId: string | null; itemName: string }>({
     isOpen: false,
     itemId: null,
     itemName: '',
   });
-  const [deleting, setDeleting] = useState(false);
+  const [working, setWorking] = useState(false);
+  // Active list by default; toggle to review + restore archived items.
+  const [statusFilter, setStatusFilter] = useState<'active' | 'archived'>('active');
 
   // Filter state (config-driven via FilterBar). Text search now comes from the
   // top-nav search box (usePageSearch); category/location stay as page filters.
@@ -109,11 +115,16 @@ export default function InventoryPage() {
   }, [selectedCategoryId]);
 
   useEffect(() => {
-    loadItems();
     loadCurrency();
     loadCategories();
     loadListings();
   }, []);
+
+  // (Re)load items when the active/archived toggle changes — also fires on mount.
+  useEffect(() => {
+    loadItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   // Load this tenant's own marketplace listings, keyed by source inventory item,
   // so the table can show "On market" and the modal can edit an existing listing.
@@ -157,7 +168,9 @@ export default function InventoryPage() {
 
   const loadItems = async () => {
     try {
-      const response = await api.get<{ success: boolean; data: InventoryItem[] }>('/ims/inventory');
+      const response = await api.get<{ success: boolean; data: InventoryItem[] }>(
+        `/ims/inventory${statusFilter === 'archived' ? '?status=archived' : ''}`,
+      );
       if (response.success) {
         setItems(response.data);
       }
@@ -250,20 +263,33 @@ export default function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategoryId, selectedSubcategory, stockStatus, locationQuery]);
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.itemId) return;
-    setDeleting(true);
+  // Archive replaces hard delete: it hides the item from the active list but
+  // keeps all history, and is reversible via Restore.
+  const handleArchiveConfirm = async () => {
+    if (!archiveConfirm.itemId) return;
+    setWorking(true);
     try {
-      await api.delete(`/ims/inventory/${deleteConfirm.itemId}`);
-      setToast({ message: t('deletedSuccessfully') || 'Item deleted successfully', type: 'success' });
-      setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' });
+      await api.patch(`/ims/inventory/${archiveConfirm.itemId}/archive`);
+      setToast({ message: t('itemArchived') || 'Item archived', type: 'success' });
+      setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' });
       await loadItems();
     } catch (err: any) {
-      console.error('Failed to delete item:', err);
-      const errorMessage = err.response?.data?.message || err.message || t('deleteFailed') || 'Failed to delete item';
+      console.error('Failed to archive item:', err);
+      const errorMessage = err.response?.data?.message || err.message || t('archiveFailed') || 'Failed to archive item';
       setToast({ message: errorMessage, type: 'error' });
     } finally {
-      setDeleting(false);
+      setWorking(false);
+    }
+  };
+
+  const handleRestore = async (item: InventoryItem) => {
+    try {
+      await api.patch(`/ims/inventory/${item.id}/restore`);
+      setToast({ message: t('itemRestored') || 'Item restored', type: 'success' });
+      await loadItems();
+    } catch (err: any) {
+      console.error('Failed to restore item:', err);
+      setToast({ message: err.response?.data?.message || err.message || 'Failed to restore item', type: 'error' });
     }
   };
 
@@ -412,28 +438,38 @@ export default function InventoryPage() {
     downloadCsv(`inventory-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   };
 
-  // Row click opens the item; the kebab keeps only Edit + Delete.
-  const rowActions: RowAction<InventoryItem>[] = [
-    {
-      label: t('edit'),
-      icon: 'bx-edit',
-      iconColor: 'text-accent',
-      onClick: (item) => router.push(`${base}/edit/${item.id}`),
-    },
-    {
-      label: t('inventory.listOnMarket', 'List on market'),
-      icon: 'bx-store',
-      iconColor: 'text-emerald-600',
-      onClick: (item) => setListingModalItem(item),
-    },
-    {
-      label: t('delete'),
-      icon: 'bx-trash',
-      iconColor: 'text-red-600',
-      danger: true,
-      onClick: (item) => setDeleteConfirm({ isOpen: true, itemId: item.id, itemName: item.name || '' }),
-    },
-  ];
+  // Row click opens the item. Active rows: Edit / List on market / Archive.
+  // Archived rows: Restore only. (Hard delete was replaced by archive.)
+  const rowActions: RowAction<InventoryItem>[] =
+    statusFilter === 'archived'
+      ? [
+          {
+            label: t('restore') || 'Restore',
+            icon: 'bx-undo',
+            iconColor: 'text-emerald-600',
+            onClick: (item) => handleRestore(item),
+          },
+        ]
+      : [
+          {
+            label: t('edit'),
+            icon: 'bx-edit',
+            iconColor: 'text-accent',
+            onClick: (item) => router.push(`${base}/edit/${item.id}`),
+          },
+          {
+            label: t('inventory.listOnMarket', 'List on market'),
+            icon: 'bx-store',
+            iconColor: 'text-emerald-600',
+            onClick: (item) => setListingModalItem(item),
+          },
+          {
+            label: t('archive') || 'Archive',
+            icon: 'bx-archive',
+            iconColor: 'text-amber-600',
+            onClick: (item) => setArchiveConfirm({ isOpen: true, itemId: item.id, itemName: item.name || '' }),
+          },
+        ];
 
   return (
     <div className="space-y-6 kz-stagger">
@@ -447,7 +483,24 @@ export default function InventoryPage() {
         ]}
         actions={
           <>
-            {!loading && items.length > 0 && (
+            {/* Active / Archived toggle */}
+            <div className="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
+              {(['active', 'archived'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatusFilter(s)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    statusFilter === s
+                      ? 'bg-brand-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                  }`}
+                >
+                  {s === 'active' ? t('active') || 'Active' : t('archived') || 'Archived'}
+                </button>
+              ))}
+            </div>
+            {!loading && items.length > 0 && statusFilter === 'active' && (
               <Button variant="secondary" size="sm" onClick={handleExportCsv}>
                 <i className="bx bx-download"></i>
                 {t('exportCsv') || 'Export CSV'}
@@ -575,10 +628,28 @@ export default function InventoryPage() {
           }}
           existing={listingByItem.get(listingModalItem.id) ?? null}
           onClose={() => setListingModalItem(null)}
-          onSaved={() => {
+          onSaved={async () => {
+            const listed = listingModalItem;
             setListingModalItem(null);
             loadListings();
-            setToast({ message: t('catalog.listingSaved', 'Market listing updated'), type: 'success' });
+            // Also opt the item into the PUBLIC marketplace (/shop). It still
+            // needs a sale price + a PUBLISHED storefront to actually appear —
+            // hence the reminder below.
+            if (listed) {
+              try {
+                await api.patch(`/ims/inventory/${listed.id}/list-on-market`, { listed: true });
+                await loadItems();
+              } catch {
+                /* non-fatal — the network listing itself still saved */
+              }
+            }
+            setToast({
+              message: t(
+                'catalog.listedOnMarket',
+                'Listed on Kuza Market. Publish your storefront (Website → Publish) for it to show on the public shop.',
+              ),
+              type: 'success',
+            });
           }}
           onError={(m) => setToast({ message: m, type: 'error' })}
         />
@@ -631,35 +702,37 @@ export default function InventoryPage() {
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Delete Confirmation Modal */}
+      {/* Archive Confirmation Modal (replaces hard delete) */}
       <Modal
-        isOpen={deleteConfirm.isOpen}
-        onClose={() => setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })}
-        title={t('confirmDelete') || 'Confirm Delete'}
+        isOpen={archiveConfirm.isOpen}
+        onClose={() => setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' })}
+        title={t('confirmArchive') || 'Archive item'}
         maxWidth="md"
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">
-            {t('areYouSureDelete') || 'Are you sure you want to delete'}{' '}
-            <strong className="text-gray-900 dark:text-gray-100">{deleteConfirm.itemName}</strong>?
+            {t('areYouSureArchive') || 'Archive'}{' '}
+            <strong className="text-gray-900 dark:text-gray-100">{archiveConfirm.itemName}</strong>?
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">{t('deleteWarning') || 'This action cannot be undone.'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            {t('archiveNote') || 'It will be hidden from your active items but keeps all history. You can restore it anytime from the Archived view.'}
+          </p>
           <div className="flex justify-end space-x-3 pt-4">
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })}
-              disabled={deleting}
+              onClick={() => setArchiveConfirm({ isOpen: false, itemId: null, itemName: '' })}
+              disabled={working}
             >
               {t('cancel') || 'Cancel'}
             </Button>
             <Button
               type="button"
-              variant="danger"
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
+              variant="primary"
+              onClick={handleArchiveConfirm}
+              disabled={working}
             >
-              {deleting ? (
+              {working ? (
                 <>
                   <svg
                     className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -674,12 +747,12 @@ export default function InventoryPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  {t('deleting') || 'Deleting...'}
+                  {t('archiving') || 'Archiving…'}
                 </>
               ) : (
                 <>
-                  <i className="bx bx-trash mr-2"></i>
-                  {t('delete') || 'Delete'}
+                  <i className="bx bx-archive mr-2"></i>
+                  {t('archive') || 'Archive'}
                 </>
               )}
             </Button>

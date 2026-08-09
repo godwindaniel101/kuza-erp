@@ -50,6 +50,24 @@ export class InventoryItem extends TenantEntity {
   sellAtPos: boolean;
 
   /**
+   * Soft-archive: archived items are hidden from the active items list but keep
+   * all history (batches, movements, orders). Replaces hard delete. Restorable.
+   */
+  @Column({ default: false })
+  isArchived: boolean;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  archivedAt: Date | null;
+
+  /**
+   * Explicit opt-in to the PUBLIC cross-tenant marketplace (/shop). Only items
+   * with this true (and stock>0, sale_price>0, sell_at_pos, published store) are
+   * surfaced by PublicMarketService. Set via the "List on market" action.
+   */
+  @Column({ default: false })
+  listedOnMarket: boolean;
+
+  /**
    * Default physical row/rack ("bin") location for this item, e.g. 'A-03-2'
    * (Warehouse MS v1). Per-branch overrides live on BranchInventoryItem.
    */

@@ -68,7 +68,11 @@ export class InventoryController {
     @Query("branchId") branchId?: string,
     @Query("forOrders") forOrders?: string,
     @Query("withBranchStock") withBranchStock?: string,
+    @Query("status") status?: string,
   ) {
+    // Active list hides archived items by default; ?status=archived | all.
+    const st: "active" | "archived" | "all" =
+      status === "archived" || status === "all" ? status : "active";
     if (forOrders === "true") {
       const items = await this.inventoryService.findForOrders(branchId);
       return {
@@ -77,13 +81,13 @@ export class InventoryController {
       };
     }
     if (withBranchStock === "true") {
-      const items = await this.inventoryService.findAllWithBranchStock();
+      const items = await this.inventoryService.findAllWithBranchStock(st);
       return {
         success: true,
         data: items,
       };
     }
-    const items = await this.inventoryService.findAll(branchId);
+    const items = await this.inventoryService.findAll(branchId, st);
     return {
       success: true,
       data: items,
@@ -217,6 +221,44 @@ export class InventoryController {
       success: true,
       message: i18n.t("common.deleted"),
     };
+  }
+
+  @Patch(":id/archive")
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "Archive (soft-hide) an inventory item" })
+  async archive(
+    @Param("id", ParseUUIDPipe) id: string,
+    @I18n() i18n: I18nContext,
+  ) {
+    const item = await this.inventoryService.setArchived(id, true);
+    return { success: true, data: item, message: i18n.t("common.updated") };
+  }
+
+  @Patch(":id/restore")
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "Restore an archived inventory item" })
+  async restore(
+    @Param("id", ParseUUIDPipe) id: string,
+    @I18n() i18n: I18nContext,
+  ) {
+    const item = await this.inventoryService.setArchived(id, false);
+    return { success: true, data: item, message: i18n.t("common.updated") };
+  }
+
+  @Patch(":id/list-on-market")
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "Opt an item in/out of the public marketplace" })
+  async listOnMarket(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { listed?: boolean; salePrice?: number },
+    @I18n() i18n: I18nContext,
+  ) {
+    const item = await this.inventoryService.setListedOnMarket(
+      id,
+      body?.listed !== false,
+      typeof body?.salePrice === "number" ? body.salePrice : undefined,
+    );
+    return { success: true, data: item, message: i18n.t("common.updated") };
   }
 
   @Post("upload-image")

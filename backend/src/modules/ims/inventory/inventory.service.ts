@@ -199,17 +199,26 @@ export class InventoryService {
     }
   }
 
-  async findAll(branchId?: string) {
+  async findAll(
+    branchId?: string,
+    status: "active" | "archived" | "all" = "active",
+  ) {
     // Use QueryBuilder to ensure relations are properly loaded
-    const items = await this.inventoryItemRepository
+    const qb = this.inventoryItemRepository
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.baseUom", "baseUom")
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("branches.branch", "branch")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .orderBy("item.name", "ASC")
-      .getMany();
+      .orderBy("item.name", "ASC");
+    // Active list hides archived items; caller can request archived-only or all.
+    if (status !== "all") {
+      qb.andWhere("item.isArchived = :archived", {
+        archived: status === "archived",
+      });
+    }
+    const items = await qb.getMany();
 
     // Guard: return early if no items
     if (!items || items.length === 0) {
@@ -550,16 +559,23 @@ export class InventoryService {
     };
   }
 
-  async findAllWithBranchStock() {
+  async findAllWithBranchStock(
+    status: "active" | "archived" | "all" = "active",
+  ) {
     // Use query builder to ensure all relations load correctly
-    const items = await this.inventoryItemRepository
+    const qb = this.inventoryItemRepository
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.baseUom", "baseUom")
       .leftJoinAndSelect("item.branches", "branches")
       .leftJoinAndSelect("item.category", "category")
       .leftJoinAndSelect("item.subcategory", "subcategory")
-      .orderBy("item.name", "ASC")
-      .getMany();
+      .orderBy("item.name", "ASC");
+    if (status !== "all") {
+      qb.andWhere("item.isArchived = :archived", {
+        archived: status === "archived",
+      });
+    }
+    const items = await qb.getMany();
 
     // Get all branches for this business
     const branches = await this.branchRepository.find({
@@ -1089,6 +1105,38 @@ export class InventoryService {
   async remove(id: string) {
     await this.findOne(id);
     await this.inventoryItemRepository.delete({ id });
+  }
+
+  /**
+   * Soft-archive / restore an item. Archiving hides it from the active list but
+   * preserves all history; restoring brings it back. Replaces hard delete.
+   */
+  async setArchived(id: string, archived: boolean) {
+    await this.findOne(id); // 404s if the item isn't in this tenant
+    await this.inventoryItemRepository.update(
+      { id },
+      { isArchived: archived, archivedAt: archived ? new Date() : null },
+    );
+    return this.findOne(id);
+  }
+
+  /**
+   * Opt an item in/out of the PUBLIC marketplace (/shop). Listing also requires
+   * a sale price and stock; we set the price when provided and never clear it.
+   */
+  async setListedOnMarket(
+    id: string,
+    listed: boolean,
+    salePrice?: number,
+  ) {
+    await this.findOne(id);
+    const patch: Partial<InventoryItem> = { listedOnMarket: listed };
+    if (listed && typeof salePrice === "number" && salePrice > 0) {
+      patch.salePrice = salePrice;
+      patch.sellAtPos = true; // must be POS-sellable to show publicly
+    }
+    await this.inventoryItemRepository.update({ id }, patch);
+    return this.findOne(id);
   }
 
   async getLowStockItems(branchId?: string) {

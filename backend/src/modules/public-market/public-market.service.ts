@@ -138,7 +138,8 @@ export class PublicMarketService {
         LEFT JOIN inventory_categories c ON c.id = i.category_id
         WHERE COALESCE(i.current_stock, 0) > 0
           AND COALESCE(i.sale_price, 0) > 0
-          AND i.sell_at_pos IS NOT FALSE`;
+          AND i.sell_at_pos IS NOT FALSE
+          AND i.listed_on_market = true`;
       if (search) {
         params.push(`%${search}%`);
         sql += ` AND i.name ILIKE $${params.length}`;
@@ -176,6 +177,7 @@ export class PublicMarketService {
         WHERE COALESCE(i.current_stock, 0) > 0
           AND COALESCE(i.sale_price, 0) > 0
           AND i.sell_at_pos IS NOT FALSE
+          AND i.listed_on_market = true
           AND c.name IS NOT NULL
       `);
       return rows.map((r) => r.category_name).filter(Boolean);
