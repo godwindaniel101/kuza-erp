@@ -157,7 +157,7 @@ export default function ProductGrid({
                   {Array.from({ length: 5 }).map((_, r) => (
                     <div
                       key={r}
-                      className="h-[84px] animate-pulse rounded-lg border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-800/60"
+                      className="h-[92px] animate-pulse rounded-lg border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-800 dark:bg-gray-800/60"
                     />
                   ))}
                 </div>
@@ -247,7 +247,7 @@ export default function ProductGrid({
                   Array.from({ length: 6 - items.length }).map((_, r) => (
                     <div
                       key={`empty-${r}`}
-                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
+                      className="h-[92px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
                     />
                   ))}
               </div>
@@ -263,7 +263,7 @@ export default function ProductGrid({
                   {Array.from({ length: 6 }).map((_, r) => (
                     <div
                       key={r}
-                      className="min-h-[84px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
+                      className="h-[92px] rounded-lg border border-dashed border-gray-200 bg-gray-50/40 shadow-sm dark:border-gray-800 dark:bg-gray-900/30"
                     />
                   ))}
                 </div>
