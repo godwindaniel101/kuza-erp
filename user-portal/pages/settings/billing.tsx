@@ -420,7 +420,7 @@ export default function BillingPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
             {/* Builder */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4">
               {GROUP_ORDER.map((group) => {
                 const apps = grouped[group];
                 if (!apps || apps.length === 0) return null;

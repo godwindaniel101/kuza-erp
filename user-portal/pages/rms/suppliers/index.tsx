@@ -307,7 +307,7 @@ export default function SuppliersPage() {
 
   return (
     <PermissionGuard permission="suppliers.view">
-      <div className="kz-stagger space-y-6">
+      <div className="kz-stagger space-y-4">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <PageHeader

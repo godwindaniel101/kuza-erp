@@ -28,7 +28,7 @@ export function TableSkeleton({ rows = 5, columns = 5, className = '' }: TableSk
       </div>
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {Array.from({ length: rows }).map((_, r) => (
-          <div key={r} className="px-6 py-4 flex gap-4 items-center">
+          <div key={r} className="px-4 py-4 flex gap-4 items-center">
             {Array.from({ length: columns }).map((_, c) => (
               <Skeleton key={c} className="h-4 flex-1" />
             ))}

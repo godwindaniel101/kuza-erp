@@ -486,7 +486,7 @@ export default function MenuStudioPage() {
         }
       />
 
-      <div className="kz-stagger space-y-6">
+      <div className="kz-stagger space-y-4">
       {!site?.isPublished && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
           Your menu page isn&apos;t live yet — guests who scan the QR code will
@@ -498,7 +498,7 @@ export default function MenuStudioPage() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr,430px]">
         {/* ── Left: settings ─────────────────────────────────────── */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Step nav — free navigation, any step clickable anytime */}
           <div className={sectionClass}>
             <div className="flex items-center">

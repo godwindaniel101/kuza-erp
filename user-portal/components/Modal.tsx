@@ -108,7 +108,7 @@ export default function Modal({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             {title && (
               <h2 className="font-display text-[15px] font-semibold tracking-tight text-gray-900 dark:text-gray-100">
                 {title}
@@ -127,11 +127,11 @@ export default function Modal({
         )}
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className="p-4">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 rounded-b-xl">
+          <div className="flex items-center justify-end gap-2 px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 rounded-b-xl">
             {footer}
           </div>
         )}

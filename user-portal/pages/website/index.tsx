@@ -39,8 +39,10 @@ interface WebsiteSite {
 async function uploadWebsiteImage(file: File): Promise<string> {
   const fd = new FormData();
   fd.append('file', file);
+  // Content-Type undefined → browser sets `multipart/form-data; boundary=…`
+  // (a hard multipart header has no boundary, so multer drops the file).
   const res = await api.post<{ success: boolean; data: { url: string } }>('/website/upload-image', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { 'Content-Type': undefined },
   });
   return res.data.url;
 }
@@ -271,7 +273,7 @@ export default function WebsiteBuilderPage() {
   }
   if (loadError || !site) {
     return (
-      <div className="p-6">
+      <div className="p-4">
         <EmptyState icon="bx-globe" title="Set up your website" description="We couldn't load your website. Refresh to try again." actions={<Button variant="primary" onClick={load}>Try again</Button>} />
       </div>
     );

@@ -121,7 +121,7 @@ export default function EditUserPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-4">
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto"></div>
         </div>
@@ -131,7 +131,7 @@ export default function EditUserPage() {
 
   if (!user) {
     return (
-      <div className="p-6">
+      <div className="p-4">
         <div className="text-center py-8">
           <p className="text-red-600 dark:text-red-400">{t('userNotFound') || 'User not found'}</p>
           <Link href="/settings/users" className="text-brand-600 dark:text-brand-400 hover:underline mt-4 inline-block">

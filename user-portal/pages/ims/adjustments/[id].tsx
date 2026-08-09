@@ -244,7 +244,7 @@ export default function AdjustmentDetailPage() {
                         <td className="px-6 py-3 whitespace-nowrap text-[13px] text-right text-gray-700 dark:text-gray-300 tabular-nums">
                           {item.unitCost != null ? formatMoney(item.unitCost, currency) : '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{item.reason || '-'}</td>
+                        <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">{item.reason || '-'}</td>
                       </tr>
                     );
                   })}

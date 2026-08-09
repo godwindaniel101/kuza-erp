@@ -86,7 +86,7 @@ export default function CustomerDetailPage() {
   }, [load]);
 
   return (
-    <div className="kz-stagger w-full max-w-5xl space-y-6">
+    <div className="kz-stagger w-full max-w-5xl space-y-4">
       <PageHeader
         title={customer?.name || t('customers.customer', 'Customer')}
         subtitle={customer?.email || undefined}

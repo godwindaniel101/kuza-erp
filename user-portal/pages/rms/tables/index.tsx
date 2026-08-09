@@ -43,7 +43,7 @@ export default function TablesPage() {
 
   return (
     <PermissionGuard permission="tables.view">
-      <div className="kz-stagger space-y-6">
+      <div className="kz-stagger space-y-4">
         <PageHeader
           title={t('tables') || 'Tables'}
           count={loading ? undefined : tables.length}

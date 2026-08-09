@@ -98,7 +98,7 @@ export default function PerformancePage() {
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {reviews.map((review, idx) => (
-              <div key={review.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <div key={review.id} className="px-4 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar name={`${review.employee?.firstName || ''} ${review.employee?.lastName || ''}`.trim() || '?'} i={idx} />

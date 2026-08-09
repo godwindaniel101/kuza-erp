@@ -55,7 +55,7 @@ export default function AiOverviewPage() {
   ];
 
   return (
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader
         title="Kuza AI Agents"
         subtitle="AI personas that sell and serve your customers across social channels — read-only and human-gated by design."

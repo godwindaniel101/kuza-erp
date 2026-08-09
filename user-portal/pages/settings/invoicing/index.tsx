@@ -176,7 +176,7 @@ function InvoicingSettingsPage() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Left: horizontal step tabs on the setup card + current step's form */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Horizontal step tabs (on the card) */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             <nav className="flex flex-wrap items-center gap-1 p-2" aria-label={t('invoiceSetup.stepsNav', 'Setup steps')}>

@@ -118,7 +118,7 @@ export default function CreateTablePage() {
 
   return (
     <PermissionGuard permission="tables.create">
-      <div className="kz-stagger w-full max-w-2xl space-y-6">
+      <div className="kz-stagger w-full max-w-2xl space-y-4">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
           title={t('tables.addTables', 'Add tables')}

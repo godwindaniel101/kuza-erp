@@ -666,9 +666,9 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl shadow-card ring-1 ring-gray-950/[0.04] dark:ring-gray-800 p-6 space-y-4">
         {/* Basic Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -744,7 +744,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         </div>
 
         {/* UOM Section - 1/3 width grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Base UOM */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -979,7 +979,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
         </div>
 
         {/* Pricing, Stock, and Trackable */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Sale Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1032,7 +1032,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('isTrackable')}
             </label>
-            <div className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
+            <div className="w-full min-h-[36px] px-3 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
               <input
                 type="checkbox"
                 checked={formData.isTrackable}
@@ -1067,7 +1067,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Sell at POS
             </label>
-            <div className="w-full min-h-[48px] px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
+            <div className="w-full min-h-[36px] px-3 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg flex items-center">
               <input
                 type="checkbox"
                 checked={formData.sellAtPos}
@@ -1188,7 +1188,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
         {/* Minimum and Maximum Stock - Only show if trackable and not a make-up item */}
         {formData.isTrackable && !hasMakeUp && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('minimumStock')}
@@ -1472,7 +1472,7 @@ export default function InventoryItemForm({ itemId, initialData, onSuccess }: In
 
       {/* Image Upload Modal */}
       <Modal isOpen={showImageUpload} onClose={() => setShowImageUpload(false)} title={t('uploadImages') || 'Upload Images'}>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Front Image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

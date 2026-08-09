@@ -138,7 +138,7 @@ export default function AiAgentsPage() {
   };
 
   return (
-    <div className="kz-stagger space-y-6">
+    <div className="kz-stagger space-y-4">
       <PageHeader
         title="Agents"
         subtitle="Create AI personas, assign what they can do, and pause or activate them."

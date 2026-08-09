@@ -318,7 +318,7 @@ export default function MarketSettingsPage() {
 
   return (
     <PermissionGuard permission="settings.view">
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="w-full max-w-2xl space-y-4">
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         <PageHeader
