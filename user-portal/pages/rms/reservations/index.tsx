@@ -619,19 +619,19 @@ export default function ReservationsPage() {
             : 'bg-white dark:bg-gray-900'
         }`}
       >
-        {/* Left: time + details */}
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="text-center shrink-0 w-14">
-            <div className="text-[13px] font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+        {/* Left: time tile + details */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex shrink-0 flex-col items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800/70 w-16 py-1.5">
+            <span className="text-[13px] font-semibold tabular-nums leading-tight text-gray-900 dark:text-gray-100">
               {formatTime(r.reservationAt)}
-            </div>
+            </span>
             {r.durationMins ? (
-              <div className="text-[11px] text-gray-400 dark:text-gray-500">{r.durationMins}m</div>
+              <span className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">{r.durationMins}m</span>
             ) : null}
           </div>
           <div className="min-w-0">
             <div className="flex items-center flex-wrap gap-2">
-              <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100 truncate">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {r.customerName}
               </span>
               <StatusBadge status={r.status} label={statusLabel(r.status)} />
@@ -642,7 +642,7 @@ export default function ReservationsPage() {
                 </span>
               )}
             </div>
-            <div className="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-gray-500 dark:text-gray-400">
+            <div className="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1">
                 <i className="bx bx-group" aria-hidden="true"></i>
                 {r.partySize} {t('guests') || 'guests'}
