@@ -122,15 +122,31 @@ export default function CreateInflowPage() {
         }));
 
         // Pre-add every PO line as a receive row with qty + unit cost prefilled.
-        // The inventory item + uom stay unmapped for the user to fill in.
-        const lines: InflowItem[] = (order.items || []).map((it: any) => ({
-          inventoryItemId: "",
-          quantity: Number(it.quantity) || 1,
-          unitCost: Number(it.unitPrice) || 0,
-          uomId: "",
-          name: "",
-          description: it.description || "",
-        }));
+        // The PO line's own item id is the SUPPLIER's item (a different tenant),
+        // so it can't be used here. Best-effort auto-map to one of the BUYER's
+        // own items by matching the line description to an item name (unique,
+        // case-insensitive). Unmatched rows stay open for the user to pick /
+        // create — but a matching catalogue means the receipt arrives complete.
+        const norm = (v: any) => String(v || "").trim().toLowerCase();
+        const matchBuyerItem = (desc: string) => {
+          const key = norm(desc);
+          if (!key) return null;
+          const hits = inventoryItems.filter((i) => norm(i.name) === key);
+          return hits.length === 1 ? hits[0] : null;
+        };
+        const lines: InflowItem[] = (order.items || []).map((it: any) => {
+          const desc = it.description || it.name || "";
+          const buyerItem: any = matchBuyerItem(desc);
+          const uoms = (buyerItem as any)?.uoms || [];
+          return {
+            inventoryItemId: buyerItem ? buyerItem.id : "",
+            quantity: Number(it.quantity) || 1,
+            unitCost: Number(it.unitPrice) || 0,
+            uomId: buyerItem ? buyerItem.baseUomId || uoms[0]?.id || "" : "",
+            name: buyerItem ? buyerItem.name : "",
+            description: desc,
+          };
+        });
         setInflowItems(lines);
       }
     } catch (err) {
