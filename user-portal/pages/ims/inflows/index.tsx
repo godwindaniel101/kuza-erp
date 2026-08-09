@@ -283,7 +283,7 @@ export default function PurchasesPage() {
                 href={branchId && typeof branchId === 'string' ? `/ims/inflows/create?branchId=${branchId}` : '/ims/inflows/create'}
               >
                 <i className="bx bx-plus"></i>
-                {t('purchases.addReceipt', 'Add receipt')}
+                {t('purchases.addReceipt', 'Record purchase')}
               </Button>
             </PermissionGuard>
           </>
@@ -373,7 +373,7 @@ export default function PurchasesPage() {
                 size="sm"
                 href={branchId && typeof branchId === 'string' ? `/ims/inflows/create?branchId=${branchId}` : '/ims/inflows/create'}
               >
-                {t('purchases.addReceipt', 'Add receipt')}
+                {t('purchases.addReceipt', 'Record purchase')}
               </Button>
             </PermissionGuard>
             <Button size="sm" variant="secondary" href="/market">
