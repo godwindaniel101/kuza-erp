@@ -161,13 +161,18 @@ export default function OrderDetailView() {
   const s = order.status;
   const counterpart = isBuyer ? order.supplierName : order.buyerName;
   const editingPrices = isSupplier && s === 'requested';
+  // Label by role: the buyer is placing a Purchase order; the supplier is
+  // receiving a Sales order. (Same landlord row, opposite sides.)
+  const sectionLabel = isSupplier
+    ? t('orders.salesTitle', 'Sales orders')
+    : t('orders.title', 'Purchase orders');
 
   return (
     <div className="space-y-5">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <PageHeader
         title={order.orderNumber}
-        breadcrumbs={[{ label: t('orders.title', 'Purchase orders'), href: '/network/orders' }, { label: order.orderNumber }]}
+        breadcrumbs={[{ label: sectionLabel, href: '/network/orders' }, { label: order.orderNumber }]}
         actions={
           <div className="flex items-center gap-2">
             <OrderStatusBadge status={order.status} size="md" />
@@ -259,8 +264,17 @@ export default function OrderDetailView() {
               </Button>
             )}
             {isBuyer && (s === 'accepted' || s === 'shipped') && (
-              <Button variant="primary" onClick={() => act('receive')} loading={acting}>
-                {t('orders.markReceived', 'Mark received')}
+              // Receiving MUST go through the goods-receipt/inflow form: that
+              // creates the inflow, adds the stock, then links it back to this
+              // order (receive{inflowId}). Marking received without an inflow
+              // would flip the order to `received` with no stock and drop it
+              // from Purchases (the D3 bug).
+              <Button
+                variant="primary"
+                onClick={() => router.push(`/ims/inflows/create?orderId=${order.id}`)}
+                disabled={acting}
+              >
+                {t('orders.receiveIntoStock', 'Receive into stock')}
               </Button>
             )}
             {isBuyer && order.paymentStatus === 'unpaid' && (s === 'accepted' || s === 'shipped' || s === 'received') && (

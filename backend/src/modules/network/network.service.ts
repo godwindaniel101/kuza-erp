@@ -200,7 +200,7 @@ export class NetworkService {
       title: 'New partnership request',
       body: `${buyerProfile.name} wants to connect with you`,
       type: 'partnership',
-      link: '/market',
+      link: '/market?tab=requests',
     });
 
     // Best-effort: notify the supplier of the new partnership ("new customer")
@@ -213,7 +213,7 @@ export class NetworkService {
           context: {
             buyerBusinessName: buyerProfile.name,
             note: dto.note || undefined,
-            actionUrl: frontendUrl ? `${frontendUrl}/market` : '',
+            actionUrl: frontendUrl ? `${frontendUrl}/market?tab=requests` : '',
           },
         })
         .catch(() => undefined);

@@ -86,7 +86,18 @@ function normalizePos(order: any, currency: string): SaleRow {
     total: Number(order.totalAmount || 0),
     currency,
     date: order.paidAt || order.createdAt || '',
-    paymentStatus: paid || order.status === 'completed' ? 'paid' : 'unpaid',
+    // A marketplace sale is fulfilled on ACCEPT (status 'completed') but sold on
+    // credit — it isn't paid until the buyer settles. So for marketplace rows
+    // derive payment ONLY from actual payments, never from the completed status.
+    // A normal POS sale completes together with payment, so status is a valid
+    // proxy there.
+    paymentStatus: isMarket
+      ? paid
+        ? 'paid'
+        : 'unpaid'
+      : paid || order.status === 'completed'
+        ? 'paid'
+        : 'unpaid',
     raw: order,
   };
 }

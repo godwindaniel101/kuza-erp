@@ -237,6 +237,59 @@ export class NetworkOrdersService {
     }
   }
 
+  /**
+   * When a network order is settled (wallet transfer or confirmed external
+   * payment), mirror the payment onto the SUPPLIER's own sales record so their
+   * Sales list stops showing the credit sale as unpaid (D5). Runs in the
+   * supplier's schema via a dedicated QueryRunner. Best-effort + idempotent: it
+   * skips if the sale is already fully paid, so a retry never double-pays.
+   */
+  private async settleSupplierSale(
+    order: NetworkOrder,
+    method: 'wallet' | 'transfer',
+  ): Promise<void> {
+    if (!order.salesOrderId || !order.supplierTenantId) return;
+    const supplier = await this.landlordService.findTenantById(order.supplierTenantId);
+    if (!supplier?.schemaName) return;
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    try {
+      await qr.query(`SET search_path TO "${supplier.schemaName}", public`);
+      // Idempotency: compare the sale's own total against payments already
+      // recorded against it. Only top up the outstanding balance.
+      const rows = await qr.query(
+        `SELECT COALESCE((SELECT total_amount FROM orders WHERE id = $1), 0) AS total,
+                COALESCE((SELECT SUM(amount) FROM order_payments WHERE order_id = $1), 0) AS paid`,
+        [order.salesOrderId],
+      );
+      const saleTotal = round2(Number(rows?.[0]?.total || 0));
+      const alreadyPaid = round2(Number(rows?.[0]?.paid || 0));
+      const remaining = round2(saleTotal - alreadyPaid);
+      if (remaining <= 0.005) return; // already settled — nothing to do
+
+      await qr.query(
+        `INSERT INTO order_payments
+           (id, order_id, amount, method, payment_mode, status, paid_at, notes, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, 'full', 'completed', now(), $4, now(), now())`,
+        [order.salesOrderId, remaining, method, `Marketplace payment for ${order.orderNumber}`],
+      );
+      await qr.query(
+        `UPDATE orders SET status = 'completed', updated_at = now() WHERE id = $1`,
+        [order.salesOrderId],
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to settle supplier sale for order ${order.orderNumber} in supplier ${order.supplierTenantId}: ${
+          error instanceof Error ? error.message : error
+        }`,
+      );
+    } finally {
+      await qr.query('SET search_path TO public').catch(() => undefined);
+      await qr.release();
+    }
+  }
+
   /** Fire-and-forget in-app notification to the order's counterpart. */
   private notifyCounterpart(
     toTenantId: string | null,
@@ -375,7 +428,11 @@ export class NetworkOrdersService {
 
   async cancel(tenantId: string, id: string, dto: OrderActionDto): Promise<any> {
     const order = await this.loadForBuyer(tenantId, id);
-    this.assertStatus(order, ['draft', 'requested', 'accepted']);
+    // Only cancellable BEFORE the supplier accepts. Once accepted the supplier's
+    // stock is already debited and the sale completed; cancelling here would
+    // leave stock/COGS/AR un-reversed (the D7 bug). A post-accept unwind needs a
+    // dedicated return/refund flow, not a silent cancel.
+    this.assertStatus(order, ['draft', 'requested']);
     await this.transition(order, 'cancelled', tenantId, dto.note);
     return this.findOne(tenantId, id);
   }
@@ -617,6 +674,8 @@ export class NetworkOrdersService {
       order.paymentStatus = 'paid';
       order.paidAt = new Date();
       await this.orderRepo.save(order);
+      // Reconcile the supplier's own sale so it stops reading as unpaid (D5).
+      await this.settleSupplierSale(order, 'wallet');
       this.notifyCounterpart(order.supplierTenantId, order, `Order ${order.orderNumber} paid`, 'payment');
     } else {
       // External / off-platform: the buyer only CLAIMS payment. It is NOT paid
@@ -649,6 +708,8 @@ export class NetworkOrdersService {
       order.paymentStatus = 'paid';
       order.paidAt = new Date();
       await this.orderRepo.save(order);
+      // External payment confirmed by the supplier → record it on their sale (D5).
+      await this.settleSupplierSale(order, 'transfer');
       this.notifyCounterpart(order.buyerTenantId, order, `Payment for ${order.orderNumber} confirmed`, 'payment');
     } else {
       order.paymentStatus = 'unpaid';

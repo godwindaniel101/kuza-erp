@@ -24,7 +24,16 @@ interface NetworkBusiness {
   currency?: string | null;
 }
 
-type View = 'browse' | 'catalog';
+type View = 'browse' | 'catalog' | 'requests';
+
+/** An incoming partnership request (supplier side, pending). */
+interface IncomingRequest {
+  id: string;
+  status: string;
+  role: 'buyer' | 'supplier';
+  createdAt?: string;
+  counterpart: { tenantId: string; name: string; slug: string } | null;
+}
 
 interface CartEntry {
   item: CatalogItem;
@@ -57,6 +66,10 @@ export default function MarketPage() {
 
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [requested, setRequested] = useState<Record<string, boolean>>({});
+  // Incoming partnership requests where THIS tenant is the supplier and the
+  // request is still pending — the supplier accepts/rejects here (D1).
+  const [incoming, setIncoming] = useState<IncomingRequest[]>([]);
+  const [reqBusy, setReqBusy] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const reqId = useRef(0);
 
@@ -262,9 +275,60 @@ export default function MarketPage() {
     }
   };
 
+  const loadIncoming = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: IncomingRequest[] }>('/network/partnerships');
+      const pending = (res.success && Array.isArray(res.data) ? res.data : []).filter(
+        (p) => p.role === 'supplier' && p.status === 'pending',
+      );
+      setIncoming(pending);
+    } catch {
+      /* non-fatal — the network module may be unavailable */
+    }
+  }, []);
+
+  // Load incoming requests on mount so the tab badge shows even before opening.
+  useEffect(() => {
+    loadIncoming();
+  }, [loadIncoming]);
+
+  // Deep-link support: the partnership notification links to /market?tab=requests
+  // so the supplier lands directly on the incoming-requests view.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const tab = router.query.tab;
+    if (tab === 'requests' || tab === 'browse' || tab === 'catalog') {
+      setView(tab as View);
+    }
+  }, [router.isReady, router.query.tab]);
+
+  const respondToRequest = async (id: string, action: 'accept' | 'reject') => {
+    setReqBusy((s) => ({ ...s, [id]: true }));
+    try {
+      await api.post(`/network/partnerships/${id}/${action}`, {});
+      setIncoming((prev) => prev.filter((r) => r.id !== id));
+      setToast({
+        message:
+          action === 'accept'
+            ? t('market.requestAccepted', 'Partnership accepted')
+            : t('market.requestRejected', 'Request declined'),
+        type: 'success',
+      });
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setToast({
+        message: e?.response?.data?.message || t('market.respondFailed', 'Could not update the request'),
+        type: 'error',
+      });
+    } finally {
+      setReqBusy((s) => ({ ...s, [id]: false }));
+    }
+  };
+
   const filters: { key: View; label: string; count?: number }[] = [
     { key: 'catalog', label: t('market.filterCatalog', 'Catalog') },
     { key: 'browse', label: t('market.filterBrowse', 'Find suppliers') },
+    { key: 'requests', label: t('market.filterRequests', 'Requests'), count: incoming.length },
   ];
 
   const avatar = (name: string, logo?: string | null) =>
@@ -357,6 +421,56 @@ export default function MarketPage() {
                 </div>
               );
             })}
+          </div>
+        )
+      ) : view === 'requests' ? (
+        incoming.length === 0 ? (
+          <EmptyState
+            icon="bx-user-plus"
+            title={t('market.noRequests', 'No pending requests')}
+            description={t('market.noRequestsDesc', 'When another business asks to connect with you, their request appears here to accept or decline.')}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {incoming.map((r) => (
+              <div key={r.id} className="flex flex-col rounded-2xl bg-white p-4 shadow-card ring-1 ring-gray-950/[0.04] dark:bg-gray-900 dark:ring-gray-800">
+                <div className="flex items-center gap-3">
+                  {avatar(r.counterpart?.name || '?', null)}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {r.counterpart?.name || t('market.aBusiness', 'A business')}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {r.counterpart?.slug ? `@${r.counterpart.slug}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  {t('market.wantsToConnect', 'Wants to connect with you as a customer.')}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => respondToRequest(r.id, 'accept')}
+                    loading={!!reqBusy[r.id]}
+                    disabled={!!reqBusy[r.id]}
+                  >
+                    {t('market.accept', 'Accept')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => respondToRequest(r.id, 'reject')}
+                    disabled={!!reqBusy[r.id]}
+                  >
+                    {t('market.decline', 'Decline')}
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )
       ) : catalog.length === 0 ? (
